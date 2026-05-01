@@ -25,14 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 First public App Store release since 1.0. The 1.0.1 draft was never shipped; its changes are folded into 1.1.0.
 
 ### Added
-- Real-time E2E encrypted collaboration on documents and trackers, with team membership and roles
+- Real-time E2E encrypted personal document sync
 - Bidirectional draft sync and queued prompts between desktop and iOS
 - Hierarchical session navigation with worktree and workstream sync
 - Cancel button for running AI sessions
-- AI model picker on iOS, including Sonnet 4.6 (with effort slider) and Opus 4.6 1M context
+- AI model picker on iOS for picking what model new sessions will use
 - Slash command typeahead and image attachments in compose bar
-- Multi-account user menu with org switching
-- Email magic link login (Stytch B2B Discovery OAuth)
 - Push notifications, with permission prompt after pairing
 - QR code deep-linking opens Nimbalyst when scanned with the Camera app
 - Jump-to-prompt sheet, clickable links, and tap-to-copy code blocks in transcripts
@@ -48,5 +46,4 @@ First public App Store release since 1.0. The 1.0.1 draft was never shipped; its
 - Sync resilience after network change, sleep, JWT refresh, and org switching
 - Draft text jumbling, character loss, and bounce-back during fast typing
 - Sessions failing to reorder when viewed; read state now syncs both ways
-- Push notifications no longer suppressed by always-active device reporting
 - QR scanner reliability in release builds
