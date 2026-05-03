@@ -20,6 +20,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 <!-- Removed features go here -->
 
+## [0.58.18] - 2026-05-03
+
+
+### Added
+- Live-update kanban peek transcript while session is running so the AI transcript streams in real time without waiting for the turn to complete.
+- Clear button on session history search input for quick filter resets.
+- CollabV3 sync metrics dashboard for monitoring sync health and performance.
+
+### Changed
+- Update lodash-es for CVE fix.
+- Reduce collabv3 observability sampling to 5%.
+- Require workspacePath for Claude Code path loader, tightening the contract so workspace-scoped overrides resolve correctly.
+
+### Fixed
+- Route built-in editor saves through Layer D and sync diff resolution across sibling tabs so edits in one tab no longer silently overwrite concurrent changes in another.
+- Smooth iOS session back navigation so the transition no longer stutters.
+- Keep iOS transcript live during AI turns instead of freezing until the turn completes.
+- Add settings shortcut to voice mode errors so users can quickly configure their provider when voice fails.
+- Prevent autosave from overwriting AI-recreated deleted files by checking the recently-deleted set before writing.
+- Use getTime() for TIMESTAMPTZ store timestamps so date comparisons work correctly across timezones (#140).
+
 ## [0.58.17] - 2026-05-01
 
 
