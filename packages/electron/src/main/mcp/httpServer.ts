@@ -40,6 +40,9 @@ import {
 import {
   handleTrackerList,
   handleTrackerGet,
+  handleTrackerListTypes,
+  handleTrackerDefineType,
+  handleTrackerDeleteType,
   handleTrackerCreate,
   handleTrackerUpdate,
   handleTrackerLinkSession,
@@ -393,6 +396,15 @@ function createSharedMcpServer(
 
         case "tracker_get":
           return handleTrackerGet(args, workspacePath);
+
+        case "tracker_list_types":
+          return handleTrackerListTypes(args);
+
+        case "tracker_define_type":
+          return handleTrackerDefineType(args, workspacePath);
+
+        case "tracker_delete_type":
+          return handleTrackerDeleteType(args, workspacePath);
 
         case "tracker_create":
           return handleTrackerCreate(args, workspacePath, sessionId);

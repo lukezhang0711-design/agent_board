@@ -1,4 +1,13 @@
+import * as path from 'path';
+import { globalRegistry } from '@nimbalyst/runtime/plugins/TrackerPlugin/models/TrackerDataModel';
 import { getCurrentIdentity } from '../../services/TrackerIdentityService';
+import {
+  deleteWorkspaceTrackerSchema,
+  getAllTrackerSchemas,
+  getTrackerRoleField,
+  isBuiltinTrackerSchema,
+  upsertWorkspaceTrackerSchema,
+} from '../../services/TrackerSchemaService';
 import {
   getEffectiveTrackerSyncPolicy,
   getInitialTrackerSyncStatus,
@@ -35,6 +44,35 @@ async function resolveTrackerRowByReference(
   );
 
   return result.rows[0] || null;
+}
+
+function buildTrackerSchemaValidationError(
+  toolName: 'tracker_create' | 'tracker_update',
+  type: string,
+  errors: Array<{ field: string; message: string }>,
+): McpToolResult {
+  const summaryLines = [
+    `${toolName} rejected by tracker schema '${type}':`,
+    ...errors.map((error) => `- ${error.field}: ${error.message}`),
+  ];
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          structured: {
+            action: 'validationFailed' as const,
+            tool: toolName,
+            type,
+            errors,
+          },
+          summary: summaryLines.join('\n'),
+        }),
+      },
+    ],
+    isError: true,
+  };
 }
 
 /**
@@ -279,6 +317,15 @@ function rowToTrackerItem(row: any): any {
   }
   if (Object.keys(extra).length > 0) result.customFields = extra;
   return result;
+}
+
+function buildTrackerSchemaFromArgs(args: any): any {
+  if (args?.schema && typeof args.schema === 'object' && !Array.isArray(args.schema)) {
+    return args.schema;
+  }
+
+  const { fileName: _fileName, ...rest } = args ?? {};
+  return rest;
 }
 
 /**
@@ -595,6 +642,62 @@ export const trackerToolSchemas = [
     },
   },
   {
+    name: "tracker_list_types",
+    description:
+      "List available tracker types and their schemas. Returns built-in and custom tracker types unless filtered.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        includeBuiltin: {
+          type: "boolean",
+          description: "Include built-in tracker types (default: true).",
+        },
+        includeCustom: {
+          type: "boolean",
+          description: "Include custom workspace tracker types (default: true).",
+        },
+        search: {
+          type: "string",
+          description: "Optional case-insensitive search over type names and display names.",
+        },
+      },
+    },
+  },
+  {
+    name: "tracker_define_type",
+    description:
+      "Define or update a custom tracker type schema in the current workspace. The schema is persisted to .nimbalyst/trackers and becomes available in the tracker UI and MCP validation.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        schema: {
+          type: "object",
+          description: "Full tracker type schema object to persist.",
+        },
+        fileName: {
+          type: "string",
+          description: "Optional YAML filename to use within .nimbalyst/trackers.",
+        },
+      },
+      required: ["schema"],
+    },
+  },
+  {
+    name: "tracker_delete_type",
+    description:
+      "Delete a custom tracker type schema from the current workspace. Built-in types cannot be deleted.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        type: {
+          type: "string",
+          description: "The tracker type key to delete.",
+        },
+      },
+      required: ["type"],
+    },
+  },
+  {
     name: "tracker_link_session",
     description:
       "Link an AI session to a tracker item. This creates a bidirectional reference between the session and the work item.\n\nBy default the link targets the current AI session. Pass sessionId to link a different session (e.g., a session id surfaced from tracker_get or tracker_list).",
@@ -708,9 +811,11 @@ export async function handleTrackerList(
     // Resolve role-based field names for filters.
     // When a type is specified, use the schema to find the actual field name.
     // When no type is specified, fall back to conventional names.
-    const resolveFieldForFilter = (role: string, fallback: string): string => {
+    const resolveFieldForFilter = (
+      role: Parameters<typeof getTrackerRoleField>[1],
+      fallback: string,
+    ): string => {
       if (args.type) {
-        const { getTrackerRoleField } = require('../../services/TrackerSchemaService');
         return getTrackerRoleField(args.type, role) ?? fallback;
       }
       return fallback;
@@ -874,6 +979,219 @@ export async function handleTrackerList(
   }
 }
 
+export async function handleTrackerListTypes(
+  args: any,
+): Promise<McpToolResult> {
+  try {
+    const includeBuiltin = args?.includeBuiltin !== false;
+    const includeCustom = args?.includeCustom !== false;
+    const search = typeof args?.search === 'string' ? args.search.trim().toLowerCase() : '';
+
+    const items = getAllTrackerSchemas()
+      .filter((model) => {
+        const builtin = isBuiltinTrackerSchema(model.type);
+        if (builtin && !includeBuiltin) return false;
+        if (!builtin && !includeCustom) return false;
+        if (!search) return true;
+        return model.type.toLowerCase().includes(search)
+          || model.displayName.toLowerCase().includes(search)
+          || model.displayNamePlural.toLowerCase().includes(search);
+      })
+      .sort((a, b) => a.type.localeCompare(b.type));
+
+    const structured = {
+      action: "listed-types" as const,
+      count: items.length,
+      items: items.map((model) => ({
+        ...model,
+        builtin: isBuiltinTrackerSchema(model.type),
+      })),
+    };
+
+    const summary = items.length > 0
+      ? items.map((model) => {
+          const builtin = isBuiltinTrackerSchema(model.type) ? 'builtin' : 'custom';
+          return `- ${model.type} (${builtin}, ${model.fields.length} fields)`;
+        }).join('\n')
+      : 'No tracker types found matching the filters.';
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            structured,
+            summary,
+          }),
+        },
+      ],
+      isError: false,
+    };
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error listing tracker types: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+export async function handleTrackerDefineType(
+  args: any,
+  workspacePath: string | undefined,
+): Promise<McpToolResult> {
+  try {
+    if (!workspacePath) {
+      return {
+        content: [{ type: "text", text: "Error: No workspace path available. Cannot define tracker type." }],
+        isError: true,
+      };
+    }
+
+    const schema = buildTrackerSchemaFromArgs(args);
+    if (typeof schema.type === 'string' && isBuiltinTrackerSchema(schema.type)) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Cannot redefine built-in tracker type '${schema.type}'. Use a new custom type instead.`,
+          },
+        ],
+        isError: true,
+      };
+    }
+    const { model, filePath } = await upsertWorkspaceTrackerSchema(workspacePath, schema, {
+      fileName: args?.fileName,
+    });
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            structured: {
+              action: "defined-type" as const,
+              type: model.type,
+              model,
+              fileName: path.basename(filePath),
+            },
+            summary: `Defined tracker type '${model.type}' in .nimbalyst/trackers/${path.basename(filePath)}.`,
+          }),
+        },
+      ],
+      isError: false,
+    };
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error defining tracker type: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+export async function handleTrackerDeleteType(
+  args: any,
+  workspacePath: string | undefined,
+): Promise<McpToolResult> {
+  try {
+    if (!workspacePath) {
+      return {
+        content: [{ type: "text", text: "Error: No workspace path available. Cannot delete tracker type." }],
+        isError: true,
+      };
+    }
+
+    if (typeof args.type !== 'string' || args.type.trim().length === 0) {
+      return {
+        content: [{ type: "text", text: "Error: tracker_delete_type requires a tracker type." }],
+        isError: true,
+      };
+    }
+
+    if (isBuiltinTrackerSchema(args.type)) {
+      return {
+        content: [{ type: "text", text: `Cannot delete built-in tracker type '${args.type}'.` }],
+        isError: true,
+      };
+    }
+
+    const { getDatabase } = await import("../../database/initialize");
+    const db = getDatabase();
+    const usage = await db.query<{ count: number | string }>(
+      `SELECT COUNT(*)::int AS count
+       FROM tracker_items
+       WHERE workspace = $1
+         AND (type = $2 OR $2 = ANY(type_tags))`,
+      [workspacePath, args.type]
+    );
+    const count = Number(usage.rows[0]?.count ?? 0);
+    if (count > 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `Cannot delete tracker type '${args.type}': ${count} tracker item` +
+              `${count === 1 ? '' : 's'} still reference this type.`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const result = await deleteWorkspaceTrackerSchema(workspacePath, args.type);
+    if (!result.deleted) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Custom tracker schema not found for type '${args.type}'.`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            structured: {
+              action: "deleted-type" as const,
+              type: args.type,
+              fileName: result.filePath ? path.basename(result.filePath) : undefined,
+            },
+            summary:
+              `Deleted tracker type '${args.type}' from .nimbalyst/trackers/` +
+              `${result.filePath ? path.basename(result.filePath) : ''}.`,
+          }),
+        },
+      ],
+      isError: false,
+    };
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error deleting tracker type: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
 export async function handleTrackerGet(
   args: any,
   workspacePath?: string,
@@ -1015,7 +1333,6 @@ export async function handleTrackerCreate(
     }
 
     // Check if this type allows creation
-    const { globalRegistry } = await import("@nimbalyst/runtime/plugins/TrackerPlugin/models/TrackerDataModel");
     const model = globalRegistry.get(args.type);
     if (model && model.creatable === false) {
       return {
@@ -1043,13 +1360,15 @@ export async function handleTrackerCreate(
     // (title, status, priority, etc.) are placed at the correct field name
     // for the target schema. E.g., a schema with roles: { title: 'name' }
     // will store args.title in data.name.
-    const { getTrackerRoleField } = await import('../../services/TrackerSchemaService');
     const rf = (role: string, fallback: string) => getTrackerRoleField(args.type, role as any) ?? fallback;
+    const titleField = rf('title', 'title');
+    const statusField = rf('workflowStatus', 'status');
+    const priorityField = rf('priority', 'priority');
 
     const data: Record<string, any> = {
-      [rf('title', 'title')]: args.title,
-      [rf('workflowStatus', 'status')]: args.status || "to-do",
-      [rf('priority', 'priority')]: args.priority || "medium",
+      [titleField]: args.title,
+      [statusField]: args.status || "to-do",
+      [priorityField]: args.priority || "medium",
       created: new Date().toISOString().split("T")[0],
       authorIdentity,
       createdByAgent: true,
@@ -1076,6 +1395,11 @@ export async function handleTrackerCreate(
           data[key] = value;
         }
       }
+    }
+
+    const validationResult = globalRegistry.validate(args.type, data);
+    if (!validationResult.valid) {
+      return buildTrackerSchemaValidationError('tracker_create', args.type, validationResult.errors);
     }
 
     // Record creation activity
@@ -1173,9 +1497,9 @@ export async function handleTrackerCreate(
         issueKey: createdItem?.issueKey,
         type: args.type,
         typeTags,
-        title: args.title,
-        status: data.status,
-        priority: data.priority,
+        title: data[titleField],
+        status: data[statusField],
+        priority: data[priorityField],
         tags: data.tags || [],
       },
     };
@@ -1186,7 +1510,7 @@ export async function handleTrackerCreate(
           type: "text",
           text: JSON.stringify({
             structured,
-            summary: `Created tracker item:\n- **Type**: ${args.type}\n- **Title**: ${args.title}\n- **Status**: ${data.status}\n- **Ref**: ${getTrackerDisplayRef(createdItem || { id })}\n- **ID**: ${id}`,
+            summary: `Created tracker item:\n- **Type**: ${args.type}\n- **Title**: ${data[titleField]}\n- **Status**: ${data[statusField]}\n- **Ref**: ${getTrackerDisplayRef(createdItem || { id })}\n- **ID**: ${id}`,
           }),
         },
       ],
@@ -1247,10 +1571,7 @@ export async function handleTrackerUpdate(
     // the user to make the body edit interactively). All other field updates
     // (status, priority, etc.) still flow through normally because they sync
     // via the tracker JSONB / field-level LWW path, not Y.Doc.
-    const { globalRegistry: trackerRegistry } = await import(
-      "@nimbalyst/runtime/plugins/TrackerPlugin/models/TrackerDataModel"
-    );
-    const itemModel = trackerRegistry.get(row.type);
+    const itemModel = globalRegistry.get(row.type);
     const bodyIsCollab = isTrackerItemBodyCollaborative(
       workspacePath,
       row.type,
@@ -1271,7 +1592,6 @@ export async function handleTrackerUpdate(
     }
 
     // Resolve role-based field names for the item's type
-    const { getTrackerRoleField } = await import('../../services/TrackerSchemaService');
     const rf = (role: string, fallback: string) => getTrackerRoleField(row.type, role as any) ?? fallback;
 
     // Map fixed MCP args to role-resolved field names, then merge into data
@@ -1365,6 +1685,11 @@ export async function handleTrackerUpdate(
       }
     }
 
+    const validationResult = globalRegistry.validate(row.type, data);
+    if (!validationResult.valid) {
+      return buildTrackerSchemaValidationError('tracker_update', row.type, validationResult.errors);
+    }
+
     // Record activity for each changed field
     const modifierIdentity = getCurrentIdentity(workspacePath);
     for (const [field, change] of Object.entries(changes)) {
@@ -1445,8 +1770,7 @@ export async function handleTrackerUpdate(
     const refreshedRow = await resolveTrackerRowByReference(db, row.id, workspacePath);
     const effectiveWorkspacePath = refreshedRow?.workspace || workspacePath;
     if (refreshedRow && effectiveWorkspacePath) {
-      const { globalRegistry: reg } = await import("@nimbalyst/runtime/plugins/TrackerPlugin/models/TrackerDataModel");
-      const updateModel = reg.get(refreshedRow.type);
+      const updateModel = globalRegistry.get(refreshedRow.type);
       const syncPolicy = getEffectiveTrackerSyncPolicy(effectiveWorkspacePath, refreshedRow.type, updateModel?.sync?.mode);
       if (shouldSyncTrackerPolicy(syncPolicy)) {
         if (isTrackerSyncActive(effectiveWorkspacePath)) {
@@ -1488,7 +1812,7 @@ export async function handleTrackerUpdate(
       issueKey: postSyncRow?.issue_key ?? refreshedRow?.issue_key ?? row.issue_key ?? undefined,
       type: row.type,
       typeTags: currentTypeTags,
-      title: data.title,
+      title: data[rf('title', 'title')],
       changes,
     };
     if (descriptionSkipped) {

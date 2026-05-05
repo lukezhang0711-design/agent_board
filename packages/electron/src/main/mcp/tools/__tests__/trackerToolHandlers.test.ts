@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockQuery } = vi.hoisted(() => ({
+const { mockQuery, mockUpsertWorkspaceTrackerSchema, mockDeleteWorkspaceTrackerSchema, mockGetAllTrackerSchemas, mockIsBuiltinTrackerSchema, mockGlobalRegistry } = vi.hoisted(() => ({
   mockQuery: vi.fn(),
+  mockUpsertWorkspaceTrackerSchema: vi.fn(),
+  mockDeleteWorkspaceTrackerSchema: vi.fn(),
+  mockGetAllTrackerSchemas: vi.fn((): any[] => []),
+  mockIsBuiltinTrackerSchema: vi.fn(() => false),
+  mockGlobalRegistry: {
+    get: vi.fn(() => undefined),
+    validate: vi.fn(() => ({ valid: true, errors: [] as Array<{ field: string; message: string }> })),
+  },
 }));
 
 vi.mock('../../../database/initialize', () => ({
@@ -27,6 +35,10 @@ vi.mock('../../../services/TrackerSyncManager', () => ({
 
 vi.mock('../../../services/TrackerSchemaService', () => ({
   getTrackerRoleField: vi.fn(() => null),
+  upsertWorkspaceTrackerSchema: mockUpsertWorkspaceTrackerSchema,
+  deleteWorkspaceTrackerSchema: mockDeleteWorkspaceTrackerSchema,
+  getAllTrackerSchemas: mockGetAllTrackerSchemas,
+  isBuiltinTrackerSchema: mockIsBuiltinTrackerSchema,
 }));
 
 vi.mock('../../../utils/store', () => ({
@@ -39,7 +51,7 @@ vi.mock('../../../window/WindowManager', () => ({
 }));
 
 vi.mock('@nimbalyst/runtime/plugins/TrackerPlugin/models/TrackerDataModel', () => ({
-  globalRegistry: { get: vi.fn(() => undefined) },
+  globalRegistry: mockGlobalRegistry,
 }));
 
 vi.mock('electron', () => ({
@@ -48,8 +60,11 @@ vi.mock('electron', () => ({
 
 import {
   handleTrackerCreate,
+  handleTrackerDefineType,
+  handleTrackerDeleteType,
   handleTrackerGet,
   handleTrackerLinkSession,
+  handleTrackerListTypes,
   handleTrackerUnlinkSession,
   handleTrackerUpdate,
 } from '../trackerToolHandlers';
@@ -93,9 +108,92 @@ describe('handleTrackerGet', () => {
   });
 });
 
+describe('tracker schema tools', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAllTrackerSchemas.mockReturnValue([]);
+    mockIsBuiltinTrackerSchema.mockReturnValue(false);
+  });
+
+  it('lists tracker types with builtin metadata', async () => {
+    mockGetAllTrackerSchemas.mockReturnValue([
+      {
+        type: 'incident',
+        displayName: 'Incident',
+        displayNamePlural: 'Incidents',
+        icon: 'warning',
+        color: '#f97316',
+        modes: { inline: true, fullDocument: false },
+        idPrefix: 'INC',
+        idFormat: 'ulid',
+        fields: [{ name: 'severity', type: 'select' }],
+      },
+    ]);
+
+    const result = await handleTrackerListTypes({});
+
+    expect(result.isError).toBe(false);
+    const payload = JSON.parse(result.content[0].text!);
+    expect(payload.structured.count).toBe(1);
+    expect(payload.structured.items[0].type).toBe('incident');
+    expect(payload.structured.items[0].builtin).toBe(false);
+  });
+
+  it('defines a custom tracker type through the schema service', async () => {
+    mockUpsertWorkspaceTrackerSchema.mockResolvedValue({
+      model: {
+        type: 'incident',
+        displayName: 'Incident',
+        displayNamePlural: 'Incidents',
+        icon: 'warning',
+        color: '#f97316',
+        modes: { inline: true, fullDocument: false },
+        idPrefix: 'INC',
+        idFormat: 'ulid',
+        fields: [{ name: 'severity', type: 'select' }],
+      },
+      filePath: '/tmp/ws/.nimbalyst/trackers/incident.yaml',
+    });
+
+    const result = await handleTrackerDefineType(
+      {
+        schema: {
+          type: 'incident',
+          displayName: 'Incident',
+          displayNamePlural: 'Incidents',
+          icon: 'warning',
+          color: '#f97316',
+          modes: { inline: true, fullDocument: false },
+          idPrefix: 'INC',
+          fields: [{ name: 'severity', type: 'select' }],
+        },
+      },
+      '/tmp/ws',
+    );
+
+    expect(result.isError).toBe(false);
+    expect(mockUpsertWorkspaceTrackerSchema).toHaveBeenCalledWith(
+      '/tmp/ws',
+      expect.objectContaining({ type: 'incident' }),
+      { fileName: undefined },
+    );
+  });
+
+  it('blocks deleting a tracker type that still has items', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: 2 }] });
+
+    const result = await handleTrackerDeleteType({ type: 'incident' }, '/tmp/ws');
+
+    expect(result.isError).toBe(true);
+    expect(mockDeleteWorkspaceTrackerSchema).not.toHaveBeenCalled();
+    expect(result.content[0].text).toContain('still reference this type');
+  });
+});
+
 describe('handleTrackerCreate session linking', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGlobalRegistry.validate.mockReturnValue({ valid: true, errors: [] });
   });
 
   // Drive every query handleTrackerCreate makes through one queue. The handler
@@ -178,6 +276,25 @@ describe('handleTrackerCreate session linking', () => {
     expect(result.isError).toBe(false);
     const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
     expect(sqls.some((s) => s.includes('UPDATE ai_sessions'))).toBe(false);
+  });
+
+  it('rejects tracker_create when the schema validation fails', async () => {
+    mockGlobalRegistry.validate.mockReturnValue({
+      valid: false,
+      errors: [{ field: 'status', message: "Field 'status' has invalid option: invalid" }],
+    });
+
+    const result = await handleTrackerCreate(
+      { type: 'bug', title: 'Some bug', status: 'invalid' },
+      '/tmp/ws',
+      undefined,
+    );
+
+    expect(result.isError).toBe(true);
+    expect(mockQuery).not.toHaveBeenCalled();
+    const payload = JSON.parse(result.content[0].text!);
+    expect(payload.structured.action).toBe('validationFailed');
+    expect(payload.structured.tool).toBe('tracker_create');
   });
 });
 
@@ -375,6 +492,7 @@ describe('handleTrackerUnlinkSession', () => {
 describe('handleTrackerUpdate description / collab body', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGlobalRegistry.validate.mockReturnValue({ valid: true, errors: [] });
     // Default: non-collab (local) workspace -- description writes proceed.
     vi.mocked(getEffectiveTrackerSyncPolicy).mockReturnValue({ mode: 'local', scope: 'project' });
     vi.mocked(shouldSyncTrackerPolicy).mockReturnValue(false);
@@ -417,6 +535,27 @@ describe('handleTrackerUpdate description / collab body', () => {
       .mockResolvedValueOnce({ rows: [{ type_tags: ['bug'] }] });             // re-read type_tags
     return trackerRow;
   }
+
+  it('rejects tracker_update when the schema validation fails', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [makeRow({ id: 'bug_target', workspace: '/tmp/ws' })],
+    });
+    mockGlobalRegistry.validate.mockReturnValue({
+      valid: false,
+      errors: [{ field: 'priority', message: "Field 'priority' has invalid option: urgent" }],
+    });
+
+    const result = await handleTrackerUpdate(
+      { id: 'NIM-1', priority: 'urgent' },
+      '/tmp/ws',
+    );
+
+    expect(result.isError).toBe(true);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(result.content[0].text!);
+    expect(payload.structured.action).toBe('validationFailed');
+    expect(payload.structured.tool).toBe('tracker_update');
+  });
 
   it('writes description to PGLite for local-only items', async () => {
     setupUpdateQueueWithDescription();
