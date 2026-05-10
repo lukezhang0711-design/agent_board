@@ -21,7 +21,7 @@ Both commands share these constraints:
 
 1. **The user is the gate.** Never call `mcp__nimbalyst-mcp__feedback_open_github_issue` without explicit user approval of the final title and body.
 2. **Anonymize aggressively.** Run anything that includes file paths, log content, environment strings, or workspace identifiers through `mcp__nimbalyst-mcp__feedback_anonymize_text` first, then read the output and redact anything else that looks sensitive.
-3. **Honor the consent flag.** The user's first message includes a `Log gathering: allowed` or `Log gathering: not allowed` line. If not allowed, do not call any of the log-reading tools (`get_main_process_logs`, `get_renderer_debug_logs`).
+3. **Honor the intake flags.** Bug-report sessions include `Log gathering: allowed` or `Log gathering: not allowed`; feature-request sessions may include `UX mockup: requested` or `UX mockup: not requested`. Only bug reports may read logs, and only when log gathering is allowed.
 4. **Handle long reports.** When the drafted body exceeds the URL safe length, the URL builder returns `reason: 'too-long'`. Fall back to: show the body in chat, open a no-body URL, tell the user to paste.
 5. **Target repo and templates.** Bug reports use `bug_report.md`; feature requests use `feature_request.md`. Both target `nimbalyst/nimbalyst`. Don't hardcode the URL — let the URL builder handle it.
 
