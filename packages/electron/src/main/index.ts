@@ -195,6 +195,15 @@ export function isRestarting(): boolean {
     return isAppRestarting;
 }
 
+/**
+ * Mark the app as restarting. Set by code paths that have already persisted
+ * session state and don't want window-close handlers to clobber it as
+ * windows tear down (e.g. auto-update quit-and-install, MCP restart).
+ */
+export function setRestarting(value: boolean): void {
+    isAppRestarting = value;
+}
+
 // Track app start time for memory monitoring
 const appStartTime = Date.now();
 

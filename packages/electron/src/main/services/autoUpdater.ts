@@ -359,6 +359,28 @@ export class AutoUpdaterService {
     setImmediate(async () => {
       try {
         log.info('Performing quit and install...');
+
+        // Persist open-window list BEFORE we tear listeners down. We remove
+        // the index.ts `before-quit` handler below, which is what normally
+        // calls saveSessionState() during a clean quit. Without saving here
+        // the window-close cascade triggered by quitAndInstall() iterates
+        // each window's WindowManager `close` handler, which deletes the
+        // window from windowStates and re-saves session state minus that
+        // window -- the last window ends up writing `{ windows: [] }`, so
+        // no workspaces restore after the update relaunch (issue #232).
+        //
+        // Mark restarting first so those close handlers short-circuit their
+        // own save (same path the MCP restart flow uses).
+        try {
+          const { setRestarting } = await import('../index');
+          setRestarting(true);
+          const { saveSessionState } = await import('../session/SessionState');
+          await saveSessionState();
+          log.info('Session state saved before quit-and-install');
+        } catch (saveErr) {
+          log.error('Failed to save session state before quit-and-install:', saveErr);
+        }
+
         await this.closeDatabaseBeforeQuit();
         AutoUpdaterService.isUpdating = true;
         app.removeAllListeners('before-quit');
