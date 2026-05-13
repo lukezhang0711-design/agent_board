@@ -522,8 +522,9 @@ async function handleGitCommitResponse(
 
   // Helper to emit the proposal response to unblock the MCP tool
   const emitProposalResponse = async (result: {
-    action: 'committed' | 'cancelled';
+    action: 'committed' | 'cancelled' | 'error';
     commitHash?: string;
+    commitDate?: string;
     error?: string;
     filesCommitted?: string[];
     commitMessage?: string;
@@ -544,7 +545,7 @@ async function handleGitCommitResponse(
   // For 'committed' action, we need to execute the git commit on desktop
   if (!response.files || !response.message) {
     log.error('GitCommit response missing files or message');
-    await emitProposalResponse({ action: 'cancelled', error: 'Missing files or message' });
+    await emitProposalResponse({ action: 'error', error: 'Missing files or message' });
     return;
   }
 
@@ -554,63 +555,34 @@ async function handleGitCommitResponse(
     const session = await AISessionsRepository.get(sessionId);
     if (!session) {
       log.error('GitCommit: session not found:', sessionId);
-      await emitProposalResponse({ action: 'cancelled', error: 'Session not found' });
+      await emitProposalResponse({ action: 'error', error: 'Session not found' });
       return;
     }
 
     const workspacePath = session.workspacePath;
     if (!workspacePath) {
       log.error('GitCommit: no workspace path for session:', sessionId);
-      await emitProposalResponse({ action: 'cancelled', error: 'No workspace path' });
+      await emitProposalResponse({ action: 'error', error: 'No workspace path' });
       return;
     }
 
-    // Execute the git commit
-    const simpleGit = (await import('simple-git')).default;
-    const { gitOperationLock } = await import('../../services/GitOperationLock');
-
-    const commitResult = await gitOperationLock.withLock(workspacePath, 'git:commit', async () => {
-      const git = simpleGit(workspacePath);
-
-      // Stage the files
-      log.info(`[GitCommit mobile] Staging ${response.files!.length} files in ${workspacePath}`);
-
-      // Reset staging area, then add only selected files
-      try {
-        await git.reset(['HEAD']);
-      } catch {
-        // May fail in fresh repo with no commits - that's OK
-      }
-      // Use --all so deletions are staged correctly. Plain `git add <path>`
-      // errors with "pathspec did not match any files" when the proposal
-      // includes deleted files (e.g., during renames where one path was
-      // removed and a new one added).
-      await git.add(['--all', '--', ...response.files!]);
-
-      // Commit
-      const result = await git.commit(response.message!);
-      return result;
-    });
-
-    if (commitResult.commit) {
-      log.info(`[GitCommit mobile] Successfully committed: ${commitResult.commit}`);
-      await emitProposalResponse({
-        action: 'committed',
-        commitHash: commitResult.commit,
-        filesCommitted: response.files,
-        commitMessage: response.message,
-      });
-    } else {
-      log.warn('[GitCommit mobile] Commit returned empty hash');
-      await emitProposalResponse({
-        action: 'cancelled',
-        error: 'No changes were committed',
-      });
-    }
+    const {
+      createGitCommitProposalResponse,
+      executeGitCommit,
+    } = await import('../../services/GitCommitService');
+    const commitResult = await executeGitCommit(
+      workspacePath,
+      response.message,
+      response.files,
+      { logContext: '[GitCommit mobile]' }
+    );
+    await emitProposalResponse(
+      createGitCommitProposalResponse(commitResult, response.files, response.message)
+    );
   } catch (error) {
     log.error('[GitCommit mobile] Failed to execute commit:', error);
     await emitProposalResponse({
-      action: 'cancelled',
+      action: 'error',
       error: error instanceof Error ? error.message : String(error),
     });
   }

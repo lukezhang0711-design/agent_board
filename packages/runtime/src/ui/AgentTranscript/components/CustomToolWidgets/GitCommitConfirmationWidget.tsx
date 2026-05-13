@@ -995,7 +995,10 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
             )}
           </div>
         ) : (
-          <div className="git-commit-widget__error-content p-2 bg-[color-mix(in_srgb,var(--nim-error)_8%,var(--nim-bg))] text-[var(--nim-error)] text-[0.8125rem]">
+          <div
+            data-testid="git-commit-error"
+            className="git-commit-widget__error-content p-2 bg-[color-mix(in_srgb,var(--nim-error)_8%,var(--nim-bg))] text-[var(--nim-error)] text-[0.8125rem]"
+          >
             {result.error}
           </div>
         )}

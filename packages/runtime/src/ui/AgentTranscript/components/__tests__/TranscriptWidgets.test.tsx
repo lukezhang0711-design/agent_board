@@ -944,6 +944,31 @@ describe('GitCommitConfirmationWidget', () => {
     expect(screen.getByTestId('git-commit-cancelled')).toBeDefined();
   });
 
+  it('renders error state from tool result', () => {
+    const message = makeToolMessage(
+      'git_commit_proposal',
+      {
+        commitMessage: 'feat: failing commit',
+        filesToStage: ['src/file.ts'],
+      },
+      { action: 'error', error: 'HOOK_DETAIL: lint failed' }
+    );
+    render(
+      <Wrapper>
+        <GitCommitConfirmationWidget
+          message={message}
+          isExpanded={false}
+          onToggle={() => {}}
+          sessionId="error-commit"
+        />
+      </Wrapper>
+    );
+    const widget = screen.getByTestId('git-commit-widget');
+    expect(widget.dataset.state).toBe('error');
+    expect(screen.getByText('Commit Failed')).toBeDefined();
+    expect(screen.getByTestId('git-commit-error').textContent).toContain('HOOK_DETAIL: lint failed');
+  });
+
   it('returns null when no tool call', () => {
     const message = makeMessage({ type: 'tool_call' });
     const { container } = render(

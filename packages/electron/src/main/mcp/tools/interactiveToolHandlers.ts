@@ -603,150 +603,123 @@ export async function handleGitCommitProposal(
     const filePaths = proposalArgs.filesToStage!.map(getFilePath);
     const commitMessage = proposalArgs.commitMessage!;
 
+    const {
+      createGitCommitProposalResponse,
+      executeGitCommit,
+    } = await import("../../services/GitCommitService");
+
+    let commitResult: {
+      success: boolean;
+      commitHash?: string;
+      commitDate?: string;
+      error?: string;
+    };
     try {
-      const simpleGit = (await import("simple-git")).default;
-      const { gitOperationLock } = await import(
-        "../../services/GitOperationLock"
-      );
-
-      const commitResult = await gitOperationLock.withLock(
+      commitResult = await executeGitCommit(
         workspacePath,
-        "git:commit",
-        async () => {
-          const git = simpleGit(workspacePath);
-
-          // Reset staging area, then add only selected files
-          try {
-            await git.reset(["HEAD"]);
-          } catch {
-            // May fail in fresh repo with no commits - that's OK
-          }
-          // Use --all so deletions are staged correctly. Plain `git add <path>`
-          // errors with "pathspec did not match any files" when the proposal
-          // includes deleted files (e.g., during renames).
-          await git.add(["--all", "--", ...filePaths]);
-          return await git.commit(commitMessage);
-        }
+        commitMessage,
+        filePaths,
+        { logContext: "[git:auto-commit]" }
       );
-
-      // Get commit date
-      let commitDate: string | undefined;
-      if (commitResult.commit) {
-        try {
-          const git = simpleGit(workspacePath);
-          const showResult = await git.show([
-            commitResult.commit,
-            "--no-patch",
-            "--format=%aI",
-          ]);
-          commitDate = showResult.trim();
-        } catch {
-          // Non-critical
-        }
-      }
-
-      const response = {
-        action: (commitResult.commit
-          ? "committed"
-          : "cancelled") as "committed" | "cancelled",
-        commitHash: commitResult.commit || undefined,
-        commitDate,
-        error: commitResult.commit
-          ? undefined
-          : "No changes were committed",
-        filesCommitted: commitResult.commit ? filePaths : undefined,
-        commitMessage: commitResult.commit ? commitMessage : undefined,
-      };
-
-      // Persist the response to DB
-      const { database } = await import(
-        "../../database/PGLiteDatabaseWorker"
-      );
-      const timestamp = Date.now();
-      const responseContent = {
-        type: "git_commit_proposal_response",
-        proposalId,
-        ...response,
-        respondedAt: timestamp,
-        respondedBy: "auto_commit",
-      };
-      await database.query(
-        `INSERT INTO ai_agent_messages (session_id, source, direction, content, created_at, hidden)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          targetSessionId,
-          "nimbalyst",
-          "output",
-          JSON.stringify(responseContent),
-          new Date(timestamp),
-          false,
-        ]
-      );
-
-      // Notify renderer to clear the pending interactive prompt indicator
-      if (commitWindow && !commitWindow.isDestroyed()) {
-        commitWindow.webContents.send("ai:gitCommitProposalResolved", {
-          sessionId: targetSessionId,
-          proposalId,
-          workspacePath,
-        });
-        commitWindow.webContents.send("mcp:gitCommitProposal", {
-          proposalId,
-          workspacePath,
-          sessionId: targetSessionId,
-          filesToStage: proposalArgs.filesToStage,
-          commitMessage: proposalArgs.commitMessage,
-          reasoning: proposalArgs.reasoning,
-        });
-      }
-
-      console.log(
-        `[MCP Server] Auto-commit completed: ${commitResult.commit || "no changes"}`
-      );
-
-      if (response.action === "committed" && response.commitHash) {
-        // Link commit to tracker items via session (fire-and-forget)
-        import("../../services/CommitTrackerLinker").then(({ commitTrackerLinker }) => {
-          commitTrackerLinker.linkBySession(
-            response.commitHash!,
-            commitMessage,
-            targetSessionId,
-            workspacePath,
-          ).catch((err) => console.error("[MCP Server] Commit-tracker linking failed:", err));
-        }).catch(() => { /* CommitTrackerLinker not available */ });
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Auto-committed ${filePaths.length} file(s).\nCommit hash: ${
-                response.commitHash
-              }${
-                response.commitDate
-                  ? `\nCommit date: ${response.commitDate}`
-                  : ""
-              }\nCommit message: ${commitMessage}`,
-            },
-          ],
-          isError: false,
-        };
-      } else {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Auto-commit failed: ${
-                response.error || "No changes were committed"
-              }`,
-            },
-          ],
-          isError: true,
-        };
-      }
     } catch (error) {
       console.error("[MCP Server] Auto-commit failed:", error);
-      // Fall through to manual mode on error
+      commitResult = {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
+
+    const response = createGitCommitProposalResponse(
+      commitResult,
+      filePaths,
+      commitMessage
+    );
+
+    // Persist the response to DB
+    const { database } = await import(
+      "../../database/PGLiteDatabaseWorker"
+    );
+    const timestamp = Date.now();
+    const responseContent = {
+      type: "git_commit_proposal_response",
+      proposalId,
+      ...response,
+      respondedAt: timestamp,
+      respondedBy: "auto_commit",
+    };
+    await database.query(
+      `INSERT INTO ai_agent_messages (session_id, source, direction, content, created_at, hidden)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        targetSessionId,
+        "nimbalyst",
+        "output",
+        JSON.stringify(responseContent),
+        new Date(timestamp),
+        false,
+      ]
+    );
+
+    // Notify renderer to clear the pending interactive prompt indicator
+    if (commitWindow && !commitWindow.isDestroyed()) {
+      commitWindow.webContents.send("ai:gitCommitProposalResolved", {
+        sessionId: targetSessionId,
+        proposalId,
+        workspacePath,
+      });
+      commitWindow.webContents.send("mcp:gitCommitProposal", {
+        proposalId,
+        workspacePath,
+        sessionId: targetSessionId,
+        filesToStage: proposalArgs.filesToStage,
+        commitMessage: proposalArgs.commitMessage,
+        reasoning: proposalArgs.reasoning,
+      });
+    }
+
+    console.log(
+      `[MCP Server] Auto-commit completed: ${commitResult.commitHash || "no changes"}`
+    );
+
+    if (response.action === "committed" && response.commitHash) {
+      // Link commit to tracker items via session (fire-and-forget)
+      import("../../services/CommitTrackerLinker").then(({ commitTrackerLinker }) => {
+        commitTrackerLinker.linkBySession(
+          response.commitHash!,
+          commitMessage,
+          targetSessionId,
+          workspacePath,
+        ).catch((err) => console.error("[MCP Server] Commit-tracker linking failed:", err));
+      }).catch(() => { /* CommitTrackerLinker not available */ });
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Auto-committed ${filePaths.length} file(s).\nCommit hash: ${
+              response.commitHash
+            }${
+              response.commitDate
+                ? `\nCommit date: ${response.commitDate}`
+                : ""
+            }\nCommit message: ${commitMessage}`,
+          },
+        ],
+        isError: false,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: `Auto-commit failed: ${
+            response.error || "No changes were committed"
+          }`,
+        },
+      ],
+      isError: true,
+    };
   }
 
   // Show OS notification if app is backgrounded
