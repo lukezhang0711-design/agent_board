@@ -16,6 +16,7 @@ import { TranscriptSearchBar } from './TranscriptSearchBar';
 import { formatToolDisplayName } from '../utils/toolNameFormatter';
 import { isToolLikeMessage } from '../utils/messageTypeHelpers';
 import { getCustomToolWidget, ToolWidgetErrorBoundary, type ToolCallDiffResult } from './CustomToolWidgets';
+import { useTranscriptToolWidgetRegistryVersion } from '../contributions';
 import { ToolCallChanges } from './ToolCallChanges';
 import { setSessionIsAtBottom, getSessionIsAtBottom } from '../../../store/atoms/transcriptScroll';
 import { isAppleMobileWebKit } from '../../../utils/platform';
@@ -408,6 +409,7 @@ const PromptAdditionsInline: React.FC<{
 
 const REMINDER_KIND_LABELS: Record<string, string> = {
   session_naming: 'Session metadata reminder',
+  wakeup_resume: 'Resumed from scheduled wakeup',
 };
 
 const SystemReminderCard: React.FC<{
@@ -1102,6 +1104,11 @@ export const RichTranscriptView = React.forwardRef<
   const scrollButtonRef = useRef<HTMLDivElement>(null);
   const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
   const [showSearchBar, setShowSearchBar] = useState(false);
+
+  // Subscribe to the transcript tool-widget registry so extension
+  // enable/disable cycles cause this view to re-render and pick up
+  // newly contributed widgets without a session reload.
+  useTranscriptToolWidgetRegistryVersion();
 
   // Notify the parent when the find-in-page search bar visibility changes
   // so it can shift `FloatingTranscriptActions` (sibling, absolutely positioned

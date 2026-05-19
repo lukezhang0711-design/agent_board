@@ -1,0 +1,18 @@
+{
+  "id": "com.nimbalyst.math",
+  "name": "Math",
+  "version": "1.0.0",
+  "description": "Render LaTeX-style math in the agent transcript via KaTeX, and (in future) inside the Lexical editor.",
+  "author": "Nimbalyst",
+  "main": "dist/index.js",
+  "styles": "dist/index.css",
+  "apiVersion": "1.0.0",
+  "defaultEnabled": true,
+  "permissions": {
+    "filesystem": false,
+    "ai": false
+  },
+  "contributions": {
+    "hostComponents": ["TranscriptMathHost"]
+  }
+}
