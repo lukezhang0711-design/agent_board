@@ -746,6 +746,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getTrackerItemContent: (payload: {
       itemId: string;
     }) => ipcRenderer.invoke('document-service:tracker-item-get-content', payload) as Promise<{ success: boolean; content?: any; error?: string }>,
+    getTrackerBodyCacheForDetail: (payload: {
+      itemId: string;
+    }) => ipcRenderer.invoke('document-service:get-tracker-body-cache-for-detail', payload) as Promise<{
+      success: boolean;
+      row?: { bodyVersion: number; content: any } | null;
+      error?: string;
+    }>,
     archiveTrackerItem: (payload: {
       itemId: string;
       archive: boolean;
@@ -848,6 +855,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         config?: {
           orgId: string;
           orgKeyBase64: string;
+          orgKeyFingerprint: string | null;
           serverUrl: string;
           userId: string;
         };

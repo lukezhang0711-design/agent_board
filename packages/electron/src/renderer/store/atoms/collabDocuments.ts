@@ -305,7 +305,7 @@ export async function initSharedDocuments(workspacePath: string, retryCount = 0)
     }
 
     store.set(workspaceHasTeamAtomFamily(workspacePath), true);
-    const { orgId, orgKeyBase64, serverUrl, userId } = result.config;
+    const { orgId, orgKeyBase64, orgKeyFingerprint, serverUrl, userId } = result.config;
 
     const { TeamSyncProvider } = await import('@nimbalyst/runtime/sync');
 
@@ -323,6 +323,7 @@ export async function initSharedDocuments(workspacePath: string, retryCount = 0)
       orgId,
       userId,
       encryptionKey,
+      orgKeyFingerprint,
       getJwt: async () => {
         const jwtResult = await window.electronAPI.documentSync.getJwt(orgId);
         if (!jwtResult.success || !jwtResult.jwt) {

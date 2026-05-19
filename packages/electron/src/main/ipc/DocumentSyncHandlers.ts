@@ -591,6 +591,7 @@ export function registerDocumentSyncHandlers(): void {
 
     const rawBytes = await crypto.subtle.exportKey('raw', encryptionKey);
     const orgKeyBase64 = Buffer.from(rawBytes).toString('base64');
+    const orgKeyFingerprint = await getOrgKeyFingerprint(orgId);
     const serverUrl = getSyncWsUrl();
 
     // logger.main.info('[DocumentSyncHandlers] Resolved doc index config', { orgId, serverUrl, userId });
@@ -600,6 +601,7 @@ export function registerDocumentSyncHandlers(): void {
       config: {
         orgId,
         orgKeyBase64,
+        orgKeyFingerprint,
         serverUrl,
         userId,
         userName: getUserDisplayName(userId),

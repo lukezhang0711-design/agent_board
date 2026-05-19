@@ -51,6 +51,7 @@ import { SessionNamingService } from './SessionNamingService';
 import { updateNativeTheme, updateWindowTitleBars } from '../theme/ThemeManager';
 import { createWindow, findWindowByWorkspace } from '../window/WindowManager';
 import { getWorkspaceWindowState } from '../utils/store';
+import { requestTrackerBackfillForWorkspace } from './TrackerSyncManager';
 
 // ─── Allow / deny lists ─────────────────────────────────────────────
 
@@ -543,6 +544,18 @@ export class SettingsControlService {
       before,
       after: mode,
     });
+    // Why: flipping from `local` to `shared`/`hybrid` for a workspace that
+    // already has items means the user expects those items to start
+    // appearing on their other devices. The tracker engine only knows what
+    // was queued through it; nothing else triggers historical items to be
+    // uploaded. Asking it to backfill here matches user expectation.
+    if ((mode === 'shared' || mode === 'hybrid') && before !== mode) {
+      requestTrackerBackfillForWorkspace(workspacePath).catch(err => {
+        // Non-fatal: the engine's on-connect backfill will retry on next
+        // restart. We log so a stuck setting is visible in main.log.
+        logger.main.warn('[SettingsControlService] tracker backfill request failed for', workspacePath, err);
+      });
+    }
     return { ok: true, before, after: mode };
   }
 
