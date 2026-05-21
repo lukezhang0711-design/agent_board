@@ -1004,13 +1004,21 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
       // Handle file mention drops from file tree or files-edited sidebar
       const fileMentionPath = e.dataTransfer.getData('application/x-nimbalyst-file-mention');
       if (fileMentionPath) {
-        // Convert absolute paths to relative (file tree uses absolute, files-edited uses relative)
-        let relativePath = fileMentionPath;
-        if (workspacePath && fileMentionPath.startsWith(workspacePath)) {
-          relativePath = fileMentionPath.slice(workspacePath.length);
-          if (relativePath.startsWith('/')) relativePath = relativePath.slice(1);
-        }
-        const mention = `@${relativePath}`;
+        // The drag source may give either an absolute path (file tree) or a
+        // workspace-relative path (files-edited sidebar). Derive both so we can
+        // build a markdown link that includes the absolute target.
+        const isAbsolute = fileMentionPath.startsWith('/');
+        const absolutePath = isAbsolute
+          ? fileMentionPath
+          : workspacePath
+            ? `${workspacePath.replace(/\/$/, '')}/${fileMentionPath.replace(/^\//, '')}`
+            : fileMentionPath;
+        const displayName = absolutePath.split('/').pop() || absolutePath;
+        // Use a markdown link with the absolute path so any agent (Codex,
+        // Claude Code, etc.) can resolve it unambiguously on the first try.
+        // Bare `@workspace-relative` paths caused Codex to guess sibling
+        // directories before finding cwd-relative files.
+        const mention = `[${displayName}](${absolutePath})`;
         // Insert at cursor position, or append with space separator
         const textarea = textareaRef.current;
         const cursorPos = textarea?.selectionStart ?? value.length;
