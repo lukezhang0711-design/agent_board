@@ -18,10 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tracker row interactions now live in a shared hook, and persisted tracker view-mode state migrates legacy `'table'` entries to the renamed `'list'` mode.
 
 ### Fixed
+- Bug-report anonymizer now scrubs workspace paths and Windows path-form variants, not just the home dir. (#396)
+- Imported Claude Code sessions now show the model actually used instead of always Sonnet. (#394)
 - Shared docs now defer markdown bootstrap until server sync to avoid duplicated content, and share-to-team preserves full custom-editor suffixes like `mockup.html` when routing collaborative docs.
 - iOS session index sync now preserves workstream, worktree, pin, and naming metadata so sessions do not reappear as duplicate or free-floating rows.
-- Bug-report anonymizer redacts the session workspace path and recognizes Windows / Git Bash / WSL / JSON-escaped path forms so usernames and project names stop leaking into prefilled issues. (#396)
-- Imported Claude Code sessions are labelled with the model actually used (per-turn `model` from the JSONL), not always Sonnet. (#394)
 - Transcript, model-picker, session-history, and shared editor dropdown menus now use floating-ui portals so they stay visible instead of clipping inside panels.
 - Agent transcript no longer repaints on every streamed token or keystroke, so text selection inside running sessions stays usable.
 - Dev-mode transcript reprocess now refreshes transcript views without marking sessions unread, and child session context menus under workstreams and blitz worktrees now use the shared session actions.
