@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-update now downloads in the background and shows only the "Ready to install" toast; the redundant "Update Available" toast has been removed. (#327)
 
 ### Fixed
+- Project quick open now loads recent projects from stored recents instead of crawling every workspace on open.
+- Rebuild Extensions submenu now lists buildable extensions alphabetically.
 - Tracker list, table, and kanban views now share the session-style `#tag` typeahead filter.
 - Session history search bar no longer overlaps floating popovers (e.g. Claude Usage).
 - Re-uploading a local source into a shared markdown document now waits for the collab write to be acknowledged before tearing down the headless sync client.
