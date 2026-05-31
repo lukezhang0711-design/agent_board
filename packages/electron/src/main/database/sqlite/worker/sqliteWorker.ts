@@ -321,6 +321,7 @@ async function handle(req: RequestEnvelope): Promise<unknown> {
         sqliteDir: opts.dbDir,
         backupDir,
         sqlite,
+        log: (level, msg, meta) => log(level, msg, meta),
       });
       await backupService.initialize();
       sqlite.setBackupService(backupService);

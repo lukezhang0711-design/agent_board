@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 <!-- Bug fixes go here -->
+- SQLite migration dry-run and full migration no longer crash in packaged builds with "Cannot find module 'electron'"; `SQLiteBackupService` was pulling `electron-log/main` into the worker bundle, where `require('electron')` is not resolvable.
 - AI sessions no longer appear to keep running forever on the mobile app after a desktop turn ends; v0.63.0 routed the "isExecuting" signal through a new lightweight wire message the server and iOS did not yet understand, so the running indicator never cleared.
 - Lexical selection-toolbar format dropdowns now render inside the editor root when portaled, so shared dropdown styling and theme backgrounds no longer disappear.
 - AskUserQuestion widget no longer goes blank (header-only "Waiting..." with no options) after switching from Agent mode to Files mode and back when the same session is open in both panels.

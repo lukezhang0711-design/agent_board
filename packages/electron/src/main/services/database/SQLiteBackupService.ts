@@ -15,8 +15,13 @@
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
-import { logger } from '../../utils/logger';
 import type { SQLiteDatabase } from '../../database/sqlite/SQLiteDatabase';
+
+export type SQLiteBackupLogFn = (
+  level: 'info' | 'warn' | 'error',
+  msg: string,
+  meta?: unknown,
+) => void;
 
 interface BackupSlotMetadata {
   timestamp: string;
@@ -48,6 +53,14 @@ export interface SQLiteBackupServiceOptions {
   backupDir: string;
   /** Reference to the live SQLiteDatabase for online backup + verification. */
   sqlite: SQLiteDatabase;
+  /**
+   * Optional log sink. Injected because this class runs inside the SQLite
+   * worker_threads worker, where `electron-log/main` cannot be required (no
+   * `electron` module resolution from a worker bundle). The worker passes its
+   * own `emit('log', …)` sink; main-process callers may pass an
+   * `electron-log` wrapper. Defaults to a no-op when not provided.
+   */
+  log?: SQLiteBackupLogFn;
 }
 
 export class SQLiteBackupService {
@@ -55,6 +68,7 @@ export class SQLiteBackupService {
   private backupDir: string;
   private sqlite: SQLiteDatabase;
   private metadataPath: string;
+  private log: SQLiteBackupLogFn;
   private metadata: BackupMetadata = {
     currentBackup: null,
     previousBackup: null,
@@ -68,12 +82,13 @@ export class SQLiteBackupService {
     this.backupDir = opts.backupDir;
     this.sqlite = opts.sqlite;
     this.metadataPath = path.join(this.backupDir, METADATA_FILENAME);
+    this.log = opts.log ?? (() => { /* no-op */ });
   }
 
   async initialize(): Promise<void> {
     await fs.mkdir(this.backupDir, { recursive: true });
     await this.loadMetadata();
-    logger.main.info('[SQLite Backup] Initialized', {
+    this.log('info', '[SQLite Backup] Initialized', {
       backupDir: this.backupDir,
       hasCurrent: !!this.metadata.currentBackup,
       hasPrevious: !!this.metadata.previousBackup,
@@ -107,10 +122,10 @@ export class SQLiteBackupService {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const tempPath = path.join(this.backupDir, `temp-backup-${timestamp}.sqlite`);
 
-      logger.main.info('[SQLite Backup] Starting online backup', { tempPath });
+      this.log('info', '[SQLite Backup] Starting online backup', { tempPath });
       await liveDb.backup(tempPath);
       const sizeBytes = (await fs.stat(tempPath)).size;
-      logger.main.info('[SQLite Backup] Online backup complete', { sizeBytes });
+      this.log('info', '[SQLite Backup] Online backup complete', { sizeBytes });
 
       const verification = await this.sqlite.verifyBackup(tempPath);
       if (!verification.valid) {
@@ -123,10 +138,10 @@ export class SQLiteBackupService {
         this.metadata.lastSuccessfulBackup = timestamp;
       }
       await this.saveMetadata();
-      logger.main.info('[SQLite Backup] Backup finished', { rotated });
+      this.log('info', '[SQLite Backup] Backup finished', { rotated });
       return { success: true };
     } catch (err) {
-      logger.main.error('[SQLite Backup] Failed to create backup', err);
+      this.log('error', '[SQLite Backup] Failed to create backup', err);
       await this.saveMetadata();
       return { success: false, error: (err as Error).message };
     }
@@ -172,12 +187,12 @@ export class SQLiteBackupService {
         const full = path.join(this.backupDir, entry.name);
         const stat = await fs.stat(full);
         if (stat.mtimeMs < cutoff) {
-          logger.main.info('[SQLite Backup] Removing stale temp file', { name: entry.name });
+          this.log('info', '[SQLite Backup] Removing stale temp file', { name: entry.name });
           await fs.rm(full, { force: true });
         }
       }
     } catch (err) {
-      logger.main.warn('[SQLite Backup] Cleanup failed', err);
+      this.log('warn', '[SQLite Backup] Cleanup failed', err);
     }
   }
 
@@ -191,7 +206,7 @@ export class SQLiteBackupService {
       this.metadata = JSON.parse(raw);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
-      logger.main.warn('[SQLite Backup] Failed to load metadata', err);
+      this.log('warn', '[SQLite Backup] Failed to load metadata', err);
     }
   }
 
@@ -199,7 +214,7 @@ export class SQLiteBackupService {
     try {
       await fs.writeFile(this.metadataPath, JSON.stringify(this.metadata, null, 2), 'utf-8');
     } catch (err) {
-      logger.main.error('[SQLite Backup] Failed to save metadata', err);
+      this.log('error', '[SQLite Backup] Failed to save metadata', err);
     }
   }
 
@@ -218,7 +233,7 @@ export class SQLiteBackupService {
 
     const currentSize = this.metadata.currentBackup?.sizeBytes ?? 0;
     if (currentSize > 0 && sizeBytes / currentSize < SIZE_GUARD_RATIO) {
-      logger.main.warn('[SQLite Backup] New backup suspiciously smaller; rejecting rotation', {
+      this.log('warn', '[SQLite Backup] New backup suspiciously smaller; rejecting rotation', {
         sizeBytes,
         currentSize,
         ratio: (sizeBytes / currentSize).toFixed(2),
@@ -253,7 +268,7 @@ export class SQLiteBackupService {
         return { success: false, error: `${source} verification failed: ${verification.error}` };
       }
 
-      logger.main.info(`[SQLite Backup] Closing live db before restore from ${source}`);
+      this.log('info', `[SQLite Backup] Closing live db before restore from ${source}`);
       await this.sqlite.close();
 
       const livePath = path.join(this.sqliteDir, 'nimbalyst.sqlite');
@@ -264,10 +279,10 @@ export class SQLiteBackupService {
         if (fsSync.existsSync(p)) await fs.rm(p, { force: true });
       }
       await fs.copyFile(backupPath, livePath);
-      logger.main.info(`[SQLite Backup] Restored from ${source}`);
+      this.log('info', `[SQLite Backup] Restored from ${source}`);
       return { success: true };
     } catch (err) {
-      logger.main.error(`[SQLite Backup] Restore from ${source} failed`, err);
+      this.log('error', `[SQLite Backup] Restore from ${source} failed`, err);
       return { success: false, error: (err as Error).message };
     }
   }
