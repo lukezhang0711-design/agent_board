@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.2] - 2026-06-01
+
+
+### Added
 - Claude Opus 4.8 is now selectable in the Claude provider (1M context, dateless ID `claude-opus-4-8`) and is the default Claude model for new installs. (#473)
 - Claude Code variants `opus-4-7` and `opus-4-7-1m` pinned to Opus 4.7 so it stays selectable after the canonical `opus` alias was bumped to 4.8. (#473)
 <!-- New features go here -->
@@ -36,9 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 <!-- Bug fixes go here -->
 - Primary buttons pick a readable label color on light/pastel theme accents instead of hardcoded white. (#504)
-- SQLite packaging fixes and validation using 'validate-packaged-sdkss.js' in afterPack
-- Three unit test files (`useDialogRequestTrigger`, `useDocumentModel`, `UnifiedOnboarding.ipcTimeout`) now declare `// @vitest-environment jsdom` so they run under jsdom after vitest v3 dropped `environmentMatchGlobs`.
-- PromptForUserInput widget no longer renders a "Cannot read properties of undefined (reading 'map')" error card when the agent emits a field without its required-by-type array; the MCP handler now rejects malformed fields with a precise error so the agent can retry, and the widget drops any malformed fields it sees as a safety net for historical sessions. (#494)
+- Packaged better-sqlite3 binaries validated during build to catch broken native modules before release.
+- PromptForUserInput widget no longer crashes with "Cannot read properties of undefined" when the agent emits a malformed field. (#494)
 - AI sessions no longer appear to keep running forever on the mobile app after a desktop turn ends; v0.63.0 routed the "isExecuting" signal through a new lightweight wire message the server and iOS did not yet understand, so the running indicator never cleared.
 - Lexical selection-toolbar format dropdowns now render inside the editor root when portaled, so shared dropdown styling and theme backgrounds no longer disappear.
 - AskUserQuestion widget no longer goes blank (header-only "Waiting..." with no options) after switching from Agent mode to Files mode and back when the same session is open in both panels.
