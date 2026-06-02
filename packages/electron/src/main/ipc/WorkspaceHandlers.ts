@@ -153,7 +153,7 @@ function getRipgrepPath(): string {
                     console.warn('[SEARCH] Could not set executable permission on ripgrep:', e);
                 }
             }
-            console.log('[SEARCH] Found ripgrep at:', testPath);
+            // console.log('[SEARCH] Found ripgrep at:', testPath);
             cachedRgPath = testPath;
             return testPath;
         }

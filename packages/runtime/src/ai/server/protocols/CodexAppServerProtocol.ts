@@ -392,11 +392,11 @@ export class CodexAppServerProtocol implements AgentProtocol {
     const binary = resolveCodexBinaryPath(this.resolveCodexPathOverride);
     const env = this.buildEnv(options, binary);
     const cwd = options.workspacePath || process.cwd();
-    console.log('[CODEX][APPSERVER] spawning child:', {
-      binary,
-      cwd,
-      helperPathEntries: getCodexVendorPathEntries(binary),
-    });
+    // console.log('[CODEX][APPSERVER] spawning child:', {
+    //   binary,
+    //   cwd,
+    //   helperPathEntries: getCodexVendorPathEntries(binary),
+    // });
     const child = spawn(binary, ['app-server', '--listen', 'stdio://'], {
       env,
       cwd,

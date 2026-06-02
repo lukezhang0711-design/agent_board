@@ -108,7 +108,7 @@ export function createPersistentPromptStream(
     controller: {
       end: (reason: string) => {
         if (!ended && endResolve) {
-          console.log(`[CLAUDE-CODE] PromptStreamController.end(reason="${reason}")`);
+          // console.log(`[CLAUDE-CODE] PromptStreamController.end(reason="${reason}")`);
           endResolve();
         }
       },

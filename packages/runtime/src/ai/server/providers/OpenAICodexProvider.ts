@@ -2631,8 +2631,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
 
     // Diagnostic: confirms the app-server pre/post-edit pipeline fired.
     // Keep this terse -- one line per file_change item -- so production logs
-    // stay scannable. Verbose `diffPreviews` removed; if you need them for
-    // debugging, set debugFlags.diffTrace in app settings (TODO -- not wired).
+    // stay scannable.
     // console.log('[CODEX][APPSERVER] file_change ' + JSON.stringify({
     //   sessionId,
     //   itemId,

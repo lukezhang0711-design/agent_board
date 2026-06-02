@@ -2249,7 +2249,7 @@ export class MessageStreamingHandler {
                 : queuedChainAlreadyActive
                 ? 'queued continuation already active'
                 : 'queued continuation scheduled';
-              logger.main.info(`[AIService] Deferring endSession for ${session.id} - ${reason}`);
+              // logger.main.info(`[AIService] Deferring endSession for ${session.id} - ${reason}`);
             } else {
               await stateManager.endSession(session.id);
               // Stop file watcher after a brief delay to let pending
