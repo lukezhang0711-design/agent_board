@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed an Electron crash when a worktree produced a filesystem-event storm; the workspace watcher now shuts down safely instead of aborting the app.
 - Background-project Claude Code CLI sessions no longer spawn (and hit the subscription rate limit) when the app is reactivated; only the window you actually bring to the front resumes its session.
 - Claude Code CLI sessions: the "Thinking…" indicator no longer disappears for the rest of a turn after you answer a question, and a pending question now correctly shows as awaiting input rather than running.
+- Claude Code CLI sessions: a typed slash command (e.g. /implement) no longer occasionally runs a different command that the autocomplete menu had highlighted.
 
 ### Removed
 <!-- Removed features go here -->
