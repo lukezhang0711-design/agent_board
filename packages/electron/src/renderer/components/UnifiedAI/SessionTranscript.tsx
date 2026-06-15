@@ -2062,7 +2062,9 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     if (messages.length > 0) return null;
     return (
       <div className="rich-transcript-empty-extras w-full max-w-[640px] flex flex-col items-center gap-6">
-        <InlineTipDisplay />
+        <InlineTipDisplay
+          onInsertPrompt={provider === 'claude-code' ? handleCommandSelect : undefined}
+        />
         {provider === 'claude-code' && (
           <SlashCommandSuggestions
             provider={provider}

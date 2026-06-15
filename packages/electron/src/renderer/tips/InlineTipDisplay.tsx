@@ -41,7 +41,16 @@ function nextTipAfter(tipId: string | null) {
   return orderedTips[(idx + 1) % orderedTips.length];
 }
 
-export function InlineTipDisplay() {
+interface InlineTipDisplayProps {
+  /**
+   * Inserts text into the session composer (e.g. a slash command). Provided
+   * only when there is somewhere to insert -- i.e. a claude-code session.
+   * When absent, tips whose action is an `insertPrompt` hide that button.
+   */
+  onInsertPrompt?: (text: string) => void;
+}
+
+export function InlineTipDisplay({ onInsertPrompt }: InlineTipDisplayProps = {}) {
   const posthog = usePostHog();
   const [activeTipId, setActiveTipId] = useAtom(activeTipIdAtom);
   const setVisibleCount = useSetAtom(emptyTranscriptVisibleCountAtom);
@@ -58,6 +67,17 @@ export function InlineTipDisplay() {
     if (!activeTipId) return null;
     return orderedTips.find((t) => t.id === activeTipId) ?? null;
   }, [activeTipId]);
+
+  // An insert-prompt action needs somewhere to insert. When that's
+  // unavailable (non-claude-code session), strip the action so TipCard
+  // doesn't render a dead button.
+  const displayTip = useMemo(() => {
+    if (!activeTip) return null;
+    if (activeTip.content.action?.insertPrompt && !onInsertPrompt) {
+      return { ...activeTip, content: { ...activeTip.content, action: undefined } };
+    }
+    return activeTip;
+  }, [activeTip, onInsertPrompt]);
 
   const advance = useCallback(
     (eventName: string, extra?: Record<string, unknown>) => {
@@ -89,17 +109,21 @@ export function InlineTipDisplay() {
   }, [activeTip, posthog, setActiveTipId]);
 
   const handleAction = useCallback(() => {
-    if (!activeTip?.content.action) return;
+    const action = activeTip?.content.action;
+    if (!activeTip || !action) return;
     posthog?.capture('tip_action_clicked', {
       tip_id: activeTip.id,
       tip_name: activeTip.name,
-      action_label: activeTip.content.action.label,
+      action_label: action.label,
       surface: 'inline_empty_transcript',
     });
-    activeTip.content.action.onClick();
+    if (action.insertPrompt && onInsertPrompt) {
+      onInsertPrompt(action.insertPrompt);
+    }
+    action.onClick?.();
     markTipCompleted(activeTip.id, activeTip.version);
     setActiveTipId(null);
-  }, [activeTip, posthog, setActiveTipId]);
+  }, [activeTip, onInsertPrompt, posthog, setActiveTipId]);
 
   const handleSecondaryAction = useCallback(() => {
     if (!activeTip?.content.secondaryAction) return;
@@ -110,7 +134,7 @@ export function InlineTipDisplay() {
       action_type: 'secondary',
       surface: 'inline_empty_transcript',
     });
-    activeTip.content.secondaryAction.onClick();
+    activeTip.content.secondaryAction.onClick?.();
   }, [activeTip, posthog]);
 
   const handleNext = useCallback(() => {
@@ -159,7 +183,7 @@ export function InlineTipDisplay() {
   return (
     <>
       <TipCard
-        tip={activeTip}
+        tip={displayTip ?? activeTip}
         onDismiss={dismissTip}
         onAction={handleAction}
         onSecondaryAction={activeTip.content.secondaryAction ? handleSecondaryAction : undefined}

@@ -27,6 +27,12 @@ export const sessionCleanupTip: TipDefinition = {
   content: {
     icon: CleanupIcon,
     title: 'Let your agent tidy the Sessions board',
-    body: 'Your Sessions board is filling up. Ask your agent to **clean it up** -- it can fix each session\'s phase, mark finished work **complete**, and flag old sessions to archive. With Claude Code, just run **/session-cleanup**.',
+    body: 'Your Sessions board is filling up. Your agent can **clean it up** -- fixing each session\'s phase, marking finished work **complete**, and flagging old sessions to archive.',
+    action: {
+      label: 'Clean up my sessions',
+      // Drops /session-cleanup into the composer (claude-code sessions only).
+      insertPrompt: '/session-cleanup ',
+      variant: 'primary',
+    },
   },
 };

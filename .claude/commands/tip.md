@@ -59,6 +59,10 @@ If no key fits, you must add a new one (see step 4) AND wire a `recordUsage` cal
 ### 2. Create the definition file
 `packages/electron/src/renderer/tips/definitions/<kebab-name>.tsx`. Match the style of a nearby tip such as `worktree-session.tsx`. Prefer `<MaterialSymbol icon="..." size={16} />` for the icon. Drive actions through atoms/IPC/`dialogRef` like the existing tips do — never reach into DOM.
 
+**Action options.** A tip's `content.action` can either:
+- run code via `onClick` (navigate, open a dialog, set an atom), or
+- seed the composer via `insertPrompt: '/some-command '` — drops that text into the session input so the user can review and submit. Use this to point at a slash command (e.g. a planning-extension command). `insertPrompt` only works in the inline surface of a **claude-code** session; the button is hidden automatically where there's nowhere to insert, so keep the body meaningful without it. See `session-cleanup.tsx`.
+
 ```tsx
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { store } from '@nimbalyst/runtime/store';

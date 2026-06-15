@@ -82,7 +82,7 @@ describe('contextual tip definitions', () => {
   });
 
   it('opens tracker mode from the tracker tip action', () => {
-    trackerModeTip.content.action?.onClick();
+    trackerModeTip.content.action?.onClick?.();
 
     expect(store.get(windowModeAtom)).toBe('tracker');
   });
@@ -105,7 +105,7 @@ describe('contextual tip definitions', () => {
   });
 
   it('opens the keyboard shortcuts dialog from the shortcuts tip action', () => {
-    keyboardShortcutsTip.content.action?.onClick();
+    keyboardShortcutsTip.content.action?.onClick?.();
 
     expect(dialogRef.current?.open).toHaveBeenCalledWith(DIALOG_IDS.KEYBOARD_SHORTCUTS, {});
   });
@@ -128,7 +128,7 @@ describe('contextual tip definitions', () => {
   });
 
   it('opens themes settings from the theme tip action', () => {
-    themeExploreTip.content.action?.onClick();
+    themeExploreTip.content.action?.onClick?.();
 
     expect(store.get(openSettingsCommandAtom)).toMatchObject({
       category: 'themes',
@@ -160,7 +160,7 @@ describe('contextual tip definitions', () => {
   });
 
   it('requests a worktree session from the worktree tip action', () => {
-    worktreeSessionTip.content.action?.onClick();
+    worktreeSessionTip.content.action?.onClick?.();
 
     expect(store.get(windowModeAtom)).toBe('agent');
     expect(store.get(tipCreateWorktreeSessionRequestAtom)).toBe(1);
@@ -182,5 +182,9 @@ describe('contextual tip definitions', () => {
 
     expect(sessionCleanupTip.trigger.condition(fewSessions)).toBe(false);
     expect(sessionCleanupTip.trigger.condition(manySessions)).toBe(true);
+  });
+
+  it('inserts the /session-cleanup command from the session cleanup tip action', () => {
+    expect(sessionCleanupTip.content.action?.insertPrompt).toBe('/session-cleanup ');
   });
 });

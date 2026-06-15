@@ -202,7 +202,7 @@ export function TipProvider({ children, currentMode, workspacePath }: TipProvide
       action_label: activeTip.content.action.label,
     });
 
-    activeTip.content.action.onClick();
+    activeTip.content.action.onClick?.();
     markTipCompleted(activeTip.id, activeTip.version);
     setActiveTipId(null);
   }, [activeTip, posthog, setActiveTipId]);
@@ -218,7 +218,7 @@ export function TipProvider({ children, currentMode, workspacePath }: TipProvide
       action_type: 'secondary',
     });
 
-    activeTip.content.secondaryAction.onClick();
+    activeTip.content.secondaryAction.onClick?.();
     // Secondary action doesn't dismiss the tip
   }, [activeTip, posthog]);
 
