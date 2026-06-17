@@ -410,17 +410,11 @@ export class MetaAgentService {
     // An explicit args.provider/args.model still wins; that is what they are for.
     let parentProvider: string | null = null;
     let parentModel: string | null = null;
-    let parentExists = false;
-    let parentAgentRole: string | null = null;
-    let parentSessionType: string | null = null;
     try {
       const parentSession = await AISessionsRepository.get(metaSessionId);
       if (parentSession) {
-        parentExists = true;
         parentProvider = parentSession.provider ?? null;
         parentModel = normalizeStoredChildModelIdentifier(parentProvider, parentSession.model ?? null);
-        parentAgentRole = parentSession.agentRole ?? null;
-        parentSessionType = parentSession.sessionType ?? null;
       }
     } catch {
       // Best-effort lookup; fall through to the hardcoded default below.
@@ -538,28 +532,20 @@ export class MetaAgentService {
       );
     }
 
-    // One-time promotion of the spawning parent to agent_role='meta-agent'.
-    // The renderer META AGENT group requires the PARENT session to carry
-    // agentRole='meta-agent'. The native Meta Agent button sets this at create
-    // time; a plain chat session (e.g. a Gemini parent) that spawns children
-    // via the meta-agent tools is still agentRole='standard', so its children
-    // render flat. Promote the genuine human-facing parent here. Never promote
-    // a workstream container (sessionType='workstream') -- that row is the
-    // grouping container, not the human-facing parent, and createChildSession
-    // Internal is always called with the original parent id, not the workstream
-    // id (resolveOrCreateWorkstream passes the container via
-    // parentSessionIdOverride only). The sessionType guard is the safeguard for
-    // the edge where the parent id is itself a workstream container.
-    // NOTE: This promotion is now inert. Spawn tools are gated on
-    // agentRole==='meta-agent' at the extension-agent branch in
-    // MessageStreamingHandler, so the only sessions that can reach this code
-    // are already meta-agents; the parentAgentRole!=='meta-agent' branch never
-    // fires for them. Kept as a defensive no-op (and to preserve renderer
-    // grouping behavior for any non-extension caller path). Distinct from the
-    // workstream promotedParent logic in resolveOrCreateWorkstream.
-    if (parentExists && parentAgentRole !== 'meta-agent' && parentSessionType !== 'workstream') {
-      await AISessionsRepository.updateMetadata(metaSessionId, { agentRole: 'meta-agent' });
-    }
+    // NIM-858: do NOT auto-promote the spawning parent to agent_role='meta-agent'.
+    // The renderer META AGENT group is reserved for genuine meta-agents (created
+    // via the Meta Agent button, which sets agentRole='meta-agent' at create
+    // time) and their children. A standard session that spawns a sibling — via
+    // the Actions-dropdown launch (launchActionSession) or the spawn_session MCP
+    // tool used by /launch-new-session — must stay agentRole='standard' so it and
+    // its sibling render flat (as workstream siblings), not under Meta Agent.
+    //
+    // A prior promotion block here claimed to be "inert" because spawn tools were
+    // gated on agentRole==='meta-agent'. That gating only covers the extension-
+    // agent (Gemini) branch in MessageStreamingHandler; the nimbalyst-meta-agent
+    // MCP server is attached to every built-in session unconditionally
+    // (McpConfigService), and launchActionSession passes a standard parent — so
+    // the block actually fired and wrongly relabeled standard parents.
 
     const sessionId = randomUUID();
     await AISessionsRepository.create({
