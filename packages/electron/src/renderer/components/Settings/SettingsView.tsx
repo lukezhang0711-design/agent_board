@@ -31,6 +31,7 @@ import { InstalledExtensionsPanel } from './panels/InstalledExtensionsPanel';
 import { PrivilegedExtensionsPanel } from './panels/PrivilegedExtensionsPanel';
 import { ThemesPanel } from './panels/ThemesPanel';
 import { TeamPanel } from './panels/TeamPanel';
+import { OrgPanel } from './panels/OrgPanel';
 import { TrackerConfigPanel } from './panels/TrackerConfigPanel';
 import { GitHubAccountPanel } from './panels/GitHubAccountPanel';
 import { ExtensionMarketplacePanel } from './panels/ExtensionMarketplacePanel';
@@ -310,6 +311,7 @@ export function SettingsView({
   // Valid categories for each scope
   const projectCategories: SettingsCategory[] = [
     'agent-permissions',
+    'org',
     'team',
     'tracker-config',
     ...(developerMode ? (['github'] as SettingsCategory[]) : []),
@@ -841,6 +843,8 @@ export function SettingsView({
             workspacePath={workspacePath ?? undefined}
           />
         );
+      case 'org':
+        return <OrgPanel workspacePath={workspacePath ?? undefined} />;
       case 'team':
         return <TeamPanel workspacePath={workspacePath ?? undefined} />;
       case 'tracker-config':

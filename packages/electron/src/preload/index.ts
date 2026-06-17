@@ -1376,6 +1376,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
     autoWrapNewMembers: (orgId: string) => ipcRenderer.invoke('team:auto-wrap-new-members', orgId),
   },
 
+  // Epic H1: org / project access model. `canAccess` is the single client-side
+  // permission check; `syncProjection` refreshes the local org/member/grant
+  // projection from the server; project-access grant/revoke/list manage the
+  // per-project member set.
+  org: {
+    canAccess: (input: { orgId?: string | null; projectId?: string | null; action: 'view' | 'edit' | 'admin' }) =>
+      ipcRenderer.invoke('org:can-access', input),
+    syncProjection: () => ipcRenderer.invoke('org:sync-projection'),
+    grantProjectAccess: (orgId: string, projectId: string, userId: string, projectRole: string) =>
+      ipcRenderer.invoke('org:grant-project-access', orgId, projectId, userId, projectRole),
+    revokeProjectAccess: (orgId: string, projectId: string, userId: string) =>
+      ipcRenderer.invoke('org:revoke-project-access', orgId, projectId, userId),
+    listProjectAccess: (orgId: string, projectId: string) =>
+      ipcRenderer.invoke('org:list-project-access', orgId, projectId),
+    // Live write-through from TeamSync DO broadcasts into the local projection.
+    applyProjectAccess: (projectId: string, userId: string, projectRole: string | null) =>
+      ipcRenderer.invoke('org:apply-project-access', projectId, userId, projectRole),
+    applyMemberUpserted: (orgId: string, userId: string, email: string | null, role: string) =>
+      ipcRenderer.invoke('org:apply-member-upserted', orgId, userId, email, role),
+    applyMemberRoleChanged: (orgId: string, userId: string, role: string) =>
+      ipcRenderer.invoke('org:apply-member-role-changed', orgId, userId, role),
+    applyMemberRemoved: (orgId: string, userId: string) =>
+      ipcRenderer.invoke('org:apply-member-removed', orgId, userId),
+  },
+
   // Extensions API
   extensions: {
     listInstalled: () => ipcRenderer.invoke('extensions:list-installed'),

@@ -28,6 +28,7 @@ export type {
   TeamDocIndexBroadcastMessage,
   TeamDocIndexRemoveBroadcastMessage,
   TeamOrgKeyRotatedMessage,
+  TeamProjectAccessChangedMessage,
   TeamErrorMessage,
 } from '@nimbalyst/collab-protocol';
 
@@ -106,6 +107,13 @@ export interface TeamSyncConfig {
 
   /** Called when the org encryption key is rotated (fingerprint changed) */
   onOrgKeyRotated?: (fingerprint: string) => void;
+
+  /**
+   * Called when a member's project-scoped access changed (Epic H1). `projectRole`
+   * is the new role, or `null` when access was revoked. The host writes this
+   * through to the local org/project projection so `canAccess` stays live.
+   */
+  onProjectAccessChanged?: (projectId: string, userId: string, projectRole: string | null) => void;
 
   /** Called when connection status changes */
   onStatusChange?: (status: TeamSyncStatus) => void;

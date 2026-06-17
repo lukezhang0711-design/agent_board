@@ -30,6 +30,7 @@
 
 import type {
   EncryptedTrackerItemEnvelope,
+  EncryptedTrackerSchemaEnvelope,
   TrackerItemPayload,
 } from './trackerProtocol';
 import { stripLocalOnlyFields } from './trackerProtocol';
@@ -79,6 +80,10 @@ function base64ToUint8Array(base64: string): Uint8Array {
  */
 function buildItemIdAad(itemId: string): Uint8Array {
   return new TextEncoder().encode(`tracker-item:${itemId}`);
+}
+
+function buildSchemaTypeAad(schemaType: string): Uint8Array {
+  return new TextEncoder().encode(`tracker-schema:${schemaType}`);
 }
 
 // ============================================================================
@@ -150,6 +155,51 @@ export async function decryptTrackerEnvelope(
   );
   const json = new TextDecoder().decode(plaintext);
   return JSON.parse(json) as TrackerItemPayload;
+}
+
+/**
+ * Encrypt a JSON-serialized TrackerDataModel for schema sync. The server never
+ * reads the model, and the plaintext schema type is bound into AES-GCM AAD so a
+ * ciphertext for one type cannot be replayed under another.
+ */
+export async function encryptTrackerSchemaPayload(
+  modelJson: string,
+  key: CryptoKey,
+  schemaType: string,
+): Promise<{ encryptedPayload: string; iv: string }> {
+  const cleartext = new TextEncoder().encode(modelJson);
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTE_LENGTH));
+  const aad = buildSchemaTypeAad(schemaType);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv, additionalData: aad as BufferSource },
+    key,
+    cleartext as BufferSource,
+  );
+  return {
+    encryptedPayload: uint8ArrayToBase64(new Uint8Array(ciphertext)),
+    iv: uint8ArrayToBase64(iv),
+  };
+}
+
+export async function decryptTrackerSchemaEnvelope(
+  envelope: EncryptedTrackerSchemaEnvelope,
+  key: CryptoKey,
+): Promise<string> {
+  if (envelope.encryptedPayload === null) {
+    throw new Error('decryptTrackerSchemaEnvelope called on a tombstone (encryptedPayload=null)');
+  }
+  if (!envelope.iv) {
+    throw new Error('decryptTrackerSchemaEnvelope: envelope missing iv');
+  }
+  const ciphertext = base64ToUint8Array(envelope.encryptedPayload);
+  const iv = base64ToUint8Array(envelope.iv);
+  const aad = buildSchemaTypeAad(envelope.schemaType);
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: iv as BufferSource, additionalData: aad as BufferSource },
+    key,
+    ciphertext as BufferSource,
+  );
+  return new TextDecoder().decode(plaintext);
 }
 
 /**

@@ -54,8 +54,24 @@ interface TrackerSchemaServiceModule {
   upsertWorkspaceTrackerSchema: (
     workspacePath: string,
     schema: string,
-    options?: { fileName?: string; overwrite?: boolean },
+    options?: { fileName?: string; overwrite?: boolean; allowBuiltinOverride?: boolean },
   ) => Promise<{ model: { type: string }; filePath: string; backupPath?: string }>;
+  customizeWorkspaceTrackerSchema: (
+    workspacePath: string,
+    type: string,
+  ) => Promise<{ model: { type: string; displayName?: string }; filePath: string; created: boolean }>;
+  resetWorkspaceTrackerSchemaOverride: (
+    workspacePath: string,
+    type: string,
+  ) => Promise<{ reset: boolean; filePath?: string }>;
+  getWorkspaceTrackerSchemaOverride: (
+    workspacePath: string,
+    type: string,
+  ) => Promise<{ overridden: boolean; filePath?: string }>;
+  applyRemoteWorkspaceTrackerSchemaDef: (
+    workspacePath: string,
+    def: { type: string; model: string | null; syncId: number },
+  ) => Promise<{ applied: boolean; deleted?: boolean; reason?: string }>;
   TrackerTypeExistsError: new (...args: any[]) => Error;
 }
 
@@ -89,6 +105,17 @@ fields:
 roles:
   title: title
 `;
+}
+
+function buildSyncedModel(type: string, displayName: string): string {
+  return JSON.stringify({
+    type,
+    displayName,
+    fields: [
+      { name: 'title', type: 'string', required: true },
+    ],
+    roles: { title: 'title' },
+  });
 }
 
 describe('TrackerSchemaService custom-type visibility (NIM-760)', () => {
@@ -196,5 +223,129 @@ describe('tracker_define_type clobber guard (NIM-760)', () => {
     expect(backup).toContain('displayName: Marketing');
     expect(backup).not.toContain('Marketing REPLACED');
     expect(result.backupPath!.endsWith('.bak')).toBe(true);
+  });
+
+  it('keeps built-in clobber guard for direct define calls', async () => {
+    await expect(
+      service.upsertWorkspaceTrackerSchema(
+        workspacePath,
+        buildCustomYaml('bug', 'Bug Override'),
+      ),
+    ).rejects.toThrow("Cannot redefine built-in tracker type 'bug'");
+  });
+
+  it('customizes and resets a built-in through the explicit override path', async () => {
+    const customized = await service.customizeWorkspaceTrackerSchema(workspacePath, 'bug');
+
+    expect(customized.created).toBe(true);
+    expect(customized.model.type).toBe('bug');
+    expect(path.basename(customized.filePath)).toBe('bug.yaml');
+
+    const override = await service.getWorkspaceTrackerSchemaOverride(workspacePath, 'bug');
+    expect(override).toEqual({ overridden: true, filePath: customized.filePath });
+    expect(await fs.readFile(customized.filePath, 'utf-8')).toContain('type: bug');
+
+    const reset = await service.resetWorkspaceTrackerSchemaOverride(workspacePath, 'bug');
+    expect(reset).toEqual({ reset: true, filePath: customized.filePath });
+    await expect(fs.stat(customized.filePath)).rejects.toThrow();
+
+    const after = await service.getWorkspaceTrackerSchemaOverride(workspacePath, 'bug');
+    expect(after).toEqual({ overridden: false });
+  });
+
+  it('opens an existing override instead of overwriting it', async () => {
+    const first = await service.customizeWorkspaceTrackerSchema(workspacePath, 'bug');
+    await fs.writeFile(first.filePath, buildCustomYaml('bug', 'Bug Customized'), 'utf-8');
+
+    const second = await service.customizeWorkspaceTrackerSchema(workspacePath, 'bug');
+
+    expect(second.created).toBe(false);
+    expect(second.filePath).toBe(first.filePath);
+    expect(second.model.displayName).toBe('Bug Customized');
+  });
+});
+
+describe('TrackerSchemaService remote schema sync apply', () => {
+  let workspacePath: string;
+  let service: TrackerSchemaServiceModule;
+  let applyRemoteMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+
+    applyRemoteMock = vi.fn(async (_workspacePath: string, def: { model: string | null }) => ({
+      applied: true,
+      deleted: def.model === null,
+    }));
+    vi.doMock('../tracker/trackerTypeDefStore', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../tracker/trackerTypeDefStore')>();
+      return {
+        ...actual,
+        applyRemoteTrackerSchemaDef: applyRemoteMock,
+      };
+    });
+
+    workspacePath = await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-schema-sync-'));
+    await fs.mkdir(path.join(workspacePath, '.nimbalyst', 'trackers'), { recursive: true });
+
+    service = (await import('../TrackerSchemaService')) as unknown as TrackerSchemaServiceModule;
+    service.initTrackerSchemaService(workspacePath);
+  });
+
+  afterEach(async () => {
+    service.updateTrackerSchemaWorkspace(null);
+    vi.doUnmock('../tracker/trackerTypeDefStore');
+    await fs.rm(workspacePath, { recursive: true, force: true });
+  });
+
+  it('registers a valid applied remote schema in the active workspace registry', async () => {
+    const model = buildSyncedModel('remoteEpic', 'Remote Epic');
+    const result = await service.applyRemoteWorkspaceTrackerSchemaDef(workspacePath, {
+      type: 'remoteEpic',
+      model,
+      syncId: 42,
+    });
+
+    expect(result).toEqual({ applied: true, deleted: false });
+    expect(applyRemoteMock).toHaveBeenCalledWith(workspacePath, {
+      type: 'remoteEpic',
+      model,
+      syncId: 42,
+    });
+    expect(service.getTrackerSchema('remoteEpic')?.type).toBe('remoteEpic');
+    expect(mockWindowSend).toHaveBeenCalledWith('tracker-schema:changed', expect.any(Array));
+  });
+
+  it('rejects malformed remote schema JSON before it reaches the DB mirror', async () => {
+    const result = await service.applyRemoteWorkspaceTrackerSchemaDef(workspacePath, {
+      type: 'remoteEpic',
+      model: '{"type":"different","fields":[]}',
+      syncId: 1,
+    });
+
+    expect(result).toEqual({ applied: false, reason: 'invalid' });
+    expect(applyRemoteMock).not.toHaveBeenCalled();
+    expect(service.getTrackerSchema('remoteEpic')).toBeUndefined();
+  });
+
+  it('applies a remote tombstone to the active registry', async () => {
+    await service.applyRemoteWorkspaceTrackerSchemaDef(workspacePath, {
+      type: 'remoteEpic',
+      model: buildSyncedModel('remoteEpic', 'Remote Epic'),
+      syncId: 1,
+    });
+    expect(service.getTrackerSchema('remoteEpic')).toBeDefined();
+    mockWindowSend.mockClear();
+
+    const result = await service.applyRemoteWorkspaceTrackerSchemaDef(workspacePath, {
+      type: 'remoteEpic',
+      model: null,
+      syncId: 2,
+    });
+
+    expect(result).toEqual({ applied: true, deleted: true });
+    expect(service.getTrackerSchema('remoteEpic')).toBeUndefined();
+    expect(mockWindowSend).toHaveBeenCalledWith('tracker-schema:changed', expect.any(Array));
   });
 });

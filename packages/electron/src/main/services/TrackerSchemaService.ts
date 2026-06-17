@@ -25,7 +25,18 @@ import {
   getRoleField,
   getFieldByRole,
 } from '@nimbalyst/runtime/plugins/TrackerPlugin/models';
-import { materializeTrackerTypeDef, materializeTrackerTypeDefs } from './tracker/trackerTypeDefStore';
+import {
+  materializeTrackerTypeDef,
+  materializeTrackerTypeDefs,
+  reconcileYamlTrackerTypeDefs,
+  listMaterializedTrackerTypeDefs,
+  classifyTrackerSchemaDrift,
+  hasSchemaDrift,
+  applyRemoteTrackerSchemaDef,
+  type SchemaDriftEntry,
+  type RemoteTrackerSchemaDef,
+  type ApplyRemoteSchemaResult,
+} from './tracker/trackerTypeDefStore';
 
 // ---------------------------------------------------------------------------
 // Service State
@@ -84,32 +95,47 @@ function loadWorkspaceSchemas(workspacePath: string): void {
 
   const trackersDir = path.join(workspacePath, '.nimbalyst', 'trackers');
 
+  const loaded: TrackerDataModel[] = [];
+  let shouldReconcileYamlMirror = false;
   try {
-    if (!fs.existsSync(trackersDir)) return;
+    if (fs.existsSync(trackersDir)) {
+      const files = fs.readdirSync(trackersDir).filter(
+        f => f.endsWith('.yaml') || f.endsWith('.yml')
+      );
+      shouldReconcileYamlMirror = true;
 
-    const files = fs.readdirSync(trackersDir).filter(
-      f => f.endsWith('.yaml') || f.endsWith('.yml')
-    );
-
-    const loaded: TrackerDataModel[] = [];
-    for (const file of files) {
-      try {
-        const filePath = path.join(trackersDir, file);
-        const content = fs.readFileSync(filePath, 'utf-8');
-        const model = parseTrackerYAML(content);
-        globalRegistry.register(model); // workspace schemas are not builtin
-        loaded.push(model);
-        // console.log(`[TrackerSchemaService] Loaded workspace schema: ${model.type}`);
-      } catch (err) {
-        console.error(`[TrackerSchemaService] Failed to load ${file}:`, err);
+      for (const file of files) {
+        try {
+          const filePath = path.join(trackersDir, file);
+          const content = fs.readFileSync(filePath, 'utf-8');
+          const model = parseTrackerYAML(content);
+          globalRegistry.register(model); // workspace schemas are not builtin
+          loaded.push(model);
+          // console.log(`[TrackerSchemaService] Loaded workspace schema: ${model.type}`);
+        } catch (err) {
+          console.error(`[TrackerSchemaService] Failed to load ${file}:`, err);
+        }
       }
+    } else {
+      shouldReconcileYamlMirror = true;
     }
-    // Mirror the loaded models into the DB so the database is the local source
-    // of truth for offline consumers (the `nim` CLI). Best-effort; never blocks
-    // schema loading. YAML stays the init/import format for git-backed projects.
-    if (loaded.length) void materializeTrackerTypeDefs(workspacePath, loaded);
   } catch (err) {
-    // Directory doesn't exist or can't be read -- that's fine
+    // Directory can't be read. Do not reconcile against an empty YAML set here:
+    // a transient permission/filesystem error should not tombstone every
+    // YAML-sourced row in tracker_type_defs.
+    console.error(`[TrackerSchemaService] Failed to read tracker schemas from ${trackersDir}:`, err);
+  }
+
+  // Mirror the loaded models into the DB so the database is the local source of
+  // truth for offline consumers (the `nim` CLI), then reconcile: tombstone any
+  // YAML-sourced type whose file was deleted on disk so the mirror stays an
+  // accurate reflection of the YAML set. Best-effort; never blocks schema
+  // loading. YAML stays the init/import format for git-backed projects.
+  if (shouldReconcileYamlMirror) {
+    void (async () => {
+      if (loaded.length) await materializeTrackerTypeDefs(workspacePath, loaded);
+      await reconcileYamlTrackerTypeDefs(workspacePath, loaded.map(m => m.type));
+    })();
   }
 }
 
@@ -208,6 +234,27 @@ function registerIpcHandlers(): void {
   safeHandle('tracker-schema:get-field-by-role', async (_event, type: string, role: TrackerSchemaRole) => {
     const field = getFieldByRole(globalRegistry, type, role);
     return field ?? null;
+  });
+
+  safeHandle('tracker-schema:get-drift', async (_event, workspacePath: string) => {
+    return computeWorkspaceSchemaDrift(workspacePath);
+  });
+
+  safeHandle('tracker-schema:resync-mirror', async (_event, workspacePath: string) => {
+    await resyncWorkspaceSchemaMirror(workspacePath);
+    return computeWorkspaceSchemaDrift(workspacePath);
+  });
+
+  safeHandle('tracker-schema:get-override', async (_event, workspacePath: string, type: string) => {
+    return getWorkspaceTrackerSchemaOverride(workspacePath, type);
+  });
+
+  safeHandle('tracker-schema:customize', async (_event, workspacePath: string, type: string) => {
+    return customizeWorkspaceTrackerSchema(workspacePath, type);
+  });
+
+  safeHandle('tracker-schema:reset-override', async (_event, workspacePath: string, type: string) => {
+    return resetWorkspaceTrackerSchemaOverride(workspacePath, type);
   });
 }
 
@@ -363,14 +410,14 @@ export class TrackerTypeExistsError extends Error {
 export async function upsertWorkspaceTrackerSchema(
   workspacePath: string,
   schema: TrackerDataModel | string,
-  options?: { fileName?: string; overwrite?: boolean },
+  options?: { fileName?: string; overwrite?: boolean; allowBuiltinOverride?: boolean },
 ): Promise<{ model: TrackerDataModel; filePath: string; backupPath?: string }> {
   if (!workspacePath) throw new Error('workspacePath is required');
 
   const yamlContent = typeof schema === 'string' ? schema : serializeTrackerYAML(schema);
   const model = parseTrackerYAML(yamlContent);
 
-  if (globalRegistry.isBuiltin(model.type)) {
+  if (globalRegistry.isBuiltin(model.type) && !options?.allowBuiltinOverride) {
     throw new Error(`Cannot redefine built-in tracker type '${model.type}'`);
   }
 
@@ -403,13 +450,185 @@ export async function upsertWorkspaceTrackerSchema(
   return { model, filePath, backupPath };
 }
 
+export async function getWorkspaceTrackerSchemaOverride(
+  workspacePath: string,
+  type: string,
+): Promise<{ overridden: boolean; filePath?: string }> {
+  if (!workspacePath || !type) return { overridden: false };
+  const filePath = await findWorkspaceSchemaFileByType(workspacePath, type);
+  return filePath ? { overridden: true, filePath } : { overridden: false };
+}
+
+export async function customizeWorkspaceTrackerSchema(
+  workspacePath: string,
+  type: string,
+): Promise<{ model: TrackerDataModel; filePath: string; created: boolean }> {
+  if (!workspacePath) throw new Error('workspacePath is required');
+  if (!type) throw new Error('type is required');
+
+  const existing = await findWorkspaceSchemaFileByType(workspacePath, type);
+  if (existing) {
+    const content = await fsPromises.readFile(existing, 'utf-8');
+    return { model: parseTrackerYAML(content), filePath: existing, created: false };
+  }
+
+  const model = globalRegistry.get(type);
+  if (!model) throw new Error(`Unknown tracker type '${type}'`);
+
+  const result = await upsertWorkspaceTrackerSchema(workspacePath, model, {
+    fileName: `${type}.yaml`,
+    allowBuiltinOverride: true,
+  });
+  return { model: result.model, filePath: result.filePath, created: true };
+}
+
+export async function resetWorkspaceTrackerSchemaOverride(
+  workspacePath: string,
+  type: string,
+): Promise<{ reset: boolean; filePath?: string }> {
+  const result = await deleteWorkspaceTrackerSchema(workspacePath, type, {
+    allowBuiltinOverride: true,
+  });
+  return { reset: result.deleted, filePath: result.filePath };
+}
+
+// ---------------------------------------------------------------------------
+// Schema drift (Epic B Phase 2)
+// ---------------------------------------------------------------------------
+
+export interface WorkspaceSchemaDrift {
+  entries: SchemaDriftEntry[];
+  hasDrift: boolean;
+}
+
+interface WorkspaceSchemaDiskRead {
+  models: TrackerDataModel[];
+  canReconcile: boolean;
+}
+
+/**
+ * Read and parse the on-disk YAML schema models for a workspace. Best-effort:
+ * unreadable directories and unparseable files are skipped (logged) rather than
+ * treated as an empty set, mirroring the safeguard in loadWorkspaceSchemas so a
+ * transient read error never masquerades as "all YAML deleted."
+ */
+function readWorkspaceSchemaModelsFromDisk(workspacePath: string): WorkspaceSchemaDiskRead {
+  const trackersDir = path.join(workspacePath, '.nimbalyst', 'trackers');
+  const models: TrackerDataModel[] = [];
+  let files: string[];
+  try {
+    if (!fs.existsSync(trackersDir)) return { models, canReconcile: true };
+    files = fs.readdirSync(trackersDir).filter(
+      f => f.endsWith('.yaml') || f.endsWith('.yml'),
+    );
+  } catch (err) {
+    console.error(`[TrackerSchemaService] readWorkspaceSchemaModelsFromDisk failed for ${trackersDir}:`, err);
+    return { models, canReconcile: false };
+  }
+
+  for (const file of files) {
+    try {
+      const content = fs.readFileSync(path.join(trackersDir, file), 'utf-8');
+      models.push(parseTrackerYAML(content));
+    } catch (err) {
+      console.error(`[TrackerSchemaService] Failed to parse ${file} for drift check:`, err);
+    }
+  }
+  return { models, canReconcile: true };
+}
+
+/**
+ * Compare the on-disk YAML schemas against the DB-materialized mirror and report
+ * per-type drift. Powers the "schema mirror is out of date" warning in the
+ * Trackers settings panel. Best-effort; returns an empty/clean result on error.
+ */
+export async function computeWorkspaceSchemaDrift(
+  workspacePath: string,
+): Promise<WorkspaceSchemaDrift> {
+  if (!workspacePath) return { entries: [], hasDrift: false };
+  try {
+    const { models: yamlModels } = readWorkspaceSchemaModelsFromDisk(workspacePath);
+    const dbDefs = await listMaterializedTrackerTypeDefs(workspacePath);
+    const entries = classifyTrackerSchemaDrift(yamlModels, dbDefs);
+    return { entries, hasDrift: hasSchemaDrift(entries) };
+  } catch (err) {
+    console.error('[TrackerSchemaService] computeWorkspaceSchemaDrift failed:', err);
+    return { entries: [], hasDrift: false };
+  }
+}
+
+/**
+ * Force the DB mirror to exactly match the on-disk YAML set: re-materialize every
+ * loaded YAML model, then tombstone any YAML-sourced row whose file is gone. This
+ * is the non-destructive "reset from files" action - it never touches CLI/sync-
+ * sourced (db-native) rows, only the YAML-mirrored ones.
+ */
+export async function resyncWorkspaceSchemaMirror(
+  workspacePath: string,
+): Promise<void> {
+  if (!workspacePath) throw new Error('workspacePath is required');
+  const { models: yamlModels, canReconcile } = readWorkspaceSchemaModelsFromDisk(workspacePath);
+  if (!canReconcile) {
+    throw new Error('Tracker schema directory could not be read; refusing to resync mirror.');
+  }
+  if (yamlModels.length) await materializeTrackerTypeDefs(workspacePath, yamlModels);
+  await reconcileYamlTrackerTypeDefs(workspacePath, yamlModels.map(m => m.type));
+}
+
+function parseSyncedTrackerSchemaModel(type: string, modelJson: string): TrackerDataModel | null {
+  try {
+    const parsed = JSON.parse(modelJson) as Partial<TrackerDataModel>;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (parsed.type !== type) return null;
+    if (!Array.isArray(parsed.fields)) return null;
+    return parsed as TrackerDataModel;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Apply a server-confirmed schema sync delta. The DB mirror is authoritative
+ * for transport state; the in-process registry is updated only when the delta
+ * belongs to the active workspace, so background workspace sync cannot leak
+ * schema definitions into another open project.
+ */
+export async function applyRemoteWorkspaceTrackerSchemaDef(
+  workspacePath: string,
+  def: RemoteTrackerSchemaDef,
+): Promise<ApplyRemoteSchemaResult> {
+  if (!workspacePath || !def?.type) return { applied: false, reason: 'invalid' };
+
+  const model = def.model === null
+    ? null
+    : parseSyncedTrackerSchemaModel(def.type, def.model);
+  if (def.model !== null && !model) {
+    return { applied: false, reason: 'invalid' };
+  }
+
+  const result = await applyRemoteTrackerSchemaDef(workspacePath, def);
+  if (!result.applied) return result;
+
+  if (currentWorkspacePath === workspacePath) {
+    if (result.deleted) {
+      globalRegistry.clearWorkspaceSchema(def.type);
+    } else if (model) {
+      globalRegistry.register(model);
+    }
+    notifySchemaChanged();
+  }
+
+  return result;
+}
+
 export async function deleteWorkspaceTrackerSchema(
   workspacePath: string,
   type: string,
+  options?: { allowBuiltinOverride?: boolean },
 ): Promise<{ deleted: boolean; filePath?: string }> {
   if (!workspacePath) throw new Error('workspacePath is required');
   if (!type) throw new Error('type is required');
-  if (globalRegistry.isBuiltin(type)) {
+  if (globalRegistry.isBuiltin(type) && !options?.allowBuiltinOverride) {
     throw new Error(`Cannot delete built-in tracker type '${type}'`);
   }
 

@@ -31,6 +31,7 @@ import type {
   TeamDocIndexBroadcastMessage,
   TeamDocIndexRemoveBroadcastMessage,
   TeamOrgKeyRotatedMessage,
+  TeamProjectAccessChangedMessage,
   EncryptedDocIndexEntry,
   ServerTeamState,
 } from './teamSyncTypes';
@@ -360,6 +361,9 @@ export class TeamSyncProvider {
         case 'orgKeyRotated':
           this.handleOrgKeyRotated(message);
           break;
+        case 'projectAccessChanged':
+          this.handleProjectAccessChanged(message);
+          break;
         case 'inboxEventFanoutAck':
           // Best-effort fanout; nothing to reconcile on the sender side.
           break;
@@ -497,6 +501,10 @@ export class TeamSyncProvider {
   private handleOrgKeyRotated(msg: TeamOrgKeyRotatedMessage): void {
     console.log('[TeamSync] Org key rotated, new fingerprint:', msg.fingerprint);
     this.config.onOrgKeyRotated?.(msg.fingerprint);
+  }
+
+  private handleProjectAccessChanged(msg: TeamProjectAccessChangedMessage): void {
+    this.config.onProjectAccessChanged?.(msg.projectId, msg.userId, msg.projectRole);
   }
 
   private handleDocIndexRemoveBroadcast(msg: TeamDocIndexRemoveBroadcastMessage): void {

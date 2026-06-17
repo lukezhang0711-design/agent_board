@@ -36,7 +36,25 @@ import {
   refreshSessionForAccount,
   onAuthStateChange,
   updateSessionToken,
+  getStytchUserId,
+  getUserEmail,
+  getPersonalOrgId,
+  getPersonalUserId,
 } from './StytchAuthService';
+import { getDatabase } from '../database/initialize';
+import {
+  backfillProjection,
+  applyMemberUpserted,
+  applyMemberRemoved,
+  applyMemberRoleChanged,
+  applyProjectGrant,
+  applyProjectRevoke,
+  type OrgWithRoster,
+  type MemberInput,
+  type ProjectionDb,
+  type ProjectRole,
+} from './OrgProjectionService';
+import { canAccess, type CanAccessInput, type AccessDatabase } from './OrgAccessResolver';
 import {
   getOrCreateIdentityKeyPair,
   uploadIdentityKeyToOrg,
@@ -747,6 +765,38 @@ async function clearProjectIdentity(orgId: string): Promise<void> {
   await fetchTeamApi(`/api/teams/${orgId}/project-identity`, 'DELETE', undefined, orgId);
 }
 
+// ============================================================================
+// Epic H1: project-access grant management (admin only). These call the new
+// collab REST endpoints, which forward to the TeamRoom DO project_access table.
+// ============================================================================
+
+/** Grant a member a project-scoped role. Admin only. */
+async function grantProjectAccess(
+  orgId: string, projectId: string, userId: string, projectRole: string,
+): Promise<void> {
+  await fetchTeamApi(
+    `/api/teams/${orgId}/project-access`, 'POST',
+    { projectId, userId, projectRole }, orgId,
+  );
+}
+
+/** Revoke a member's access to a project. Admin only. */
+async function revokeProjectAccess(orgId: string, projectId: string, userId: string): Promise<void> {
+  const qp = `projectId=${encodeURIComponent(projectId)}&userId=${encodeURIComponent(userId)}`;
+  await fetchTeamApi(`/api/teams/${orgId}/project-access?${qp}`, 'DELETE', undefined, orgId);
+}
+
+/** List the grants for a project. Admin only. */
+async function listProjectAccess(
+  orgId: string, projectId: string,
+): Promise<Array<{ userId: string; projectRole: string }>> {
+  const qp = `projectId=${encodeURIComponent(projectId)}`;
+  const data = await fetchTeamApi(
+    `/api/teams/${orgId}/project-access?${qp}`, 'GET', undefined, orgId,
+  ) as { grants?: Array<{ userId: string; projectRole: string }> };
+  return data.grants || [];
+}
+
 /**
  * Re-share the org encryption key with a specific member.
  * Admin-only: fetches the member's current public key and wraps the org key for them.
@@ -1006,6 +1056,12 @@ export async function autoMatchTeamForWorkspace(workspacePath: string): Promise<
         startAutoWrapPolling(result.team.orgId);
       }
 
+      // Epic H1: refresh the local org/project/membership projection so the
+      // canAccess resolver has this team's roster + grants. Best-effort.
+      syncOrgProjectionFromServer().catch(err => {
+        logger.main.warn('[TeamService] post-match org projection sync failed:', err);
+      });
+
       // Notify all renderer windows about the team match
       const { BrowserWindow } = await import('electron');
       for (const win of BrowserWindow.getAllWindows()) {
@@ -1110,7 +1166,202 @@ export async function autoWrapForNewMembers(orgId: string): Promise<void> {
 // IPC Handler Registration
 // ============================================================================
 
+/**
+ * Epic H1: refresh the LOCAL org/project/membership projection from the
+ * server-authoritative roster. Mints/updates `orgs`/`projects`/`org_members`/
+ * `project_access` so the `canAccess` resolver can gate UX locally.
+ *
+ * Idempotent (upserts + DO NOTHING grant seeding) — safe to call on workspace
+ * team match, after team mutations, or periodically. Best-effort: a roster
+ * fetch failure for one team seeds that team with an empty roster rather than
+ * aborting the whole sync.
+ */
+export async function syncOrgProjectionFromServer(): Promise<{
+  success: boolean;
+  counts?: { orgs: number; projects: number; members: number; grants: number };
+  error?: string;
+}> {
+  if (!isAuthenticated()) return { success: false, error: 'not-authenticated' };
+  const db = getDatabase() as AccessDatabase | null;
+  if (!db) return { success: false, error: 'db-unavailable' };
+
+  try {
+    const orgs: OrgWithRoster[] = [];
+
+    // Personal org (solo owner) so personal-context access resolves locally.
+    const personalOrgId = getPersonalOrgId();
+    const personalUserId = getPersonalUserId();
+    if (personalOrgId && personalUserId) {
+      orgs.push({
+        org: { orgId: personalOrgId, name: 'Personal', flavor: 'personal' },
+        members: [{ userId: personalUserId, email: getUserEmail(), role: 'owner' }],
+      });
+    }
+
+    const teams = await listTeams();
+    for (const team of teams) {
+      let members: MemberInput[] = [];
+      try {
+        const data = await listMembers(team.orgId);
+        members = (data.members || []).map((m) => ({
+          userId: m.memberId,
+          email: m.email,
+          role: m.role,
+        }));
+      } catch (err) {
+        // Pending/invited teams (or transient failures) can't list members --
+        // seed the org row with an empty roster; a later sync fills it in.
+        logger.main.debug('[TeamService] projection sync: listMembers failed for', team.orgId, err);
+      }
+      orgs.push({
+        org: {
+          orgId: team.orgId,
+          name: team.name,
+          flavor: 'team',
+          teamProjectId: team.teamProjectId ?? null,
+          gitOriginHash: team.gitRemoteHash,
+        },
+        members,
+      });
+    }
+
+    const counts = await backfillProjection(db, orgs);
+    logger.main.info('[TeamService] org projection synced:', counts);
+    return { success: true, counts };
+  } catch (err) {
+    logger.main.error('[TeamService] syncOrgProjectionFromServer error:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Resolve the viewer's per-org member id (Stytch member ids are org-scoped) by
+ * matching the current user's email against the local roster, then run the
+ * `canAccess` resolver. Falls back to the current session's user id.
+ */
+async function canAccessForCurrentUser(input: CanAccessInput): Promise<{
+  allowed: boolean; orgRole: string | null; projectRole: string | null; reason: string;
+}> {
+  const db = getDatabase() as AccessDatabase | null;
+  if (!db) return { allowed: false, orgRole: null, projectRole: null, reason: 'db-unavailable' };
+
+  let viewerUserId = getStytchUserId() ?? getPersonalUserId() ?? '';
+  const email = getUserEmail();
+
+  // Resolve the org first (from projectId if needed), then map email -> member id.
+  let orgId = input.orgId ?? null;
+  if (!orgId && input.projectId) {
+    const pr = await db.query<{ org_id: string }>(`SELECT org_id FROM projects WHERE id = $1`, [input.projectId]);
+    orgId = pr.rows[0]?.org_id ?? null;
+  }
+  if (orgId && email) {
+    const r = await db.query<{ user_id: string }>(
+      `SELECT user_id FROM org_members WHERE org_id = $1 AND lower(email) = lower($2)`,
+      [orgId, email],
+    );
+    if (r.rows[0]?.user_id) viewerUserId = r.rows[0].user_id;
+  }
+
+  return canAccess(db, viewerUserId, input);
+}
+
 export function registerTeamHandlers(): void {
+  safeHandle('org:sync-projection', async () => {
+    return syncOrgProjectionFromServer();
+  });
+
+  safeHandle('org:can-access', async (_event, input: CanAccessInput) => {
+    try {
+      return await canAccessForCurrentUser(input);
+    } catch (error) {
+      return {
+        allowed: false, orgRole: null, projectRole: null,
+        reason: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
+  safeHandle('org:grant-project-access', async (_event, orgId: string, projectId: string, userId: string, projectRole: string) => {
+    try {
+      await grantProjectAccess(orgId, projectId, userId, projectRole);
+      // Reflect the grant in the local projection immediately.
+      await syncOrgProjectionFromServer();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle('org:revoke-project-access', async (_event, orgId: string, projectId: string, userId: string) => {
+    try {
+      await revokeProjectAccess(orgId, projectId, userId);
+      await syncOrgProjectionFromServer();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle('org:list-project-access', async (_event, orgId: string, projectId: string) => {
+    try {
+      const grants = await listProjectAccess(orgId, projectId);
+      return { success: true, grants };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Epic H1 live write-through: the renderer's TeamSync config forwards DO
+  // broadcasts here so the local projection (org_members / project_access)
+  // stays current without a full re-sync. Each is targeted + idempotent.
+  safeHandle('org:apply-project-access', async (_event, projectId: string, userId: string, projectRole: string | null) => {
+    try {
+      const db = getDatabase() as ProjectionDb | null;
+      if (!db) return { success: false, error: 'db-unavailable' };
+      if (projectRole) {
+        await applyProjectGrant(db, projectId, userId, projectRole as ProjectRole);
+      } else {
+        await applyProjectRevoke(db, projectId, userId);
+      }
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle('org:apply-member-upserted', async (_event, orgId: string, userId: string, email: string | null, role: string) => {
+    try {
+      const db = getDatabase() as ProjectionDb | null;
+      if (!db) return { success: false, error: 'db-unavailable' };
+      await applyMemberUpserted(db, orgId, { userId, email, role });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle('org:apply-member-role-changed', async (_event, orgId: string, userId: string, role: string) => {
+    try {
+      const db = getDatabase() as ProjectionDb | null;
+      if (!db) return { success: false, error: 'db-unavailable' };
+      await applyMemberRoleChanged(db, orgId, userId, role);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  safeHandle('org:apply-member-removed', async (_event, orgId: string, userId: string) => {
+    try {
+      const db = getDatabase() as ProjectionDb | null;
+      if (!db) return { success: false, error: 'db-unavailable' };
+      await applyMemberRemoved(db, orgId, userId);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
   safeHandle('team:list', async () => {
     try {
       const teams = await listTeams();
@@ -1317,6 +1568,20 @@ export function registerTeamHandlers(): void {
       return { success: true, ...result };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Epic H1: populate the local org/project/membership projection independently
+  // of a workspace team match, so `canAccess` resolves correctly even before (or
+  // without) opening a matched workspace. Runs once now (no-op until auth + db
+  // are ready) and again whenever auth becomes available (login / token refresh
+  // on launch). Idempotent + best-effort.
+  syncOrgProjectionFromServer().catch(err =>
+    logger.main.warn('[TeamService] launch org projection sync failed:', err));
+  onAuthStateChange((authState) => {
+    if (authState.isAuthenticated) {
+      syncOrgProjectionFromServer().catch(err =>
+        logger.main.warn('[TeamService] auth-change org projection sync failed:', err));
     }
   });
 }

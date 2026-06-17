@@ -14,6 +14,12 @@ import {
 } from '@nimbalyst/runtime';
 import crypto from 'crypto';
 import { getCurrentIdentity } from './TrackerIdentityService';
+import { applyCommentMutation, type CommentMutation } from './tracker/commentMutations';
+import {
+  getBacklinks as getRelationshipBacklinks,
+  reindexItemRelationships,
+  rebuildWorkspaceRelationshipIndex,
+} from './tracker/trackerRelationshipIndexStore';
 import { extractFrontmatter, extractCommonFields } from '../utils/frontmatterReader';
 import { VIRTUAL_DOCS, isVirtualPath } from '@nimbalyst/runtime';
 import {
@@ -3239,17 +3245,25 @@ export function setupDocumentServiceHandlers(resolver: DocumentServiceResolver) 
 
       const data = typeof row.rows[0].data === 'string' ? JSON.parse(row.rows[0].data) : row.rows[0].data || {};
       const comments = data.comments || [];
-      const idx = comments.findIndex((c: any) => c.id === payload.commentId);
-      if (idx === -1) return { success: false, error: 'Comment not found' };
 
-      if (payload.body !== undefined) {
-        comments[idx].body = payload.body;
-        comments[idx].updatedAt = Date.now();
+      // NIM-360: edit/delete are author-only. Build the requested mutation
+      // (delete wins over edit if both are set) and let the pure guard enforce
+      // authorship + LWW stamping. Fails closed for non-authors / unknown ids.
+      const actor = getCurrentIdentity(row.rows[0].workspace);
+      const mutation: CommentMutation | null =
+        payload.deleted === true
+          ? { kind: 'delete' }
+          : payload.body !== undefined
+            ? { kind: 'edit', body: payload.body }
+            : null;
+      if (!mutation) return { success: false, error: 'No comment change requested' };
+
+      const result = applyCommentMutation(comments, payload.commentId, mutation, actor, Date.now());
+      if (!result.ok) {
+        return { success: false, error: result.error, code: result.code };
       }
-      if (payload.deleted !== undefined) {
-        comments[idx].deleted = payload.deleted;
-      }
-      data.comments = comments;
+      data.comments = result.comments;
+      data.lastModifiedBy = actor;
 
       await database.query(
         `UPDATE tracker_items SET data = $1, updated = NOW() WHERE id = $2`,
@@ -3262,6 +3276,73 @@ export function setupDocumentServiceHandlers(resolver: DocumentServiceResolver) 
       // Trigger sync
       await syncAfterCommentMutation(event, payload.itemId, row.rows[0].workspace, row.rows[0].type);
 
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Relationship backlinks (Epic C Phase 2). The tracker_relationship_index is a
+  // local, rebuildable projection of relationship field values; build it lazily
+  // per workspace on first request, then return incoming links for an item. The
+  // UI resolves source titles from its already-loaded items map, so we return
+  // only the edge identity.
+  // Throttle full-workspace rebuilds: cheap enough to re-run so MCP/agent writes
+  // (which don't reindex incrementally) surface in backlinks, but not on every
+  // rapid item open. UI field edits reindex their own item immediately.
+  const relationshipIndexBuiltAt = new Map<string, number>();
+  const RELATIONSHIP_INDEX_TTL_MS = 2000;
+
+  async function ensureRelationshipIndex(workspace: string): Promise<void> {
+    const last = relationshipIndexBuiltAt.get(workspace) ?? 0;
+    if (Date.now() - last < RELATIONSHIP_INDEX_TTL_MS) return;
+    relationshipIndexBuiltAt.set(workspace, Date.now()); // set before await to dedupe concurrent builds
+    try {
+      const { globalRegistry } = await import('@nimbalyst/runtime/plugins/TrackerPlugin/models/TrackerDataModel');
+      await rebuildWorkspaceRelationshipIndex(
+        workspace,
+        (type) => globalRegistry.get(type)?.fields ?? [],
+        database as any,
+      );
+    } catch (err) {
+      relationshipIndexBuiltAt.delete(workspace); // allow a retry on next request
+      console.error('[DocumentService] relationship index build failed:', err);
+    }
+  }
+
+  safeHandle('document-service:tracker-item-backlinks', async (_event, payload: { itemId: string }) => {
+    try {
+      const row = await database.query<any>(`SELECT workspace FROM tracker_items WHERE id = $1`, [payload.itemId]);
+      const workspace = row.rows[0]?.workspace;
+      if (!workspace) return { success: true, backlinks: [] };
+      await ensureRelationshipIndex(workspace);
+      const backlinks = await getRelationshipBacklinks(workspace, payload.itemId, database as any);
+      return {
+        success: true,
+        backlinks: backlinks.map((b) => ({
+          sourceItemId: b.sourceItemId,
+          sourceFieldId: b.sourceFieldId,
+          relationshipTypeKey: b.relationshipTypeKey,
+        })),
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error), backlinks: [] };
+    }
+  });
+
+  // Incremental reindex of one item's outgoing relationship edges. Called by the
+  // renderer after a relationship field changes so backlinks update without a
+  // full workspace rebuild. Idempotent.
+  safeHandle('document-service:tracker-item-reindex-relationships', async (_event, payload: { itemId: string }) => {
+    try {
+      const row = await database.query<any>(`SELECT id, type, data, workspace, updated FROM tracker_items WHERE id = $1`, [payload.itemId]);
+      if (row.rows.length === 0) return { success: false, error: 'Item not found' };
+      const r = row.rows[0];
+      const data = typeof r.data === 'string' ? JSON.parse(r.data) : (r.data || {});
+      const { globalRegistry } = await import('@nimbalyst/runtime/plugins/TrackerPlugin/models/TrackerDataModel');
+      const defs = globalRegistry.get(r.type)?.fields ?? [];
+      const updatedAt = typeof r.updated === 'string' ? r.updated : (r.updated ? new Date(r.updated).toISOString() : null);
+      await reindexItemRelationships(r.workspace, r.id, data, defs, updatedAt, database as any);
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };

@@ -18,6 +18,7 @@ import {
 } from '../../services/TrackerPolicyService';
 import { isTrackerSyncActive, syncTrackerItem } from '../../services/TrackerSyncManager';
 import { applyHeadlessBodyMarkdown } from '../../services/MainBodyDocService';
+import { applyRelationshipFieldWrites } from '../../services/tracker/relationshipFieldWrite';
 import { getWorkspaceState } from '../../utils/store';
 import { getVisibleTrackerLinkedSessions, shouldPersistTrackerLinkedSessions } from '../../../shared/trackerSessionLinks';
 import {
@@ -1358,7 +1359,7 @@ export async function handleTrackerDeleteType(
       ? `EXISTS (SELECT 1 FROM json_each(type_tags) WHERE value = $2)`
       : `$2 = ANY(type_tags)`;
     const usage = await db.query<{ count: number | string }>(
-      `SELECT COUNT(*)::int AS count
+      `SELECT COUNT(*) AS count
        FROM tracker_items
        WHERE workspace = $1
          AND (type = $2 OR ${tagMembership})`,
@@ -1649,6 +1650,15 @@ export async function handleTrackerCreate(
           data[key] = value;
         }
       }
+    }
+
+    // Canonicalize + validate relationship fields (Epic C) before persistence.
+    const relWrite = applyRelationshipFieldWrites(data, globalRegistry.get(args.type)?.fields ?? [], id);
+    if (!relWrite.ok) {
+      return {
+        content: [{ type: 'text', text: `Invalid relationship field "${relWrite.field}": ${relWrite.errors.join('; ')}` }],
+        isError: true,
+      };
     }
 
     const validationResult = globalRegistry.validate(args.type, data);
@@ -2239,6 +2249,15 @@ export async function handleTrackerUpdate(
         changes.type = { from: oldType, to: newType };
         row.type = newType;
         primaryTypeChanged = true;
+      }
+
+      // Canonicalize + validate relationship fields (Epic C) before persistence.
+      const relWrite = applyRelationshipFieldWrites(data, globalRegistry.get(row.type)?.fields ?? [], row.id);
+      if (!relWrite.ok) {
+        return {
+          content: [{ type: 'text', text: `Invalid relationship field "${relWrite.field}": ${relWrite.errors.join('; ')}` }],
+          isError: true,
+        };
       }
 
       const validationResult = globalRegistry.validate(row.type, data);

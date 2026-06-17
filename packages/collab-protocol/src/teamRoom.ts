@@ -105,6 +105,7 @@ export type TeamServerMessage =
   | TeamDocIndexBroadcastMessage
   | TeamDocIndexRemoveBroadcastMessage
   | TeamOrgKeyRotatedMessage
+  | TeamProjectAccessChangedMessage
   | InboxEventFanoutAckMessage
   | TeamErrorMessage;
 
@@ -166,6 +167,21 @@ export interface TeamIdentityKeyUploadedMessage {
 export interface TeamOrgKeyRotatedMessage {
   type: 'orgKeyRotated';
   fingerprint: string;
+}
+
+/**
+ * Broadcast: a member's project-scoped access changed (Epic H1).
+ *
+ * Emitted by the TeamRoom when a project_access grant is created, updated, or
+ * revoked (via the admin REST mutations or the one-time backfill). Lets every
+ * connected member keep its local org/project projection live without polling.
+ * `projectRole` is the new role, or `null` when access was revoked.
+ */
+export interface TeamProjectAccessChangedMessage {
+  type: 'projectAccessChanged';
+  projectId: string;
+  userId: string;
+  projectRole: string | null;
 }
 
 /** Full document list response */

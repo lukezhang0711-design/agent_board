@@ -31,6 +31,7 @@ export type SettingsCategory =
   | 'marketplace'
   | 'installed'
   | 'team'
+  | 'org'
   | 'tracker-config'
   | 'github';
 
@@ -253,6 +254,12 @@ Best for quick edits and tasks that do not require multi-file operations.`,
     ...(alphaFeatures['collaboration'] ? [{
       title: 'Collaboration',
       items: [
+        {
+          id: 'org' as SettingsCategory,
+          name: 'Organization',
+          icon: <MaterialSymbol icon="corporate_fare" size={16} />,
+          isAlpha: true,
+        },
         {
           id: 'team' as SettingsCategory,
           name: 'Team',

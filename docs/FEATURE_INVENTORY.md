@@ -219,12 +219,16 @@ A concise reference of all features in the product. Keep this up to date as feat
 
 ## Tracker System
 
-- Tracker mode (Cmd+T) with kanban and list views
+- Tracker mode (Cmd+T) with list, table, kanban, and tag-board views
+- Kanban columns honor each type's status order from its schema (no hardcoded order)
+- Tag-board view with one column per tag (items appear in every matching column, plus an Untagged column)
+- Saved views: name, save, apply, and delete reusable filter/layout views per workspace
 - Configurable tracker item types (bugs, tasks, architecture docs, decisions, etc.)
 - Tracker sidebar with type counts
 - Item detail panel
 - E2E encrypted sync across team members
 - Inline `#type` items in markdown (TrackerPlugin)
+- Tracker schema overrides in Trackers settings -- customize a built-in type into `.nimbalyst/trackers`, edit an existing override, reset back to the built-in default, and resync the local database mirror when schema files drift
 - External-source importers: import GitHub issues (extension-provided) into the tracker as native bug, task, or feature items with a back-link to the source, a "from GitHub" chip, re-snapshot ("pull latest from source") with conservative merge, and a Source filter; agent tools `tracker_importer_list` / `tracker_importer_search` / `tracker_import` / `tracker_resnapshot` / `tracker_get_by_urn`
 
 ## Shared Links

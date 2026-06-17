@@ -428,10 +428,40 @@ export async function initSharedDocuments(workspacePath: string, retryCount = 0)
         );
       },
 
-      onMemberAdded: (_member) => {
+      onMemberAdded: (member) => {
         (window as any).electronAPI.team.autoWrapNewMembers(orgId).catch((err: unknown) => {
           console.error('[collabDocuments] auto-wrap after memberAdded failed:', err);
         });
+        // Epic H1: keep the local org_members projection live.
+        (window as any).electronAPI.org
+          .applyMemberUpserted(orgId, member.userId, member.email ?? null, member.role)
+          .catch((err: unknown) => {
+            console.error('[collabDocuments] applyMemberUpserted failed:', err);
+          });
+      },
+
+      onMemberRoleChanged: (userId, role) => {
+        (window as any).electronAPI.org
+          .applyMemberRoleChanged(orgId, userId, role)
+          .catch((err: unknown) => {
+            console.error('[collabDocuments] applyMemberRoleChanged failed:', err);
+          });
+      },
+
+      onMemberRemoved: (userId) => {
+        (window as any).electronAPI.org
+          .applyMemberRemoved(orgId, userId)
+          .catch((err: unknown) => {
+            console.error('[collabDocuments] applyMemberRemoved failed:', err);
+          });
+      },
+
+      onProjectAccessChanged: (projectId, userId, projectRole) => {
+        (window as any).electronAPI.org
+          .applyProjectAccess(projectId, userId, projectRole)
+          .catch((err: unknown) => {
+            console.error('[collabDocuments] applyProjectAccess failed:', err);
+          });
       },
 
       onIdentityKeyUploaded: (_userId) => {

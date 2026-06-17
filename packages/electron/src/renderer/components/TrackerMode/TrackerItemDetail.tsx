@@ -16,10 +16,12 @@ import { $getRoot } from 'lexical';
 import type { TrackerRecord } from '@nimbalyst/runtime/core/TrackerRecord';
 import { globalRegistry } from '@nimbalyst/runtime/plugins/TrackerPlugin/models';
 import type { FieldDefinition } from '@nimbalyst/runtime/plugins/TrackerPlugin/models/TrackerDataModel';
-import { getRecordTitle, getRecordStatus, getRecordPriority, getRecordField } from '@nimbalyst/runtime/plugins/TrackerPlugin/trackerRecordAccessors';
+import { getRecordTitle, getRecordStatus, getRecordPriority, getRecordField, isSameIdentity } from '@nimbalyst/runtime/plugins/TrackerPlugin/trackerRecordAccessors';
+import type { TrackerIdentity } from '@nimbalyst/runtime';
 import { TrackerFieldEditor, type TeamMemberOption } from '@nimbalyst/runtime/plugins/TrackerPlugin/components/TrackerFieldEditor';
 import { UserAvatar } from '@nimbalyst/runtime/plugins/TrackerPlugin/components/UserAvatar';
-import { trackerItemByIdAtom } from '@nimbalyst/runtime/plugins/TrackerPlugin/trackerDataAtoms';
+import { trackerItemByIdAtom, trackerItemsMapAtom } from '@nimbalyst/runtime/plugins/TrackerPlugin/trackerDataAtoms';
+import { resolveRelationshipType } from '@nimbalyst/runtime/plugins/TrackerPlugin/models';
 import { refreshSessionListAtom, sessionRegistryAtom, type SessionMeta } from '../../store/atoms/sessions';
 import { buildTrackerDeepLink } from '../../store/atoms/collabDocuments';
 import { errorNotificationService } from '../../services/ErrorNotificationService';
@@ -680,6 +682,12 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           syncMode,
         });
       }
+      // Refresh the derived relationship index for this item (Epic C Phase 2) so
+      // backlinks stay current after a relationship field edit. Fire-and-forget,
+      // idempotent; harmless for non-relationship field saves.
+      window.electronAPI
+        .invoke('document-service:tracker-item-reindex-relationships', { itemId: item.id })
+        .catch(() => {});
     } catch (err) {
       console.error('[TrackerItemDetail] Failed to save field:', err);
     }
@@ -1474,6 +1482,9 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           </div>
         )}
 
+        {/* Linked From (incoming relationships, Epic C Phase 2) */}
+        <BacklinksSection itemId={item.id} />
+
         {/* Comments section */}
         {item.source !== 'inline' && item.source !== 'frontmatter' && (
           <div className="space-y-2">
@@ -1629,12 +1640,105 @@ const ReadOnlyField: React.FC<{ field: FieldDefinition; value: any }> = ({ field
   );
 };
 
+/**
+ * "Linked From" — incoming relationships (Epic C Phase 2). Reads the derived
+ * tracker_relationship_index via IPC; resolves each source item's display from
+ * the loaded items map. Hidden when there are no backlinks.
+ */
+interface Backlink { sourceItemId: string; sourceFieldId: string; relationshipTypeKey?: string | null }
+
+const BacklinksSection: React.FC<{ itemId: string }> = ({ itemId }) => {
+  const [backlinks, setBacklinks] = useState<Backlink[]>([]);
+  const itemsMap = useAtomValue(trackerItemsMapAtom);
+
+  useEffect(() => {
+    let cancelled = false;
+    window.electronAPI
+      .invoke('document-service:tracker-item-backlinks', { itemId })
+      .then((res: any) => {
+        if (cancelled) return;
+        setBacklinks(res?.success && Array.isArray(res.backlinks) ? res.backlinks : []);
+      })
+      .catch(() => { if (!cancelled) setBacklinks([]); });
+    return () => { cancelled = true; };
+  }, [itemId]);
+
+  if (backlinks.length === 0) return null;
+
+  return (
+    <div className="space-y-2 tracker-backlinks">
+      <h4 className="text-xs font-medium text-nim-muted uppercase tracking-wide">Linked from</h4>
+      <div className="flex flex-wrap gap-1">
+        {backlinks.map((b) => {
+          const src = itemsMap.get(b.sourceItemId);
+          const label = src?.issueKey || (src?.fields?.title as string | undefined) || b.sourceItemId;
+          const rel = resolveRelationshipType(b.relationshipTypeKey ?? undefined);
+          const relLabel = rel?.displayName ?? b.relationshipTypeKey ?? 'links to';
+          return (
+            <span
+              key={`${b.sourceItemId}:${b.sourceFieldId}`}
+              className="tracker-backlink-pill inline-flex items-center gap-1 rounded-full bg-nim-tertiary px-2 py-0.5 text-[11px] text-nim"
+              title={`${label} — ${relLabel}`}
+            >
+              <span className="text-nim-faint">{relLabel}:</span>
+              {label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 /** Inline comments section for tracker items */
 const CommentsSection: React.FC<{ itemId: string; comments?: any[] }> = ({ itemId, comments }) => {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   // Optimistic comments shown immediately on submit, before the atom round-trips
   const [optimisticComments, setOptimisticComments] = useState<any[]>([]);
+  // Current user identity, used to gate edit/delete to the comment author (NIM-360).
+  const [currentIdentity, setCurrentIdentity] = useState<TrackerIdentity | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    window.electronAPI
+      .invoke('document-service:get-current-identity')
+      .then((result: any) => {
+        if (cancelled) return;
+        if (result?.success && result.identity) setCurrentIdentity(result.identity);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleEditSave = useCallback(async (commentId: string) => {
+    const body = editBody.trim();
+    if (!body) return;
+    setEditingId(null);
+    try {
+      await window.electronAPI.invoke('document-service:tracker-item-update-comment', {
+        itemId,
+        commentId,
+        body,
+      });
+    } catch (err) {
+      console.error('Failed to edit comment:', err);
+    }
+  }, [itemId, editBody]);
+
+  const handleDelete = useCallback(async (commentId: string) => {
+    try {
+      await window.electronAPI.invoke('document-service:tracker-item-update-comment', {
+        itemId,
+        commentId,
+        deleted: true,
+      });
+    } catch (err) {
+      console.error('Failed to delete comment:', err);
+    }
+  }, [itemId]);
 
   // When server-side comments arrive (atom update), clear optimistic entries
   // that are now present in the real data.
@@ -1683,16 +1787,68 @@ const CommentsSection: React.FC<{ itemId: string; comments?: any[] }> = ({ itemI
 
   return (
     <div className="space-y-2">
-      {visibleComments.map((comment: any) => (
-        <div key={comment.id} className={`rounded bg-nim-tertiary p-2 space-y-1${comment._optimistic ? ' opacity-70' : ''}`}>
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="font-medium text-nim-muted">{comment.authorIdentity?.displayName || 'You'}</span>
-            <span className="text-nim-faint">{getRelativeTimeString(comment.createdAt)}</span>
-            {comment.updatedAt && <span className="text-nim-faint">(edited)</span>}
+      {visibleComments.map((comment: any) => {
+        const isAuthor = !comment._optimistic
+          && isSameIdentity(comment.authorIdentity ?? null, currentIdentity);
+        const isEditing = editingId === comment.id;
+        return (
+          <div key={comment.id} className={`tracker-comment group rounded bg-nim-tertiary p-2 space-y-1${comment._optimistic ? ' opacity-70' : ''}`}>
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="font-medium text-nim-muted">{comment.authorIdentity?.displayName || 'You'}</span>
+              <span className="text-nim-faint">{getRelativeTimeString(comment.createdAt)}</span>
+              {comment.updatedAt && <span className="text-nim-faint">(edited)</span>}
+              {isAuthor && !isEditing && (
+                <span className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    className="tracker-comment-edit text-nim-faint hover:text-nim"
+                    title="Edit comment"
+                    onClick={() => { setEditingId(comment.id); setEditBody(comment.body); }}
+                  >
+                    <MaterialSymbol icon="edit" size={13} />
+                  </button>
+                  <button
+                    className="tracker-comment-delete text-nim-faint hover:text-nim-error"
+                    title="Delete comment"
+                    onClick={() => handleDelete(comment.id)}
+                  >
+                    <MaterialSymbol icon="delete" size={13} />
+                  </button>
+                </span>
+              )}
+            </div>
+            {isEditing ? (
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={editBody}
+                  autoFocus
+                  onChange={e => setEditBody(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave(comment.id); }
+                    if (e.key === 'Escape') { setEditingId(null); }
+                  }}
+                  className="flex-1 bg-nim-secondary border border-nim rounded px-2 py-1 text-xs text-nim outline-none focus:border-nim-primary"
+                />
+                <button
+                  onClick={() => handleEditSave(comment.id)}
+                  disabled={!editBody.trim()}
+                  className="px-2 py-1 rounded text-xs bg-nim-primary text-nim-on-primary disabled:opacity-40"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="px-2 py-1 rounded text-xs text-nim-muted hover:text-nim"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-nim m-0 whitespace-pre-wrap">{comment.body}</p>
+            )}
           </div>
-          <p className="text-xs text-nim m-0 whitespace-pre-wrap">{comment.body}</p>
-        </div>
-      ))}
+        );
+      })}
       <div className="flex gap-1">
         <input
           type="text"
