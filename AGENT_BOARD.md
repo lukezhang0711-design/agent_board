@@ -2,8 +2,8 @@
 
 This repository is Luke's personal fork of Nimbalyst for building Agent Board:
 a local project workspace led by a Head Agent. Agent Board helps a user turn a
-rough product idea into durable project documents, module workspaces, visible
-review packets, and coordinated execution by Codex / Claude Code sub-agents.
+rough product idea into durable project documents, mission workspaces, visible
+review packets, and coordinated execution by Codex / Claude Code mission agents.
 
 ## Upstream
 
@@ -17,8 +17,8 @@ review packets, and coordinated execution by Codex / Claude Code sub-agents.
   without user approval.
 - Make the Head Agent a workspace, not a single permanent chat. It must survive
   context-window resets through project memory, handoffs, and concise state.
-- Make each module a mini-workspace with its own task, agent, handoff, current
-  result, review state, and technical details.
+- Make each mission a mini-workspace with its own execution agent, task
+  breakdown, handoff, current result, review state, and technical details.
 - Store long-term project memory as Markdown in the repo. The board is a visual
   projection of those documents plus live run state.
 - Prefer visible product outcomes for user review. Technical evidence remains
@@ -28,14 +28,17 @@ review packets, and coordinated execution by Codex / Claude Code sub-agents.
 - Keep Codex support as a first-class execution backend.
 - Replace the brittle Claude Code integration with a direct adapter around the
   working local Claude Code CLI.
-- Add Head Agent and module workspace layers that coordinate scoped work across
+- Add Head Agent and mission workspace layers that coordinate scoped work across
   Codex and Claude Code sessions.
-- Show mission progress, module status, blocked decisions, review packets, and
+- Show mission progress, task status, blocked decisions, review packets, and
   handoff health in one board.
 - Reduce or remove features that are not needed for a single-user local tool.
 
 For the current product vision, see
 [`docs/agent-board/product-vision.md`](docs/agent-board/product-vision.md).
+
+For the current flow audit, see
+[`docs/agent-board/flow-audit.md`](docs/agent-board/flow-audit.md).
 
 For the current interaction demo, open
 [`docs/agent-board/demo/index.html`](docs/agent-board/demo/index.html).

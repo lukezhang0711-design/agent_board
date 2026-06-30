@@ -7,8 +7,8 @@ Last updated: 2026-06-30
 
 Agent Board is a local project workspace led by a Head Agent. It helps the user
 turn rough ideas into confirmed product, design, and technical plans, then
-coordinate Codex and Claude Code execution agents through missions, module
-workspaces, review packets, and explicit user decisions.
+coordinate Codex and Claude Code execution agents through missions, mission
+workspaces, task breakdowns, review packets, and explicit user decisions.
 
 It is not a Nimbalyst reskin, a pure multi-agent chat app, a Jira clone, a
 black-box automation runner, or a document editor as the product identity.
@@ -21,9 +21,9 @@ The user is the owner / CEO. The user owns product direction, scope, priorities,
 visible outcome approval, and consequential decisions.
 
 The user should primarily work through the product board and the Head Agent, but
-can enter any module workspace and talk directly with the execution agent. The
-system must stay transparent: board objects should link to their underlying
-documents, evidence, and archived records when useful.
+can enter any mission workspace and talk directly with the mission execution
+agent. The system must stay transparent: board objects should link to their
+underlying documents, evidence, and archived records when useful.
 
 ### Head Agent
 
@@ -32,7 +32,7 @@ to understand, challenge, organize, recommend, coordinate, diagnose, review,
 validate, maintain documents, and launch support agents.
 
 The Head Agent does not do implementation work for project scope. Project
-implementation belongs to the sub-agent execution team.
+implementation belongs to mission execution agents.
 
 The Head Agent is responsible for:
 
@@ -40,9 +40,9 @@ The Head Agent is responsible for:
 - challenging weak assumptions and helping the user converge;
 - brainstorming with the user and authoring planning documents for confirmation;
 - recommending when enough is known to enter development;
-- decomposing missions into modules and acceptance plans;
+- decomposing missions into task plans and acceptance plans;
 - checking product conflicts and blocking conflicts before dispatch;
-- recommending which execution agent should do what;
+- recommending which execution agent should own each mission;
 - keeping scope, dependency, risk, blocker, and handoff awareness;
 - reviewing technical work that the user cannot judge directly;
 - translating technical results into user-facing effects or decisions;
@@ -50,13 +50,20 @@ The Head Agent is responsible for:
 - maintaining project memory, file maps, summaries, indexes, and cleanup;
 - archiving completed missions after acceptance.
 
-### Execution Sub-Agents
+### Mission Execution Agents
 
-Execution sub-agents are the implementation team. They work inside module
-workspaces and receive clear task briefs, context, constraints, expected outputs,
-and review criteria.
+Mission execution agents are the implementation team. By default, one active
+mission has one primary execution agent and one mission workspace. The mission
+workspace contains the agent conversation, task breakdown, handoff, current
+result, blockers, review state, and evidence links.
 
-Execution sub-agents change project results by implementing module work.
+Mission execution agents change project results by implementing approved mission
+scope. They may work through internal tasks, implementation modules, runs, or checklists, but
+those are not separate PM-facing agent conversations by default.
+
+If a mission is too large for one execution agent, the Head Agent should
+recommend splitting it into multiple missions or explicitly ask the user to
+approve a multi-agent execution plan.
 
 ### Support Agents
 
@@ -65,7 +72,7 @@ diagnosis, review, validation, comparison, evidence gathering, or other
 non-implementation work.
 
 Support agents must not change project results. They help the Head Agent judge;
-they do not deliver modules.
+they do not own missions.
 
 ## Product Lifecycle
 
@@ -77,13 +84,13 @@ Idea / problem
 -> Head Agent writes planning drafts
 -> User confirms settled plans
 -> Head Agent extracts settled conclusions into long-term memory
--> Head Agent proposes development readiness and mission decomposition
+-> Head Agent proposes development readiness and mission breakdown
 -> User gives dispatch approval
--> Execution sub-agents implement approved module work
+-> Mission execution agents implement approved mission work
 -> Head Agent reviews technical work
 -> User reviews visible impact work
 -> Feedback becomes rework instructions or scope decisions
--> User accepts the mission when all module results combine into the goal
+-> User accepts the mission when the combined result satisfies the goal
 -> Head Agent archives the mission and cleans active work
 ```
 
@@ -129,8 +136,8 @@ Transitions:
 - `planning_review -> dispatch_review`: user confirms the plan is settled enough
   to become the basis for a dispatch plan.
 - `dispatch_review -> in_execution`: user approves the dispatch plan.
-- `in_execution -> mission_review`: all required module work has reached its
-  review threshold.
+- `in_execution -> mission_review`: all required mission tasks have reached
+  their review threshold.
 - `mission_review -> accepted`: user confirms the combined result satisfies the
   mission.
 - `accepted -> archived`: Head Agent creates the archive summary, updates
@@ -139,13 +146,17 @@ Transitions:
 Rules:
 
 - execution agents cannot start implementation before `in_execution`;
-- module acceptance does not automatically mean mission acceptance;
+- task completion does not automatically mean mission acceptance;
 - mission acceptance always belongs to the user;
 - archived missions stay traceable through summaries and retained evidence.
 
-### Module Flow
+### Mission Task Flow
 
-User-facing board states:
+Tasks are slices inside a mission workspace. They help the Head Agent and
+mission execution agent coordinate work, but they are not separate agent
+workspaces by default.
+
+User-facing task states:
 
 ```text
 待派发 -> 排队中 -> 执行中 -> Head Agent 检查中 -> 待你验收 -> 返工中 -> 已通过
@@ -162,10 +173,10 @@ planned -> queued -> working -> head_review -> user_review -> rework -> accepted
 Transitions:
 
 - `planned -> queued`: mission dispatch is approved and the Head Agent assigns
-  the module.
-- `queued -> working`: the execution agent starts work.
-- `working -> head_review`: the execution agent submits a result or blocker
-  package.
+  the task inside the mission workspace.
+- `queued -> working`: the mission execution agent starts work.
+- `working -> head_review`: the mission execution agent submits a result or
+  blocker package.
 - `head_review -> accepted`: Head Agent accepts purely technical work that
   passes the acceptance plan and does not affect visible product behavior.
 - `head_review -> user_review`: the result has visible impact or needs user
@@ -178,11 +189,11 @@ Transitions:
 
 Rules:
 
-- execution agents do not self-authorize implementation;
+- mission execution agents do not self-authorize implementation;
 - visible impact work must pass through user review;
-- Head Agent technical acceptance is module-level evidence, not mission
+- Head Agent technical acceptance is task-level evidence, not mission
   acceptance;
-- blocked modules must explain the cause, options, impact, and recommended next
+- blocked tasks must explain the cause, options, impact, and recommended next
   decision.
 
 ### Decision And Review Flow
@@ -207,7 +218,7 @@ Rules:
 - changes to scope, product direction, acceptance standards, architecture
   direction, meaningful risk, publishing, merging, or stage transition create a
   decision item;
-- user messages inside a module workspace that change scope or acceptance must
+- user messages inside a mission workspace that change scope or acceptance must
   be summarized back to the Head Agent and converted into a decision item;
 - confirmed decisions can update long-term memory;
 - rejected results become rework or historical context, not product truth;
@@ -218,7 +229,7 @@ Rules:
 
 ### Project
 
-The top-level container. It has long-term memory, active missions, module
+The top-level container. It has long-term memory, active missions, mission
 workspaces, active runs, review history, maintainer handoffs, and mission
 archives.
 
@@ -227,9 +238,11 @@ archives.
 A mission is a user-approved work objective inside a project. A project may have
 multiple active missions when they do not create blocking conflicts.
 
-Missions are the main work objective. Versions are not the main object; a version
-is only a time label for a visible result, such as current effect, previous
-effect, or discarded result.
+Missions are the main execution object. Each active mission normally has one
+primary mission execution agent, one mission workspace, and one conversation the
+user can enter from the board. Versions are not the main object; a version is
+only a time label for a visible result, such as current effect, previous effect,
+or discarded result.
 
 Active missions should be shown as a flat list on the project board so the user
 can see the current work without drilling through a hierarchy. If active mission
@@ -237,7 +250,7 @@ count grows beyond a small threshold, the board can collapse lower-priority or
 inactive sections while keeping the focused mission visible.
 
 Agent Board should not encourage many missions to run at once. In practice,
-parallel missions are limited by file overlap, module overlap, product direction
+parallel missions are limited by file overlap, task overlap, product direction
 conflicts, unresolved user decisions, and review burden. The Head Agent should
 recommend parallel execution only when the work can proceed without blocking
 conflicts.
@@ -245,52 +258,58 @@ conflicts.
 ### Mission Scope
 
 Mission scope is the full set of functions and outcomes agreed during mission
-decomposition. Agent Board should not split mission scope into required and
-optional modules by default. If the work was included when the mission was
-approved, it belongs to the mission.
+breakdown. Agent Board should not split mission scope into required and optional
+tasks by default. If the work was included when the mission was approved, it
+belongs to the mission.
 
 Changing scope after dispatch approval requires user approval.
 
-### Module Workspace
+### Mission Workspace
 
-A module is a work slice inside a mission. The Head Agent may decompose missions
-by functional boundary, technical layer, or a mixed boundary depending on
-conflicts, dependencies, acceptance method, and execution efficiency.
+A mission workspace is the transparent execution room for one mission and its
+primary mission execution agent. It is where the user can enter the mission,
+talk to the agent, inspect progress, see the current result, and open review
+packets or evidence.
 
-The module workspace is a transparent execution room, not an independent project
-entry point. The user may talk directly with the execution sub-agent to clarify
-requirements, answer questions, inspect progress, or correct the current result
-inside the approved brief.
-
-Direct module conversation must not bypass the Head Agent. If the conversation
+Direct mission conversation must not bypass the Head Agent. If the conversation
 changes mission scope, acceptance plan, priority, architecture direction, risk
-acceptance, or cross-module dependency, the execution sub-agent must summarize
-the change back to the Head Agent. The Head Agent then creates the needed
-decision item, scope change proposal, or execution reslicing proposal before more
-implementation proceeds.
+acceptance, or cross-mission dependency, the mission execution agent must
+summarize the change back to the Head Agent. The Head Agent then creates the
+needed decision item, scope change proposal, or execution reslicing proposal
+before more implementation proceeds.
 
-Each module workspace should show, by default:
+Each mission workspace should show, by default:
 
-- module name;
+- mission name;
+- mission execution agent;
 - current status;
 - current visible result, if any;
-- current execution sub-agent;
+- task breakdown;
 - acceptance plan;
 - blocker or decision needed, if any;
-- link to the underlying module document.
+- Head Agent review state;
+- link to the underlying mission document.
 
 Expanded details can show:
 
-- module brief;
-- task scope;
+- mission brief;
+- task details;
 - dependencies;
 - conflict risks;
 - handoff;
 - run history;
 - technical files, diff, logs, and validation evidence.
 
-Module cards should stay lightweight by default. They must not become a Jira
-clone or a technical diff dashboard.
+### Mission Tasks
+
+Tasks are slices inside a mission workspace. The Head Agent may break a mission
+down by functional boundary, technical layer, or a mixed boundary depending on
+conflicts, dependencies, acceptance method, and execution efficiency.
+
+Tasks should stay lightweight by default. They show what the mission agent is
+doing and what remains, but they do not create separate PM-facing conversations
+unless the Head Agent explicitly proposes a multi-agent plan and the user
+approves it.
 
 ### Run
 
@@ -319,7 +338,7 @@ For technical work, the packet focuses on Head Agent judgment:
 - short reason;
 - validation method;
 - product impact, if any;
-- linked module / task / run / files for traceability.
+- linked mission / task / run / files for traceability.
 
 Long-term review history should keep summaries and pointers, not raw packets
 dumped into permanent memory.
@@ -335,21 +354,21 @@ default priority order is:
 2. visible results waiting for user review;
 3. blockers or risks that need attention.
 
-Below those attention items, the board can show active missions, module
-progress, and the Head Agent's current summary.
+Below those attention items, the board can show active missions, mission agent
+status, task progress, and the Head Agent's current summary.
 
 The board can show:
 
 - current project phase;
 - active missions and focused mission;
-- module status;
+- mission agent status and task progress;
 - blockers, risks, bugs, and technical debt in context;
 - pending review packets;
 - pending user decisions;
 - next recommended actions;
 - links to related documents and evidence.
 
-Issues are part of the progress board, attached to the mission or module they
+Issues are part of the progress board, attached to the mission or task they
 affect. They are not a separate required top-level `issues.md` document.
 
 Documents, handoffs, retained evidence, diff, and run history should be linked
@@ -360,7 +379,7 @@ The default board should not become a wall of agent state or technical evidence.
 
 The board is the working surface, but important board items need a durable source
 of truth. Decisions, blockers, risks, reviews, and action-needed items should be
-stored on the mission or module document they belong to, not in a top-level
+stored on the mission or task record they belong to, not in a top-level
 `issues.md` file and not only in transient UI state.
 
 Example board item metadata:
@@ -372,7 +391,7 @@ board_items:
     status: open | resolved | superseded
     title: Should records be allowed without a category?
     owner: user | head_agent | execution_agent
-    source: mission | module | run | review_packet
+    source: mission | task | run | review_packet
     linked_to:
       - docs/...
       - run:...
@@ -407,7 +426,7 @@ The default rule is:
 ```text
 The Head Agent recommends and coordinates.
 The user decides consequential product matters.
-Execution sub-agents implement approved project scope.
+Mission execution agents implement approved project scope.
 Support agents provide judgment material without changing project results.
 ```
 
@@ -419,7 +438,7 @@ The user must approve the dispatch plan first.
 Dispatch approval covers:
 
 - mission scope;
-- module boundaries;
+- task breakdown;
 - execution order;
 - acceptance plan;
 - known risks and conflicts.
@@ -467,9 +486,8 @@ Blocking conflicts stop or delay execution. Examples:
 ### Execution Reslicing
 
 The Head Agent may recommend execution reslicing when the approved mission scope
-stays the same. Reslicing can change execution grouping, module boundaries,
-agent ownership, or sequencing, but it must not change what the mission will
-deliver.
+stays the same. Reslicing can change task grouping, sequencing, or agent
+ownership, but it must not change what the mission will deliver.
 
 Execution reslicing is valid only when it:
 
@@ -481,9 +499,9 @@ Execution reslicing is valid only when it:
 
 Examples:
 
-- splitting one login module into separate login UI and login API modules;
+- splitting one login task into separate login UI and login API tasks;
 - separating homepage visual polish from homepage data integration;
-- moving a shared validation task from one module to another without changing
+- moving a shared validation task from one mission task to another without changing
   the expected result.
 
 Execution reslicing needs lightweight user confirmation because it changes how
@@ -507,17 +525,18 @@ High-risk decisions require clear warning and a second confirmation. Examples:
 - removing important functionality;
 - changing privacy, account, payment, or security behavior;
 - significantly increasing development scope;
-- making architecture decisions that affect multiple modules.
+- making architecture decisions that affect multiple missions or major tasks.
 
 ## Review And Acceptance Model
 
 ### Review Flow
 
 Review should feel like a simple product decision, not a technical audit. When a
-sub-agent result arrives, the Head Agent first translates it into a review path.
+mission agent result arrives, the Head Agent first translates it into a review
+path.
 
 ```text
-Sub-agent submits result
+Mission agent submits result
 -> Head Agent reviews and classifies the result
 -> Purely technical work: Head Agent accepts, rejects, or marks risk
 -> Visible impact work: Head Agent prepares a user review packet
@@ -527,7 +546,7 @@ Sub-agent submits result
 
 Default user actions on a visible review packet:
 
-- `Accept`: the visible result is good enough for this module or mission stage.
+- `Accept`: the visible result is good enough for this mission or mission stage.
 - `Keep improving`: the user gives feedback, and the Head Agent turns it into a
   rework brief.
 - `Change goal / scope`: the feedback changes what the work is supposed to
@@ -538,20 +557,20 @@ Default user actions on a visible review packet:
   options are in ordinary product language.
 
 The board should not force the user to choose between technical states such as
-module acceptance, mission acceptance, or technical acceptance. The Head Agent
-maps user actions to the correct internal state.
+task completion, mission acceptance, or technical acceptance. The Head Agent maps
+user actions to the correct internal state.
 
-### Module Acceptance
+### Task Completion
 
-Module acceptance means one module satisfies its acceptance plan. It may happen
-before the mission is accepted so parallel work can keep moving.
+Task completion means one task inside a mission satisfies its acceptance plan. It
+may happen before the mission is accepted so the mission can keep moving.
 
-Module acceptance is only partial mission progress.
+Task completion is only partial mission progress.
 
 ### Mission Acceptance
 
-Mission acceptance means all module results defined during mission decomposition
-and their combined effect satisfy the mission.
+Mission acceptance means all task results defined during mission breakdown and
+their combined effect satisfy the mission.
 
 Mission acceptance belongs to the user.
 
@@ -568,7 +587,8 @@ It should not store every raw review packet in full.
 ### Product-Level Rules
 
 Agent Board should include built-in operating rules for how the Head Agent,
-execution sub-agents, support agents, review, confirmation, and archiving work.
+mission execution agents, support agents, review, confirmation, and archiving
+work.
 
 These rules are product-level defaults, not a required per-project
 `operating-plan.md`. If the user customizes the default rules for a project, the
@@ -613,7 +633,7 @@ Project memory updates are split by risk:
 - factual updates may be recorded automatically;
 - decision updates require user confirmation.
 
-Factual updates include module completion, review conclusions, blockers, and
+Factual updates include task completion, review conclusions, blockers, and
 file-map updates.
 
 Decision updates include mission scope, product principles, architecture
@@ -633,7 +653,7 @@ Examples:
 - planning confirmation is recorded on the planning document or confirmed
   section;
 - dispatch approval is recorded on the mission brief;
-- visible acceptance is recorded on the module or mission review record;
+- visible acceptance is recorded on the mission review record;
 - technical acceptance is recorded on the Head Agent review summary;
 - scope changes are recorded on the relevant decision record.
 
@@ -690,7 +710,7 @@ needed.
 
 ### Evidence Retention
 
-After mission or module work completes, the Head Agent decides which evidence is
+After mission or task work completes, the Head Agent decides which evidence is
 necessary to preserve. Necessary screenshots, logs, recordings, run outputs, or
 review materials should be retained or archived. Routine agent-facing runtime
 material can be cleaned up.
@@ -717,7 +737,7 @@ project, with user approval for meaningful durable structure changes.
 The standard folders should be created because they are project assets that
 agents and future maintainers need. However, the user should not be asked to
 work from the document tree by default. The product surface should show a visual
-project view: missions, module decomposition, progress, review needs, blockers,
+project view: missions, mission agents, task progress, review needs, blockers,
 and current outcomes. Documents are the durable source and traceability layer,
 entered from board objects when the user wants to inspect or edit them.
 
@@ -750,8 +770,8 @@ Default user-facing structure:
     mission-短ID-中文标题/
       mission-brief.md
       acceptance-plan.md
-      modules/
-        module-短ID-中文标题/
+      tasks/
+        task-短ID-中文标题.md
 
   04-验收记录/
     验收历史.md
@@ -781,18 +801,20 @@ The main interface should have three visible layers.
 
 ### Project Board
 
-Shows the phase, active missions, focused mission, modules, review requests,
-blockers, risks, decisions, and current effect status.
+Shows the phase, active missions, focused mission, mission agents, task
+progress, review requests, blockers, risks, decisions, and current effect
+status.
 
 ### Head Agent Panel
 
 Shows the Head Agent conversation, current judgment, recommended next steps,
 handoff status, document links, and decision requests.
 
-### Module Workspaces
+### Mission Workspaces
 
-Each module opens into a mini-workspace with sub-agent conversation, current
-task, current output, review state, handoff, and optional technical evidence.
+Each mission opens into a mini-workspace with the mission execution agent
+conversation, current task breakdown, current output, review state, handoff, and
+optional technical evidence.
 
 Technical details such as diff, files, commands, git status, and worktrees are
 available when needed but hidden from the default PM-facing view.
@@ -853,7 +875,7 @@ Must be rebuilt or heavily redesigned:
 
 - Claude Code CLI provider;
 - Head Agent workspace;
-- module workspace model;
+- mission workspace model;
 - project memory writer / reader;
 - user decision and delegation model;
 - review packet model;

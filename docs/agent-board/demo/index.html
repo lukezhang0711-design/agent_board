@@ -367,78 +367,6 @@
       margin-top: 16px;
     }
 
-    .subagent-panel {
-      margin-bottom: 16px;
-    }
-
-    .agent-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      padding: 14px;
-    }
-
-    .agent-card {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: #fff;
-      padding: 12px;
-      display: grid;
-      gap: 10px;
-      min-width: 0;
-      cursor: pointer;
-    }
-
-    .agent-card:hover {
-      border-color: var(--line-strong);
-      background: #fbfcfe;
-    }
-
-    .agent-head {
-      display: flex;
-      align-items: start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .agent-id {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      min-width: 0;
-    }
-
-    .avatar {
-      width: 30px;
-      height: 30px;
-      border-radius: 7px;
-      display: grid;
-      place-items: center;
-      background: #111827;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 800;
-      flex: 0 0 30px;
-    }
-
-    .agent-id strong,
-    .agent-id span {
-      display: block;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-
-    .agent-id strong {
-      font-size: 13px;
-    }
-
-    .agent-id span {
-      color: var(--muted);
-      font-size: 11px;
-      margin-top: 2px;
-    }
-
     .agent-brief {
       margin: 0;
       color: var(--muted);
@@ -493,6 +421,7 @@
       background: #fff;
       min-height: 184px;
       min-width: 0;
+      cursor: pointer;
     }
 
     .mission-card.focused {
@@ -848,7 +777,7 @@
         max-width: 100%;
         overflow: hidden;
       }
-      .attention-grid, .mission-list, .agent-grid {
+      .attention-grid, .mission-list {
         grid-template-columns: 1fr;
         width: 100%;
         max-width: 100%;
@@ -906,7 +835,7 @@
         </div>
       </div>
       <div class="top-actions">
-        <input class="search" aria-label="Search" placeholder="搜索 mission、模块、决策..." />
+        <input class="search" aria-label="Search" placeholder="搜索 mission、任务、决策..." />
         <button class="btn ghost" data-toast="已打开项目文档入口">项目文档</button>
         <button class="btn primary" data-toast="Head Agent 正在整理新的 mission 草案"><span class="icon send"></span>新 Mission</button>
       </div>
@@ -921,7 +850,7 @@
       <div class="section-label">Board</div>
       <button class="nav-item active"><span>待我处理</span><span class="count">5</span></button>
       <button class="nav-item"><span>Active Missions</span><span class="count">3</span></button>
-      <button class="nav-item"><span>模块工作台</span><span class="count">8</span></button>
+      <button class="nav-item"><span>Mission 工作台</span><span class="count">3</span></button>
       <button class="nav-item"><span>验收记录</span><span class="count">12</span></button>
 
       <div class="section-label">Documents</div>
@@ -946,7 +875,7 @@
         <article class="attention-card review">
           <div class="card-kicker"><span>待我验收</span><span class="tag green">1</span></div>
           <h3>记录编辑器 v3 效果已可看</h3>
-          <p>子 agent 完成了记录输入、标签、保存反馈。Head Agent 已检查技术通过，需要你看交互是否顺手。</p>
+          <p>Mission Agent 完成了记录输入、标签、保存反馈。Head Agent 已检查技术通过，需要你看交互是否顺手。</p>
           <div class="card-actions">
             <button class="mini-btn primary" data-open-drawer="review"><span class="icon check"></span>看效果</button>
             <button class="mini-btn" data-toast="已标记稍后验收"><span class="icon pause"></span>稍后</button>
@@ -955,79 +884,13 @@
 
         <article class="attention-card risk">
           <div class="card-kicker"><span>阻塞风险</span><span class="tag amber">2</span></div>
-          <h3>设置页和账号模块可能重叠</h3>
-          <p>两个 mission 都会改设置入口。Head Agent 建议先合并评审，不阻塞本地开发，但不能各自验收。</p>
+          <h3>设置页和账号 mission 可能重叠</h3>
+          <p>两个 mission 都会改设置入口。Head Agent 建议先合并评审，不阻塞本地开发，但不能各自独立验收。</p>
           <div class="card-actions">
             <button class="mini-btn primary" data-toast="已打开 combined review">合并评审</button>
             <button class="mini-btn" data-toast="已显示冲突来源">看来源</button>
           </div>
         </article>
-      </section>
-
-      <section class="panel subagent-panel" aria-label="Sub-agent dispatch board">
-        <div class="panel-header">
-          <div class="panel-title">
-            <h2>Sub-agents</h2>
-            <p>Head Agent 下发后的执行队列；每个卡片都能进入对应模块的迷你工作台。</p>
-          </div>
-          <button class="btn" data-toast="已按风险和验收优先级排序">排序：需要你处理优先</button>
-        </div>
-
-        <div class="agent-grid">
-          <article class="agent-card" data-open-drawer="agent">
-            <div class="agent-head">
-              <div class="agent-id">
-                <div class="avatar">C1</div>
-                <div>
-                  <strong>Codex UI-01</strong>
-                  <span>记录编辑器体验重做 / 编辑器交互</span>
-                </div>
-              </div>
-              <span class="tag green">待你验收</span>
-            </div>
-            <p class="agent-brief">已完成输入区、标签入口、保存反馈。Head Agent 技术检查通过，等待你看效果。</p>
-            <div class="agent-meta">
-              <div class="meta-box"><span>Provider</span><strong>Codex</strong></div>
-              <div class="meta-box"><span>Workspace</span><strong>module/editor-ui</strong></div>
-            </div>
-          </article>
-
-          <article class="agent-card" data-open-drawer="agent">
-            <div class="agent-head">
-              <div class="agent-id">
-                <div class="avatar">CL</div>
-                <div>
-                  <strong>Claude CLI-02</strong>
-                  <span>Claude Code 接入修复 / Provider 重做</span>
-                </div>
-              </div>
-              <span class="tag blue">执行中</span>
-            </div>
-            <p class="agent-brief">正在重做 Claude Code CLI adapter，目标是绕开 Nimbalyst 里不稳定的登录态判断。</p>
-            <div class="agent-meta">
-              <div class="meta-box"><span>Provider</span><strong>Claude Code CLI</strong></div>
-              <div class="meta-box"><span>Workspace</span><strong>module/claude-cli</strong></div>
-            </div>
-          </article>
-
-          <article class="agent-card" data-open-drawer="agent">
-            <div class="agent-head">
-              <div class="agent-id">
-                <div class="avatar">D3</div>
-                <div>
-                  <strong>Codex Docs-03</strong>
-                  <span>项目文档治理 / ADR 合并</span>
-                </div>
-              </div>
-              <span class="tag red">阻塞</span>
-            </div>
-            <p class="agent-brief">发现 ADR 数量过多，等你确认是合并成一份决策记录，还是保留完整 ADR 目录。</p>
-            <div class="agent-meta">
-              <div class="meta-box"><span>Provider</span><strong>Codex</strong></div>
-              <div class="meta-box"><span>Workspace</span><strong>module/docs-cleanup</strong></div>
-            </div>
-          </article>
-        </div>
       </section>
 
       <section class="panel mission-panel">
@@ -1040,67 +903,67 @@
         </div>
 
         <div class="mission-list">
-          <article class="mission-card focused">
+          <article class="mission-card focused" data-open-drawer="agent">
             <div class="mission-top">
               <div>
                 <h3>记录编辑器体验重做</h3>
-                <div class="mission-meta">状态：执行中 · focused mission · 4 / 6 模块通过</div>
+                <div class="mission-meta">Agent：Codex UI-01 · Provider：Codex · workspace/mission/editor-v3</div>
               </div>
               <span class="tag blue">执行中</span>
             </div>
             <div class="progress"><span style="width: 68%"></span></div>
             <div class="module-strip">
-              <div class="module-row" data-open-drawer="agent"><div><strong>编辑器交互</strong><span class="module-agent">Codex UI-01 · 可看效果</span></div><span class="tag green">待你验收</span></div>
-              <div class="module-row" data-open-drawer="agent"><div><strong>本地保存</strong><span class="module-agent">Codex Storage-02 · Head Agent 已验收</span></div><span class="tag green">技术通过</span></div>
-              <div class="module-row" data-open-drawer="agent"><div><strong>标签系统</strong><span class="module-agent">Codex Tags-03 · 正在实现</span></div><span class="tag blue">执行中</span></div>
+              <div class="module-row"><div><strong>编辑器交互</strong><span class="module-agent">任务 · 可看效果</span></div><span class="tag green">待你验收</span></div>
+              <div class="module-row"><div><strong>本地保存</strong><span class="module-agent">任务 · Head Agent 已检查</span></div><span class="tag green">技术通过</span></div>
+              <div class="module-row"><div><strong>标签系统</strong><span class="module-agent">任务 · 进行中</span></div><span class="tag blue">执行中</span></div>
             </div>
           </article>
 
-          <article class="mission-card">
+          <article class="mission-card" data-open-drawer="agent">
             <div class="mission-top">
               <div>
                 <h3>首页信息层级收敛</h3>
-                <div class="mission-meta">状态：方案待确认 · 等用户确认范围</div>
+                <div class="mission-meta">Agent：未派发 · 等你确认 mission 范围</div>
               </div>
               <span class="tag amber">待确认</span>
             </div>
             <div class="progress"><span style="width: 22%"></span></div>
             <div class="module-strip">
-              <div class="module-row" data-open-drawer="agent"><div><strong>首页主路径</strong><span class="module-agent">未派发 · 等你拍板</span></div><span class="tag amber">待拍板</span></div>
-              <div class="module-row" data-open-drawer="agent"><div><strong>今日回顾</strong><span class="module-agent">Head Agent 草案中</span></div><span class="tag amber">pending</span></div>
-              <div class="module-row" data-open-drawer="agent"><div><strong>视觉密度</strong><span class="module-agent">未派发 · 草稿</span></div><span class="tag">草稿</span></div>
+              <div class="module-row"><div><strong>首页主路径</strong><span class="module-agent">任务 · 等你拍板</span></div><span class="tag amber">待拍板</span></div>
+              <div class="module-row"><div><strong>今日回顾</strong><span class="module-agent">任务 · pending</span></div><span class="tag amber">pending</span></div>
+              <div class="module-row"><div><strong>视觉密度</strong><span class="module-agent">任务 · 草稿</span></div><span class="tag">草稿</span></div>
             </div>
           </article>
 
-          <article class="mission-card">
+          <article class="mission-card" data-open-drawer="agent">
             <div class="mission-top">
               <div>
                 <h3>Claude Code 接入修复</h3>
-                <div class="mission-meta">状态：Head Agent 检查中 · 纯技术任务</div>
+                <div class="mission-meta">Agent：Claude CLI-02 · Provider：Claude Code CLI · workspace/mission/claude-cli</div>
               </div>
               <span class="tag blue">检查中</span>
             </div>
             <div class="progress"><span style="width: 48%"></span></div>
             <div class="module-strip">
-              <div class="module-row" data-open-drawer="agent"><div><strong>CLI 登录检测</strong><span class="module-agent">Codex Auth-01 · Head Agent 已验收</span></div><span class="tag green">技术通过</span></div>
-              <div class="module-row" data-open-drawer="agent"><div><strong>Provider 重做</strong><span class="module-agent">Claude CLI-02 · 执行中</span></div><span class="tag blue">执行中</span></div>
-              <div class="module-row" data-open-drawer="agent"><div><strong>Sonnet 默认策略</strong><span class="module-agent">未派发 · 排队</span></div><span class="tag">排队中</span></div>
+              <div class="module-row"><div><strong>CLI 登录检测</strong><span class="module-agent">任务 · Head Agent 已检查</span></div><span class="tag green">技术通过</span></div>
+              <div class="module-row"><div><strong>Provider 重做</strong><span class="module-agent">任务 · 执行中</span></div><span class="tag blue">执行中</span></div>
+              <div class="module-row"><div><strong>Sonnet 默认策略</strong><span class="module-agent">任务 · 排队</span></div><span class="tag">排队中</span></div>
             </div>
           </article>
 
-          <article class="mission-card">
+          <article class="mission-card" data-open-drawer="agent">
             <div class="mission-top">
               <div>
                 <h3>项目文档治理</h3>
-                <div class="mission-meta">状态：阻塞 · 等用户确认 ADR 合并策略</div>
+                <div class="mission-meta">Agent：Codex Docs-03 · Provider：Codex · 等你确认 ADR 合并策略</div>
               </div>
               <span class="tag red">阻塞</span>
             </div>
             <div class="progress"><span style="width: 36%; background: var(--red)"></span></div>
             <div class="module-strip">
-              <div class="module-row" data-open-drawer="agent"><div><strong>术语表迁移</strong><span class="module-agent">Codex Docs-02 · 等你确认</span></div><span class="tag amber">待确认</span></div>
-              <div class="module-row" data-open-drawer="agent"><div><strong>ADR 合并</strong><span class="module-agent">Codex Docs-03 · 阻塞</span></div><span class="tag red">阻塞</span></div>
-              <div class="module-row" data-open-drawer="agent"><div><strong>Swap 清理</strong><span class="module-agent">未派发 · 待派发</span></div><span class="tag">待派发</span></div>
+              <div class="module-row"><div><strong>术语表迁移</strong><span class="module-agent">任务 · 等你确认</span></div><span class="tag amber">待确认</span></div>
+              <div class="module-row"><div><strong>ADR 合并</strong><span class="module-agent">任务 · 阻塞</span></div><span class="tag red">阻塞</span></div>
+              <div class="module-row"><div><strong>Swap 清理</strong><span class="module-agent">任务 · 待派发</span></div><span class="tag">待派发</span></div>
             </div>
           </article>
         </div>
@@ -1126,7 +989,7 @@
             </div>
             <div class="report-item">
               <strong>Decision Needed</strong>
-              <p>确认首页信息层级后，Head Agent 会重切首页模块，不改变 mission scope。</p>
+              <p>确认首页信息层级后，Head Agent 会重切首页 mission 的任务顺序，不改变 mission scope。</p>
             </div>
           </div>
         </section>
@@ -1159,8 +1022,8 @@
   <section class="drawer" id="reviewDrawer" aria-label="Review packet">
     <div class="drawer-header">
       <div>
-        <h3>记录编辑器 v3 · 验收包</h3>
-        <div class="mission-meta">来源：编辑器交互模块 · 状态：待你验收</div>
+        <h3>记录编辑器体验重做 · 验收包</h3>
+        <div class="mission-meta">来源：Mission Agent Codex UI-01 · 状态：待你验收</div>
       </div>
       <button class="mini-btn" id="closeDrawer">关闭</button>
     </div>
@@ -1210,18 +1073,18 @@
       </div>
 
       <div class="trace">
-        <a href="#">Module brief</a>
+        <a href="#">Mission brief</a>
         <a href="#">Review record</a>
         <a href="#">Run evidence</a>
       </div>
     </div>
   </section>
 
-  <section class="drawer" id="agentDrawer" aria-label="Module workspace">
+  <section class="drawer" id="agentDrawer" aria-label="Mission workspace">
     <div class="drawer-header">
       <div>
-        <h3>编辑器交互 · Module Workspace</h3>
-        <div class="mission-meta">子 agent：Codex UI-01 · Provider：Codex · 状态：待你验收</div>
+        <h3>记录编辑器体验重做 · Mission Workspace</h3>
+        <div class="mission-meta">Mission Agent：Codex UI-01 · Provider：Codex · 状态：待你验收</div>
       </div>
       <button class="mini-btn" id="closeAgentDrawer">关闭</button>
     </div>
@@ -1229,7 +1092,7 @@
       <div class="panel" style="box-shadow:none; margin-bottom: 14px;">
         <div class="panel-header">
           <div class="panel-title">
-            <h3>Head Agent 下发任务</h3>
+            <h3>Head Agent 下发 Mission</h3>
             <p>把记录编辑器主输入变轻，不打断随手记录；高级字段降级到二级区域。</p>
           </div>
           <span class="tag blue">approved brief</span>
@@ -1241,14 +1104,14 @@
             <div class="meta-box"><span>不得改变</span><strong>mission scope</strong></div>
             <div class="meta-box"><span>冲突状态</span><strong>无阻塞冲突</strong></div>
           </div>
-          <p class="agent-brief">子 agent 只能在批准 brief 内执行。若反馈改变目标、范围、验收标准或跨模块依赖，必须回传 Head Agent 生成决策卡。</p>
+          <p class="agent-brief">Mission Agent 只能在批准 brief 内执行。若反馈改变目标、范围、验收标准或跨 mission 依赖，必须回传 Head Agent 生成决策卡。</p>
         </div>
       </div>
 
       <div class="panel" style="box-shadow:none; margin-bottom: 14px;">
         <div class="panel-header">
           <div class="panel-title">
-            <h3>子 Agent 运行记录</h3>
+            <h3>Mission Agent 运行记录</h3>
             <p>这里给你看“它做了什么”，不是让你读技术日志。</p>
           </div>
           <span class="tag green">Head Agent 已检查</span>
@@ -1262,13 +1125,13 @@
 
       <div class="review-actions">
         <button class="btn primary" data-open-drawer="review"><span class="icon check"></span>打开验收包</button>
-        <button class="btn" data-toast="已显示子 agent 交接摘要">看交接</button>
+        <button class="btn" data-toast="已显示 Mission Agent 交接摘要">看交接</button>
         <button class="btn" data-toast="已打开运行证据链接">看证据</button>
-        <button class="btn" data-toast="已向 Head Agent 询问该模块风险">问 Head Agent</button>
+        <button class="btn" data-toast="已向 Head Agent 询问该 mission 风险">问 Head Agent</button>
       </div>
 
       <div class="trace">
-        <a href="#">Task brief</a>
+        <a href="#">Mission brief</a>
         <a href="#">Handoff</a>
         <a href="#">Changed files</a>
       </div>
@@ -1317,7 +1180,7 @@
     document.querySelectorAll('[data-action]').forEach((el) => {
       el.addEventListener('click', () => {
         const labels = {
-          accept: '已接受：模块会标记为已通过，但 mission 仍需整体验收。',
+          accept: '已接受：该任务会记为通过，但 mission 仍需整体验收。',
           improve: '已转成返工：Head Agent 会生成 revised brief。',
           scope: '已生成决策卡：改变目标/范围前需要你确认。',
           pause: '已暂停：相关执行不会继续推进。',
