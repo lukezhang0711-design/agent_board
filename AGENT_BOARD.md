@@ -37,6 +37,9 @@ review packets, and coordinated execution by Codex / Claude Code sub-agents.
 For the current product vision, see
 [`docs/agent-board/product-vision.md`](docs/agent-board/product-vision.md).
 
+For the current interaction demo, open
+[`docs/agent-board/demo/index.html`](docs/agent-board/demo/index.html).
+
 ## Initial Technical Priorities
 
 1. Build and run the upstream Electron app locally.

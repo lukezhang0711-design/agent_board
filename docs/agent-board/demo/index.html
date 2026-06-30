@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Board Demo</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-2: #f0f3f7;
+      --ink: #171a21;
+      --muted: #677083;
+      --faint: #98a1b2;
+      --line: #dfe4ec;
+      --line-strong: #c9d1de;
+      --blue: #2563eb;
+      --blue-soft: #eaf1ff;
+      --green: #15803d;
+      --green-soft: #e8f7ee;
+      --amber: #b45309;
+      --amber-soft: #fff3dd;
+      --red: #c2410c;
+      --red-soft: #fff0e9;
+      --shadow: 0 18px 45px rgba(20, 28, 45, .08);
+      --radius: 6px;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: 14px;
+      letter-spacing: 0;
+      overflow-x: hidden;
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 232px minmax(680px, 1fr) 356px;
+      grid-template-rows: 56px minmax(0, 1fr);
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, .92);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .brand {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: linear-gradient(135deg, #1f2937 0%, #2563eb 100%);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .brand-title strong { font-size: 14px; }
+    .brand-title span { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .search {
+      width: 260px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      color: var(--ink);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .btn {
+      height: 34px;
+      border-radius: var(--radius);
+      padding: 0 12px;
+      background: var(--surface-2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .btn.primary {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .btn.ghost {
+      background: transparent;
+    }
+
+    .icon {
+      width: 15px;
+      height: 15px;
+      display: inline-block;
+      position: relative;
+      flex: 0 0 15px;
+    }
+
+    .icon::before, .icon::after {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border: 1.8px solid currentColor;
+      border-radius: 2px;
+    }
+
+    .icon.send::before { transform: rotate(45deg); border-left: 0; border-bottom: 0; inset: 3px 4px 4px 2px; }
+    .icon.send::after { border: 0; height: 1.8px; background: currentColor; top: 7px; left: 2px; right: 4px; transform: rotate(-22deg); }
+    .icon.check::before { border: 0; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; width: 9px; height: 5px; transform: rotate(-45deg); top: 4px; left: 3px; }
+    .icon.pause::before { border: 0; width: 3px; background: currentColor; left: 4px; right: auto; }
+    .icon.pause::after { border: 0; width: 3px; background: currentColor; left: auto; right: 4px; }
+    .icon.info::before { border-radius: 50%; }
+    .icon.info::after { border: 0; width: 2px; height: 6px; background: currentColor; left: 7px; top: 6px; box-shadow: 0 -4px 0 currentColor; }
+
+    .sidebar {
+      grid-row: 2;
+      background: #fbfcfe;
+      border-right: 1px solid var(--line);
+      padding: 16px 12px;
+      overflow: auto;
+    }
+
+    .section-label {
+      color: var(--faint);
+      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 700;
+      margin: 18px 8px 8px;
+    }
+
+    .project-card {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: 0 8px 26px rgba(20, 28, 45, .04);
+    }
+
+    .project-card strong { display: block; font-size: 14px; margin-bottom: 6px; }
+    .project-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+    .nav-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: transparent;
+      margin-bottom: 3px;
+      text-align: left;
+    }
+
+    .nav-item.active {
+      color: var(--ink);
+      background: var(--blue-soft);
+    }
+
+    .count {
+      min-width: 22px;
+      height: 20px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      padding: 0 6px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .main {
+      grid-row: 2;
+      padding: 18px;
+      overflow: auto;
+      min-width: 0;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 28px rgba(20, 28, 45, .045);
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .panel-title {
+      min-width: 0;
+    }
+
+    .panel-title h2, .panel-title h3 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .panel-title p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .attention-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .attention-card {
+      padding: 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      min-height: 158px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .attention-card.decision { border-top: 3px solid var(--blue); }
+    .attention-card.review { border-top: 3px solid var(--green); }
+    .attention-card.risk { border-top: 3px solid var(--amber); }
+
+    .card-kicker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .attention-card h3 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.3;
+    }
+
+    .attention-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.48;
+    }
+
+    .attention-card h3,
+    .attention-card p,
+    .panel-title p,
+    .mission-meta,
+    .report-item p,
+    .bubble,
+    .trace a {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      border-radius: 11px;
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+
+    .tag.blue { background: var(--blue-soft); color: var(--blue); }
+    .tag.green { background: var(--green-soft); color: var(--green); }
+    .tag.amber { background: var(--amber-soft); color: var(--amber); }
+    .tag.red { background: var(--red-soft); color: var(--red); }
+
+    .card-actions {
+      margin-top: auto;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mini-btn {
+      height: 30px;
+      border-radius: var(--radius);
+      padding: 0 10px;
+      background: var(--surface-2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mini-btn.primary {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
+
+    .mission-panel {
+      margin-top: 16px;
+    }
+
+    .mission-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .mission-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #fff;
+      min-height: 184px;
+      min-width: 0;
+    }
+
+    .mission-card.focused {
+      border-color: rgba(37, 99, 235, .45);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .08);
+    }
+
+    .mission-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .mission-top h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .mission-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .progress {
+      height: 7px;
+      background: var(--surface-2);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      background: var(--blue);
+      border-radius: inherit;
+    }
+
+    .module-strip {
+      display: grid;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .module-row {
+      height: 35px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 9px;
+      background: #fbfcfe;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .module-row strong {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 12px;
+    }
+
+    .module-row:hover {
+      border-color: var(--line-strong);
+      background: #f7f9fc;
+    }
+
+    .right {
+      grid-row: 2;
+      border-left: 1px solid var(--line);
+      background: #fbfcfe;
+      padding: 16px;
+      overflow: auto;
+      min-width: 0;
+    }
+
+    .head-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .head-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .head-card h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+    }
+
+    .report-block {
+      border-left: 3px solid var(--blue);
+      padding-left: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .report-item strong {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: 3px;
+    }
+
+    .report-item p {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .chat {
+      display: grid;
+      gap: 8px;
+      max-height: 292px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .bubble {
+      border-radius: var(--radius);
+      padding: 9px 10px;
+      line-height: 1.45;
+      font-size: 12px;
+    }
+
+    .bubble.agent {
+      background: var(--surface-2);
+      color: var(--ink);
+    }
+
+    .bubble.user {
+      background: var(--blue-soft);
+      color: #174ea6;
+    }
+
+    .composer {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .composer input {
+      min-width: 0;
+      flex: 1;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0 10px;
+      outline: none;
+      background: var(--surface);
+    }
+
+    .drawer {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: min(620px, calc(100vw - 48px));
+      max-height: min(760px, calc(100vh - 96px));
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      z-index: 10;
+      display: none;
+      overflow: hidden;
+    }
+
+    .drawer.open { display: block; }
+
+    .drawer-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+    }
+
+    .drawer-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .drawer-body {
+      padding: 16px;
+      overflow: auto;
+      max-height: calc(min(760px, calc(100vh - 96px)) - 58px);
+    }
+
+    .effect-preview {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 14px;
+      background: #101827;
+    }
+
+    .preview-top {
+      height: 32px;
+      background: #182133;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fb7185;
+    }
+    .dot:nth-child(2) { background: #fbbf24; }
+    .dot:nth-child(3) { background: #34d399; }
+
+    .preview-content {
+      padding: 18px;
+      color: #e5e7eb;
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+      min-height: 190px;
+    }
+
+    .mock-card {
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .mock-card h4 {
+      margin: 0 0 8px;
+      font-size: 13px;
+    }
+
+    .mock-line {
+      height: 8px;
+      background: rgba(255,255,255,.18);
+      border-radius: 99px;
+      margin: 7px 0;
+    }
+
+    .mock-line.short { width: 55%; }
+    .mock-line.mid { width: 76%; }
+
+    .review-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 14px 0;
+    }
+
+    .trace {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .trace a {
+      color: var(--blue);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 9px;
+      font-size: 12px;
+      background: #fbfcfe;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(18px);
+      opacity: 0;
+      background: #111827;
+      color: #fff;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 13px;
+      transition: .2s ease;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 1120px) {
+      .app {
+        grid-template-columns: 72px minmax(0, 1fr);
+      }
+      .right {
+        grid-column: 2;
+        grid-row: auto;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+      .sidebar {
+        padding: 12px 8px;
+      }
+      .project-card, .section-label, .nav-item span:first-child {
+        display: none;
+      }
+      .nav-item {
+        justify-content: center;
+      }
+      .count { min-width: 26px; }
+    }
+
+    @media (max-width: 840px) {
+      .app {
+        display: block;
+      }
+      .topbar {
+        position: static;
+        gap: 10px;
+        padding: 0 12px;
+      }
+      .sidebar {
+        display: none;
+      }
+      .main, .right {
+        padding: 12px;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+      }
+      .attention-grid, .mission-list {
+        grid-template-columns: 1fr;
+        width: 100%;
+        max-width: 100%;
+      }
+      .panel-header .btn {
+        display: none;
+      }
+      .search {
+        display: none;
+      }
+      .brand-title {
+        min-width: 0;
+      }
+      .brand-title strong,
+      .brand-title span {
+        max-width: 176px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .top-actions .btn.ghost {
+        display: none;
+      }
+      .top-actions .btn.primary {
+        width: 38px;
+        padding: 0;
+        font-size: 0;
+      }
+      .preview-content {
+        grid-template-columns: 1fr;
+      }
+      .drawer {
+        right: 12px;
+        bottom: 12px;
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 24px);
+      }
+      .drawer-body {
+        max-height: calc(100vh - 82px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">AB</div>
+        <div class="brand-title">
+          <strong>Agent Board</strong>
+          <span>记录 App · Head Agent 工作台</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <input class="search" aria-label="Search" placeholder="搜索 mission、模块、决策..." />
+        <button class="btn ghost" data-toast="已打开项目文档入口">项目文档</button>
+        <button class="btn primary" data-toast="Head Agent 正在整理新的 mission 草案"><span class="icon send"></span>新 Mission</button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="project-card">
+        <strong>当前项目</strong>
+        <p>个人记录 App：把想法、计划、记录沉淀成可回顾的第二大脑。</p>
+      </div>
+
+      <div class="section-label">Board</div>
+      <button class="nav-item active"><span>待我处理</span><span class="count">5</span></button>
+      <button class="nav-item"><span>Active Missions</span><span class="count">3</span></button>
+      <button class="nav-item"><span>模块工作台</span><span class="count">8</span></button>
+      <button class="nav-item"><span>验收记录</span><span class="count">12</span></button>
+
+      <div class="section-label">Documents</div>
+      <button class="nav-item"><span>01-项目方案</span><span class="count">4</span></button>
+      <button class="nav-item"><span>02-长期记忆</span><span class="count">6</span></button>
+      <button class="nav-item"><span>03-当前工作</span><span class="count">3</span></button>
+      <button class="nav-item"><span>06-完成归档</span><span class="count">9</span></button>
+    </aside>
+
+    <main class="main">
+      <section class="attention-grid" aria-label="User attention items">
+        <article class="attention-card decision">
+          <div class="card-kicker"><span>待我决策</span><span class="tag blue">2</span></div>
+          <h3>首页是否保留“今日回顾”入口？</h3>
+          <p>Head Agent 判断这会影响首页主线密度。建议保留入口，但降级为二级入口，避免记录按钮被稀释。</p>
+          <div class="card-actions">
+            <button class="mini-btn primary" data-toast="已打开决策卡">去拍板</button>
+            <button class="mini-btn" data-toast="Head Agent 已解释影响">解释一下</button>
+          </div>
+        </article>
+
+        <article class="attention-card review">
+          <div class="card-kicker"><span>待我验收</span><span class="tag green">1</span></div>
+          <h3>记录编辑器 v3 效果已可看</h3>
+          <p>子 agent 完成了记录输入、标签、保存反馈。Head Agent 已检查技术通过，需要你看交互是否顺手。</p>
+          <div class="card-actions">
+            <button class="mini-btn primary" data-open-drawer="review"><span class="icon check"></span>看效果</button>
+            <button class="mini-btn" data-toast="已标记稍后验收"><span class="icon pause"></span>稍后</button>
+          </div>
+        </article>
+
+        <article class="attention-card risk">
+          <div class="card-kicker"><span>阻塞风险</span><span class="tag amber">2</span></div>
+          <h3>设置页和账号模块可能重叠</h3>
+          <p>两个 mission 都会改设置入口。Head Agent 建议先合并评审，不阻塞本地开发，但不能各自验收。</p>
+          <div class="card-actions">
+            <button class="mini-btn primary" data-toast="已打开 combined review">合并评审</button>
+            <button class="mini-btn" data-toast="已显示冲突来源">看来源</button>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel mission-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>Active Missions</h2>
+            <p>平铺展示当前推进主线；超过阈值后折叠低优先级 mission。</p>
+          </div>
+          <button class="btn" data-toast="低优先级 mission 已折叠">折叠非聚焦</button>
+        </div>
+
+        <div class="mission-list">
+          <article class="mission-card focused">
+            <div class="mission-top">
+              <div>
+                <h3>记录编辑器体验重做</h3>
+                <div class="mission-meta">状态：执行中 · focused mission · 4 / 6 模块通过</div>
+              </div>
+              <span class="tag blue">执行中</span>
+            </div>
+            <div class="progress"><span style="width: 68%"></span></div>
+            <div class="module-strip">
+              <div class="module-row" data-open-drawer="review"><strong>编辑器交互</strong><span class="tag green">待你验收</span></div>
+              <div class="module-row"><strong>本地保存</strong><span class="tag green">技术通过</span></div>
+              <div class="module-row"><strong>标签系统</strong><span class="tag blue">执行中</span></div>
+            </div>
+          </article>
+
+          <article class="mission-card">
+            <div class="mission-top">
+              <div>
+                <h3>首页信息层级收敛</h3>
+                <div class="mission-meta">状态：方案待确认 · 等用户确认范围</div>
+              </div>
+              <span class="tag amber">待确认</span>
+            </div>
+            <div class="progress"><span style="width: 22%"></span></div>
+            <div class="module-strip">
+              <div class="module-row"><strong>首页主路径</strong><span class="tag amber">待拍板</span></div>
+              <div class="module-row"><strong>今日回顾</strong><span class="tag amber">pending</span></div>
+              <div class="module-row"><strong>视觉密度</strong><span class="tag">草稿</span></div>
+            </div>
+          </article>
+
+          <article class="mission-card">
+            <div class="mission-top">
+              <div>
+                <h3>Claude Code 接入修复</h3>
+                <div class="mission-meta">状态：Head Agent 检查中 · 纯技术任务</div>
+              </div>
+              <span class="tag blue">检查中</span>
+            </div>
+            <div class="progress"><span style="width: 48%"></span></div>
+            <div class="module-strip">
+              <div class="module-row"><strong>CLI 登录检测</strong><span class="tag green">技术通过</span></div>
+              <div class="module-row"><strong>Provider 重做</strong><span class="tag blue">执行中</span></div>
+              <div class="module-row"><strong>Sonnet 默认策略</strong><span class="tag">排队中</span></div>
+            </div>
+          </article>
+
+          <article class="mission-card">
+            <div class="mission-top">
+              <div>
+                <h3>项目文档治理</h3>
+                <div class="mission-meta">状态：阻塞 · 等用户确认 ADR 合并策略</div>
+              </div>
+              <span class="tag red">阻塞</span>
+            </div>
+            <div class="progress"><span style="width: 36%; background: var(--red)"></span></div>
+            <div class="module-strip">
+              <div class="module-row"><strong>术语表迁移</strong><span class="tag amber">待确认</span></div>
+              <div class="module-row"><strong>ADR 合并</strong><span class="tag red">阻塞</span></div>
+              <div class="module-row"><strong>Swap 清理</strong><span class="tag">待派发</span></div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <aside class="right">
+      <div class="head-panel">
+        <section class="head-card">
+          <h3>Head Agent 工作台</h3>
+          <div class="report-block">
+            <div class="report-item">
+              <strong>Background</strong>
+              <p>当前 focused mission 是记录编辑器体验重做，核心目标是让用户快速记录、不被字段打断。</p>
+            </div>
+            <div class="report-item">
+              <strong>Problem</strong>
+              <p>首页入口和编辑器入口都在争抢第一优先级，需要你确认首页是否保留“今日回顾”。</p>
+            </div>
+            <div class="report-item">
+              <strong>Recommendation</strong>
+              <p>保留今日回顾，但降级为二级入口。现在先验收编辑器 v3，避免阻塞主流程。</p>
+            </div>
+            <div class="report-item">
+              <strong>Decision Needed</strong>
+              <p>确认首页信息层级后，Head Agent 会重切首页模块，不改变 mission scope。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="head-card">
+          <h3>对话</h3>
+          <div class="chat" id="chat">
+            <div class="bubble agent">我已检查编辑器 v3：技术上通过。现在需要你看是否符合“随手记不打断”的产品目标。</div>
+            <div class="bubble user">如果不满意，我可以直接说哪里不对？</div>
+            <div class="bubble agent">可以。你给自然语言反馈，我会转成返工 brief；如果反馈改变目标或范围，我会先生成决策卡让你确认。</div>
+          </div>
+          <div class="composer">
+            <input id="chatInput" placeholder="问 Head Agent 当前进度、风险或下一步..." />
+            <button class="btn primary" id="sendChat"><span class="icon send"></span></button>
+          </div>
+        </section>
+
+        <section class="head-card">
+          <h3>文档入口</h3>
+          <div class="trace">
+            <a href="../product-vision.md">产品愿景</a>
+            <a href="#">Mission Brief</a>
+            <a href="#">决策记录</a>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <section class="drawer" id="reviewDrawer" aria-label="Review packet">
+    <div class="drawer-header">
+      <div>
+        <h3>记录编辑器 v3 · 验收包</h3>
+        <div class="mission-meta">来源：编辑器交互模块 · 状态：待你验收</div>
+      </div>
+      <button class="mini-btn" id="closeDrawer">关闭</button>
+    </div>
+    <div class="drawer-body">
+      <div class="effect-preview">
+        <div class="preview-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="preview-content">
+          <div class="mock-card">
+            <h4>快速记录</h4>
+            <div class="mock-line mid"></div>
+            <div class="mock-line"></div>
+            <div class="mock-line short"></div>
+            <div style="height: 20px"></div>
+            <span class="tag green">已保存</span>
+            <span class="tag">#想法</span>
+          </div>
+          <div class="mock-card">
+            <h4>Head Agent 对照目标</h4>
+            <div class="mock-line"></div>
+            <div class="mock-line mid"></div>
+            <div class="mock-line short"></div>
+            <div style="height: 20px"></div>
+            <span class="tag blue">符合主流程</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="box-shadow:none; margin-bottom: 14px;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h3>Head Agent 结论</h3>
+            <p>技术检查通过。需要你判断：输入区域是否足够轻、保存反馈是否明确。</p>
+          </div>
+          <span class="tag green">技术通过</span>
+        </div>
+        <div style="padding: 14px; color: var(--muted); line-height: 1.55; font-size: 13px;">
+          这版把分类、标签、保存状态收到了二级区域。好处是主输入更安静；代价是高级字段不如上一版显眼。我建议先接受这版方向，再微调标签入口。
+        </div>
+      </div>
+
+      <div class="review-actions">
+        <button class="btn primary" data-action="accept"><span class="icon check"></span>Accept</button>
+        <button class="btn" data-action="improve">Keep improving</button>
+        <button class="btn" data-action="scope">Change goal / scope</button>
+        <button class="btn" data-action="pause"><span class="icon pause"></span>Pause</button>
+        <button class="btn" data-action="explain"><span class="icon info"></span>Explain</button>
+      </div>
+
+      <div class="trace">
+        <a href="#">Module brief</a>
+        <a href="#">Review record</a>
+        <a href="#">Run evidence</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const drawer = document.getElementById('reviewDrawer');
+    const chat = document.getElementById('chat');
+    const chatInput = document.getElementById('chatInput');
+    const sendChat = document.getElementById('sendChat');
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove('show'), 1900);
+    }
+
+    document.querySelectorAll('[data-open-drawer]').forEach((el) => {
+      el.addEventListener('click', () => drawer.classList.add('open'));
+    });
+
+    document.getElementById('closeDrawer').addEventListener('click', () => {
+      drawer.classList.remove('open');
+    });
+
+    document.querySelectorAll('[data-toast]').forEach((el) => {
+      el.addEventListener('click', () => showToast(el.dataset.toast));
+    });
+
+    document.querySelectorAll('[data-action]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const labels = {
+          accept: '已接受：模块会标记为已通过，但 mission 仍需整体验收。',
+          improve: '已转成返工：Head Agent 会生成 revised brief。',
+          scope: '已生成决策卡：改变目标/范围前需要你确认。',
+          pause: '已暂停：相关执行不会继续推进。',
+          explain: 'Head Agent 正在用普通产品语言解释变化影响。'
+        };
+        showToast(labels[el.dataset.action]);
+      });
+    });
+
+    function appendBubble(type, text) {
+      const node = document.createElement('div');
+      node.className = `bubble ${type}`;
+      node.textContent = text;
+      chat.appendChild(node);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    sendChat.addEventListener('click', () => {
+      const value = chatInput.value.trim();
+      if (!value) return;
+      appendBubble('user', value);
+      chatInput.value = '';
+      window.setTimeout(() => {
+        appendBubble('agent', '我会先判断这是不是范围/验收变化。如果只是已批准 brief 内的反馈，我会直接转成返工任务；如果改变方向，会先生成决策卡。');
+      }, 350);
+    });
+
+    chatInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') sendChat.click();
+    });
+  </script>
+</body>
+</html>
