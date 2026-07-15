@@ -5,8 +5,6 @@
 // shape and notification translation that future codex upgrades might break.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EventEmitter } from 'node:events';
-import { PassThrough } from 'node:stream';
 
 // IMPORTANT: mock `node:child_process` BEFORE importing the protocol so the
 // module under test picks up the stub.
@@ -24,72 +22,16 @@ vi.mock('../codexAppServer/codexAppServerBinary', () => ({
 
 import { CodexAppServerProtocol } from '../CodexAppServerProtocol';
 import type { ProtocolEvent } from '../ProtocolInterface';
-
-class FakeChildProcess extends EventEmitter {
-  readonly stdin: PassThrough;
-  readonly stdout: PassThrough;
-  readonly stderr: PassThrough;
-  killed = false;
-  /** Captures every line the protocol writes to stdin. */
-  readonly writtenLines: unknown[] = [];
-
-  constructor() {
-    super();
-    this.stdin = new PassThrough();
-    this.stdout = new PassThrough();
-    this.stderr = new PassThrough();
-    let buffer = '';
-    this.stdin.on('data', (chunk: Buffer) => {
-      buffer += chunk.toString('utf8');
-      let idx: number;
-      while ((idx = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-        if (!line.trim()) continue;
-        try { this.writtenLines.push(JSON.parse(line)); }
-        catch { this.writtenLines.push({ __unparseable: line }); }
-      }
-    });
-  }
-
-  kill(): boolean {
-    if (this.killed) return false;
-    this.killed = true;
-    this.emit('exit', 0, null);
-    return true;
-  }
-
-  /** Push a server -> client line. */
-  emitLine(msg: unknown): void {
-    this.stdout.write(JSON.stringify(msg) + '\n');
-  }
-}
-
-function nextWrittenMatching(child: FakeChildProcess, method: string, timeoutMs = 1000): Promise<Record<string, unknown>> {
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    const check = () => {
-      for (const line of child.writtenLines) {
-        if (line && typeof line === 'object' && (line as Record<string, unknown>).method === method) {
-          resolve(line as Record<string, unknown>);
-          return;
-        }
-      }
-      if (Date.now() - start > timeoutMs) {
-        reject(new Error(`timeout waiting for ${method}; saw: ${JSON.stringify(child.writtenLines)}`));
-        return;
-      }
-      setTimeout(check, 5);
-    };
-    check();
-  });
-}
+import {
+  FakeCodexAppServer,
+  nextWrittenMatching,
+} from './fixtures/fakeCodexAppServer';
 
 describe('CodexAppServerProtocol', () => {
-  let child: FakeChildProcess;
+  let child: FakeCodexAppServer;
 
   beforeEach(() => {
-    child = new FakeChildProcess();
+    child = new FakeCodexAppServer();
     spawnMock.mockReset();
     spawnMock.mockReturnValue(child);
   });
@@ -97,6 +39,33 @@ describe('CodexAppServerProtocol', () => {
   afterEach(() => {
     if (!child.killed) child.kill();
   });
+
+  async function createActiveTurn(
+    protocol: CodexAppServerProtocol,
+    threadId = 'thread-interrupt',
+    turnId = 'turn-interrupt',
+  ) {
+    child
+      .scriptResult('initialize', {
+        codexHome: '/fake',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+        userAgent: 'fake/0',
+      })
+      .scriptResult('thread/start', { thread: { id: threadId } })
+      .scriptResult('turn/start', {
+        turn: { id: turnId, items: [], status: 'inProgress' },
+      });
+
+    const session = await protocol.createSession({ workspacePath: '/tmp/ws' });
+    const iterator = protocol.sendMessage(session, { content: 'keep working' })[Symbol.asyncIterator]();
+    const firstEvent = iterator.next();
+    await nextWrittenMatching(child, 'turn/start');
+    child.emitLine({ method: 'turn/started', params: { threadId, turnId } });
+    await firstEvent;
+
+    return { iterator, session };
+  }
 
   it('spawns the codex binary, completes the initialize handshake, and starts a thread', async () => {
     const protocol = new CodexAppServerProtocol();
@@ -618,5 +587,248 @@ describe('CodexAppServerProtocol', () => {
     expect(response).toBeDefined();
     expect((response as { result?: { decision?: string } }).result?.decision).toBe('denied');
     expect(approveFileChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends threadId and turnId and waits for interrupt confirmation', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(protocol);
+    let releaseConfirmation!: () => void;
+    const confirmationGate = new Promise<void>((resolve) => {
+      releaseConfirmation = resolve;
+    });
+    child.scriptResult('turn/interrupt', {}, { after: confirmationGate });
+
+    try {
+      let settled = false;
+      const resultPromise = protocol.interruptTurn(session).then((result) => {
+        settled = true;
+        return result;
+      });
+      const interruptRequest = await nextWrittenMatching(child, 'turn/interrupt');
+
+      expect(interruptRequest.params).toEqual({
+        threadId: 'thread-interrupt',
+        turnId: 'turn-interrupt',
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(settled).toBe(false);
+
+      releaseConfirmation();
+      await expect(resultPromise).resolves.toEqual({ outcome: 'interrupted' });
+    } finally {
+      await iterator.return?.();
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('returns failed with the server rejection reason', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(protocol);
+    child.scriptInterruptMissingTurnId();
+
+    try {
+      await expect(protocol.interruptTurn(session)).resolves.toEqual({
+        outcome: 'failed',
+        error: expect.stringContaining('missing field `turnId`'),
+      });
+    } finally {
+      await iterator.return?.();
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('returns already-ended without a request when there is no active turn', async () => {
+    child
+      .scriptResult('initialize', {
+        codexHome: '/fake',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+        userAgent: 'fake/0',
+      })
+      .scriptResult('thread/start', { thread: { id: 'thread-ended' } })
+      .scriptResult('turn/interrupt', {});
+    const protocol = new CodexAppServerProtocol();
+    const session = await protocol.createSession({ workspacePath: '/tmp/ws' });
+
+    try {
+      await expect(protocol.interruptTurn(session)).resolves.toEqual({
+        outcome: 'already-ended',
+      });
+      expect(child.requests('turn/interrupt')).toHaveLength(0);
+    } finally {
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('ignores retrying errors and resolves when the active turn ends before confirmation', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(protocol);
+    let releaseConfirmation!: () => void;
+    const confirmationGate = new Promise<void>((resolve) => {
+      releaseConfirmation = resolve;
+    });
+    child.scriptResult('turn/interrupt', {}, { after: confirmationGate });
+    let resultPromise: ReturnType<CodexAppServerProtocol['interruptTurn']> | undefined;
+
+    try {
+      let settled = false;
+      resultPromise = protocol.interruptTurn(session).then((result) => {
+        settled = true;
+        return result;
+      });
+      await nextWrittenMatching(child, 'turn/interrupt');
+
+      child.emitError({
+        threadId: 'thread-interrupt',
+        turnId: 'turn-interrupt',
+        error: { message: 'temporary transport error' },
+        willRetry: true,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(settled).toBe(false);
+
+      child.emitTurnCompleted({
+        threadId: 'thread-interrupt',
+        turn: { id: 'turn-interrupt', status: 'completed' },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(settled).toBe(true);
+      await expect(resultPromise).resolves.toEqual({ outcome: 'already-ended' });
+    } finally {
+      releaseConfirmation();
+      await resultPromise?.catch(() => undefined);
+      await iterator.return?.();
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('keeps abortSession void while sending an interrupt request with both ids', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(protocol);
+    child.scriptResult('turn/interrupt', {});
+
+    try {
+      expect(protocol.abortSession(session)).toBeUndefined();
+      const interruptRequest = await nextWrittenMatching(child, 'turn/interrupt');
+      expect(interruptRequest.id).toBeDefined();
+      expect(interruptRequest.params).toEqual({
+        threadId: 'thread-interrupt',
+        turnId: 'turn-interrupt',
+      });
+    } finally {
+      await iterator.return?.();
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('uses the waitable interrupt request for an aborted sendMessage turn', async () => {
+    const abortController = new AbortController();
+    abortController.abort();
+    child
+      .scriptResult('initialize', {
+        codexHome: '/fake',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+        userAgent: 'fake/0',
+      })
+      .scriptResult('thread/start', { thread: { id: 'thread-signal' } })
+      .scriptResult('turn/start', {
+        turn: { id: 'turn-signal', items: [], status: 'inProgress' },
+      })
+      .scriptResult('turn/interrupt', {})
+      .scriptResult('turn/interrupt', {});
+    const protocol = new CodexAppServerProtocol();
+    const session = await protocol.createSession({
+      workspacePath: '/tmp/ws',
+      abortSignal: abortController.signal,
+    } as never);
+    const collector = (async () => {
+      for await (const _event of protocol.sendMessage(session, { content: 'stop now' })) {
+        // Drain the turn so sendMessage runs its normal terminal cleanup.
+      }
+    })();
+
+    try {
+      const interruptRequest = await nextWrittenMatching(child, 'turn/interrupt');
+      expect(interruptRequest.params).toEqual({
+        threadId: 'thread-signal',
+        turnId: 'turn-signal',
+      });
+    } finally {
+      child.emitTurnCompleted({
+        threadId: 'thread-signal',
+        turn: { id: 'turn-signal', status: 'completed' },
+      });
+      await collector;
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('returns failed when the matching terminal event reports a turn failure', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(protocol);
+    let releaseConfirmation!: () => void;
+    const confirmationGate = new Promise<void>((resolve) => {
+      releaseConfirmation = resolve;
+    });
+    child.scriptResult('turn/interrupt', {}, { after: confirmationGate });
+    const resultPromise = protocol.interruptTurn(session);
+
+    try {
+      await nextWrittenMatching(child, 'turn/interrupt');
+      child.emitTurnCompleted({
+        threadId: 'thread-interrupt',
+        turn: {
+          id: 'turn-interrupt',
+          status: 'failed',
+          error: { message: 'turn stopped with an error' },
+        },
+      });
+      await expect(resultPromise).resolves.toEqual({
+        outcome: 'failed',
+        error: 'turn stopped with an error',
+      });
+    } finally {
+      releaseConfirmation();
+      await resultPromise.catch(() => undefined);
+      await iterator.return?.();
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('returns failed for a non-retrying error on the active turn', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(protocol);
+    let releaseConfirmation!: () => void;
+    const confirmationGate = new Promise<void>((resolve) => {
+      releaseConfirmation = resolve;
+    });
+    child.scriptResult('turn/interrupt', {}, { after: confirmationGate });
+    const resultPromise = protocol.interruptTurn(session);
+
+    try {
+      await nextWrittenMatching(child, 'turn/interrupt');
+      child.emitError({
+        threadId: 'thread-interrupt',
+        turnId: 'turn-interrupt',
+        error: { message: 'fatal app-server error' },
+        willRetry: false,
+      });
+      const observedResult = await Promise.race([
+        resultPromise,
+        new Promise<{ outcome: 'not-settled' }>((resolve) => {
+          setTimeout(() => resolve({ outcome: 'not-settled' }), 20);
+        }),
+      ]);
+      expect(observedResult).toEqual({
+        outcome: 'failed',
+        error: 'fatal app-server error',
+      });
+    } finally {
+      releaseConfirmation();
+      await resultPromise.catch(() => undefined);
+      await iterator.return?.();
+      protocol.cleanupSession(session);
+    }
   });
 });

@@ -63,6 +63,7 @@ import type {
   ThreadStartResponse,
   TokenUsage,
   TurnCompletedNotification,
+  TurnInterruptParams,
   TurnStartParams,
   UserInputElement,
   WarningNotification,
@@ -107,6 +108,11 @@ export interface CodexAppServerProtocolOptions {
   host?: CodexAppServerHostBindings;
   /** Optional client info to send in initialize. */
   clientInfo?: { name: string; version: string };
+}
+
+export interface InterruptTurnResult {
+  outcome: 'interrupted' | 'already-ended' | 'failed';
+  error?: string;
 }
 
 interface AppServerSessionRaw {
@@ -284,6 +290,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
 
     let usage: { input_tokens: number; output_tokens: number; total_tokens: number } | undefined;
     let fullText = '';
+    let abortInterruptRequested = false;
 
     const unsubscribers: Array<() => void> = [];
 
@@ -323,10 +330,13 @@ export class CodexAppServerProtocol implements AgentProtocol {
     // Pump events until we see the terminating queue entry.
     try {
       while (true) {
-        if (abortSignal?.aborted) {
+        if (abortSignal?.aborted && !abortInterruptRequested) {
+          abortInterruptRequested = true;
           // Issue interrupt; codex will emit a turn/failed or turn/completed.
-          try { await raw.client.request('turn/interrupt', { threadId: raw.threadId }); }
-          catch (err) { console.warn('[CODEX][APPSERVER] turn/interrupt failed:', err); }
+          const result = await this.interruptTurn(session);
+          if (result.outcome === 'failed') {
+            console.warn('[CODEX][APPSERVER] turn/interrupt failed:', result.error);
+          }
         }
         while (queue.length === 0) {
           await new Promise<void>((resolve) => waiters.push(() => resolve()));
@@ -357,11 +367,70 @@ export class CodexAppServerProtocol implements AgentProtocol {
     }
   }
 
-  abortSession(session: ProtocolSession): void {
+  /** Interrupt the active turn and wait for an RPC response or its terminal event. */
+  async interruptTurn(session: ProtocolSession): Promise<InterruptTurnResult> {
     const raw = this.assertRaw(session);
-    if (raw.activeTurnId && raw.threadId) {
-      raw.client.notify('turn/interrupt', { threadId: raw.threadId });
+    const turnId = raw.activeTurnId;
+    if (!turnId) return { outcome: 'already-ended' };
+
+    let resolveTerminal!: (result: InterruptTurnResult) => void;
+    const terminalPromise = new Promise<InterruptTurnResult>((resolve) => {
+      resolveTerminal = resolve;
+    });
+    const unsubscribe = raw.client.onNotification((method, paramsUnknown) => {
+      const params = paramsUnknown as {
+        threadId?: string;
+        turnId?: string;
+        willRetry?: boolean;
+        error?: { message?: string } | null;
+        turn?: {
+          id?: string;
+          status?: string;
+          error?: { message?: string } | null;
+        };
+      } | undefined;
+      if (method === 'error' && params?.willRetry === true) return;
+      if (method !== 'turn/completed' && method !== 'turn/failed' && method !== 'error') return;
+      const notificationTurnId = params?.turn?.id ?? params?.turnId;
+      if (params?.threadId !== raw.threadId || notificationTurnId !== turnId) return;
+      if (raw.activeTurnId === turnId) raw.activeTurnId = null;
+      if (method === 'turn/failed' || method === 'error' || params.turn?.status === 'failed') {
+        resolveTerminal({
+          outcome: 'failed',
+          error: params.turn?.error?.message ?? params.error?.message ?? 'turn failed',
+        });
+      } else {
+        resolveTerminal({ outcome: 'already-ended' });
+      }
+    });
+
+    try {
+      const interruptParams: TurnInterruptParams = {
+        threadId: raw.threadId,
+        turnId,
+      };
+      const requestPromise = raw.client.request('turn/interrupt', interruptParams).then(
+        (): InterruptTurnResult => ({ outcome: 'interrupted' }),
+        (err): InterruptTurnResult => ({
+          outcome: 'failed',
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+      return await Promise.race([requestPromise, terminalPromise]);
+    } finally {
+      unsubscribe();
     }
+  }
+
+  abortSession(session: ProtocolSession): void {
+    void this.interruptTurn(session).then(
+      (result) => {
+        if (result.outcome === 'failed') {
+          console.warn('[CODEX][APPSERVER] turn/interrupt failed:', result.error);
+        }
+      },
+      (err) => console.warn('[CODEX][APPSERVER] turn/interrupt failed:', err),
+    );
   }
 
   cleanupSession(session: ProtocolSession): void {

@@ -155,6 +155,7 @@ export interface TurnStartResponse {
 
 export interface TurnInterruptParams {
   threadId: string;
+  turnId: string;
 }
 
 // ---- Notifications we consume ----
