@@ -1420,7 +1420,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         setCancelFeedback({
           phase: 'failed',
           action: queueAction,
-          error: result.error || '停止请求失败，请重试',
+          error: result.error || 'Stop request failed. Please try again.',
         });
         return;
       }
@@ -2630,12 +2630,12 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
           <span>
             {cancelFeedback.phase === 'requesting'
               || cancelFeedback.phase === 'awaiting-terminal'
-              ? `${cancelFeedback.action === 'clear' ? '停止并清空' : '停止'}请求已发送，等待生效`
+              ? `${cancelFeedback.action === 'clear' ? 'Stop & clear' : 'Stop'} request sent, waiting for it to take effect…`
               : cancelFeedback.phase === 'failed'
-                ? `停止失败：${cancelFeedback.error}`
+                ? `Stop failed: ${cancelFeedback.error}`
                 : cancelFeedback.phase === 'stopped'
-                  ? '已停止'
-                  : '停止会暂停并保留后续队列'}
+                  ? 'Stopped'
+                  : 'Stopping pauses and keeps the queued messages'}
           </span>
           {isLoading && (
             <button
@@ -2653,7 +2653,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
                 opacity: cancelRequestInFlightRef.current ? 0.5 : 1,
               }}
             >
-              停止并清空
+              Stop &amp; clear queue
             </button>
           )}
         </div>
