@@ -46,6 +46,10 @@ import { McpConfigService } from '../../services/McpConfigService';
 import { BaseAgentProvider } from '../BaseAgentProvider';
 import { ClaudeCodeProvider } from '../ClaudeCodeProvider';
 
+// The orchestration MCP + task/todo allow-list the Head Agent keeps after Wave 2.
+// This is the auto-approve set, NOT an exhaustive capability filter: native workspace
+// tools are absent here because they now flow through the normal permission path, not
+// because they are blocked.
 const META_AGENT_ALLOWED_TOOLS = [
   'mcp__nimbalyst-meta-agent__list_spawned_sessions',
   'mcp__nimbalyst-meta-agent__list_worktrees',
@@ -86,7 +90,54 @@ function createEmptyClaudeQuery() {
   });
 }
 
-describe('Meta Agent current capability restrictions', () => {
+/**
+ * Spin up a ClaudeCodeProvider wired as a Head Agent (meta-agent role) with all
+ * side-effecting internals stubbed, so a drained sendMessage() only captures the
+ * SDK options passed to `query`. `customRole` is what getMetaAgentCustomRole returns
+ * (undefined => built-in default role).
+ */
+async function createMetaAgentProviderProbe(customRole?: string): Promise<ClaudeCodeProvider> {
+  const provider = new ClaudeCodeProvider();
+  await provider.initialize({ model: 'claude-code:opus' });
+
+  const hooks = {
+    clearEditedFiles: vi.fn(),
+    createPreToolUseHook: vi.fn(() => vi.fn()),
+    createPostToolUseHook: vi.fn(() => vi.fn()),
+    createPermissionDeniedHook: vi.fn(() => vi.fn()),
+    getEditedFiles: vi.fn(() => new Set<string>()),
+    createTurnEndSnapshots: vi.fn(async () => {}),
+  };
+  const internals = provider as any;
+  internals.getAgentRole = vi.fn(async () => 'meta-agent');
+  internals.getWorkflowPreset = vi.fn(async () => 'default');
+  internals.getMetaAgentCustomRole = vi.fn(async () => customRole);
+  internals.createToolHooksService = vi.fn(() => hooks);
+  internals.createCanUseToolHandler = vi.fn(() => vi.fn());
+  internals.logAgentMessage = vi.fn(async () => {});
+  internals.flushPendingWrites = vi.fn(async () => {});
+  internals.processTranscriptMessages = vi.fn(async () => {});
+  return provider;
+}
+
+async function captureMetaAgentSdkOptions(
+  provider: ClaudeCodeProvider,
+): Promise<Record<string, unknown>> {
+  for await (const _chunk of provider.sendMessage(
+    'probe Head Agent tools',
+    undefined,
+    'head-session',
+    [],
+    '/workspace',
+  )) {
+    // Drain the provider so its finally block closes the prompt controller.
+  }
+
+  expect(claudeQueryMock).toHaveBeenCalledTimes(1);
+  return claudeQueryMock.mock.calls[0][0].options as Record<string, unknown>;
+}
+
+describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', () => {
   beforeEach(() => {
     claudeQueryMock.mockReset();
     claudeQueryMock.mockImplementation(() => createEmptyClaudeQuery());
@@ -113,35 +164,47 @@ describe('Meta Agent current capability restrictions', () => {
     vi.restoreAllMocks();
   });
 
-  it('keeps the Head Agent no-files/no-commands ban in the assembled prompt', () => {
-    // Wave 2 解禁后本测试应翻转：默认角色说明不应再包含这组能力禁令。
+  it('builds a responsibility-constrained Head Agent role with no capability ban', () => {
     const prompt = buildMetaAgentSystemPrompt('claude', 'default', {
       provider: 'claude-code',
       model: 'opus',
     });
 
-    expect(prompt).toContain('You never touch code directly.');
-    expect(prompt).toContain(
-      'You still cannot read files, run commands, edit code, or browse the filesystem.',
+    // The old capability prohibitions are gone.
+    expect(prompt).not.toContain('You never touch code directly');
+    expect(prompt).not.toContain(
+      'You still cannot read files, run commands, edit code, or browse the filesystem',
     );
-    expect(prompt).toContain(
-      'All real implementation, testing, reviewing, and debugging work must be delegated',
-    );
+
+    // Iron law: implementation is always delegated, even a one-line edit.
+    expect(prompt).toContain('Iron law — implementation is always delegated');
+    expect(prompt).toContain('even a one-line edit');
+
+    // Head Agent may investigate on its own (read files, run read-only diagnostics).
+    expect(prompt).toContain('read any file');
+    expect(prompt).toContain('read-only diagnostics');
+
+    // Acceptance upgrade: the Head Agent must personally verify a child's work.
+    expect(prompt).toContain("Verify, don't trust the prose");
+    expect(prompt).toContain('personally verify');
   });
 
-  it('locks the runtime Meta Agent orchestration allow-list', () => {
-    // Wave 2 解禁后本测试应翻转：原生工作区工具将进入 Head Agent 的能力集合。
+  it('retains the orchestration MCP allow-list without amputating native tools', () => {
     const actual = (BaseAgentProvider as unknown as {
       META_AGENT_ALLOWED_TOOLS: string[];
     }).META_AGENT_ALLOWED_TOOLS;
 
+    // The orchestration whitelist is retained unchanged.
     expect(actual).toEqual(META_AGENT_ALLOWED_TOOLS);
+    // Native workspace tools are NOT auto-approved via this list — they now go through
+    // the normal permission flow (canUseTool), exactly like a standard session.
     expect(actual).not.toEqual(expect.arrayContaining(['Read', 'Write', 'Edit', 'Bash']));
   });
 
   it('keeps custom MCP servers visible while excluding extension-dev and settings in the meta profile', async () => {
-    // Wave 2 解禁后本测试应翻转的限制项：extension-dev/settings 当前被 profile 排除。
-    // custom-shell 的断言同时防止把 META_AGENT_ALLOWED_TOOLS 误读成严格可见工具白名单。
+    // Unchanged by Wave 2: the meta profile still surfaces orchestration + custom MCP
+    // servers while excluding extension-dev/settings. custom-shell also guards against
+    // reading META_AGENT_ALLOWED_TOOLS as a strict visible-tool whitelist.
     const service = new McpConfigService({
       mcpServerPort: 41001,
       sessionNamingServerPort: 41002,
@@ -174,52 +237,66 @@ describe('Meta Agent current capability restrictions', () => {
     expect(config).not.toHaveProperty('nimbalyst-settings');
   });
 
-  it('hard-blocks Claude native file and command tools in the SDK options', async () => {
-    // Wave 2 解禁后本测试应翻转：disallowedTools/blockedTools 不应再封锁原生工作区工具。
-    const provider = new ClaudeCodeProvider();
-    await provider.initialize({ model: 'claude-code:opus' });
+  it('no longer hard-blocks Claude native file and command tools in the SDK options', async () => {
+    const provider = await createMetaAgentProviderProbe();
+    const options = await captureMetaAgentSdkOptions(provider);
 
-    const hooks = {
-      clearEditedFiles: vi.fn(),
-      createPreToolUseHook: vi.fn(() => vi.fn()),
-      createPostToolUseHook: vi.fn(() => vi.fn()),
-      createPermissionDeniedHook: vi.fn(() => vi.fn()),
-      getEditedFiles: vi.fn(() => new Set<string>()),
-      createTurnEndSnapshots: vi.fn(async () => {}),
-    };
-    const providerInternals = provider as any;
-    providerInternals.getAgentRole = vi.fn(async () => 'meta-agent');
-    providerInternals.getWorkflowPreset = vi.fn(async () => 'default');
-    providerInternals.createToolHooksService = vi.fn(() => hooks);
-    providerInternals.createCanUseToolHandler = vi.fn(() => vi.fn());
-    providerInternals.logAgentMessage = vi.fn(async () => {});
-    providerInternals.flushPendingWrites = vi.fn(async () => {});
-    providerInternals.processTranscriptMessages = vi.fn(async () => {});
-
-    for await (const _chunk of provider.sendMessage(
-      'probe current Head Agent tools',
-      undefined,
-      'head-session',
-      [],
-      '/workspace',
-    )) {
-      // Drain the provider so its finally block closes the prompt controller.
-    }
-
-    expect(claudeQueryMock).toHaveBeenCalledTimes(1);
-    const options = claudeQueryMock.mock.calls[0][0].options as Record<string, unknown>;
+    // Orchestration allow-list is still applied (auto-approve for orchestration tools).
     expect(options.allowedTools).toEqual(META_AGENT_ALLOWED_TOOLS);
-    expect(options.disallowedTools).toEqual(
-      expect.arrayContaining(['Read', 'Write', 'Edit', 'MultiEdit', 'Glob', 'Grep', 'LS', 'Bash']),
+
+    // Native workspace tools are NO LONGER injected into disallowed/blocked — the Head
+    // Agent has full native capability, gated only by the normal permission flow.
+    expect(options.disallowedTools).toBeUndefined();
+    expect(options.blockedTools).toBeUndefined();
+  });
+
+  it('replaces the default Head Agent role with custom metadata role text, keeping orchestration sections', () => {
+    const customRole =
+      'You are Atlas, a bespoke orchestrator for this workspace. Follow the operator exactly.';
+    const prompt = buildMetaAgentSystemPrompt('claude', 'default', {
+      provider: 'claude-code',
+      model: 'opus',
+      customRole,
+    });
+
+    // Custom role text replaces the built-in default role segment.
+    expect(prompt).toContain(customRole);
+    expect(prompt).not.toContain('You are the Head Agent — a Meta Agent that orchestrates');
+    expect(prompt).not.toContain("Verify, don't trust the prose");
+
+    // Fixed orchestration sections remain and are unaffected by the override.
+    expect(prompt).toContain('## Your Tools');
+    expect(prompt).toContain('## Core Behavior');
+    expect(prompt).toContain('Delegate all implementation');
+    expect(prompt).toContain('## First Turn');
+
+    // Blank/whitespace custom role falls back to the built-in default role.
+    const fallback = buildMetaAgentSystemPrompt('claude', 'default', {
+      provider: 'claude-code',
+      model: 'opus',
+      customRole: '   ',
+    });
+    expect(fallback).toContain('You are the Head Agent — a Meta Agent that orchestrates');
+  });
+
+  it('threads a custom Head Agent role from session metadata into the Claude system prompt', async () => {
+    const customRole = 'You are Atlas, a bespoke orchestrator wired via session metadata.';
+    const provider = await createMetaAgentProviderProbe(customRole);
+    const options = await captureMetaAgentSdkOptions(provider);
+
+    // The meta-agent system prompt is passed as a plain string; it carries the custom role.
+    expect(options.systemPrompt).toContain(customRole);
+    expect(options.systemPrompt).not.toContain(
+      'You are the Head Agent — a Meta Agent that orchestrates',
     );
-    expect(options.blockedTools).toEqual(options.disallowedTools);
-    expect(options.disallowedTools).not.toEqual(
-      expect.arrayContaining(['TaskCreate', 'TaskGet', 'TaskUpdate', 'TaskList', 'TodoRead', 'TodoWrite']),
-    );
+    // Fixed orchestration mechanics still present regardless of the custom role.
+    expect(options.systemPrompt).toContain('## Your Tools');
+    expect(options.systemPrompt).toContain('## Core Behavior');
   });
 
   it('shows that Codex app-server drops the provider tool allow/deny fields', () => {
-    // Wave 2 解禁施工应删除上游伪限制；本探针锁定当前 app-server 并未执行它。
+    // Unchanged by Wave 2: Codex has native capability sandboxed to the workspace, and
+    // the app-server transport never enforced allow/deny — so nothing to unlock here.
     const protocol = new CodexAppServerProtocol();
     const params = (protocol as any).buildThreadStartParams({
       workspacePath: '/workspace',
@@ -236,7 +313,7 @@ describe('Meta Agent current capability restrictions', () => {
   });
 
   it('shows that the installed Codex SDK drops unknown tool allow/deny fields before execution', async () => {
-    // Wave 2 解禁施工应删除上游伪限制；本探针锁定当前 SDK 也未执行它。
+    // Unchanged by Wave 2: the installed Codex SDK also drops allow/deny before exec.
     let forwardedRunOptions: Record<string, unknown> | undefined;
     const codex = new Codex({ codexPathOverride: '/fake/codex' });
     const thread = codex.startThread({
