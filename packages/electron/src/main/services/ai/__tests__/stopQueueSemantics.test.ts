@@ -7,6 +7,7 @@ import { PGlite } from '@electric-sql/pglite';
 import {
   cancelRequestWithQueueSemantics,
   createPGLiteQueuedPromptsStore,
+  resumeQueuedPromptsWithDispatch,
   tryDispatchNextQueuedPromptUnlessPaused,
   type QueuedPromptsStore,
 } from '../../PGLiteQueuedPromptsStore';
@@ -276,7 +277,8 @@ describe('cancel and automatic dispatch queue semantics', () => {
   });
 
   it('pauses on cancel, blocks completion/error dispatch, then resumes explicitly', async () => {
-    await store.create({ id: 'p-cancel', sessionId: 'session-cancel', prompt: 'continue later' });
+    await store.create({ id: 'p-cancel-1', sessionId: 'session-cancel', prompt: 'continue first' });
+    await store.create({ id: 'p-cancel-2', sessionId: 'session-cancel', prompt: 'continue second' });
 
     const cancelled: string[] = [];
     const processing = new Set(['session-cancel']);
@@ -290,10 +292,11 @@ describe('cancel and automatic dispatch queue semantics', () => {
       clearProcessing: () => processing.delete('session-cancel'),
     });
 
-    expect(result).toEqual({ success: true, queue: 'paused' });
+    expect(result).toEqual({ success: true, queue: 'paused', paused: 2 });
     expect(cancelled).toEqual(['current']);
     expect(processing.has('session-cancel')).toBe(false);
-    expect((await store.get('p-cancel'))?.status).toBe('paused');
+    expect((await store.get('p-cancel-1'))?.status).toBe('paused');
+    expect((await store.get('p-cancel-2'))?.status).toBe('paused');
 
     const delivered: string[] = [];
     const dispatch = async () => {
@@ -315,12 +318,55 @@ describe('cancel and automatic dispatch queue semantics', () => {
     await expect(gate('completion-handler queue')).resolves.toBe(false);
     await expect(gate('error-handler queue')).resolves.toBe(false);
     expect(delivered).toEqual([]);
-    expect((await store.get('p-cancel'))?.status).toBe('paused');
+    expect((await store.get('p-cancel-1'))?.status).toBe('paused');
+    expect((await store.get('p-cancel-2'))?.status).toBe('paused');
 
-    await store.resumeSessionQueue('session-cancel');
-    await expect(gate('explicit resume')).resolves.toBe(true);
-    expect(delivered).toEqual(['continue later']);
-    expect((await store.get('p-cancel'))?.status).toBe('executing');
+    await expect(resumeQueuedPromptsWithDispatch({
+      sessionId: 'session-cancel',
+      queueStore: store,
+      dispatch: () => gate('explicit resume'),
+    })).resolves.toEqual({ success: true, resumed: 2 });
+    expect(delivered).toEqual(['continue first']);
+    expect((await store.get('p-cancel-1'))?.status).toBe('executing');
+    expect((await store.get('p-cancel-2'))?.status).toBe('pending');
+  }, 30_000);
+
+  it('returns resume and dispatch failures with the number already resumed', async () => {
+    const dispatchAfterResumeFailure = vi.fn(async () => {});
+    await expect(resumeQueuedPromptsWithDispatch({
+      sessionId: 'session-resume-failure',
+      queueStore: {
+        resumeSessionQueue: async () => {
+          throw new Error('resume unavailable');
+        },
+      },
+      dispatch: dispatchAfterResumeFailure,
+    })).resolves.toEqual({
+      success: false,
+      resumed: 0,
+      error: 'resume unavailable',
+    });
+    expect(dispatchAfterResumeFailure).not.toHaveBeenCalled();
+
+    await store.create({
+      id: 'p-dispatch-failure',
+      sessionId: 'session-dispatch-failure',
+      prompt: 'resume before dispatch fails',
+    });
+    await store.pauseSessionQueue('session-dispatch-failure');
+
+    await expect(resumeQueuedPromptsWithDispatch({
+      sessionId: 'session-dispatch-failure',
+      queueStore: store,
+      dispatch: async () => {
+        throw new Error('dispatch unavailable');
+      },
+    })).resolves.toEqual({
+      success: false,
+      resumed: 1,
+      error: 'dispatch unavailable',
+    });
+    expect((await store.get('p-dispatch-failure'))?.status).toBe('pending');
   }, 30_000);
 
   it('clears active queue rows and surfaces queue failures instead of cancelling anyway', async () => {

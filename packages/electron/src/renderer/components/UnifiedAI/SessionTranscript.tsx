@@ -213,13 +213,27 @@ type CancelQueueAction = 'pause' | 'clear';
 type CancelRequestResult = {
   success: boolean;
   queue: 'paused' | 'cleared' | 'unchanged';
+  paused?: number;
   error?: string;
 };
+type PausedQueueAction = 'resume' | 'clear';
 type CancelFeedback = {
   phase: 'idle' | 'requesting' | 'awaiting-terminal' | 'failed' | 'stopped';
   action?: CancelQueueAction;
   error?: string;
+  pausedCount?: number;
+  queueAction?: PausedQueueAction;
+  queueError?: {
+    action: PausedQueueAction;
+    message: string;
+  };
 };
+
+function queueActionErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error) return error;
+  return fallback;
+}
 
 export interface SessionTranscriptRef {
   focusInput: () => void;
@@ -439,6 +453,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const inputRef = useRef<AIInputRef>(null);
   const transcriptPanelRef = useRef<{ scrollToMessage: (index: number) => void; scrollToTop: () => void }>(null);
   const cancelRequestInFlightRef = useRef(false);
+  const pausedQueueActionInFlightRef = useRef(false);
   const [cancelFeedback, setCancelFeedback] = useState<CancelFeedback>({ phase: 'idle' });
 
   // Get effective document context - prefer getter for fresh data (reads from disk at call time)
@@ -483,6 +498,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
   useEffect(() => {
     cancelRequestInFlightRef.current = false;
+    pausedQueueActionInFlightRef.current = false;
     setCancelFeedback({ phase: 'idle' });
   }, [sessionId]);
 
@@ -498,9 +514,13 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
           || current.phase === 'failed')
       ) {
         cancelRequestInFlightRef.current = false;
-        return { phase: 'stopped', action: current.action };
+        return { ...current, phase: 'stopped' };
       }
-      if (isProcessing && current.phase === 'stopped') {
+      if (
+        isProcessing
+        && current.phase === 'stopped'
+        && current.queueAction === undefined
+      ) {
         return { phase: 'idle' };
       }
       return current;
@@ -1425,7 +1445,11 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         return;
       }
 
-      setCancelFeedback({ phase: 'awaiting-terminal', action: queueAction });
+      setCancelFeedback({
+        phase: 'awaiting-terminal',
+        action: queueAction,
+        pausedCount: queueAction === 'pause' ? result.paused ?? 0 : 0,
+      });
       if (isClaudeCliTerminalSession(provider)) recordClaudeActivity();
     } catch (error) {
       console.error('[SessionTranscript] Failed to cancel request:', error);
@@ -1434,6 +1458,103 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       setCancelFeedback({ phase: 'awaiting-terminal', action: queueAction });
     }
   }, [provider, sessionId, recordClaudeActivity]);
+
+  const beginPausedQueueAction = useCallback((action: PausedQueueAction): boolean => {
+    if (pausedQueueActionInFlightRef.current) return false;
+    pausedQueueActionInFlightRef.current = true;
+    setCancelFeedback((current) => ({
+      ...current,
+      queueAction: action,
+      queueError: undefined,
+    }));
+    return true;
+  }, []);
+
+  const showPausedQueueActionFailure = useCallback((
+    action: PausedQueueAction,
+    message: string,
+  ) => {
+    setCancelFeedback((current) => ({
+      ...current,
+      phase: 'stopped',
+      queueAction: undefined,
+      queueError: { action, message },
+    }));
+  }, []);
+
+  const handleResumePausedQueue = useCallback(async () => {
+    if (!beginPausedQueueAction('resume')) return;
+
+    try {
+      const result = await window.electronAPI.invoke(
+        'ai:resumeQueuedPrompts',
+        sessionId,
+      );
+
+      if (!result || typeof result.success !== 'boolean' || typeof result.resumed !== 'number') {
+        showPausedQueueActionFailure('resume', 'Resume request returned an invalid response.');
+        return;
+      }
+      if (!result.success) {
+        showPausedQueueActionFailure(
+          'resume',
+          result.error || 'Resume request failed. Please try again.',
+        );
+        return;
+      }
+
+      setCancelFeedback({ phase: 'idle' });
+    } catch (error) {
+      console.error('[SessionTranscript] Failed to resume paused queue:', error);
+      showPausedQueueActionFailure(
+        'resume',
+        queueActionErrorMessage(error, 'Resume request failed. Please try again.'),
+      );
+    } finally {
+      pausedQueueActionInFlightRef.current = false;
+    }
+  }, [beginPausedQueueAction, sessionId, showPausedQueueActionFailure]);
+
+  const handleClearPausedQueue = useCallback(async () => {
+    if (!beginPausedQueueAction('clear')) return;
+
+    try {
+      const result = await window.electronAPI.invoke(
+        'ai:cancelRequest',
+        sessionId,
+        'clear',
+      ) as CancelRequestResult | undefined;
+
+      if (!result || typeof result.success !== 'boolean') {
+        showPausedQueueActionFailure('clear', 'Clear request returned an invalid response.');
+        return;
+      }
+      if (!result.success) {
+        showPausedQueueActionFailure(
+          'clear',
+          result.error || 'Clear request failed. Please try again.',
+        );
+        return;
+      }
+
+      setQueuedPrompts([]);
+      setCancelFeedback((current) => ({
+        ...current,
+        phase: 'stopped',
+        pausedCount: 0,
+        queueAction: undefined,
+        queueError: undefined,
+      }));
+    } catch (error) {
+      console.error('[SessionTranscript] Failed to clear paused queue:', error);
+      showPausedQueueActionFailure(
+        'clear',
+        queueActionErrorMessage(error, 'Clear request failed. Please try again.'),
+      );
+    } finally {
+      pausedQueueActionInFlightRef.current = false;
+    }
+  }, [beginPausedQueueAction, sessionId, setQueuedPrompts, showPausedQueueActionFailure]);
 
   const handleFileClick = useCallback((filePath: string) => {
     const baseDir = sessionWorktreePath ?? workspacePath;
@@ -2384,6 +2505,32 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     );
   }
 
+  const stoppedPausedCount = cancelFeedback.phase === 'stopped'
+    ? cancelFeedback.pausedCount ?? 0
+    : 0;
+  const isPausedQueueActionInFlight = cancelFeedback.phase === 'stopped'
+    && cancelFeedback.queueAction !== undefined;
+  let cancelStatusMessage = 'Stopping pauses and keeps the queued messages';
+  if (cancelFeedback.phase === 'requesting' || cancelFeedback.phase === 'awaiting-terminal') {
+    cancelStatusMessage = `${cancelFeedback.action === 'clear' ? 'Stop & clear' : 'Stop'} request sent, waiting for it to take effect…`;
+  } else if (cancelFeedback.phase === 'failed') {
+    cancelStatusMessage = `Stop failed: ${cancelFeedback.error}`;
+  } else if (cancelFeedback.phase === 'stopped') {
+    if (cancelFeedback.queueError) {
+      const actionLabel = cancelFeedback.queueError.action === 'resume' ? 'Resume' : 'Clear';
+      cancelStatusMessage = `${actionLabel} failed: ${cancelFeedback.queueError.message}`;
+    } else if (cancelFeedback.queueAction === 'resume') {
+      cancelStatusMessage = 'Resuming queued messages…';
+    } else if (cancelFeedback.queueAction === 'clear') {
+      cancelStatusMessage = 'Clearing queued messages…';
+    } else if (stoppedPausedCount > 0) {
+      const messageLabel = stoppedPausedCount === 1 ? 'message' : 'messages';
+      cancelStatusMessage = `Stopped · ${stoppedPausedCount} queued ${messageLabel} paused`;
+    } else {
+      cancelStatusMessage = 'Stopped';
+    }
+  }
+
   return (
     <div
       style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}
@@ -2610,7 +2757,9 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
       {(isLoading || cancelFeedback.phase !== 'idle') && (
         <div
-          role={cancelFeedback.phase === 'failed' ? 'alert' : 'status'}
+          className="session-stop-status"
+          data-testid="session-stop-status"
+          role={cancelFeedback.phase === 'failed' || cancelFeedback.queueError ? 'alert' : 'status'}
           aria-live="polite"
           style={{
             minHeight: 28,
@@ -2621,22 +2770,13 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             padding: '4px 10px',
             borderTop: '1px solid var(--nim-border)',
             background: 'var(--nim-bg-secondary)',
-            color: cancelFeedback.phase === 'failed'
+            color: cancelFeedback.phase === 'failed' || cancelFeedback.queueError
               ? 'var(--nim-error)'
               : 'var(--nim-text-muted)',
             fontSize: 12,
           }}
         >
-          <span>
-            {cancelFeedback.phase === 'requesting'
-              || cancelFeedback.phase === 'awaiting-terminal'
-              ? `${cancelFeedback.action === 'clear' ? 'Stop & clear' : 'Stop'} request sent, waiting for it to take effect…`
-              : cancelFeedback.phase === 'failed'
-                ? `Stop failed: ${cancelFeedback.error}`
-                : cancelFeedback.phase === 'stopped'
-                  ? 'Stopped'
-                  : 'Stopping pauses and keeps the queued messages'}
-          </span>
+          <span>{cancelStatusMessage}</span>
           {isLoading && (
             <button
               type="button"
@@ -2655,6 +2795,49 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             >
               Stop &amp; clear queue
             </button>
+          )}
+          {cancelFeedback.phase === 'stopped' && stoppedPausedCount > 0 && (
+            <div
+              className="session-paused-queue-actions"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+            >
+              <button
+                type="button"
+                className="session-paused-queue-resume"
+                data-testid="session-paused-queue-resume"
+                onClick={() => void handleResumePausedQueue()}
+                disabled={isPausedQueueActionInFlight}
+                style={{
+                  border: '1px solid var(--nim-border)',
+                  borderRadius: 5,
+                  padding: '3px 8px',
+                  background: 'var(--nim-bg-active)',
+                  color: 'var(--nim-text)',
+                  cursor: isPausedQueueActionInFlight ? 'default' : 'pointer',
+                  opacity: isPausedQueueActionInFlight ? 0.5 : 1,
+                }}
+              >
+                Resume
+              </button>
+              <button
+                type="button"
+                className="session-paused-queue-clear"
+                data-testid="session-paused-queue-clear"
+                onClick={() => void handleClearPausedQueue()}
+                disabled={isPausedQueueActionInFlight}
+                style={{
+                  border: '1px solid var(--nim-border)',
+                  borderRadius: 5,
+                  padding: '3px 8px',
+                  background: 'transparent',
+                  color: 'var(--nim-text-muted)',
+                  cursor: isPausedQueueActionInFlight ? 'default' : 'pointer',
+                  opacity: isPausedQueueActionInFlight ? 0.5 : 1,
+                }}
+              >
+                Clear
+              </button>
+            </div>
           )}
         </div>
       )}

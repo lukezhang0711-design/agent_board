@@ -341,6 +341,7 @@ interface ElectronAPI {
   aiCancelRequest: (sessionId: string) => Promise<{
     success: boolean;
     queue: 'paused' | 'cleared' | 'unchanged';
+    paused?: number;
     error?: string;
   }>;
   aiApplyEdit: (edit: any) => Promise<any>;
@@ -1437,7 +1438,14 @@ interface ElectronAPI {
   startImageDrag: (imagePath: string) => Promise<{ success: boolean; error?: string }>;
 
   // Generic IPC methods for services
-  invoke: (channel: string, ...args: any[]) => Promise<any>;
+  invoke: {
+    (channel: 'ai:resumeQueuedPrompts', sessionId: string): Promise<{
+      success: boolean;
+      resumed: number;
+      error?: string;
+    }>;
+    (channel: string, ...args: any[]): Promise<any>;
+  };
   send: (channel: string, ...args: any[]) => void;
   on: (channel: string, callback: (...args: any[]) => void) => () => void;
   off: (channel: string, callback: (...args: any[]) => void) => void;

@@ -78,7 +78,7 @@ import {
   getDefaultEffortLevel
 } from '../../utils/store';
 import { mergeAISettings, getAIProviderOverridesWithWorktreeFallback } from '../../utils/aiSettingsMerge';
-import { DocumentContextService, type RawDocumentContext, type PreparedDocumentContext } from '@nimbalyst/runtime';
+import { AISessionsRepository, DocumentContextService, type RawDocumentContext, type PreparedDocumentContext } from '@nimbalyst/runtime';
 import { getMessageSyncHandler, getSyncProvider, isDesktopTrulyAway } from '../SyncManager';
 import { normalizeCodexProviderConfig, omitModelsField, stripTransientProviderFields } from '@nimbalyst/runtime/ai/server/utils/modelConfigUtils';
 import { isFileInWorkspaceOrWorktree, resolveProjectPath } from '../../utils/workspaceDetection';
@@ -120,10 +120,12 @@ import { supportsWorkspaceSlashWorkflowProvider } from '../../../shared/agentWor
 import {
   cancelRequestWithQueueSemantics,
   prepareQueuedPromptForDispatch,
+  resumeQueuedPromptsWithDispatch,
   type QueueCancelAction,
   type QueuedPromptOrigin,
   type QueuedPromptsStore,
 } from '../PGLiteQueuedPromptsStore';
+import { getQueuedPromptsStore } from '../RepositoryManager';
 
 const execFileAsync = promisify(execFile);
 
@@ -2267,6 +2269,48 @@ export class AIService {
       );
 
       return { processed };
+    });
+
+    safeHandle('ai:resumeQueuedPrompts', async (event, sessionId: string) => {
+      if (!sessionId) {
+        return {
+          success: false,
+          resumed: 0,
+          error: 'Session ID is required to resume queued prompts',
+        };
+      }
+
+      let session;
+      try {
+        session = await AISessionsRepository.get(sessionId);
+      } catch (error) {
+        return { success: false, resumed: 0, error: cancelErrorMessage(error) };
+      }
+      if (!session) {
+        return { success: false, resumed: 0, error: 'Session not found' };
+      }
+      const { workspacePath } = session;
+      if (!workspacePath) {
+        return { success: false, resumed: 0, error: 'Session has no workspace path' };
+      }
+
+      let queueStore: QueuedPromptsStore;
+      try {
+        queueStore = getQueuedPromptsStore();
+      } catch (error) {
+        return { success: false, resumed: 0, error: cancelErrorMessage(error) };
+      }
+
+      return resumeQueuedPromptsWithDispatch({
+        sessionId,
+        queueStore,
+        dispatch: () => this.tryDispatchNextQueuedPrompt(
+          sessionId,
+          workspacePath,
+          BrowserWindow.fromWebContents(event.sender),
+          'resumeQueuedPrompts',
+        ),
+      });
     });
 
     // Save draft input
