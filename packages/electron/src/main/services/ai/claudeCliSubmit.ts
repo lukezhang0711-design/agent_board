@@ -31,6 +31,8 @@ export interface SubmitClaudeCliPromptInput {
   sessionId: string;
   workspacePath: string;
   prompt: string;
+  /** Persisted queue source; omitted immediate submissions are ordinary user input. */
+  origin?: 'user' | 'child_session_event';
   attachments?: ChatAttachment[];
   /** Active document / selection context (NIM-818) — appended to the PTY line. */
   documentContext?: ClaudeCliDocumentContext | null;
@@ -114,14 +116,18 @@ export async function submitClaudeCliPrompt(
     deps.writeToTerminal(input.sessionId, SUBMIT_TERMINATOR);
   }
 
-  // Log the CLEAN typed prompt (+ attachment chips), NOT the path-augmented PTY
-  // line. Best-effort: the CLI turn already started.
-  await deps.logUserPrompt({
-    sessionId: input.sessionId,
-    workspacePath: input.workspacePath,
-    prompt,
-    attachments,
-  });
+  // Internal child-session events drive the CLI through the same PTY boundary,
+  // but must never masquerade as a transcript user message.
+  if (input.origin !== 'child_session_event') {
+    // Log the CLEAN typed prompt (+ attachment chips), NOT the path-augmented
+    // PTY line. Best-effort: the CLI turn already started.
+    await deps.logUserPrompt({
+      sessionId: input.sessionId,
+      workspacePath: input.workspacePath,
+      prompt,
+      attachments,
+    });
+  }
 
   deps.sendAnalytics({
     messageLength: prompt.length,

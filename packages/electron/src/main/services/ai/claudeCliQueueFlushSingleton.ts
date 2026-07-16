@@ -29,14 +29,19 @@ export async function flushNextClaudeCliQueuedPromptForSession(
   flushInFlight.add(sessionId);
   try {
     const store = getQueuedPromptsStore();
+    let claimedOrigin: 'user' | 'child_session_event' | undefined;
     return await flushNextClaudeCliQueuedPrompt(
       { sessionId, workspacePath },
       {
         listPending: (s) => store.listPending(s),
-        claim: (id) => store.claim(id),
+        claim: async (id) => {
+          const claimed = await store.claim(id);
+          claimedOrigin = claimed?.origin;
+          return claimed;
+        },
         complete: (id) => store.complete(id),
         fail: (id, m) => store.fail(id, m),
-        submit: (i) => submitClaudeCliPromptProduction(i),
+        submit: (i) => submitClaudeCliPromptProduction({ ...i, origin: claimedOrigin }),
         // The flush runs from the PID-idle transition with no originating IPC
         // event, so there is no single target window; broadcasting is safe
         // because the renderer filters by sessionId (NIM-830).
