@@ -309,6 +309,29 @@ export abstract class BaseAgentProvider extends BaseAIProvider {
   }
 
   /**
+   * Custom Head Agent role text, read from the session metadata key `metaAgentRole`.
+   * When a non-empty string is present it REPLACES the built-in default role segment in
+   * buildMetaAgentSystemPrompt (identity + duties + iron law + verification philosophy);
+   * the tools list, core behavior, and other sections are unaffected. Returns undefined
+   * when absent/blank so the caller falls back to the built-in default role.
+   */
+  protected async getMetaAgentCustomRole(sessionId?: string): Promise<string | undefined> {
+    if (!sessionId) {
+      return undefined;
+    }
+    try {
+      const session = await AISessionsRepository.get(sessionId);
+      const role = (session?.metadata as Record<string, unknown> | undefined)?.metaAgentRole;
+      if (typeof role === 'string' && role.trim().length > 0) {
+        return role;
+      }
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Best-effort message logging - doesn't throw on failure
    */
   protected async logAgentMessageBestEffort(

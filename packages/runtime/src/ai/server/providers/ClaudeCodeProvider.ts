@@ -600,7 +600,8 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       const agentRole = await this.getAgentRole(sessionId);
       const isMetaAgent = agentRole === 'meta-agent';
       const workflowPreset = isMetaAgent ? await this.getWorkflowPreset(sessionId) : 'default';
-      const systemPrompt = this.buildSystemPrompt(documentContext, enableAgentTeams, isMetaAgent, workflowPreset);
+      const metaAgentCustomRole = isMetaAgent ? await this.getMetaAgentCustomRole(sessionId) : undefined;
+      const systemPrompt = this.buildSystemPrompt(documentContext, enableAgentTeams, isMetaAgent, workflowPreset, metaAgentCustomRole);
 
       // Note: Attachments (images/documents) are NOT added to the message text.
       // They're sent as separate content blocks via the API's multimodal format.
@@ -666,18 +667,21 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       this.promptController = promptController;
       spawnDiagContext = { binaryPath: options.pathToClaudeCodeExecutable, cwd: options.cwd };
 
-      // Meta-agent: override MCP config with meta-agent profile and apply tool restrictions
+      // Meta-agent: override MCP config with the meta-agent profile.
+      // Wave 2 (FB-002/003): the Head Agent holds FULL native workspace capability
+      // (read files, run read-only diagnostics/tests/type-checks, maintain plan and
+      // coordination docs). "It does not implement product features itself" is enforced
+      // by the role constraint in its system prompt, NOT by amputating tools. So we keep
+      // the orchestration MCP tools on the auto-approve allow-list, but no longer inject
+      // native file/command tools into disallowedTools/blockedTools -- they now fall
+      // through to canUseTool exactly like a standard session's tools do.
       if (isMetaAgent) {
         options.mcpServers = await this.mcpConfigService.getMcpServersConfig({
           sessionId,
           workspacePath,
           profile: 'meta-agent',
         });
-        const allowedSet = new Set(BaseAgentProvider.META_AGENT_ALLOWED_TOOLS);
-        const blockedNativeTools = SDK_NATIVE_TOOLS.filter(t => !allowedSet.has(t));
         (options as any).allowedTools = BaseAgentProvider.META_AGENT_ALLOWED_TOOLS;
-        (options as any).disallowedTools = blockedNativeTools;
-        (options as any).blockedTools = blockedNativeTools;
       }
 
       const queryStartTime = Date.now();
@@ -3166,11 +3170,12 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
   }
 
 
-  protected buildSystemPrompt(documentContext?: DocumentContext, enableAgentTeams?: boolean, isMetaAgent: boolean = false, workflowPreset: MetaAgentWorkflowPreset = 'default'): string {
+  protected buildSystemPrompt(documentContext?: DocumentContext, enableAgentTeams?: boolean, isMetaAgent: boolean = false, workflowPreset: MetaAgentWorkflowPreset = 'default', metaAgentCustomRole?: string): string {
     if (isMetaAgent) {
       return buildMetaAgentSystemPrompt('claude', workflowPreset, {
         provider: 'claude-code',
         model: this.config.model ?? undefined,
+        customRole: metaAgentCustomRole,
       });
     }
 
