@@ -111,6 +111,13 @@ export function getMigrations(schemaDir: string): Migration[] {
       name: 'tracker_relationship_index',
       sqlFile: path.join(schemaDir, '0014_tracker_relationship_index.sql'),
     },
+    ...(fs.existsSync(path.join(schemaDir, '0015_queued_prompts_paused.sql'))
+      ? [{
+          version: 15,
+          name: 'queued_prompts_paused',
+          sqlFile: path.join(schemaDir, '0015_queued_prompts_paused.sql'),
+        }]
+      : []),
   ];
 }
 

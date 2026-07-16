@@ -209,6 +209,18 @@ interface Todo {
   activeForm: string;
 }
 
+type CancelQueueAction = 'pause' | 'clear';
+type CancelRequestResult = {
+  success: boolean;
+  queue: 'paused' | 'cleared' | 'unchanged';
+  error?: string;
+};
+type CancelFeedback = {
+  phase: 'idle' | 'requesting' | 'awaiting-terminal' | 'failed' | 'stopped';
+  action?: CancelQueueAction;
+  error?: string;
+};
+
 export interface SessionTranscriptRef {
   focusInput: () => void;
 }
@@ -426,6 +438,8 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const posthog = usePostHog();
   const inputRef = useRef<AIInputRef>(null);
   const transcriptPanelRef = useRef<{ scrollToMessage: (index: number) => void; scrollToTop: () => void }>(null);
+  const cancelRequestInFlightRef = useRef(false);
+  const [cancelFeedback, setCancelFeedback] = useState<CancelFeedback>({ phase: 'idle' });
 
   // Get effective document context - prefer getter for fresh data (reads from disk at call time)
   const getEffectiveDocumentContext = useCallback(async () => {
@@ -466,6 +480,32 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const loadSessionData = useSetAtom(loadSessionDataAtom);
   const reloadSessionData = useSetAtom(reloadSessionDataAtom);
   const updateSessionStore = useSetAtom(updateSessionStoreAtom);
+
+  useEffect(() => {
+    cancelRequestInFlightRef.current = false;
+    setCancelFeedback({ phase: 'idle' });
+  }, [sessionId]);
+
+  // sessionProcessingAtom is cleared only by the centralized terminal-session
+  // listeners. A successful IPC response therefore remains a request-sent
+  // transition until the actual completed/error/interrupted event arrives.
+  useEffect(() => {
+    setCancelFeedback((current) => {
+      if (
+        !isProcessing
+        && (current.phase === 'requesting'
+          || current.phase === 'awaiting-terminal'
+          || current.phase === 'failed')
+      ) {
+        cancelRequestInFlightRef.current = false;
+        return { phase: 'stopped', action: current.action };
+      }
+      if (isProcessing && current.phase === 'stopped') {
+        return { phase: 'idle' };
+      }
+      return current;
+    });
+  }, [isProcessing, cancelFeedback.phase]);
 
   // Child session creation for "start new session" option
   const createChildSession = useSetAtom(createChildSessionAtom);
@@ -1358,26 +1398,42 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     [workspacePath, sessionId]
   );
 
-  const handleCancel = useCallback(async () => {
+  const handleCancel = useCallback(async (queueAction: CancelQueueAction = 'pause') => {
+    if (cancelRequestInFlightRef.current) return;
+    cancelRequestInFlightRef.current = true;
+    setCancelFeedback({ phase: 'requesting', action: queueAction });
+
     try {
-      if (isClaudeCliTerminalSession(provider)) {
-        // Escalating stop (NIM-814): Ctrl-C → Ctrl-C → SIGINT in the main
-        // process. Fire-and-forget — escalation can take a few seconds and the
-        // button must stay responsive to repeat presses.
-        void window.electronAPI.terminal.interruptClaudeCli(sessionId).catch((err) => {
-          console.error('[SessionTranscript] Failed to interrupt Claude CLI:', err);
-        });
-        recordClaudeActivity();
+      const result = await window.electronAPI.invoke(
+        'ai:cancelRequest',
+        sessionId,
+        queueAction,
+      ) as CancelRequestResult | undefined;
+
+      if (!result || typeof result.success !== 'boolean') {
+        setCancelFeedback({ phase: 'awaiting-terminal', action: queueAction });
         return;
       }
 
-      await window.electronAPI.invoke('ai:cancelRequest', sessionId);
-      // Note: session:interrupted event will also set this to false via sessionStateListeners
-      setIsProcessing(false);
+      if (!result.success) {
+        cancelRequestInFlightRef.current = false;
+        setCancelFeedback({
+          phase: 'failed',
+          action: queueAction,
+          error: result.error || '停止请求失败，请重试',
+        });
+        return;
+      }
+
+      setCancelFeedback({ phase: 'awaiting-terminal', action: queueAction });
+      if (isClaudeCliTerminalSession(provider)) recordClaudeActivity();
     } catch (error) {
       console.error('[SessionTranscript] Failed to cancel request:', error);
+      // The IPC transport did not provide an acknowledgement, so don't claim
+      // success or failure. Keep waiting for the real terminal-session event.
+      setCancelFeedback({ phase: 'awaiting-terminal', action: queueAction });
     }
-  }, [provider, sessionId, setIsProcessing, recordClaudeActivity]);
+  }, [provider, sessionId, recordClaudeActivity]);
 
   const handleFileClick = useCallback((filePath: string) => {
     const baseDir = sessionWorktreePath ?? workspacePath;
@@ -2551,6 +2607,57 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         onEdit={handleEditQueuedPrompt}
         onSendNow={isLoading && !isClaudeCliTerminalSession(provider) ? handleSendNowQueuedPrompt : undefined}
       />
+
+      {(isLoading || cancelFeedback.phase !== 'idle') && (
+        <div
+          role={cancelFeedback.phase === 'failed' ? 'alert' : 'status'}
+          aria-live="polite"
+          style={{
+            minHeight: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            padding: '4px 10px',
+            borderTop: '1px solid var(--nim-border)',
+            background: 'var(--nim-bg-secondary)',
+            color: cancelFeedback.phase === 'failed'
+              ? 'var(--nim-error)'
+              : 'var(--nim-text-muted)',
+            fontSize: 12,
+          }}
+        >
+          <span>
+            {cancelFeedback.phase === 'requesting'
+              || cancelFeedback.phase === 'awaiting-terminal'
+              ? `${cancelFeedback.action === 'clear' ? '停止并清空' : '停止'}请求已发送，等待生效`
+              : cancelFeedback.phase === 'failed'
+                ? `停止失败：${cancelFeedback.error}`
+                : cancelFeedback.phase === 'stopped'
+                  ? '已停止'
+                  : '停止会暂停并保留后续队列'}
+          </span>
+          {isLoading && (
+            <button
+              type="button"
+              onClick={() => void handleCancel('clear')}
+              disabled={cancelRequestInFlightRef.current}
+              style={{
+                flexShrink: 0,
+                border: '1px solid var(--nim-border)',
+                borderRadius: 5,
+                padding: '3px 8px',
+                background: 'transparent',
+                color: 'inherit',
+                cursor: cancelRequestInFlightRef.current ? 'default' : 'pointer',
+                opacity: cancelRequestInFlightRef.current ? 0.5 : 1,
+              }}
+            >
+              停止并清空
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Note: All interactive prompts (ToolPermission, ExitPlanMode, AskUserQuestion) use inline widgets in transcript */}
 

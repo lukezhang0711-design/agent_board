@@ -1669,7 +1669,7 @@ class PGLiteWorker {
           id TEXT PRIMARY KEY,
           session_id TEXT NOT NULL,
           prompt TEXT NOT NULL,
-          status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'executing', 'completed', 'failed')),
+          status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paused', 'executing', 'completed', 'failed')),
           attachments JSONB,
           document_context JSONB,
           created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1686,6 +1686,39 @@ class PGLiteWorker {
         CREATE INDEX IF NOT EXISTS idx_queued_prompts_status ON queued_prompts(status);
         CREATE INDEX IF NOT EXISTS idx_queued_prompts_session_status ON queued_prompts(session_id, status);
         CREATE INDEX IF NOT EXISTS idx_queued_prompts_created ON queued_prompts(created_at);
+
+        DO $$
+        DECLARE
+          constraint_name TEXT;
+        BEGIN
+          SELECT con.conname INTO constraint_name
+          FROM pg_constraint con
+          JOIN pg_attribute att
+            ON att.attnum = ANY(con.conkey) AND att.attrelid = con.conrelid
+          WHERE con.conrelid = 'queued_prompts'::regclass
+            AND att.attname = 'status'
+            AND con.contype = 'c'
+            AND pg_get_constraintdef(con.oid) NOT LIKE '%paused%'
+          LIMIT 1;
+
+          IF constraint_name IS NOT NULL THEN
+            EXECUTE 'ALTER TABLE queued_prompts DROP CONSTRAINT ' || quote_ident(constraint_name);
+          END IF;
+
+          IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint con
+            JOIN pg_attribute att
+              ON att.attnum = ANY(con.conkey) AND att.attrelid = con.conrelid
+            WHERE con.conrelid = 'queued_prompts'::regclass
+              AND att.attname = 'status'
+              AND con.contype = 'c'
+              AND pg_get_constraintdef(con.oid) LIKE '%paused%'
+          ) THEN
+            ALTER TABLE queued_prompts ADD CONSTRAINT queued_prompts_status_check
+              CHECK (status IN ('pending', 'paused', 'executing', 'completed', 'failed'));
+          END IF;
+        END $$;
       `);
       console.log('[PGLite Worker] queued_prompts table created successfully');
     } catch (error) {

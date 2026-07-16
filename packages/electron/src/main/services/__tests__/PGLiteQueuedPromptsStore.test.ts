@@ -74,6 +74,71 @@ describe('PGLiteQueuedPromptsStore.rollbackAllExecuting', () => {
   });
 });
 
+describe('PGLiteQueuedPromptsStore queue pause controls', () => {
+  it('pauses only pending rows for one session and reports the changed row count', async () => {
+    const query = vi.fn(async (sql: string, params?: any[]) => {
+      expect(sql).toContain("SET status = 'paused'");
+      expect(sql).toContain("status = 'pending'");
+      expect(sql).toContain('session_id = $1');
+      expect(params).toEqual(['session-paused']);
+      return { rows: [{ id: 'pending-1' }, { id: 'pending-2' }] };
+    });
+    const store = createPGLiteQueuedPromptsStore({ query: query as any });
+
+    await expect(store.pauseSessionQueue('session-paused')).resolves.toBe(2);
+  });
+
+  it('resumes only paused rows for one session and reports the changed row count', async () => {
+    const query = vi.fn(async (sql: string, params?: any[]) => {
+      expect(sql).toContain("SET status = 'pending'");
+      expect(sql).toContain("status = 'paused'");
+      expect(sql).toContain('session_id = $1');
+      expect(params).toEqual(['session-resumed']);
+      return { rows: [{ id: 'paused-1' }] };
+    });
+    const store = createPGLiteQueuedPromptsStore({ query: query as any });
+
+    await expect(store.resumeSessionQueue('session-resumed')).resolves.toBe(1);
+  });
+
+  it('treats any paused row as a session-level gate for listPending', async () => {
+    const query = vi.fn(async (sql: string, params?: any[]) => {
+      expect(sql).toContain("status = 'pending'");
+      expect(sql).toContain('NOT EXISTS');
+      expect(sql).toContain("paused.status = 'paused'");
+      expect(params).toEqual(['session-gated']);
+      return { rows: [] };
+    });
+    const store = createPGLiteQueuedPromptsStore({ query: query as any });
+
+    await expect(store.listPending('session-gated')).resolves.toEqual([]);
+  });
+
+  it('reports a paused session from persisted rows', async () => {
+    const query = vi.fn(async (sql: string, params?: any[]) => {
+      expect(sql).toContain("status = 'paused'");
+      expect(sql).toContain('COUNT(*)');
+      expect(params).toEqual(['session-paused']);
+      return { rows: [{ count: '2' }] };
+    });
+    const store = createPGLiteQueuedPromptsStore({ query: query as any });
+
+    await expect(store.isSessionQueuePaused('session-paused')).resolves.toBe(true);
+  });
+
+  it('clears only active queued rows and preserves terminal history', async () => {
+    const query = vi.fn(async (sql: string, params?: any[]) => {
+      expect(sql).toContain('DELETE FROM queued_prompts');
+      expect(sql).toContain("status IN ('pending', 'paused', 'executing')");
+      expect(params).toEqual(['session-clear']);
+      return { rows: [{ id: 'pending-1' }, { id: 'paused-1' }] };
+    });
+    const store = createPGLiteQueuedPromptsStore({ query: query as any });
+
+    await expect(store.clearSessionQueue('session-clear')).resolves.toBe(2);
+  });
+});
+
 describe('PGLiteQueuedPromptsStore.sweepExecutingOnBoot', () => {
   it('marks delivered executing rows completed, rolls back undelivered ones', async () => {
     const calls: { sql: string; params?: any[] }[] = [];
