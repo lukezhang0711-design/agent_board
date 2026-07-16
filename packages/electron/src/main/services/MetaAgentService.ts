@@ -23,6 +23,7 @@ import {
 import { computeNotificationSignature } from './metaAgentNotificationSignature';
 import { extractMessageText, extractUserPrompts } from './metaAgentMessageText';
 import { ClaudeCliLauncherConfig } from './ai/claudeCliLauncherSingleton';
+import type { QueueCancelAction, QueueCancelResult } from './PGLiteQueuedPromptsStore';
 
 type SessionStatusValue = 'idle' | 'running' | 'waiting_for_input' | 'error' | 'interrupted';
 type PromptType = 'permission_request' | 'ask_user_question_request' | 'exit_plan_mode_request';
@@ -69,6 +70,50 @@ interface CreateChildSessionArgs {
   useWorktree?: boolean;
   worktreeId?: string;
   toolScope?: string;
+}
+
+interface InterruptSessionArgs {
+  sessionId: string;
+  cascade?: boolean;
+  queueAction?: QueueCancelAction;
+}
+
+interface TaskTreeSessionRow {
+  id: string;
+  created_by_session_id: string | null;
+  status: SessionStatusValue | null;
+}
+
+interface InterruptSessionNodeResult {
+  sessionId: string;
+  outcome: 'interrupted' | 'already-ended' | 'failed';
+  queue: QueueCancelResult['queue'];
+  paused?: number;
+  reason?: string;
+}
+
+function collectDescendantSessionIds(rows: TaskTreeSessionRow[], rootSessionId: string): string[] {
+  const childrenByParent = new Map<string, string[]>();
+  for (const row of rows) {
+    if (!row.created_by_session_id) continue;
+    const children = childrenByParent.get(row.created_by_session_id) ?? [];
+    children.push(row.id);
+    childrenByParent.set(row.created_by_session_id, children);
+  }
+
+  const descendants: string[] = [];
+  const visited = new Set<string>([rootSessionId]);
+  const pending = [rootSessionId];
+  while (pending.length > 0) {
+    const parentId = pending.shift()!;
+    for (const childId of childrenByParent.get(parentId) ?? []) {
+      if (visited.has(childId)) continue;
+      visited.add(childId);
+      descendants.push(childId);
+      pending.push(childId);
+    }
+  }
+  return descendants;
 }
 
 function normalizeStoredChildModelIdentifier(
@@ -141,6 +186,81 @@ export class MetaAgentService {
     return this.serverPort;
   }
 
+  public async interruptSession(
+    metaSessionId: string,
+    workspaceId: string,
+    args: InterruptSessionArgs,
+  ): Promise<string> {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
+    if (!args?.sessionId?.trim()) {
+      throw new Error('sessionId is required');
+    }
+
+    const queueAction = args.queueAction ?? 'pause';
+    if (queueAction !== 'pause' && queueAction !== 'clear') {
+      throw new Error('queueAction must be "pause" or "clear"');
+    }
+
+    const { rows } = await databaseWorker.query<TaskTreeSessionRow>(
+      `SELECT id, created_by_session_id, status
+       FROM ai_sessions
+       WHERE workspace_id = $1
+         AND (is_archived = FALSE OR is_archived IS NULL)`,
+      [workspaceId]
+    );
+    const targetSessionId = args.sessionId.trim();
+    const allowedSessionIds = new Set(collectDescendantSessionIds(rows, metaSessionId));
+    if (!allowedSessionIds.has(targetSessionId)) {
+      throw new Error(
+        `Session ${targetSessionId} is not in the task tree created by Head Agent ${metaSessionId}`
+      );
+    }
+
+    const targetIds = args.cascade
+      ? [
+          targetSessionId,
+          ...collectDescendantSessionIds(rows, targetSessionId)
+            .filter((sessionId) => allowedSessionIds.has(sessionId)),
+        ]
+      : [targetSessionId];
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    const results: InterruptSessionNodeResult[] = [];
+    for (const sessionId of targetIds) {
+      const stopResult = await this.aiService.stopSession(sessionId, queueAction);
+      const status = rowById.get(sessionId)?.status ?? 'idle';
+      const wasActive = status === 'running' || status === 'waiting_for_input';
+      const inactiveTransport =
+        stopResult.error === 'No active provider for session'
+        || stopResult.error === 'No active terminal for session';
+      const outcome: InterruptSessionNodeResult['outcome'] = stopResult.success
+        ? (wasActive ? 'interrupted' : 'already-ended')
+        : (!wasActive && inactiveTransport ? 'already-ended' : 'failed');
+      const nodeResult: InterruptSessionNodeResult = {
+        sessionId,
+        outcome,
+        queue: stopResult.queue,
+      };
+      if (stopResult.paused !== undefined) {
+        nodeResult.paused = stopResult.paused;
+      }
+      if (outcome === 'already-ended') {
+        nodeResult.reason = stopResult.error || `Session was already ${status}`;
+      } else if (outcome === 'failed') {
+        nodeResult.reason = stopResult.error || 'Stop failed';
+      }
+      results.push(nodeResult);
+    }
+
+    return JSON.stringify({
+      success: results.every((result) => result.outcome !== 'failed'),
+      cascade: args.cascade ?? false,
+      queueAction,
+      results,
+    }, null, 2);
+  }
+
   private shouldBypassChildAgentExecutionForTests(): boolean {
     return (
       process.env.PLAYWRIGHT === '1' ||
@@ -188,6 +308,8 @@ export class MetaAgentService {
           this.getSessionResultJson(targetSessionId, workspaceId),
         sendPrompt: (_metaSessionId, workspaceId, targetSessionId, prompt) =>
           this.sendPromptToSession(targetSessionId, workspaceId, prompt),
+        interruptSession: (metaSessionId, workspaceId, args) =>
+          this.interruptSession(metaSessionId, workspaceId, args),
         respondToPrompt: (_metaSessionId, workspaceId, args) =>
           this.respondToPrompt(workspaceId, args),
         listSpawnedSessions: (metaSessionId, workspaceId) =>

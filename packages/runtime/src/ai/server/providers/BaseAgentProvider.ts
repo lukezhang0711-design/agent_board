@@ -35,6 +35,7 @@ export abstract class BaseAgentProvider extends BaseAIProvider {
     'mcp__nimbalyst-meta-agent__get_session_status',
     'mcp__nimbalyst-meta-agent__get_session_result',
     'mcp__nimbalyst-meta-agent__send_prompt',
+    'mcp__nimbalyst-meta-agent__interrupt_session',
     'mcp__nimbalyst-meta-agent__respond_to_prompt',
     'mcp__nimbalyst-session-naming__update_session_meta',
     'mcp__nimbalyst-mcp__capture_editor_screenshot',

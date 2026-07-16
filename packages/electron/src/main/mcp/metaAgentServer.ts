@@ -49,6 +49,12 @@ type RespondToPromptArgs = {
   response: Record<string, unknown>;
 };
 
+type InterruptSessionArgs = {
+  sessionId: string;
+  cascade?: boolean;
+  queueAction?: "pause" | "clear";
+};
+
 interface MetaAgentToolFns {
   listWorktrees: (
     metaSessionId: string,
@@ -88,6 +94,11 @@ interface MetaAgentToolFns {
   listSpawnedSessions: (
     metaSessionId: string,
     workspaceId: string
+  ) => Promise<string>;
+  interruptSession: (
+    metaSessionId: string,
+    workspaceId: string,
+    args: InterruptSessionArgs
   ) => Promise<string>;
 }
 
@@ -286,6 +297,32 @@ const META_AGENT_TOOL_DEFS: Array<{
     },
   },
   {
+    name: "interrupt_session",
+    description:
+      "Interrupt a child session created by this Head Agent. Set cascade=true to interrupt the target and every descendant in its task tree. This stops active turns but does not revert file changes. queueAction=\"pause\" (default) preserves queued prompts in a paused state; queueAction=\"clear\" removes active queued prompts. Returns the actual outcome and queue action for every targeted session. Targets outside this Head Agent's task tree are rejected.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sessionId: {
+          type: "string",
+          description: "The child session ID to interrupt.",
+        },
+        cascade: {
+          type: "boolean",
+          default: false,
+          description: "Default false. When true, also interrupt every descendant of the target session.",
+        },
+        queueAction: {
+          type: "string",
+          enum: ["pause", "clear"],
+          default: "pause",
+          description: "Default pause. Preserve queued prompts in a paused state, or clear active queued prompts.",
+        },
+      },
+      required: ["sessionId"],
+    },
+  },
+  {
     name: "respond_to_prompt",
     description:
       "Answer a child session's interactive prompt such as AskUserQuestion, ExitPlanMode, or ToolPermission.",
@@ -352,6 +389,7 @@ const EXTENSION_META_AGENT_ALLOWED_TOOLS = new Set<string>([
   "get_session_status",
   "get_session_result",
   "send_prompt",
+  "interrupt_session",
   "respond_to_prompt",
   "list_spawned_sessions",
 ]);
@@ -420,6 +458,12 @@ export async function dispatchMetaAgentTool(
         effectiveWorkspaceId,
         (args?.sessionId as string) ?? "",
         (args?.prompt as string) ?? ""
+      );
+    case "interrupt_session":
+      return toolFns.interruptSession(
+        aiSessionId,
+        effectiveWorkspaceId,
+        (args ?? {}) as InterruptSessionArgs
       );
     case "respond_to_prompt":
       return toolFns.respondToPrompt(aiSessionId, effectiveWorkspaceId, (args ?? {}) as RespondToPromptArgs);
