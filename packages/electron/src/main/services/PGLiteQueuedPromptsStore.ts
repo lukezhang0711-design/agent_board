@@ -147,6 +147,13 @@ export type QueueCancelAction = 'pause' | 'clear';
 export type QueueCancelResult = {
   success: boolean;
   queue: 'paused' | 'cleared' | 'unchanged';
+  paused?: number;
+  error?: string;
+};
+
+export type QueueResumeResult = {
+  success: boolean;
+  resumed: number;
   error?: string;
 };
 
@@ -174,6 +181,7 @@ export async function cancelRequestWithQueueSemantics(options: {
     clearProcessing,
   } = options;
   let queue: QueueCancelResult['queue'] = 'unchanged';
+  let paused = 0;
 
   try {
     if (queueAction === 'clear') {
@@ -183,8 +191,9 @@ export async function cancelRequestWithQueueSemantics(options: {
       const initiallyPaused = await queueStore.pauseSessionQueue(sessionId);
       await queueStore.sweepExecutingForSession(sessionId);
       const pausedAfterSweep = await queueStore.pauseSessionQueue(sessionId);
-      const isPaused = await queueStore.isSessionQueuePaused(sessionId);
-      if (initiallyPaused > 0 || pausedAfterSweep > 0 || isPaused) {
+      paused = (await queueStore.listForSession(sessionId))
+        .filter((prompt) => prompt.status === 'paused').length;
+      if (initiallyPaused > 0 || pausedAfterSweep > 0 || paused > 0) {
         queue = 'paused';
       }
     }
@@ -199,9 +208,28 @@ export async function cancelRequestWithQueueSemantics(options: {
       if (clearedAfterCancel > 0) queue = 'cleared';
     }
     clearProcessing();
-    return { success: true, queue };
+    return queueAction === 'pause'
+      ? { success: true, queue, paused }
+      : { success: true, queue };
   } catch (error) {
     return { success: false, queue, error: errorMessage(error) };
+  }
+}
+
+/** Resume persisted paused work, then immediately attempt one queue dispatch. */
+export async function resumeQueuedPromptsWithDispatch(options: {
+  sessionId: string;
+  queueStore: Pick<QueuedPromptsStore, 'resumeSessionQueue'>;
+  dispatch: () => Promise<unknown>;
+}): Promise<QueueResumeResult> {
+  const { sessionId, queueStore, dispatch } = options;
+  let resumed = 0;
+  try {
+    resumed = await queueStore.resumeSessionQueue(sessionId);
+    await dispatch();
+    return { success: true, resumed };
+  } catch (error) {
+    return { success: false, resumed, error: errorMessage(error) };
   }
 }
 
