@@ -30,6 +30,24 @@ export interface Migration {
 export interface MigrationResult {
   applied: number[];
   skipped: number[];
+  repaired: number[];
+}
+
+interface MigrationSchemaRequirement {
+  version: number;
+  name: string;
+  validate: (db: SqliteDatabase) => string | null;
+}
+
+export interface MigrationSchemaMismatch {
+  version: number;
+  name: string;
+  reason: string;
+}
+
+interface QueuedPromptOriginRow {
+  id: string;
+  origin: string;
 }
 
 /**
@@ -128,6 +146,84 @@ export function getMigrations(schemaDir: string): Migration[] {
   ];
 }
 
+const MIGRATION_SCHEMA_REQUIREMENTS: readonly MigrationSchemaRequirement[] = [
+  {
+    version: 15,
+    name: 'queued_prompts_paused',
+    validate: (db) => {
+      const row = db
+        .prepare(
+          `SELECT sql
+           FROM sqlite_master
+           WHERE type = 'table' AND name = 'queued_prompts'`,
+        )
+        .get() as { sql?: string } | undefined;
+      const tableSql = row?.sql ?? '';
+      return /CHECK\s*\(\s*status\s+IN\s*\([^)]*['"]paused['"]/i.test(tableSql)
+        ? null
+        : 'queued_prompts.status does not allow paused';
+    },
+  },
+  {
+    version: 16,
+    name: 'queued_prompts_origin',
+    validate: (db) => {
+      return queuedPromptsHasColumn(db, 'origin')
+        ? null
+        : 'queued_prompts.origin is missing';
+    },
+  },
+];
+
+function findAppliedSchemaMismatches(
+  db: SqliteDatabase,
+  applied: ReadonlySet<number>,
+): MigrationSchemaMismatch[] {
+  const mismatches: MigrationSchemaMismatch[] = [];
+  for (const requirement of MIGRATION_SCHEMA_REQUIREMENTS) {
+    if (!applied.has(requirement.version)) continue;
+    const reason = requirement.validate(db);
+    if (reason) {
+      mismatches.push({
+        version: requirement.version,
+        name: requirement.name,
+        reason,
+      });
+    }
+  }
+  return mismatches;
+}
+
+function queuedPromptsHasColumn(db: SqliteDatabase, columnName: string): boolean {
+  const columns = db
+    .prepare('PRAGMA table_info(queued_prompts)')
+    .all() as Array<{ name: string }>;
+  return columns.some(({ name }) => name === columnName);
+}
+
+function readAppliedVersions(db: SqliteDatabase): Set<number> {
+  const appliedRows = db
+    .prepare('SELECT version FROM _migrations ORDER BY version ASC')
+    .all() as Array<{ version: number }>;
+  return new Set(appliedRows.map((row) => row.version));
+}
+
+export function getAppliedMigrationSchemaMismatches(
+  db: SqliteDatabase,
+): MigrationSchemaMismatch[] {
+  return findAppliedSchemaMismatches(db, readAppliedVersions(db));
+}
+
+export function assertAppliedMigrationSchema(db: SqliteDatabase): void {
+  const mismatches = getAppliedMigrationSchemaMismatches(db);
+  if (mismatches.length === 0) return;
+  throw new Error(
+    `Migration schema validation failed: ${mismatches
+      .map(({ version, name, reason }) => `${version} (${name}): ${reason}`)
+      .join('; ')}`,
+  );
+}
+
 export function runMigrations(db: SqliteDatabase, schemaDir: string): MigrationResult {
   db.exec(`
     CREATE TABLE IF NOT EXISTS _migrations (
@@ -137,12 +233,6 @@ export function runMigrations(db: SqliteDatabase, schemaDir: string): MigrationR
     );
   `);
 
-  const appliedRows = db
-    .prepare('SELECT version FROM _migrations ORDER BY version ASC')
-    .all() as Array<{ version: number }>;
-  const applied = new Set(appliedRows.map((r) => r.version));
-
-  const result: MigrationResult = { applied: [], skipped: [] };
   const migrations = getMigrations(schemaDir).sort((a, b) => a.version - b.version);
 
   // Verify ordering: no version may equal a previous version.
@@ -152,6 +242,48 @@ export function runMigrations(db: SqliteDatabase, schemaDir: string): MigrationR
       throw new Error(`Duplicate migration version ${m.version} (${m.name})`);
     }
     seen.add(m.version);
+  }
+
+  const applied = readAppliedVersions(db);
+  const mismatches = findAppliedSchemaMismatches(db, applied);
+  const result: MigrationResult = { applied: [], skipped: [], repaired: [] };
+  let preservedQueuedPromptOrigins: QueuedPromptOriginRow[] = [];
+  if (mismatches.length > 0) {
+    const firstBrokenVersion = Math.min(...mismatches.map(({ version }) => version));
+    const availableVersions = new Set(migrations.map(({ version }) => version));
+    const unavailableRepairVersions = MIGRATION_SCHEMA_REQUIREMENTS
+      .filter(
+        ({ version }) =>
+          version >= firstBrokenVersion &&
+          applied.has(version) &&
+          !availableVersions.has(version),
+      )
+      .map(({ version }) => version);
+    if (unavailableRepairVersions.length > 0) {
+      throw new Error(
+        `Cannot repair migration schema; SQL unavailable for recorded version(s): ${unavailableRepairVersions.join(', ')}`,
+      );
+    }
+    if (
+      firstBrokenVersion <= 15 &&
+      queuedPromptsHasColumn(db, 'origin')
+    ) {
+      preservedQueuedPromptOrigins = db
+        .prepare('SELECT id, origin FROM queued_prompts')
+        .all() as QueuedPromptOriginRow[];
+    }
+    const repairVersions = migrations
+      .filter(({ version }) => version >= firstBrokenVersion && applied.has(version))
+      .map(({ version }) => version);
+    const invalidate = db.transaction(() => {
+      const remove = db.prepare('DELETE FROM _migrations WHERE version = ?');
+      for (const version of repairVersions) {
+        remove.run(version);
+        applied.delete(version);
+      }
+    });
+    invalidate();
+    result.repaired.push(...repairVersions);
   }
 
   for (const m of migrations) {
@@ -183,6 +315,23 @@ export function runMigrations(db: SqliteDatabase, schemaDir: string): MigrationR
     tx();
     result.applied.push(m.version);
   }
+
+  if (preservedQueuedPromptOrigins.length > 0) {
+    const restoreOrigins = db.transaction(() => {
+      const update = db.prepare('UPDATE queued_prompts SET origin = ? WHERE id = ?');
+      for (const row of preservedQueuedPromptOrigins) {
+        const info = update.run(row.origin, row.id);
+        if (info.changes !== 1) {
+          throw new Error(
+            `Failed to restore queued_prompts.origin for ${row.id}; updated ${info.changes} rows`,
+          );
+        }
+      }
+    });
+    restoreOrigins();
+  }
+
+  assertAppliedMigrationSchema(db);
 
   return result;
 }

@@ -31,13 +31,6 @@ describe('0015 queued prompt pause migration (SQLite)', () => {
         fs.copyFileSync(path.join(realSchemaDir, file), path.join(legacySchemaDir, file));
       }
     }
-    // Once version 15 is registered, the legacy fixture applies a no-op entry
-    // and then removes its ledger row so the real upgrade can run below.
-    fs.writeFileSync(
-      path.join(legacySchemaDir, '0015_queued_prompts_paused.sql'),
-      '-- deferred to the real schema directory\n',
-    );
-
     const legacy = new SQLiteDatabase({
       dbDir,
       schemaDir: legacySchemaDir,
@@ -46,7 +39,6 @@ describe('0015 queued prompt pause migration (SQLite)', () => {
     });
     await legacy.initialize();
     const legacyHandle = legacy.getRawHandle()!;
-    legacyHandle.prepare('DELETE FROM _migrations WHERE version = 15').run();
     legacyHandle.prepare(
       `INSERT INTO ai_sessions (id, provider, title) VALUES (?, ?, ?)`,
     ).run('session-sqlite', 'claude-code', 'SQLite pause migration');

@@ -36,6 +36,7 @@ import {
   type PGLiteHandle,
 } from './PGLiteToSQLiteMigrator';
 import { MigrationProgressReporter } from './MigrationProgressReporter';
+import { runMigrations } from './MigrationRunner';
 import { commitMigrationToSqlite } from './BackendSelector';
 
 /**
@@ -241,12 +242,25 @@ export class MigrationOrchestrator {
       summary.totalRowsCopied += finalCatchUp.rowsAdded;
       summary.tablesCopied = mergeCopiedTables(summary.tablesCopied, finalCatchUp.perTable);
 
-      // 5. Close SQLite cleanly before the rename.
+      // 5. Reconcile the migration ledger with the real post-copy schema.
+      // The data-plane should never replace target DDL, but this is the final
+      // invariant gate before cutover: a latest-version ledger must not mask a
+      // legacy-shaped table. runMigrations invalidates and replays the affected
+      // migrations when a recorded schema requirement is missing.
+      phase = 'synchronizing-sqlite-schema';
+      const sqliteHandle = sqlite.getRawHandle();
+      if (!sqliteHandle) {
+        throw new Error('MigrationOrchestrator lost the SQLite handle before schema sync.');
+      }
+      const schemaSync = runMigrations(sqliteHandle, this.opts.schemaDir);
+      log('info', '[orchestrator] synchronized SQLite schema after final copy', schemaSync);
+
+      // 6. Close SQLite cleanly before the rename.
       phase = 'closing-sqlite';
       await sqlite.close();
       sqlite = null;
 
-      // 6. Cutover. Rename PGLite directory aside, write the backend flag.
+      // 7. Cutover. Rename PGLite directory aside, write the backend flag.
       // Per the plan: if the rename fails (e.g. Windows file-in-use), we still
       // proceed — the flag points at SQLite, and a leftover pglite-db/ is
       // harmless. We log and surface it but don't fail the migration.
@@ -260,7 +274,7 @@ export class MigrationOrchestrator {
       }
       commitMigrationToSqlite(userData, pgliteMigratedDir);
 
-      // 7. Done. Hand control back to the caller, which re-opens SQLite under
+      // 8. Done. Hand control back to the caller, which re-opens SQLite under
       // the production code path.
       if (this.opts.onCutoverSuccess) {
         await this.opts.onCutoverSuccess({ sqliteDir, pgliteMigratedDir, summary });
