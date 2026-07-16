@@ -11,7 +11,7 @@ export interface QueuedPrompt {
   id: string;
   sessionId: string;
   prompt: string;
-  status: 'pending' | 'executing' | 'completed' | 'failed';
+  status: 'pending' | 'paused' | 'executing' | 'completed' | 'failed';
   attachments?: any[];
   documentContext?: {
     filePath?: string;
@@ -52,6 +52,18 @@ export interface QueuedPromptsStore {
 
   /** List pending prompts for a session (ready to execute) */
   listPending(sessionId: string): Promise<QueuedPrompt[]>;
+
+  /** Pause all pending work for a session, preserving it for explicit resume. */
+  pauseSessionQueue(sessionId: string): Promise<number>;
+
+  /** Resume all paused work for a session. */
+  resumeSessionQueue(sessionId: string): Promise<number>;
+
+  /** Whether persisted paused work currently gates this session's queue. */
+  isSessionQueuePaused(sessionId: string): Promise<boolean>;
+
+  /** Delete active queue work while preserving completed/failed history. */
+  clearSessionQueue(sessionId: string): Promise<number>;
 
   /**
    * Atomically claim a pending prompt for execution.
@@ -126,6 +138,84 @@ type PGliteLike = {
 };
 
 type EnsureReadyFn = () => Promise<void>;
+
+export type QueueCancelAction = 'pause' | 'clear';
+export type QueueCancelResult = {
+  success: boolean;
+  queue: 'paused' | 'cleared' | 'unchanged';
+  error?: string;
+};
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Apply queue semantics before interrupting the active turn. Queue preparation
+ * is deliberately first: if persistence fails, cancelling would allow an
+ * unpaused pending row to be picked up by the turn-completion/error paths.
+ */
+export async function cancelRequestWithQueueSemantics(options: {
+  sessionId: string;
+  queueAction?: QueueCancelAction;
+  queueStore: QueuedPromptsStore;
+  cancelCurrent: () => Promise<void>;
+  clearProcessing: () => void;
+}): Promise<QueueCancelResult> {
+  const {
+    sessionId,
+    queueAction = 'pause',
+    queueStore,
+    cancelCurrent,
+    clearProcessing,
+  } = options;
+  let queue: QueueCancelResult['queue'] = 'unchanged';
+
+  try {
+    if (queueAction === 'clear') {
+      const cleared = await queueStore.clearSessionQueue(sessionId);
+      if (cleared > 0) queue = 'cleared';
+    } else {
+      const initiallyPaused = await queueStore.pauseSessionQueue(sessionId);
+      await queueStore.sweepExecutingForSession(sessionId);
+      const pausedAfterSweep = await queueStore.pauseSessionQueue(sessionId);
+      const isPaused = await queueStore.isSessionQueuePaused(sessionId);
+      if (initiallyPaused > 0 || pausedAfterSweep > 0 || isPaused) {
+        queue = 'paused';
+      }
+    }
+  } catch (error) {
+    return { success: false, queue, error: errorMessage(error) };
+  }
+
+  try {
+    await cancelCurrent();
+    if (queueAction === 'clear') {
+      const clearedAfterCancel = await queueStore.clearSessionQueue(sessionId);
+      if (clearedAfterCancel > 0) queue = 'cleared';
+    }
+    clearProcessing();
+    return { success: true, queue };
+  } catch (error) {
+    return { success: false, queue, error: errorMessage(error) };
+  }
+}
+
+/** Gate every automatic continuation on the persisted session pause state. */
+export async function tryDispatchNextQueuedPromptUnlessPaused(options: {
+  sessionId: string;
+  source: string;
+  isSessionQueuePaused: (sessionId: string) => Promise<boolean>;
+  dispatch: () => Promise<boolean>;
+  logInfo?: (message: string) => void;
+}): Promise<boolean> {
+  const { sessionId, source, isSessionQueuePaused, dispatch, logInfo } = options;
+  if (await isSessionQueuePaused(sessionId)) {
+    logInfo?.(`[Queue] ${source}: session ${sessionId} is paused; automatic dispatch skipped`);
+    return false;
+  }
+  return dispatch();
+}
 
 function rowToQueuedPrompt(row: any): QueuedPrompt {
   // Parse JSONB fields
@@ -229,8 +319,14 @@ export function createPGLiteQueuedPromptsStore(
       await ensureReady();
 
       const { rows } = await db.query<any>(
-        `SELECT * FROM queued_prompts
-         WHERE session_id = $1 AND status = 'pending'
+        `SELECT * FROM queued_prompts candidate
+         WHERE candidate.session_id = $1
+           AND candidate.status = 'pending'
+           AND NOT EXISTS (
+             SELECT 1 FROM queued_prompts paused
+             WHERE paused.session_id = candidate.session_id
+               AND paused.status = 'paused'
+           )
          ORDER BY created_at ASC`,
         [sessionId]
       );
@@ -238,15 +334,68 @@ export function createPGLiteQueuedPromptsStore(
       return rows.map(rowToQueuedPrompt);
     },
 
+    async pauseSessionQueue(sessionId: string): Promise<number> {
+      await ensureReady();
+      const { rows } = await db.query<{ id: string }>(
+        `UPDATE queued_prompts
+         SET status = 'paused'
+         WHERE session_id = $1 AND status = 'pending'
+         RETURNING id`,
+        [sessionId]
+      );
+      return rows.length;
+    },
+
+    async resumeSessionQueue(sessionId: string): Promise<number> {
+      await ensureReady();
+      const { rows } = await db.query<{ id: string }>(
+        `UPDATE queued_prompts
+         SET status = 'pending'
+         WHERE session_id = $1 AND status = 'paused'
+         RETURNING id`,
+        [sessionId]
+      );
+      return rows.length;
+    },
+
+    async isSessionQueuePaused(sessionId: string): Promise<boolean> {
+      await ensureReady();
+      const { rows } = await db.query<{ count: string | number }>(
+        `SELECT COUNT(*) AS count
+         FROM queued_prompts
+         WHERE session_id = $1 AND status = 'paused'`,
+        [sessionId]
+      );
+      return Number(rows[0]?.count ?? 0) > 0;
+    },
+
+    async clearSessionQueue(sessionId: string): Promise<number> {
+      await ensureReady();
+      const { rows } = await db.query<{ id: string }>(
+        `DELETE FROM queued_prompts
+         WHERE session_id = $1
+           AND status IN ('pending', 'paused', 'executing')
+         RETURNING id`,
+        [sessionId]
+      );
+      return rows.length;
+    },
+
     async claim(id: string): Promise<QueuedPrompt | null> {
       await ensureReady();
 
-      // ATOMIC: Only update if status is still 'pending'
+      // ATOMIC: Only update if status is still 'pending' and no persisted
+      // paused row gates the prompt's session.
       // This is the key operation that prevents duplicate execution
       const { rows } = await db.query<any>(
-        `UPDATE queued_prompts
+        `UPDATE queued_prompts AS candidate
          SET status = 'executing', claimed_at = CURRENT_TIMESTAMP
-         WHERE id = $1 AND status = 'pending'
+         WHERE candidate.id = $1 AND candidate.status = 'pending'
+           AND NOT EXISTS (
+             SELECT 1 FROM queued_prompts paused
+             WHERE paused.session_id = candidate.session_id
+               AND paused.status = 'paused'
+           )
          RETURNING *`,
         [id]
       );
