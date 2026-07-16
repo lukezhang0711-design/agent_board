@@ -135,6 +135,226 @@ describe('CodexAppServerProtocol', () => {
     protocol.cleanupSession(session);
   });
 
+  it('keeps a retrying turn alive and emits recovery before one complete reply', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(
+      protocol,
+      'thread-retry',
+      'turn-retry',
+    );
+    const events: ProtocolEvent[] = [];
+    const collector = (async () => {
+      while (true) {
+        const result = await iterator.next();
+        if (result.done) return;
+        events.push(result.value);
+      }
+    })();
+
+    try {
+      child.emitLine({
+        method: 'item/agentMessage/delta',
+        params: {
+          threadId: 'thread-retry',
+          turnId: 'turn-retry',
+          itemId: 'msg-retry',
+          delta: 'Before reconnect. ',
+        },
+      });
+      child.emitError({
+        threadId: 'thread-retry',
+        turnId: 'turn-retry',
+        error: { message: 'temporary disconnect' },
+        willRetry: true,
+      });
+      child.emitLine({
+        method: 'item/agentMessage/delta',
+        params: {
+          threadId: 'thread-retry',
+          turnId: 'turn-retry',
+          itemId: 'msg-retry',
+          delta: 'After reconnect.',
+        },
+      });
+      child.emitTurnCompleted({
+        threadId: 'thread-retry',
+        turn: { id: 'turn-retry', status: 'completed' },
+      });
+
+      await collector;
+
+      const stateEvents = events.filter(
+        (event) => event.type === 'retrying' || event.type === 'recovered',
+      );
+      expect(stateEvents).toEqual([
+        {
+          type: 'retrying',
+          metadata: expect.objectContaining({
+            lastError: 'temporary disconnect',
+            retryCount: 1,
+          }),
+        },
+        {
+          type: 'recovered',
+          metadata: expect.objectContaining({
+            lastError: 'temporary disconnect',
+            retryCount: 1,
+          }),
+        },
+      ]);
+      expect(events.filter((event) => event.type === 'error')).toHaveLength(0);
+      expect(events.filter((event) => event.type === 'complete')).toEqual([
+        expect.objectContaining({
+          type: 'complete',
+          content: 'Before reconnect. After reconnect.',
+        }),
+      ]);
+      expect(child.requests('turn/start')).toHaveLength(1);
+      expect(spawnMock).toHaveBeenCalledTimes(1);
+    } finally {
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('increments retry metadata across consecutive transient errors', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(
+      protocol,
+      'thread-retries',
+      'turn-retries',
+    );
+
+    try {
+      child.emitError({
+        threadId: 'thread-retries',
+        turnId: 'turn-retries',
+        error: { message: 'first disconnect' },
+        willRetry: true,
+      });
+      expect((await iterator.next()).value).toMatchObject({ type: 'raw_event' });
+      expect((await iterator.next()).value).toEqual({
+        type: 'retrying',
+        metadata: expect.objectContaining({
+          lastError: 'first disconnect',
+          retryCount: 1,
+        }),
+      });
+
+      child.emitError({
+        threadId: 'thread-retries',
+        turnId: 'turn-retries',
+        error: { message: 'second disconnect' },
+        willRetry: true,
+      });
+      expect((await iterator.next()).value).toMatchObject({ type: 'raw_event' });
+      expect((await iterator.next()).value).toEqual({
+        type: 'retrying',
+        metadata: expect.objectContaining({
+          lastError: 'second disconnect',
+          retryCount: 2,
+        }),
+      });
+
+      child.emitLine({
+        method: 'item/agentMessage/delta',
+        params: {
+          threadId: 'thread-retries',
+          turnId: 'turn-retries',
+          itemId: 'msg-retries',
+          delta: 'back online',
+        },
+      });
+      expect((await iterator.next()).value).toMatchObject({ type: 'raw_event' });
+      expect((await iterator.next()).value).toEqual({
+        type: 'recovered',
+        metadata: expect.objectContaining({
+          lastError: 'second disconnect',
+          retryCount: 2,
+        }),
+      });
+      expect((await iterator.next()).value).toMatchObject({
+        type: 'text',
+        content: 'back online',
+      });
+    } finally {
+      await iterator.return?.();
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it.each([
+    { label: 'willRetry false', willRetry: false },
+    { label: 'willRetry omitted', willRetry: undefined },
+  ])(
+    'treats $label as a terminal error without starting a fallback turn',
+    async ({ willRetry }) => {
+      const protocol = new CodexAppServerProtocol();
+      const { iterator, session } = await createActiveTurn(
+        protocol,
+        'thread-terminal-error',
+        'turn-terminal-error',
+      );
+
+      try {
+        child.emitError({
+          threadId: 'thread-terminal-error',
+          turnId: 'turn-terminal-error',
+          error: { message: 'fatal transport error' },
+          willRetry,
+        });
+        expect((await iterator.next()).value).toMatchObject({ type: 'raw_event' });
+        expect((await iterator.next()).value).toMatchObject({
+          type: 'error',
+          error: expect.stringContaining('fatal transport error'),
+        });
+        await expect(iterator.next()).resolves.toMatchObject({ done: true });
+        expect(child.requests('turn/start')).toHaveLength(1);
+        expect(spawnMock).toHaveBeenCalledTimes(1);
+      } finally {
+        protocol.cleanupSession(session);
+      }
+    },
+  );
+
+  it('reports turn/failed after a retry without recovery or fallback', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(
+      protocol,
+      'thread-retry-failed',
+      'turn-retry-failed',
+    );
+
+    try {
+      child.emitError({
+        threadId: 'thread-retry-failed',
+        turnId: 'turn-retry-failed',
+        error: { message: 'temporary disconnect' },
+        willRetry: true,
+      });
+      expect((await iterator.next()).value).toMatchObject({ type: 'raw_event' });
+      expect((await iterator.next()).value).toMatchObject({ type: 'retrying' });
+
+      child.emitTurnFailed({
+        threadId: 'thread-retry-failed',
+        turn: {
+          id: 'turn-retry-failed',
+          status: 'failed',
+          error: { message: 'authentication expired during retry' },
+        },
+      });
+      expect((await iterator.next()).value).toMatchObject({ type: 'raw_event' });
+      expect((await iterator.next()).value).toMatchObject({
+        type: 'error',
+        error: expect.stringContaining('authentication expired during retry'),
+      });
+      await expect(iterator.next()).resolves.toMatchObject({ done: true });
+      expect(child.requests('turn/start')).toHaveLength(1);
+      expect(spawnMock).toHaveBeenCalledTimes(1);
+    } finally {
+      protocol.cleanupSession(session);
+    }
+  });
+
   it('translates fileChange item/completed into a tool_call event with diff-based baselines', async () => {
     const protocol = new CodexAppServerProtocol();
     const sessionPromise = protocol.createSession({ workspacePath: '/tmp/ws' });
@@ -697,6 +917,39 @@ describe('CodexAppServerProtocol', () => {
     } finally {
       releaseConfirmation();
       await resultPromise?.catch(() => undefined);
+      await iterator.return?.();
+      protocol.cleanupSession(session);
+    }
+  });
+
+  it('can interrupt the active turn after it enters retrying state', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const { iterator, session } = await createActiveTurn(
+      protocol,
+      'thread-retry-interrupt',
+      'turn-retry-interrupt',
+    );
+    child.scriptResult('turn/interrupt', {});
+
+    try {
+      child.emitError({
+        threadId: 'thread-retry-interrupt',
+        turnId: 'turn-retry-interrupt',
+        error: { message: 'temporary disconnect' },
+        willRetry: true,
+      });
+      expect((await iterator.next()).value).toMatchObject({ type: 'raw_event' });
+      expect((await iterator.next()).value).toMatchObject({ type: 'retrying' });
+
+      await expect(protocol.interruptTurn(session)).resolves.toEqual({
+        outcome: 'interrupted',
+      });
+      expect(child.requests('turn/interrupt')).toHaveLength(1);
+      expect(child.requests('turn/interrupt')[0].params).toEqual({
+        threadId: 'thread-retry-interrupt',
+        turnId: 'turn-retry-interrupt',
+      });
+    } finally {
       await iterator.return?.();
       protocol.cleanupSession(session);
     }

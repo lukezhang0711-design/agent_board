@@ -154,6 +154,9 @@ export type ProtocolEventType =
   | 'tool_call'               // Tool invocation
   | 'tool_result'             // Tool execution result
   | 'error'                   // Error occurred
+  // Transient retry lifecycle states for an active turn.
+  | 'retrying'
+  | 'recovered'
   | 'complete'                // Stream complete
   | 'usage'                   // Token usage stats
   | 'planning_mode_entered'   // Agent entered planning mode

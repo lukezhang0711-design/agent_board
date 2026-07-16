@@ -3,6 +3,7 @@ import { PassThrough } from 'node:stream';
 import type {
   ErrorNotification,
   TurnCompletedNotification,
+  TurnFailedNotification,
 } from '../../codexAppServer/types';
 
 export interface FakeRpcError {
@@ -93,6 +94,10 @@ export class FakeCodexAppServer extends EventEmitter {
 
   emitTurnCompleted(params: TurnCompletedNotification): void {
     this.emitLine({ method: 'turn/completed', params });
+  }
+
+  emitTurnFailed(params: TurnFailedNotification): void {
+    this.emitLine({ method: 'turn/failed', params });
   }
 
   emitError(params: ErrorNotification): void {

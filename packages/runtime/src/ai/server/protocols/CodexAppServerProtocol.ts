@@ -63,6 +63,7 @@ import type {
   ThreadStartResponse,
   TokenUsage,
   TurnCompletedNotification,
+  TurnFailedNotification,
   TurnInterruptParams,
   TurnStartParams,
   UserInputElement,
@@ -129,6 +130,12 @@ interface AppServerSessionRaw {
   stderrTail: string[];
 }
 
+interface TurnRetryState {
+  retryCount: number;
+  lastError?: string;
+  awaitingRecovery: boolean;
+}
+
 function previewForLog(value: string | undefined, max = 300): string | undefined {
   if (!value) return value;
   return value.length > max ? `${value.slice(0, max)}...` : value;
@@ -182,6 +189,28 @@ function summarizeNotificationParams(
     default:
       return undefined;
   }
+}
+
+function isRecoveryNotification(
+  method: string,
+  paramsUnknown: unknown,
+  raw: AppServerSessionRaw,
+): boolean {
+  if (method === 'error' || method === 'turn/failed' || method === 'warning') {
+    return false;
+  }
+
+  const params = paramsUnknown as {
+    threadId?: string;
+    turnId?: string;
+    turn?: { id?: string; status?: string };
+  } | undefined;
+  const turnId = params?.turn?.id ?? params?.turnId;
+  if (params?.threadId !== raw.threadId || turnId !== raw.activeTurnId) {
+    return false;
+  }
+
+  return method !== 'turn/completed' || params?.turn?.status !== 'failed';
 }
 
 export class CodexAppServerProtocol implements AgentProtocol {
@@ -305,12 +334,24 @@ export class CodexAppServerProtocol implements AgentProtocol {
     let usage: { input_tokens: number; output_tokens: number; total_tokens: number } | undefined;
     let fullText = '';
     let abortInterruptRequested = false;
+    const retryState: TurnRetryState = {
+      retryCount: 0,
+      awaitingRecovery: false,
+    };
 
     const unsubscribers: Array<() => void> = [];
 
     const onNotification = (method: string, params: unknown) => {
       try {
-        this.dispatchNotification(method, params, push, raw, (delta) => { fullText += delta; }, (u) => { usage = u; });
+        this.dispatchNotification(
+          method,
+          params,
+          push,
+          raw,
+          retryState,
+          (delta) => { fullText += delta; },
+          (u) => { usage = u; },
+        );
       } catch (err) {
         push({ kind: 'fail', error: err instanceof Error ? err : new Error(String(err)) });
       }
@@ -696,6 +737,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
     paramsUnknown: unknown,
     push: (entry: { kind: 'event'; event: ProtocolEvent } | { kind: 'end' } | { kind: 'fail'; error: Error }) => void,
     raw: AppServerSessionRaw,
+    retryState: TurnRetryState,
     appendText: (delta: string) => void,
     setUsage: (u: { input_tokens: number; output_tokens: number; total_tokens: number }) => void,
   ): void {
@@ -714,6 +756,21 @@ export class CodexAppServerProtocol implements AgentProtocol {
         metadata: { transport: 'app-server', method, params },
       },
     });
+
+    if (retryState.awaitingRecovery && isRecoveryNotification(method, paramsUnknown, raw)) {
+      retryState.awaitingRecovery = false;
+      push({
+        kind: 'event',
+        event: {
+          type: 'recovered',
+          metadata: {
+            transport: 'app-server',
+            lastError: retryState.lastError,
+            retryCount: retryState.retryCount,
+          },
+        },
+      });
+    }
 
     switch (method) {
       case 'item/started': {
@@ -760,10 +817,32 @@ export class CodexAppServerProtocol implements AgentProtocol {
         }
         return;
       }
-      case 'turn/failed':
+      case 'turn/failed': {
+        const n = params as unknown as TurnFailedNotification;
+        const msg = n?.turn?.error?.message ?? 'codex app-server error';
+        push({ kind: 'fail', error: new Error(msg) });
+        return;
+      }
       case 'error': {
         const n = params as unknown as ErrorNotification;
         const msg = n?.error?.message ?? 'codex app-server error';
+        if (n?.willRetry === true) {
+          retryState.retryCount += 1;
+          retryState.lastError = previewForLog(msg) ?? msg;
+          retryState.awaitingRecovery = true;
+          push({
+            kind: 'event',
+            event: {
+              type: 'retrying',
+              metadata: {
+                transport: 'app-server',
+                lastError: retryState.lastError,
+                retryCount: retryState.retryCount,
+              },
+            },
+          });
+          return;
+        }
         push({ kind: 'fail', error: new Error(msg) });
         return;
       }
