@@ -20,6 +20,15 @@ import { ToolCallChanges } from './ToolCallChanges';
 import { setSessionIsAtBottom, getSessionIsAtBottom } from '../../../store/atoms/transcriptScroll';
 import { isAppleMobileWebKit } from '../../../utils/platform';
 
+const CHILD_SESSION_UPDATE_PREFIX = '[Child Session Update]';
+
+export function isHistoricalChildSessionUpdateMessage(
+  message: TranscriptViewMessage,
+): boolean {
+  return message.type === 'user_message'
+    && (message.text ?? '').startsWith(CHILD_SESSION_UPDATE_PREFIX);
+}
+
 // Per-session VList cache - survives component remounts so returning to a session
 // doesn't re-measure all items from scratch
 const vlistCacheMap = new Map<string, CacheSnapshot>();
@@ -1979,6 +1988,9 @@ export const RichTranscriptView = React.forwardRef<
   // selection helpers can find them.
   const renderedMessages = messages.map((message, index) => {
     const messageKey = getTranscriptMessageKey(sessionId, message, index);
+    if (isHistoricalChildSessionUpdateMessage(message)) {
+      return <div key={messageKey} style={{ display: 'none' }} />;
+    }
     // Skip tool calls superseded by a later event with the same providerToolCallId
     if (supersededToolIndices.has(index)) {
       return <div key={messageKey} style={{ display: 'none' }} />;

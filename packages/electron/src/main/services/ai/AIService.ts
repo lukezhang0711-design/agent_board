@@ -119,7 +119,9 @@ import { ensureClaudeCliSession, claudeCliSessionSupportsPlugins } from './claud
 import { supportsWorkspaceSlashWorkflowProvider } from '../../../shared/agentWorkflowProviders';
 import {
   cancelRequestWithQueueSemantics,
+  prepareQueuedPromptForDispatch,
   type QueueCancelAction,
+  type QueuedPromptOrigin,
   type QueuedPromptsStore,
 } from '../PGLiteQueuedPromptsStore';
 
@@ -235,7 +237,8 @@ export class AIService {
     sessionId: string,
     prompt: string,
     attachments?: any[],
-    documentContext?: any
+    documentContext?: any,
+    origin: QueuedPromptOrigin = 'user',
   ): Promise<{ id: string; prompt: string; createdAt: number }> {
     const { getQueuedPromptsStore } = await import('../RepositoryManager');
     const queueStore = getQueuedPromptsStore();
@@ -244,6 +247,7 @@ export class AIService {
       id: promptId,
       sessionId,
       prompt,
+      origin,
       attachments,
       documentContext,
     });
@@ -676,6 +680,13 @@ export class AIService {
 
     const { getQueuedPromptsStore } = await import('../RepositoryManager');
     const queueStore = getQueuedPromptsStore();
+    const dispatchQueueStore: QueuedPromptsStore = {
+      ...queueStore,
+      claim: async (promptId) => {
+        const claimed = await queueStore.claim(promptId);
+        return claimed ? prepareQueuedPromptForDispatch(claimed) : null;
+      },
+    };
 
     // Captures whether the just-settled child chain ended in 'error' so the
     // meta-agent wakeup (onAfterSettled) can skip re-driving the parent for a
@@ -750,7 +761,7 @@ export class AIService {
         });
       },
       processingSet: this.sessionsProcessingQueue,
-      queueStore,
+      queueStore: dispatchQueueStore,
       sendMessageHandler: this.sendMessageHandler,
       sessionId,
       source,
@@ -2075,14 +2086,15 @@ export class AIService {
       const claimed = await queueStore.claim(promptId);
 
       if (claimed) {
+        const dispatched = prepareQueuedPromptForDispatch(claimed);
         logger.main.info(`[AIService] claimQueuedPrompt: claimed ${promptId} for session ${sessionId}`);
         // Return in the format expected by the renderer
         return {
-          id: claimed.id,
-          prompt: claimed.prompt,
-          timestamp: claimed.createdAt,
-          attachments: claimed.attachments,
-          documentContext: claimed.documentContext,
+          id: dispatched.id,
+          prompt: dispatched.prompt,
+          timestamp: dispatched.createdAt,
+          attachments: dispatched.attachments,
+          documentContext: dispatched.documentContext,
         };
       }
 

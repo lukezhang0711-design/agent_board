@@ -74,6 +74,8 @@ async function makeQueueDb(): Promise<{
       id TEXT PRIMARY KEY,
       session_id TEXT NOT NULL,
       prompt TEXT NOT NULL,
+      origin TEXT NOT NULL DEFAULT 'user'
+        CHECK (origin IN ('user', 'child_session_event')),
       status TEXT NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'paused', 'executing', 'completed', 'failed')),
       attachments JSONB,
@@ -109,6 +111,30 @@ afterAll(() => {
 });
 
 describe('queued prompt pause persistence (PGLite)', () => {
+  it('persists default user and child session event origins across a database restart', async () => {
+    const { db, dataDir, store } = await makeQueueDb();
+    await store.create({ id: 'p-origin-user', sessionId: 'session-origin-pg', prompt: 'user prompt' });
+    await store.create({
+      id: 'p-origin-child',
+      sessionId: 'session-origin-pg',
+      prompt: '[Child Session Update]\nEvent: session:completed',
+      origin: 'child_session_event',
+    });
+    expect((await store.get('p-origin-user'))?.origin).toBe('user');
+    expect((await store.get('p-origin-child'))?.origin).toBe('child_session_event');
+    await db.close();
+
+    const reopenedDb = new PGlite({ dataDir });
+    await reopenedDb.waitReady;
+    const reopenedStore = createPGLiteQueuedPromptsStore(reopenedDb);
+    try {
+      expect((await reopenedStore.get('p-origin-user'))?.origin).toBe('user');
+      expect((await reopenedStore.get('p-origin-child'))?.origin).toBe('child_session_event');
+    } finally {
+      await reopenedDb.close();
+    }
+  }, 30_000);
+
   it('keeps paused rows unclaimable across sweeps and a database restart', async () => {
     const { db, dataDir, store } = await makeQueueDb();
     await store.create({ id: 'p-1', sessionId: 'session-pg', prompt: 'one' });
@@ -183,6 +209,53 @@ describe('queued prompt pause persistence (PGLite)', () => {
       });
       expect(updated.rows).toEqual([
         { id: 'prompt-worker', prompt: 'preserve me', status: 'paused' },
+      ]);
+    } finally {
+      await closeWorker(upgradedWorker);
+    }
+  }, 60_000);
+
+  it('adds origin to an existing worker queue and defaults preserved rows to user', async () => {
+    const userDataPath = makeTempDir('nim-worker-queue-origin-');
+    const firstWorker = spawnPGLiteWorker(userDataPath);
+    await requestWorker(firstWorker, 'init');
+    await requestWorker(firstWorker, 'exec', {
+      sql: `
+        INSERT INTO ai_sessions (id, provider, title)
+        VALUES ('session-worker-origin', 'claude-code', 'Worker origin migration');
+        INSERT INTO queued_prompts (id, session_id, prompt, status)
+        VALUES ('prompt-worker-origin', 'session-worker-origin', 'preserve origin default', 'pending');
+        ALTER TABLE queued_prompts DROP COLUMN IF EXISTS origin;
+      `,
+    });
+    await closeWorker(firstWorker);
+
+    const upgradedWorker = spawnPGLiteWorker(userDataPath);
+    try {
+      await requestWorker(upgradedWorker, 'init');
+      const legacy = await requestWorker(upgradedWorker, 'query', {
+        sql: `SELECT id, prompt, origin FROM queued_prompts WHERE id = $1`,
+        params: ['prompt-worker-origin'],
+      });
+      expect(legacy.rows).toEqual([
+        { id: 'prompt-worker-origin', prompt: 'preserve origin default', origin: 'user' },
+      ]);
+
+      const child = await requestWorker(upgradedWorker, 'query', {
+        sql: `
+          INSERT INTO queued_prompts (id, session_id, prompt, origin)
+          VALUES ($1, $2, $3, $4)
+          RETURNING id, origin
+        `,
+        params: [
+          'prompt-worker-child-origin',
+          'session-worker-origin',
+          '[Child Session Update]',
+          'child_session_event',
+        ],
+      });
+      expect(child.rows).toEqual([
+        { id: 'prompt-worker-child-origin', origin: 'child_session_event' },
       ]);
     } finally {
       await closeWorker(upgradedWorker);

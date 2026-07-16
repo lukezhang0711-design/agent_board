@@ -7,10 +7,13 @@
 
 import { toMillis } from '../utils/timestampUtils';
 
+export type QueuedPromptOrigin = 'user' | 'child_session_event';
+
 export interface QueuedPrompt {
   id: string;
   sessionId: string;
   prompt: string;
+  origin: QueuedPromptOrigin;
   status: 'pending' | 'paused' | 'executing' | 'completed' | 'failed';
   attachments?: any[];
   documentContext?: {
@@ -30,6 +33,7 @@ export interface CreateQueuedPromptInput {
   id: string;
   sessionId: string;
   prompt: string;
+  origin?: QueuedPromptOrigin;
   attachments?: any[];
   documentContext?: {
     filePath?: string;
@@ -217,6 +221,21 @@ export async function tryDispatchNextQueuedPromptUnlessPaused(options: {
   return dispatch();
 }
 
+/** Attach the persisted queue origin to the existing delivery context seam. */
+export function prepareQueuedPromptForDispatch(prompt: QueuedPrompt): QueuedPrompt {
+  if (prompt.origin !== 'child_session_event') {
+    return prompt;
+  }
+
+  return {
+    ...prompt,
+    documentContext: {
+      ...(prompt.documentContext ?? {}),
+      promptOrigin: 'child_session_event',
+    },
+  };
+}
+
 function rowToQueuedPrompt(row: any): QueuedPrompt {
   // Parse JSONB fields
   let attachments = row.attachments;
@@ -241,6 +260,7 @@ function rowToQueuedPrompt(row: any): QueuedPrompt {
     id: row.id,
     sessionId: row.session_id,
     prompt: row.prompt,
+    origin: row.origin === 'child_session_event' ? 'child_session_event' : 'user',
     status: row.status,
     attachments,
     documentContext,
@@ -266,13 +286,14 @@ export function createPGLiteQueuedPromptsStore(
       await ensureReady();
 
       const { rows } = await db.query<any>(
-        `INSERT INTO queued_prompts (id, session_id, prompt, attachments, document_context)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO queued_prompts (id, session_id, prompt, origin, attachments, document_context)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
         [
           input.id,
           input.sessionId,
           input.prompt,
+          input.origin ?? 'user',
           input.attachments ? JSON.stringify(input.attachments) : null,
           input.documentContext ? JSON.stringify(input.documentContext) : null,
         ]

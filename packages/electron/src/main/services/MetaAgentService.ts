@@ -1027,7 +1027,13 @@ export class MetaAgentService {
       }
 
       const notification = this.buildNotificationMessage(eventType, result);
-      await this.aiService.queuePromptForSession(session.createdBySessionId, notification);
+      await this.aiService.queuePromptForSession(
+        session.createdBySessionId,
+        notification,
+        undefined,
+        undefined,
+        'child_session_event',
+      );
 
       // Do not auto-re-drive the parent when THIS child settle was an error.
       // The [Child Session Update] notification above is still queued for

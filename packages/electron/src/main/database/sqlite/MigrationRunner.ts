@@ -118,6 +118,13 @@ export function getMigrations(schemaDir: string): Migration[] {
           sqlFile: path.join(schemaDir, '0015_queued_prompts_paused.sql'),
         }]
       : []),
+    ...(fs.existsSync(path.join(schemaDir, '0016_queued_prompts_origin.sql'))
+      ? [{
+          version: 16,
+          name: 'queued_prompts_origin',
+          sqlFile: path.join(schemaDir, '0016_queued_prompts_origin.sql'),
+        }]
+      : []),
   ];
 }
 

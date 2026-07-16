@@ -1669,6 +1669,7 @@ class PGLiteWorker {
           id TEXT PRIMARY KEY,
           session_id TEXT NOT NULL,
           prompt TEXT NOT NULL,
+          origin TEXT NOT NULL DEFAULT 'user' CHECK (origin IN ('user', 'child_session_event')),
           status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paused', 'executing', 'completed', 'failed')),
           attachments JSONB,
           document_context JSONB,
@@ -1681,6 +1682,10 @@ class PGLiteWorker {
             REFERENCES ai_sessions(id)
             ON DELETE CASCADE
         );
+
+        ALTER TABLE queued_prompts
+          ADD COLUMN IF NOT EXISTS origin TEXT NOT NULL DEFAULT 'user'
+            CHECK (origin IN ('user', 'child_session_event'));
 
         CREATE INDEX IF NOT EXISTS idx_queued_prompts_session ON queued_prompts(session_id);
         CREATE INDEX IF NOT EXISTS idx_queued_prompts_status ON queued_prompts(status);

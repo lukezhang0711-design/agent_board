@@ -67,7 +67,8 @@ describe('0015 queued prompt pause migration (SQLite)', () => {
         .prepare('SELECT version FROM _migrations ORDER BY version')
         .all() as Array<{ version: number }>;
       expect(versions.map(({ version }) => version)).toContain(15);
-      expect(getMigrations(realSchemaDir).at(-1)?.name).toBe('queued_prompts_paused');
+      expect(getMigrations(realSchemaDir).find(({ version }) => version === 15)?.name)
+        .toBe('queued_prompts_paused');
 
       const store = createPGLiteQueuedPromptsStore(upgraded);
       await expect(store.pauseSessionQueue('session-sqlite')).resolves.toBe(1);
@@ -117,6 +118,78 @@ describe('0015 queued prompt pause migration (SQLite)', () => {
       await expect(restartedStore.clearSessionQueue('session-sqlite')).resolves.toBe(2);
       await expect(restartedStore.listForSession('session-sqlite', { includeCompleted: true }))
         .resolves.toEqual([]);
+    } finally {
+      await restarted.close();
+    }
+  }, 30_000);
+});
+
+describe('0016 queued prompt origin migration (SQLite)', () => {
+  it('defaults legacy rows to user and persists child session event origins across restart', async () => {
+    const dbDir = makeTempDir('nim-queue-origin-sqlite-');
+    const legacySchemaDir = makeTempDir('nim-queue-origin-schema-');
+    const realSchemaDir = path.resolve(__dirname, '..', 'schemas');
+
+    for (const file of fs.readdirSync(realSchemaDir)) {
+      if (/^00(?:0[1-9]|1[0-5])_.*\.sql$/.test(file)) {
+        fs.copyFileSync(path.join(realSchemaDir, file), path.join(legacySchemaDir, file));
+      }
+    }
+
+    const legacy = new SQLiteDatabase({
+      dbDir,
+      schemaDir: legacySchemaDir,
+      slowQueryThresholdMs: 1000,
+      sampleRate: 0,
+    });
+    await legacy.initialize();
+    const legacyHandle = legacy.getRawHandle()!;
+    legacyHandle.prepare(
+      `INSERT INTO ai_sessions (id, provider, title) VALUES (?, ?, ?)`,
+    ).run('session-origin-sqlite', 'claude-code', 'SQLite origin migration');
+    legacyHandle.prepare(
+      `INSERT INTO queued_prompts (id, session_id, prompt, status) VALUES (?, ?, ?, 'pending')`,
+    ).run('prompt-origin-legacy', 'session-origin-sqlite', 'legacy user prompt');
+    await legacy.close();
+
+    const upgraded = new SQLiteDatabase({
+      dbDir,
+      schemaDir: realSchemaDir,
+      slowQueryThresholdMs: 1000,
+      sampleRate: 0,
+    });
+    await upgraded.initialize();
+    try {
+      const versions = upgraded.getRawHandle()!
+        .prepare('SELECT version FROM _migrations ORDER BY version')
+        .all() as Array<{ version: number }>;
+      expect(versions.map(({ version }) => version)).toContain(16);
+      expect(getMigrations(realSchemaDir).at(-1)?.name).toBe('queued_prompts_origin');
+
+      const store = createPGLiteQueuedPromptsStore(upgraded);
+      expect((await store.get('prompt-origin-legacy'))?.origin).toBe('user');
+      await store.create({
+        id: 'prompt-origin-child',
+        sessionId: 'session-origin-sqlite',
+        prompt: '[Child Session Update]\nEvent: session:completed',
+        origin: 'child_session_event',
+      });
+      expect((await store.get('prompt-origin-child'))?.origin).toBe('child_session_event');
+    } finally {
+      await upgraded.close();
+    }
+
+    const restarted = new SQLiteDatabase({
+      dbDir,
+      schemaDir: realSchemaDir,
+      slowQueryThresholdMs: 1000,
+      sampleRate: 0,
+    });
+    await restarted.initialize();
+    try {
+      const store = createPGLiteQueuedPromptsStore(restarted);
+      expect((await store.get('prompt-origin-legacy'))?.origin).toBe('user');
+      expect((await store.get('prompt-origin-child'))?.origin).toBe('child_session_event');
     } finally {
       await restarted.close();
     }

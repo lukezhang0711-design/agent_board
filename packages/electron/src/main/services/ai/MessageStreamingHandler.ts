@@ -119,6 +119,60 @@ export type SendMessageHandler = (
   workspacePath?: string,
 ) => Promise<{ content: string }>;
 
+type ProviderMessageLogger = (
+  sessionId: string,
+  source: string,
+  direction: 'input' | 'output',
+  ...rest: unknown[]
+) => Promise<void>;
+
+/**
+ * Suppress raw input persistence for one internal child-event turn while
+ * leaving provider delivery and every output log unchanged.
+ */
+export function suppressChildSessionEventInputPersistence(
+  provider: AIProvider,
+  sessionId: string,
+): () => void {
+  const target = provider as AIProvider & { logAgentMessage?: ProviderMessageLogger };
+  const original = target.logAgentMessage;
+  if (typeof original !== 'function') {
+    throw new Error(
+      `[AIService] Provider cannot safely deliver child session event for ${sessionId}: input logging seam unavailable`,
+    );
+  }
+
+  const hadOwnLogger = Object.prototype.hasOwnProperty.call(target, 'logAgentMessage');
+  const ownDescriptor = Object.getOwnPropertyDescriptor(target, 'logAgentMessage');
+  Object.defineProperty(target, 'logAgentMessage', {
+    configurable: true,
+    writable: true,
+    value: async function scopedMessageLogger(
+      this: AIProvider,
+      loggedSessionId: string,
+      source: string,
+      direction: 'input' | 'output',
+      ...rest: unknown[]
+    ): Promise<void> {
+      if (loggedSessionId === sessionId && direction === 'input') {
+        return;
+      }
+      await original.apply(this, [loggedSessionId, source, direction, ...rest]);
+    },
+  });
+
+  let restored = false;
+  return () => {
+    if (restored) return;
+    restored = true;
+    if (hadOwnLogger && ownDescriptor) {
+      Object.defineProperty(target, 'logAgentMessage', ownDescriptor);
+    } else {
+      delete target.logAgentMessage;
+    }
+  };
+}
+
 /**
  * Structural view of the AIService members this handler needs. Keeping it
  * declared here (rather than reaching into the AIService class via `private`
@@ -303,6 +357,8 @@ export class MessageStreamingHandler {
   ) => {
     // Check for queued prompt deduplication - prevents duplicate execution from multiple renderer panels
     const queuedPromptId = (documentContext as any)?.queuedPromptId as string | undefined;
+    const isChildSessionEvent = queuedPromptId !== undefined
+      && documentContext?.promptOrigin === 'child_session_event';
     if (queuedPromptId) {
       if (this.svc.processingQueuedPromptIds.has(queuedPromptId)) {
         logger.main.info(`[AIService] SKIPPING duplicate queued prompt: ${queuedPromptId}`);
@@ -413,31 +469,33 @@ export class MessageStreamingHandler {
     perfLog.provider = session.provider;
     perfLog.model = session.model || 'default';
 
-    // Add user message to session (include attachments if present)
-    const userMessage: Message = {
-      role: 'user',
-      content: message,
-      timestamp: Date.now(),
-      attachments: attachments && attachments.length > 0 ? attachments : undefined,
-      mode: documentContext?.mode,
-    };
-    // logger.main.info(`[AIService] Adding user message to session ${session.id}: "${message.substring(0, 50)}..." (queuedPromptId: ${queuedPromptId || 'none'}, mode: ${documentContext?.mode})`);
-    await this.svc.sessionManager.addMessage(userMessage, session.id);
-    // logger.main.info(`[AIService] User message added successfully to session ${session.id}`);
+    if (!isChildSessionEvent) {
+      // Add user message to session (include attachments if present)
+      const userMessage: Message = {
+        role: 'user',
+        content: message,
+        timestamp: Date.now(),
+        attachments: attachments && attachments.length > 0 ? attachments : undefined,
+        mode: documentContext?.mode,
+      };
+      // logger.main.info(`[AIService] Adding user message to session ${session.id}: "${message.substring(0, 50)}..." (queuedPromptId: ${queuedPromptId || 'none'}, mode: ${documentContext?.mode})`);
+      await this.svc.sessionManager.addMessage(userMessage, session.id);
+      // logger.main.info(`[AIService] User message added successfully to session ${session.id}`);
 
-    // Update session title if this is the first user message
-    if (session.messages.length === 0 || (session.messages.length === 1 && session.messages[0].type === 'user_message')) {
-      // Generate a provisional title from the first message without locking out auto-naming
-      const title = message.length > 100 ? message.substring(0, 97) + '...' : message;
-      await this.svc.sessionManager.updateSessionTitle(session.id, title, {
-        force: true,
-        markAsNamed: false,
-      });
+      // Update session title if this is the first user message
+      if (session.messages.length === 0 || (session.messages.length === 1 && session.messages[0].type === 'user_message')) {
+        // Generate a provisional title from the first message without locking out auto-naming
+        const title = message.length > 100 ? message.substring(0, 97) + '...' : message;
+        await this.svc.sessionManager.updateSessionTitle(session.id, title, {
+          force: true,
+          markAsNamed: false,
+        });
 
-      // Keep session-history UI in sync with provisional title updates without forcing a full refresh.
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) {
-          window.webContents.send('sessions:session-updated', session.id, { title });
+        // Keep session-history UI in sync with provisional title updates without forcing a full refresh.
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!window.isDestroyed()) {
+            window.webContents.send('sessions:session-updated', session.id, { title });
+          }
         }
       }
     }
@@ -1087,6 +1145,7 @@ export class MessageStreamingHandler {
       });
     }
 
+    let restoreChildEventInputPersistence: (() => void) | null = null;
     try {
       let fullResponse = '';
       let lastTextSection = '';  // Track text after the last tool call (for notifications)
@@ -1337,6 +1396,13 @@ export class MessageStreamingHandler {
                 modelDisplayName: resolveExtensionModelDisplayName(session.provider, session.model),
               })
             : undefined;
+
+      if (isChildSessionEvent) {
+        restoreChildEventInputPersistence = suppressChildSessionEventInputPersistence(
+          provider,
+          session.id,
+        );
+      }
 
       for await (const chunk of provider.sendMessage(messageToSend, contextWithSession, session.id, sessionMessages, effectiveWorkspacePath, attachments, extensionAgentTools, extensionAgentSystemPrompt)) {
         if (!chunk) continue;
@@ -2545,6 +2611,9 @@ export class MessageStreamingHandler {
         }
       }
 
+      restoreChildEventInputPersistence?.();
+      restoreChildEventInputPersistence = null;
+
       // Flush any Bash commands that only emitted one observable tool event
       // so they still get pending-review tags and tool-call-linked diffs.
       for (const [commandItemId, command] of pendingBashCommands.entries()) {
@@ -2583,6 +2652,8 @@ export class MessageStreamingHandler {
 
       return { content: fullResponse };
     } catch (error) {
+      restoreChildEventInputPersistence?.();
+      restoreChildEventInputPersistence = null;
       const errorTime = Date.now() - startTime;
       const isClaudeCode = session?.provider === 'claude-code';
       const logPrefix = isClaudeCode ? '[CLAUDE-CODE-SERVICE]' : '[AIService]';
