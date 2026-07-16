@@ -167,6 +167,14 @@ describe('ClaudeCliSessionLauncher', () => {
     expect(metaServers).toHaveProperty('custom-shell');
     expect(metaServers).not.toHaveProperty('nimbalyst-extension-dev');
     expect(metaServers).not.toHaveProperty('nimbalyst-settings');
+    const metaArgs = createClaudeCliTerminal.mock.calls[0][1].spawnConfig.args;
+    const metaAllowedTools = metaArgs.slice(
+      metaArgs.indexOf('--allowedTools') + 1,
+      metaArgs.indexOf('--disallowedTools'),
+    );
+    expect(metaAllowedTools).toContain('mcp__nimbalyst-meta-agent');
+    expect(metaAllowedTools).not.toContain('mcp__nimbalyst-extension-dev');
+    expect(metaAllowedTools).not.toContain('mcp__nimbalyst-settings');
 
     const standardServers = JSON.parse(writes[1].data).mcpServers;
     expect(standardServers).toHaveProperty('nimbalyst-extension-dev');
