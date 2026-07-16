@@ -516,7 +516,11 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         cancelRequestInFlightRef.current = false;
         return { ...current, phase: 'stopped' };
       }
-      if (isProcessing && current.phase === 'stopped') {
+      if (
+        isProcessing
+        && current.phase === 'stopped'
+        && current.queueAction === undefined
+      ) {
         return { phase: 'idle' };
       }
       return current;
@@ -2766,7 +2770,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             padding: '4px 10px',
             borderTop: '1px solid var(--nim-border)',
             background: 'var(--nim-bg-secondary)',
-            color: cancelFeedback.phase === 'failed'
+            color: cancelFeedback.phase === 'failed' || cancelFeedback.queueError
               ? 'var(--nim-error)'
               : 'var(--nim-text-muted)',
             fontSize: 12,
