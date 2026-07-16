@@ -15,6 +15,47 @@ function createAsyncEventStream(events: any[]): AsyncIterable<any> {
 }
 
 describe('CodexSDKProtocol', () => {
+  it('delivers the session abort signal to runStreamed and preserves its abort event', async () => {
+    const abortController = new AbortController();
+    let receivedSignal: AbortSignal | undefined;
+    const abortObserved = vi.fn();
+    const runStreamed = vi.fn(async (_input: unknown, options?: { signal?: AbortSignal }) => {
+      receivedSignal = options?.signal;
+      receivedSignal?.addEventListener('abort', abortObserved, { once: true });
+      return {
+        events: createAsyncEventStream([
+          { type: 'unknown.output', payload: { id: 'signal-probe' } },
+        ]),
+      };
+    });
+    const startThread = vi.fn(() => ({
+      id: 'thread-abort-signal',
+      runStreamed,
+    }));
+    const protocol = new CodexSDKProtocol(
+      'test-key',
+      async () =>
+        ({
+          Codex: class {
+            startThread = startThread;
+            resumeThread = vi.fn();
+          },
+        }) as any
+    );
+
+    const session = await protocol.createSession({
+      workspacePath: process.cwd(),
+      abortSignal: abortController.signal,
+    });
+    for await (const _event of protocol.sendMessage(session, { content: 'test signal' })) {
+      // drain
+    }
+
+    expect(receivedSignal).toBe(abortController.signal);
+    abortController.abort();
+    expect(abortObserved).toHaveBeenCalledTimes(1);
+  });
+
   it('emits a raw_event for every SDK event, including unknown shapes', async () => {
     const sdkEvents = [
       { type: 'unknown.output', payload: { id: 1 } },

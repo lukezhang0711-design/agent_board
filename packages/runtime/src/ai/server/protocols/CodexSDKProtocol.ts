@@ -112,7 +112,7 @@ export class CodexSDKProtocol implements AgentProtocol {
       platform: this.platform,
       raw: {
         thread,
-        options: threadOptions,
+        options: { ...threadOptions, abortSignal: options.abortSignal },
       },
     };
   }
@@ -140,7 +140,7 @@ export class CodexSDKProtocol implements AgentProtocol {
       platform: this.platform,
       raw: {
         thread,
-        options: threadOptions,
+        options: { ...threadOptions, abortSignal: options.abortSignal },
       },
     };
   }
@@ -196,7 +196,7 @@ export class CodexSDKProtocol implements AgentProtocol {
     try {
       // Run the thread with streaming
       const runResult = await thread.runStreamed(input, {
-        signal: (session.raw?.options as { abortSignal?: AbortSignal })?.abortSignal,
+        signal: rawOptions?.abortSignal,
       });
 
       // Thread ID is captured from thread.started event during streaming (see event loop below)
@@ -205,7 +205,7 @@ export class CodexSDKProtocol implements AgentProtocol {
       const events = getEventsIterable(runResult);
       for await (const event of events) {
         // Check for abort
-        if ((session.raw?.options as { abortSignal?: AbortSignal })?.abortSignal?.aborted) {
+        if (rawOptions?.abortSignal?.aborted) {
           throw new Error('Operation cancelled');
         }
 
@@ -311,7 +311,7 @@ export class CodexSDKProtocol implements AgentProtocol {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const isAbort =
-        (session.raw?.options as { abortSignal?: AbortSignal })?.abortSignal?.aborted || /abort|cancel/i.test(errorMessage);
+        rawOptions?.abortSignal?.aborted || /abort|cancel/i.test(errorMessage);
 
       if (!isAbort) {
         const configHint = describeCodexConfigError(errorMessage);

@@ -17,8 +17,12 @@ import {
   ChatAttachment,
 } from '../types';
 import { CodexSDKProtocol } from '../protocols/CodexSDKProtocol';
-import { CodexAppServerProtocol, type CodexAppServerHostBindings } from '../protocols/CodexAppServerProtocol';
-import { AgentProtocol, ProtocolEvent, ProtocolSession } from '../protocols/ProtocolInterface';
+import {
+  CodexAppServerProtocol,
+  type CodexAppServerHostBindings,
+  type InterruptTurnResult,
+} from '../protocols/CodexAppServerProtocol';
+import { AgentProtocol, ProtocolEvent, ProtocolSession, SessionOptions } from '../protocols/ProtocolInterface';
 import { ToolPermissionService } from '../permissions/ToolPermissionService';
 import { PermissionMode, TrustChecker, PermissionPatternSaver, PermissionPatternChecker, SecurityLogger } from './ProviderPermissionMixin';
 import { CodexSdkModuleLike, loadCodexSdkModule } from './codex/codexSdkLoader';
@@ -52,7 +56,12 @@ export type CodexTransport = 'sdk' | 'app-server';
  */
 export interface CodexProtocol extends AgentProtocol {
   setApiKey?(apiKey: string): void;
+  interruptTurn?(session: ProtocolSession): Promise<InterruptTurnResult>;
 }
+
+export type CodexProviderInterruptResult =
+  | ({ method: 'interrupt' } & InterruptTurnResult)
+  | { method: 'abort' };
 
 interface OpenAICodexProviderDeps {
   protocol?: CodexProtocol;
@@ -186,6 +195,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
    * `liveProtocolSessions` is in-memory only.
    */
   private readonly liveProtocolSessions = new Map<string, ProtocolSession>();
+  private activeProtocolSession: ProtocolSession | null = null;
 
   // Analytics initialization data, captured during first sendMessage call
   private _initData: {
@@ -937,6 +947,20 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     this.abort();
   }
 
+  async interruptCurrentTurn(): Promise<CodexProviderInterruptResult> {
+    const session = this.activeProtocolSession;
+    if (!session) {
+      return { method: 'interrupt', outcome: 'already-ended' };
+    }
+    if (!this.protocol.interruptTurn) {
+      this.abort();
+      return { method: 'abort' };
+    }
+
+    const result = await this.protocol.interruptTurn(session);
+    return { method: 'interrupt', ...result };
+  }
+
   async *sendMessage(
     message: string,
     documentContext?: DocumentContext,
@@ -1009,6 +1033,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     this.abortController = abortController;
 
     let fullText = '';
+    let protocolSessionForTurn: ProtocolSession | null = null;
 
     try {
       // Check permission using ToolPermissionService
@@ -1098,6 +1123,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       const sessionOptions = {
         workspacePath,
         model: resolvedModel,
+        abortSignal: abortController.signal,
         ...(permissionDecision.permissionMode ? { permissionMode: permissionDecision.permissionMode } : {}),
         mcpServers,
         ...(isMetaAgent ? {
@@ -1106,13 +1132,12 @@ export class OpenAICodexProvider extends BaseAgentProvider {
         } : {}),
         raw: {
           systemPrompt,
-          abortSignal: abortController.signal,
           codexConfigOverrides: this.buildCodexConfigOverrides(mcpServers),
           ...(codexEnv ? { codexEnv } : {}),
           ...(this.config?.effortLevel ? { effortLevel: this.config.effortLevel } : {}),
           ...(additionalDirectories.length > 0 ? { additionalDirectories } : {}),
         },
-      };
+      } satisfies SessionOptions;
 
       // Pre-flight auth check for the app-server transport. The session child
       // can't authenticate on its own when there's no auth.json -- the codex
@@ -1210,6 +1235,8 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       );
 
       // Send message using protocol -- adapter parses all events
+      protocolSessionForTurn = session;
+      this.activeProtocolSession = session;
       for await (const event of this.protocol.sendMessage(session, {
         content: prompt,
         attachments,
@@ -1385,6 +1412,9 @@ export class OpenAICodexProvider extends BaseAgentProvider {
         this.evictLiveProtocolSession(sessionId);
       }
     } finally {
+      if (this.activeProtocolSession === protocolSessionForTurn) {
+        this.activeProtocolSession = null;
+      }
       if (this.abortController === abortController) {
         this.abortController = null;
       }

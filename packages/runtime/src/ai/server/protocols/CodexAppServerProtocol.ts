@@ -280,13 +280,27 @@ export class CodexAppServerProtocol implements AgentProtocol {
     // Drain queue: notifications and one terminating turn event are pushed by
     // the JsonRpcClient handler; the generator below awaits them.
     const queue: Array<{ kind: 'event'; event: ProtocolEvent } | { kind: 'end' } | { kind: 'fail'; error: Error }> = [];
-    let waiters: Array<(v: unknown) => void> = [];
+    let waiters: Array<() => void> = [];
     const push = (entry: typeof queue[number]) => {
       queue.push(entry);
       const w = waiters;
       waiters = [];
-      for (const r of w) r(undefined);
+      for (const wake of w) wake();
     };
+    const waitForQueueOrAbort = (signal?: AbortSignal) => new Promise<void>((resolve) => {
+      let settled = false;
+      const wake = () => {
+        if (settled) return;
+        settled = true;
+        const index = waiters.indexOf(wake);
+        if (index >= 0) waiters.splice(index, 1);
+        signal?.removeEventListener('abort', wake);
+        resolve();
+      };
+      waiters.push(wake);
+      signal?.addEventListener('abort', wake, { once: true });
+      if (signal?.aborted) wake();
+    });
 
     let usage: { input_tokens: number; output_tokens: number; total_tokens: number } | undefined;
     let fullText = '';
@@ -339,8 +353,10 @@ export class CodexAppServerProtocol implements AgentProtocol {
           }
         }
         while (queue.length === 0) {
-          await new Promise<void>((resolve) => waiters.push(() => resolve()));
+          await waitForQueueOrAbort(abortInterruptRequested ? undefined : abortSignal);
+          if (abortSignal?.aborted && !abortInterruptRequested) break;
         }
+        if (queue.length === 0) continue;
         const entry = queue.shift()!;
         if (entry.kind === 'event') {
           yield entry.event;

@@ -764,6 +764,55 @@ describe('CodexAppServerProtocol', () => {
     }
   });
 
+  it('wakes an empty event queue and interrupts immediately when the abort signal fires', async () => {
+    const abortController = new AbortController();
+    const removeAbortListener = vi.spyOn(abortController.signal, 'removeEventListener');
+    child
+      .scriptResult('initialize', {
+        codexHome: '/fake',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+        userAgent: 'fake/0',
+      })
+      .scriptResult('thread/start', { thread: { id: 'thread-empty-queue' } })
+      .scriptResult('turn/start', {
+        turn: { id: 'turn-empty-queue', items: [], status: 'inProgress' },
+      })
+      .scriptResult('turn/interrupt', {});
+
+    const protocol = new CodexAppServerProtocol();
+    const session = await protocol.createSession({
+      workspacePath: '/tmp/ws',
+      abortSignal: abortController.signal,
+    });
+    const collector = (async () => {
+      for await (const _event of protocol.sendMessage(session, { content: 'wait quietly' })) {
+        // Drain the turn so sendMessage runs its normal terminal cleanup.
+      }
+    })();
+
+    try {
+      await nextWrittenMatching(child, 'turn/start');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      abortController.abort();
+
+      const interruptRequest = await nextWrittenMatching(child, 'turn/interrupt', 100);
+      expect(interruptRequest.params).toEqual({
+        threadId: 'thread-empty-queue',
+        turnId: 'turn-empty-queue',
+      });
+      expect(removeAbortListener).toHaveBeenCalledWith('abort', expect.any(Function));
+    } finally {
+      child.emitTurnCompleted({
+        threadId: 'thread-empty-queue',
+        turn: { id: 'turn-empty-queue', status: 'completed' },
+      });
+      await collector;
+      protocol.cleanupSession(session);
+    }
+  });
+
   it('returns failed when the matching terminal event reports a turn failure', async () => {
     const protocol = new CodexAppServerProtocol();
     const { iterator, session } = await createActiveTurn(protocol);
