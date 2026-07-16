@@ -109,6 +109,7 @@ import { installScopedProviderListener } from './providerListenerRegistry';
 import type Store from 'electron-store';
 import type { AIService } from './AIService';
 import type { HooklessAgentFileWatcher } from './HooklessAgentFileWatcher';
+import { tryDispatchNextQueuedPromptUnlessPaused } from '../PGLiteQueuedPromptsStore';
 
 export type SendMessageHandler = (
   event: Electron.IpcMainInvokeEvent,
@@ -151,6 +152,7 @@ interface AIServiceInternal {
     targetWindow: Electron.BrowserWindow | null,
     source: string,
   ): Promise<boolean>;
+  isSessionQueuePaused(sessionId: string): Promise<boolean>;
   runAutoContextCommand(
     session: SessionData,
     workspacePath: string,
@@ -2409,12 +2411,19 @@ export class MessageStreamingHandler {
             const queuedChainAlreadyActive = this.svc.sessionsProcessingQueue.has(session.id);
             let queuedContinuationScheduled = false;
             if (!hasTeammates && !willResume && !queuedChainAlreadyActive) {
-              queuedContinuationScheduled = await this.svc.tryDispatchNextQueuedPrompt(
-                session.id,
-                workspacePath,
-                BrowserWindow.fromWebContents(event.sender),
-                'completion-handler queue',
-              );
+              queuedContinuationScheduled = await tryDispatchNextQueuedPromptUnlessPaused({
+                sessionId: session.id,
+                source: 'completion-handler queue',
+                isSessionQueuePaused: (queuedSessionId) =>
+                  this.svc.isSessionQueuePaused(queuedSessionId),
+                dispatch: () => this.svc.tryDispatchNextQueuedPrompt(
+                  session.id,
+                  workspacePath,
+                  BrowserWindow.fromWebContents(event.sender),
+                  'completion-handler queue',
+                ),
+                logInfo: (message) => logger.main.info(message),
+              });
             }
             if (hasTeammates || willResume || queuedChainAlreadyActive || queuedContinuationScheduled) {
               const reason = hasTeammates
@@ -2629,12 +2638,19 @@ export class MessageStreamingHandler {
         const queuedChainAlreadyActiveOnError = this.svc.sessionsProcessingQueue.has(session.id);
         let queuedContinuationScheduledOnError = false;
         if (!hasTeammatesOnError && !willResumeOnError && !queuedChainAlreadyActiveOnError) {
-          queuedContinuationScheduledOnError = await this.svc.tryDispatchNextQueuedPrompt(
-            session.id,
-            workspacePath,
-            BrowserWindow.fromWebContents(event.sender),
-            'error-handler queue',
-          );
+          queuedContinuationScheduledOnError = await tryDispatchNextQueuedPromptUnlessPaused({
+            sessionId: session.id,
+            source: 'error-handler queue',
+            isSessionQueuePaused: (queuedSessionId) =>
+              this.svc.isSessionQueuePaused(queuedSessionId),
+            dispatch: () => this.svc.tryDispatchNextQueuedPrompt(
+              session.id,
+              workspacePath,
+              BrowserWindow.fromWebContents(event.sender),
+              'error-handler queue',
+            ),
+            logInfo: (message) => logger.main.info(message),
+          });
         }
         if (hasTeammatesOnError || willResumeOnError || queuedChainAlreadyActiveOnError || queuedContinuationScheduledOnError) {
           const reason = hasTeammatesOnError
