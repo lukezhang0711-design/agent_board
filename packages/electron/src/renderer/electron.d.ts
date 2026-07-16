@@ -338,7 +338,11 @@ interface ElectronAPI {
   aiUpdateSessionMessages: (sessionId: string, messages: any[], workspacePath?: string) => Promise<{ success: boolean; error?: string }>;
   aiSaveDraftInput: (sessionId: string, draftInput: string, workspacePath?: string) => Promise<{ success: boolean; error?: string }>;
   aiDeleteSession: (sessionId: string, workspacePath?: string) => Promise<{ success: boolean }>;
-  aiCancelRequest: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
+  aiCancelRequest: (sessionId: string) => Promise<{
+    success: boolean;
+    queue: 'paused' | 'cleared' | 'unchanged';
+    error?: string;
+  }>;
   aiApplyEdit: (edit: any) => Promise<any>;
 
   // Flat-key settings -- single read-everything snapshot, single per-key write,
