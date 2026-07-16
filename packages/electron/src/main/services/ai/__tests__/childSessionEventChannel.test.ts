@@ -297,6 +297,19 @@ describe('child session event hidden delivery channel', () => {
       searchable_text: reply,
     });
 
+    AgentMessagesRepository.clearStore();
+    AISessionsRepository.clearStore();
+    await db.close();
+    db = new SQLiteDatabase({
+      dbDir,
+      schemaDir: path.resolve(__dirname, '../../../database/sqlite/schemas'),
+      slowQueryThresholdMs: 1000,
+      sampleRate: 0,
+    });
+    await db.initialize();
+    AISessionsRepository.setStore(createPGLiteSessionStore(db));
+    AgentMessagesRepository.setStore(createPGLiteAgentMessagesStore(db));
+
     const transcript = await new TranscriptRuntime(rawMessageStore(db)).getViewMessages(
       sessionId,
       'claude-code',
@@ -470,11 +483,16 @@ describe('child session event hidden delivery channel', () => {
       id: 'prompt-user-default',
       sessionId,
       prompt: userPrompt,
+      documentContext: {
+        filePath: '/workspace/visible.md',
+        promptOrigin: 'child_session_event',
+      },
     });
     expect(queued.origin).toBe('user');
     const claimed = await queueStore.claim(queued.id);
     const dispatched = prepareQueuedPromptForDispatch(claimed!);
     expect(dispatched.documentContext?.promptOrigin).toBeUndefined();
+    expect(dispatched.documentContext?.filePath).toBe('/workspace/visible.md');
 
     const provider = createPersistingProvider([], 'Normal reply');
     for await (const _chunk of provider.sendMessage(dispatched.prompt, sessionId)) {

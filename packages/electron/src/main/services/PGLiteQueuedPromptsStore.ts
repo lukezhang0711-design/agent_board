@@ -223,16 +223,24 @@ export async function tryDispatchNextQueuedPromptUnlessPaused(options: {
 
 /** Attach the persisted queue origin to the existing delivery context seam. */
 export function prepareQueuedPromptForDispatch(prompt: QueuedPrompt): QueuedPrompt {
-  if (prompt.origin !== 'child_session_event') {
+  if (prompt.origin === 'child_session_event') {
+    return {
+      ...prompt,
+      documentContext: {
+        ...(prompt.documentContext ?? {}),
+        promptOrigin: 'child_session_event',
+      },
+    };
+  }
+
+  if (prompt.documentContext?.promptOrigin !== 'child_session_event') {
     return prompt;
   }
 
+  const { promptOrigin: _discardedOrigin, ...documentContext } = prompt.documentContext;
   return {
     ...prompt,
-    documentContext: {
-      ...(prompt.documentContext ?? {}),
-      promptOrigin: 'child_session_event',
-    },
+    documentContext,
   };
 }
 

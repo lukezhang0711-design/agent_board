@@ -131,5 +131,9 @@ describe('MetaAgentService child event queue origin', () => {
       undefined,
       'child_session_event',
     );
+    expect(triggerQueuedPromptProcessingForSession).toHaveBeenCalledWith(
+      'parent-session',
+      '/workspace',
+    );
   });
 });

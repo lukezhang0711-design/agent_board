@@ -1035,13 +1035,9 @@ export class MetaAgentService {
         'child_session_event',
       );
 
-      // Do not auto-re-drive the parent when THIS child settle was an error.
-      // The [Child Session Update] notification above is still queued for
-      // visibility, but re-triggering the parent's queue on every error settle
-      // spins the meta-agent wakeup loop with no backoff (an antigravity 429
-      // child settles instantly into 'error' every cycle). Native children
-      // settle 'session:completed', so this gate is a no-op for them.
-      if (eventType !== 'session:error' && (metaStatus === 'idle' || metaStatus === 'interrupted' || metaStatus === 'error')) {
+      // All four child event types use the same internal delivery path. When
+      // the parent can run, trigger its queue so the event reaches the model.
+      if (metaStatus === 'idle' || metaStatus === 'interrupted' || metaStatus === 'error') {
         await this.aiService.triggerQueuedPromptProcessingForSession(metaSession.id, metaSession.workspacePath);
       }
     } catch (error) {
