@@ -44,6 +44,7 @@ export interface ClaudeCliSessionLauncherDeps {
   getMcpServersConfig: (opts: {
     sessionId: string;
     workspacePath: string;
+    profile?: 'standard' | 'meta-agent';
   }) => Promise<Record<string, unknown>>;
   /** Resolve the `claude` executable path. Falls back to the bare `claude`. */
   resolveClaudeExecutable: () => string;
@@ -122,6 +123,10 @@ export interface LaunchClaudeCliSessionInput {
   resumeSessionId?: string;
   cols?: number;
   rows?: number;
+  /** Select the runtime MCP server profile for this CLI session. */
+  mcpProfile?: 'standard' | 'meta-agent';
+  /** Additional text appended to the CLI's existing Nimbalyst system prompt. */
+  systemPromptAppend?: string;
   /**
    * Directories to pre-authorize for the CLI's file tools via `--add-dir`
    * (NIM-806). Production passes the workspace's chat-attachments root so pasted
@@ -176,7 +181,11 @@ export class ClaudeCliSessionLauncher {
     }
 
     // 1 + 2. Build the sessionId-bearing MCP config and persist it to a temp file.
-    const mcpServers = await this.deps.getMcpServersConfig({ sessionId, workspacePath });
+    const mcpConfigOptions =
+      input.mcpProfile === 'meta-agent'
+        ? { sessionId, workspacePath, profile: 'meta-agent' as const }
+        : { sessionId, workspacePath };
+    const mcpServers = await this.deps.getMcpServersConfig(mcpConfigOptions);
     const mcpConfigPath = await this.writeMcpConfig(sessionId, mcpServers);
     // The map's keys are the trusted Nimbalyst MCP server names — pre-allow them so
     // the genuine CLI doesn't double-prompt on top of our widgets (NIM-806 BUG 2).
@@ -287,6 +296,7 @@ export class ClaudeCliSessionLauncher {
       dangerouslySkipPermissions,
       additionalDirectories: input.additionalDirectories,
       pluginDirs,
+      systemPromptAppend: input.systemPromptAppend,
     });
 
     // 4. Spawn the genuine interactive CLI in the terminal strip. Tear the proxy

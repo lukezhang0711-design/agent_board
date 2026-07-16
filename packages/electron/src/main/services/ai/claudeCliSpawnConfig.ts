@@ -140,6 +140,11 @@ export interface ClaudeCliSpawnInput {
    * skipped; omit for no extension plugins.
    */
   pluginDirs?: string[];
+  /**
+   * Additional system instructions to append after the standard Nimbalyst CLI
+   * nudges. Head sessions pass the shared runtime Meta Agent prompt here.
+   */
+  systemPromptAppend?: string;
   /** Extra CLI args appended verbatim (escape hatch for flags we pass through). */
   extraArgs?: string[];
 }
@@ -314,7 +319,10 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
   }
   // Force the model off the built-in TUI AskUserQuestion and onto our MCP tool.
   args.push('--disallowedTools', ...CLAUDE_CLI_DISALLOWED_TOOLS);
-  args.push('--append-system-prompt', CLAUDE_CLI_SYSTEM_PROMPT_APPEND);
+  const systemPromptAppend = input.systemPromptAppend
+    ? `${CLAUDE_CLI_SYSTEM_PROMPT_APPEND}\n\n${input.systemPromptAppend}`
+    : CLAUDE_CLI_SYSTEM_PROMPT_APPEND;
+  args.push('--append-system-prompt', systemPromptAppend);
   if (input.extraArgs?.length) {
     args.push(...input.extraArgs);
   }

@@ -17,8 +17,13 @@ import os from 'os';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { app } from 'electron';
-import { McpConfigService } from '@nimbalyst/runtime/ai/server';
+import {
+  buildMetaAgentSystemPrompt,
+  McpConfigService,
+  type MetaAgentWorkflowPreset,
+} from '@nimbalyst/runtime/ai/server';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
+import { AISessionsRepository } from '@nimbalyst/runtime/storage/repositories/AISessionsRepository';
 import { getTerminalSessionManager } from '../TerminalSessionManager';
 import { getEnhancedPath, getShellEnvironment } from '../CLIManager';
 import { ClaudeCliSessionLauncher } from './ClaudeCliSessionLauncher';
@@ -159,8 +164,8 @@ function buildMcpConfigService(): McpConfigService {
 function buildLauncher(): ClaudeCliSessionLauncher {
   const mcpConfigService = buildMcpConfigService();
   return new ClaudeCliSessionLauncher({
-    getMcpServersConfig: ({ sessionId, workspacePath }) =>
-      mcpConfigService.getMcpServersConfig({ sessionId, workspacePath }),
+    getMcpServersConfig: (options) =>
+      mcpConfigService.getMcpServersConfig(options),
     resolveClaudeExecutable,
     getEnhancedPath: () => getEnhancedPath(),
     terminalManager: getTerminalSessionManager(),
@@ -191,6 +196,41 @@ function buildLauncher(): ClaudeCliSessionLauncher {
       ),
     cliSupportsPluginDir: (executable: string) => resolveClaudeCliSupportsPluginDir(executable),
   });
+}
+
+async function resolveMetaAgentLaunchConfig(
+  sessionId: string,
+  model?: string,
+): Promise<
+  | {
+      mcpProfile: 'meta-agent';
+      systemPromptAppend: string;
+    }
+  | undefined
+> {
+  try {
+    const session = await AISessionsRepository.get(sessionId);
+    if (session?.agentRole !== 'meta-agent') {
+      return undefined;
+    }
+
+    const rawWorkflowPreset = (session.metadata as Record<string, unknown> | undefined)
+      ?.workflowPreset;
+    const workflowPreset: MetaAgentWorkflowPreset =
+      rawWorkflowPreset === 'research' || rawWorkflowPreset === 'implement-review-test'
+        ? rawWorkflowPreset
+        : 'default';
+
+    return {
+      mcpProfile: 'meta-agent',
+      systemPromptAppend: buildMetaAgentSystemPrompt('claude', workflowPreset, {
+        provider: 'claude-code-cli',
+        model,
+      }),
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 export interface EnsureClaudeCliSessionInput {
@@ -266,6 +306,10 @@ export async function ensureClaudeCliSession(
         initialStatus: 'running',
       });
 
+      const metaAgentLaunchConfig = await resolveMetaAgentLaunchConfig(
+        input.sessionId,
+        input.model,
+      );
       const launcher = buildLauncher();
       // Pre-authorize the workspace's chat-attachments root so pasted images
       // (stored OUTSIDE the workspace cwd) read without the native CLI permission
@@ -283,6 +327,7 @@ export async function ensureClaudeCliSession(
         cols: input.cols,
         rows: input.rows,
         additionalDirectories,
+        ...metaAgentLaunchConfig,
         onTurnState: (state: ClaudeTurnState) => {
           // idle is the terminal turn boundary; running/waiting are mid-turn.
           // Root the file watcher at the spawn cwd (the worktree for worktree

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { McpConfigService } from '@nimbalyst/runtime/ai/server';
 import { ClaudeCliSessionLauncher, type ClaudeCliSessionLauncherDeps } from '../ClaudeCliSessionLauncher';
 import type { ClaudeCliSpawnConfig } from '../claudeCliSpawnConfig';
 
@@ -92,6 +93,85 @@ describe('ClaudeCliSessionLauncher', () => {
     expect(mcpArg).toBe(writes[0].file);
     expect(opts.spawnConfig.args).toContain('--model');
     expect(opts.spawnConfig.executable).toBe('/usr/local/bin/claude');
+  });
+
+  it('launches a Head session with the Meta MCP profile and shared role prompt', async () => {
+    const { launcher, createClaudeCliTerminal, getMcpServersConfig } = makeHarness();
+
+    await launcher.launch({
+      ...baseInput,
+      mcpProfile: 'meta-agent',
+      systemPromptAppend: 'HEAD_ROLE_PROMPT',
+    });
+
+    expect(getMcpServersConfig).toHaveBeenCalledWith({
+      sessionId: 'sess-01HABC',
+      workspacePath: '/work',
+      profile: 'meta-agent',
+    });
+    const args = createClaudeCliTerminal.mock.calls[0][1].spawnConfig.args;
+    const appendIndex = args.indexOf('--append-system-prompt');
+    expect(appendIndex).toBeGreaterThanOrEqual(0);
+    expect(args[appendIndex + 1]).toContain('HEAD_ROLE_PROMPT');
+  });
+
+  it('writes the real Meta MCP snapshot while leaving the standard profile unchanged', async () => {
+    const mcpConfigService = new McpConfigService({
+      mcpServerPort: 41001,
+      sessionNamingServerPort: 41002,
+      extensionDevServerPort: 41003,
+      superLoopProgressServerPort: null,
+      sessionContextServerPort: 41004,
+      metaAgentServerPort: 41005,
+      settingsServerPort: 41006,
+      mcpConfigLoader: async () => ({
+        'custom-shell': {
+          type: 'stdio',
+          command: 'custom-shell-server',
+          args: [],
+        },
+      }),
+      claudeSettingsEnvLoader: null,
+      shellEnvironmentLoader: null,
+    });
+    const writes: Array<{ file: string; data: string }> = [];
+    const createClaudeCliTerminal = vi.fn(
+      async (..._args: CreateClaudeCliTerminalArgs): Promise<void> => {},
+    );
+    const launcher = new ClaudeCliSessionLauncher({
+      getMcpServersConfig: (options) => mcpConfigService.getMcpServersConfig(options),
+      resolveClaudeExecutable: () => '/usr/local/bin/claude',
+      getEnhancedPath: () => '/opt/bin:/usr/bin',
+      terminalManager: { createClaudeCliTerminal },
+      baseEnv: {},
+      tempDir: '/tmp/claude-cli-test',
+      mkdir: vi.fn(async () => undefined),
+      writeFile: vi.fn(async (file: string, data: string) => {
+        writes.push({ file, data });
+      }),
+      pathExists: () => false,
+    });
+
+    await launcher.launch({
+      sessionId: 'head-session',
+      workspacePath: '/work',
+      mcpProfile: 'meta-agent',
+    });
+    await launcher.launch({
+      sessionId: 'standard-session',
+      workspacePath: '/work',
+    });
+
+    const metaServers = JSON.parse(writes[0].data).mcpServers;
+    expect(metaServers).toHaveProperty('nimbalyst-meta-agent');
+    expect(metaServers).toHaveProperty('custom-shell');
+    expect(metaServers).not.toHaveProperty('nimbalyst-extension-dev');
+    expect(metaServers).not.toHaveProperty('nimbalyst-settings');
+
+    const standardServers = JSON.parse(writes[1].data).mcpServers;
+    expect(standardServers).toHaveProperty('nimbalyst-extension-dev');
+    expect(standardServers).toHaveProperty('nimbalyst-settings');
+    expect(standardServers).toHaveProperty('custom-shell');
   });
 
   it('pre-allows the injected MCP servers by name (--allowedTools mcp__<server>) — NIM-806 BUG 2', async () => {
