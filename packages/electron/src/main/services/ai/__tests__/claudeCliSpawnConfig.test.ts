@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { buildClaudeCliSpawnConfig, resolveClaudeCliModelArg } from '../claudeCliSpawnConfig';
 
+const CURRENT_STANDARD_SYSTEM_PROMPT = [
+  'You are running inside Nimbalyst, a desktop GUI that manages your session. When you need user input, a decision, or disambiguation, call the mcp__nimbalyst-mcp__AskUserQuestion tool (multiple-choice) or the mcp__nimbalyst-mcp__PromptForUserInput tool (richer structured input) — they render as interactive UI elements the user can click. Do not ask questions in plain text.',
+  'Early in your first turn — as soon as you understand what the user wants — call the mcp__nimbalyst-session-naming__update_session_meta tool to name this session. Pass `name` (2-5 words, the descriptive part first, based on what the user asked for — e.g. "Dark mode implementation"), `add` (2-4 lowercase hyphenated tags for the type of work and area, e.g. ["bug-fix", "ui"]), and `phase` (one of backlog, planning, implementing, validating). Call it again later only when the phase changes.',
+].join('\n\n');
+
 /**
  * Spawn-config builder for the genuine `claude` CLI on the subscription
  * (NIM-806, Phase 1). Pure arg/env construction so it is verifiable without
@@ -147,6 +152,41 @@ describe('buildClaudeCliSpawnConfig', () => {
     const nudge = cfg.args[cfg.args.indexOf('--append-system-prompt') + 1] ?? '';
     expect(nudge).toContain('mcp__nimbalyst-mcp__AskUserQuestion');
     expect(nudge).toContain('mcp__nimbalyst-mcp__PromptForUserInput');
+  });
+
+  it('keeps the standard CLI launch args byte-for-byte unchanged', () => {
+    expect(buildClaudeCliSpawnConfig(base).args).toEqual([
+      '--disallowedTools',
+      'AskUserQuestion',
+      '--append-system-prompt',
+      CURRENT_STANDARD_SYSTEM_PROMPT,
+    ]);
+  });
+
+  it('appends the Head role prompt without adding native tool restrictions', () => {
+    const standard = buildClaudeCliSpawnConfig(base);
+    const head = buildClaudeCliSpawnConfig({
+      ...base,
+      systemPromptAppend: 'HEAD_ROLE_PROMPT',
+    });
+
+    const standardAppendIndex = standard.args.indexOf('--append-system-prompt');
+    const headAppendIndex = head.args.indexOf('--append-system-prompt');
+    expect(head.args[headAppendIndex + 1]).toBe(
+      `${standard.args[standardAppendIndex + 1]}\n\nHEAD_ROLE_PROMPT`,
+    );
+
+    const standardDisallowed = standard.args.slice(
+      standard.args.indexOf('--disallowedTools') + 1,
+      standardAppendIndex,
+    );
+    const headDisallowed = head.args.slice(
+      head.args.indexOf('--disallowedTools') + 1,
+      headAppendIndex,
+    );
+    expect(headDisallowed).toEqual(standardDisallowed);
+    expect(headDisallowed).toEqual(['AskUserQuestion']);
+    expect(head.args).not.toContain('--tools');
   });
 
   it('nudges the model to name the session via update_session_meta on its first turn', () => {
