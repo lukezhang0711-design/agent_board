@@ -1134,11 +1134,16 @@ export class MetaAgentService {
         'session:waiting': 'waiting',
         'session:interrupted': 'interrupted',
       };
-      await this.updateWorkOrderStatusForSession(
-        sessionId,
-        workOrderStatusByEvent[eventType],
-        eventType === 'session:interrupted' ? 'Session interrupted' : undefined,
-      );
+      try {
+        await this.updateWorkOrderStatusForSession(
+          sessionId,
+          workOrderStatusByEvent[eventType],
+          eventType === 'session:interrupted' ? 'Session interrupted' : undefined,
+        );
+      } catch (error) {
+        // Tracker state is secondary to the existing Head notification path.
+        console.error(`[MetaAgentService] Failed to update work-order for child ${sessionId}:`, error);
+      }
 
       // Honor fire-and-forget: spawn_session sets metadata.notifyParent=false on
       // the child for /launch-new-session-style hand-offs where the parent does

@@ -173,4 +173,46 @@ describe('MetaAgentService child event queue origin', () => {
       'child_session_event',
     );
   });
+
+  it('still delivers the child event when work-order status persistence fails', async () => {
+    const childSessionId = 'child-with-tracker-failure';
+    const trackerError = new Error('tracker status unavailable');
+    databaseQuery
+      .mockRejectedValueOnce(trackerError)
+      .mockResolvedValue({ rows: [{ count: '0' }] });
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(service as any, 'buildSessionResultData').mockResolvedValue({
+      sessionId: childSessionId,
+      title: 'Child with tracker failure',
+      provider: 'claude-code',
+      model: null,
+      status: 'idle',
+      lastActivity: 1,
+      originalPrompt: 'finish despite tracker failure',
+      userPrompts: ['finish despite tracker failure'],
+      lastResponse: 'done',
+      fullResponse: 'done',
+      recentMessages: [],
+      editedFiles: [],
+      pendingPrompt: null,
+      createdAt: 1,
+      updatedAt: 2,
+      worktreeId: null,
+      toolScope: null,
+    });
+
+    await (service as any).handleChildSessionEvent(childSessionId, 'session:completed');
+
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.stringContaining(`Failed to update work-order for child ${childSessionId}`),
+      trackerError,
+    );
+    expect(queuePromptForSession).toHaveBeenCalledWith(
+      'parent-session',
+      expect.stringContaining('Event: session:completed'),
+      undefined,
+      undefined,
+      'child_session_event',
+    );
+  });
 });
