@@ -9,6 +9,7 @@
 
 import { store } from '../index';
 import { codexUsageAtom, CodexUsageData } from '../atoms/codexUsageAtoms';
+import { sessionStoreAtom } from '../atoms/sessions';
 
 export function initCodexUsageListeners(): () => void {
   const cleanups: Array<() => void> = [];
@@ -19,6 +20,21 @@ export function initCodexUsageListeners(): () => void {
 
   cleanups.push(
     window.electronAPI.on('codex-usage:update', handleUsageUpdate)
+  );
+
+  cleanups.push(
+    window.electronAPI.on('ai:streamResponse', (data: {
+      sessionId?: string;
+      isComplete?: boolean;
+    }) => {
+      if (!data.sessionId || !data.isComplete) return;
+      const session = store.get(sessionStoreAtom(data.sessionId));
+      if (session?.provider !== 'openai-codex') return;
+
+      void window.electronAPI.invoke('codex-usage:turn-completed').catch((error: Error) => {
+        console.error('[CodexUsageListeners] Failed to refresh after turn completion:', error);
+      });
+    })
   );
 
   // Fetch initial usage data on startup

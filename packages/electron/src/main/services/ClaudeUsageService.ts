@@ -16,22 +16,25 @@ import * as path from 'path';
 import * as os from 'os';
 import { BrowserWindow } from 'electron';
 import { logger } from '../utils/logger';
+import {
+  makeUsagePoolKey,
+  markUsagePoolsStale,
+  mergeUsagePoolSnapshot,
+  type ClaudeUsageData,
+  type UsagePoolMap,
+} from '../../shared/usage';
 
-export interface ClaudeUsageData {
-  fiveHour: {
-    utilization: number; // 0-100 percentage
-    resetsAt: string | null; // ISO timestamp
-  };
-  sevenDay: {
-    utilization: number;
-    resetsAt: string | null;
-  };
-  sevenDayOpus?: {
-    utilization: number;
-    resetsAt: string | null;
-  };
-  lastUpdated: number; // Unix timestamp
-  error?: string;
+export type { ClaudeUsageData } from '../../shared/usage';
+
+interface ClaudeUsageWindowResponse {
+  utilization?: number;
+  resets_at?: string | null;
+}
+
+export interface ClaudeUsageResponse {
+  five_hour?: ClaudeUsageWindowResponse | null;
+  seven_day?: ClaudeUsageWindowResponse | null;
+  seven_day_opus?: ClaudeUsageWindowResponse | null;
 }
 
 interface KeychainCredentials {
@@ -129,29 +132,39 @@ class ClaudeUsageServiceImpl {
           `[ClaudeUsageService] No Claude OAuth token found in ${source}. ` +
           'Claude usage indicator will remain hidden until Claude Code login is restored.'
         );
-        const errorData: ClaudeUsageData = {
-          fiveHour: { utilization: 0, resetsAt: null },
-          sevenDay: { utilization: 0, resetsAt: null },
-          lastUpdated: Date.now(),
-          error: 'No Claude Code credentials found. Please log in to Claude Code.',
-        };
+        const errorData = this.buildUnavailableUsage(
+          'No Claude Code credentials found. Please log in to Claude Code.',
+        );
         this.cachedUsage = errorData;
         this.broadcastUpdate();
         return errorData;
       }
 
       const usageData = await this.fetchUsageData(token);
+      if (Object.keys(usageData.pools).length === 0) {
+        const unavailable = this.buildUnavailableUsage(
+          'Claude usage response did not contain any quota pools.',
+        );
+        this.cachedUsage = unavailable;
+        this.broadcastUpdate();
+        return unavailable;
+      }
+      if (this.cachedUsage) {
+        const mergedPools = markUsagePoolsStale(this.cachedUsage.pools);
+        for (const [key, candidate] of Object.entries(usageData.pools)) {
+          mergedPools[key] = mergeUsagePoolSnapshot(mergedPools[key], candidate);
+        }
+        usageData.pools = mergedPools;
+        usageData.lastUpdated = Math.max(...Object.values(mergedPools).map((pool) => pool.updatedAt));
+      }
       this.cachedUsage = usageData;
       this.broadcastUpdate();
       return usageData;
     } catch (error) {
       logger.main.error('[ClaudeUsageService] Error refreshing usage:', error);
-      const errorData: ClaudeUsageData = {
-        fiveHour: { utilization: 0, resetsAt: null },
-        sevenDay: { utilization: 0, resetsAt: null },
-        lastUpdated: Date.now(),
-        error: error instanceof Error ? error.message : 'Unknown error fetching usage',
-      };
+      const errorData = this.buildUnavailableUsage(
+        error instanceof Error ? error.message : 'Unknown error fetching usage',
+      );
       this.cachedUsage = errorData;
       this.broadcastUpdate();
       return errorData;
@@ -329,23 +342,8 @@ class ClaudeUsageServiceImpl {
           throw new Error(`API error: ${response.status} ${response.statusText}`);
         }
 
-        const data = await response.json();
-
-        return {
-          fiveHour: {
-            utilization: data.five_hour?.utilization ?? 0,
-            resetsAt: data.five_hour?.resets_at ?? null,
-          },
-          sevenDay: {
-            utilization: data.seven_day?.utilization ?? 0,
-            resetsAt: data.seven_day?.resets_at ?? null,
-          },
-          sevenDayOpus: data.seven_day_opus ? {
-            utilization: data.seven_day_opus.utilization ?? 0,
-            resetsAt: data.seven_day_opus.resets_at ?? null,
-          } : undefined,
-          lastUpdated: Date.now(),
-        };
+        const data = await response.json() as ClaudeUsageResponse;
+        return mapClaudeUsageResponse(data, Date.now());
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
@@ -395,6 +393,22 @@ class ClaudeUsageServiceImpl {
     }
   }
 
+  private buildUnavailableUsage(error: string): ClaudeUsageData {
+    if (this.cachedUsage) {
+      return {
+        ...this.cachedUsage,
+        pools: markUsagePoolsStale(this.cachedUsage.pools),
+        error,
+      };
+    }
+    return {
+      provider: 'claude-code',
+      pools: {},
+      lastUpdated: null,
+      error,
+    };
+  }
+
   private broadcastUpdate(): void {
     // Send update to all browser windows
     const windows = BrowserWindow.getAllWindows();
@@ -408,3 +422,40 @@ class ClaudeUsageServiceImpl {
 
 // Singleton instance
 export const claudeUsageService = new ClaudeUsageServiceImpl();
+
+export function mapClaudeUsageResponse(
+  response: ClaudeUsageResponse,
+  updatedAt: number,
+): ClaudeUsageData {
+  const pools: UsagePoolMap = {};
+  const addPool = (
+    limitId: 'five_hour' | 'seven_day' | 'seven_day_opus',
+    name: string,
+    windowMinutes: number,
+    window: ClaudeUsageWindowResponse | null | undefined,
+  ): void => {
+    if (typeof window?.utilization !== 'number' || !Number.isFinite(window.utilization)) return;
+    const key = makeUsagePoolKey('claude-code', limitId);
+    pools[key] = {
+      key,
+      provider: 'claude-code',
+      limitId,
+      name,
+      utilization: window.utilization,
+      resetsAt: typeof window.resets_at === 'string' ? window.resets_at : null,
+      windowMinutes,
+      updatedAt,
+      stale: false,
+    };
+  };
+
+  addPool('five_hour', '5-hour', 5 * 60, response.five_hour);
+  addPool('seven_day', 'Weekly', 7 * 24 * 60, response.seven_day);
+  addPool('seven_day_opus', 'Opus weekly', 7 * 24 * 60, response.seven_day_opus);
+
+  return {
+    provider: 'claude-code',
+    pools,
+    lastUpdated: Object.keys(pools).length > 0 ? updatedAt : null,
+  };
+}

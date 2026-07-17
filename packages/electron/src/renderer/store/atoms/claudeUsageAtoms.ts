@@ -6,19 +6,9 @@
  */
 
 import { atom } from 'jotai';
+import type { ClaudeUsageData, UsagePool } from '../../../shared/usage';
 
-export interface ClaudeUsageWindow {
-  utilization: number; // 0-100 percentage
-  resetsAt: string | null; // ISO timestamp
-}
-
-export interface ClaudeUsageData {
-  fiveHour: ClaudeUsageWindow;
-  sevenDay: ClaudeUsageWindow;
-  sevenDayOpus?: ClaudeUsageWindow;
-  lastUpdated: number; // Unix timestamp
-  error?: string;
-}
+export type { ClaudeUsageData } from '../../../shared/usage';
 
 /**
  * Current Claude usage data from the API.
@@ -41,13 +31,22 @@ export const claudeUsageAvailableAtom = atom((get) => {
   return Boolean(usage);
 });
 
+export const claudeUsageSummaryPoolAtom = atom<UsagePool | null>((get) => {
+  const usage = get(claudeUsageAtom);
+  if (!usage) return null;
+  return Object.values(usage.pools).reduce<UsagePool | null>(
+    (highest, pool) => !highest || pool.utilization > highest.utilization ? pool : highest,
+    null,
+  );
+});
+
 /**
  * Derived atom: color for the session (5-hour) indicator
  */
 export const claudeUsageSessionColorAtom = atom((get) => {
-  const usage = get(claudeUsageAtom);
-  if (!usage) return 'muted';
-  const util = usage.fiveHour.utilization;
+  const pool = get(claudeUsageSummaryPoolAtom);
+  if (!pool || pool.stale) return 'muted';
+  const util = pool.utilization;
   if (util >= 80) return 'red';
   if (util >= 50) return 'yellow';
   return 'green';
@@ -59,7 +58,8 @@ export const claudeUsageSessionColorAtom = atom((get) => {
 export const claudeUsageWeeklyColorAtom = atom((get) => {
   const usage = get(claudeUsageAtom);
   if (!usage) return 'muted';
-  const util = usage.sevenDay.utilization;
+  const util = usage.pools['claude-code:seven_day']?.utilization;
+  if (typeof util !== 'number') return 'muted';
   if (util >= 80) return 'red';
   if (util >= 50) return 'yellow';
   return 'green';
