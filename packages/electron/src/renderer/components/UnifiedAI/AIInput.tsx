@@ -36,6 +36,7 @@ import {
 } from '../../store';
 import { useAIInputUndo } from '../../hooks/useAIInputUndo';
 import type { AIInputSnapshot } from '../../store/atoms/aiInputUndo';
+import { STOP_KEEP_QUEUE_ARIA_LABEL, STOP_KEEP_QUEUE_TITLE } from './stopCopy';
 
 export interface AIInputRef {
   focus: () => void;
@@ -1396,8 +1397,8 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
                   console.log('[AIInput] Cancel button clicked, onCancel:', !!onCancel);
                   onCancel();
                 }}
-                title="Cancel request (Esc)"
-                aria-label="Cancel request"
+                title={STOP_KEEP_QUEUE_TITLE}
+                aria-label={STOP_KEEP_QUEUE_ARIA_LABEL}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

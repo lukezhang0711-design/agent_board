@@ -163,6 +163,8 @@ export class McpConfigService {
         transport: 'sse',
         url: `http://127.0.0.1:${this.deps.metaAgentServerPort}/mcp?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspacePath)}`,
         ...(authHeaders ? { headers: { ...authHeaders } } : {}),
+        // submit_plan blocks while the user reviews and approves the plan.
+        tool_timeout_sec: 604800,
       };
     }
 

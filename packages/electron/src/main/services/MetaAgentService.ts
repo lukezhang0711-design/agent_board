@@ -47,6 +47,10 @@ const IMPLEMENTATION_PLAN_APPROVAL_ERROR =
 const SESSION_INTENT_ERROR =
   'intent is required and must be "investigation" or "implementation"';
 const DEFAULT_META_AGENT_MAX_PARALLEL = 4;
+const PLAN_APPROVAL_MAX_POLL_TIME_MS = 7 * 24 * 60 * 60 * 1000;
+const PLAN_APPROVAL_FAST_POLL_WINDOW_MS = 60 * 1000;
+const PLAN_APPROVAL_FAST_POLL_INTERVAL_MS = 100;
+const PLAN_APPROVAL_SLOW_POLL_INTERVAL_MS = 2_000;
 const LIFETIME_BACKSTOP = 50;
 const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max']);
 
@@ -64,6 +68,15 @@ class DispatchCapacityError extends Error {
 
 function isValidMaxParallel(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+function isMatchingPlanApprovalRequestId(candidate: unknown, requestId: string): boolean {
+  if (candidate === requestId) return true;
+  if (typeof candidate !== 'string') return false;
+  const segments = candidate.split('|');
+  return segments.length === 4
+    && segments[0] === 'nimtc'
+    && segments[1] === requestId;
 }
 
 function getEffectiveMaxParallel(override: number | undefined): number {
@@ -1037,25 +1050,28 @@ export class MetaAgentService {
     requestId: string,
   ): Promise<PlanApprovalResponse> {
     const pollStartedAt = Date.now();
-    const maxPollTime = 10 * 60 * 1000;
 
-    while (Date.now() - pollStartedAt <= maxPollTime) {
+    while (Date.now() - pollStartedAt <= PLAN_APPROVAL_MAX_POLL_TIME_MS) {
       const { rows } = await databaseWorker.query<{ content: unknown }>(
         `SELECT content
          FROM ai_agent_messages
          WHERE session_id = $1
            AND content LIKE '%"type":"exit_plan_mode_response"%'
-           AND content LIKE $2
+           AND (content LIKE $2 OR content LIKE $3)
          ORDER BY id DESC
          LIMIT 20`,
-        [sessionId, `%"requestId":"${requestId}"%`],
+        [
+          sessionId,
+          `%"requestId":"${requestId}"%`,
+          `%"requestId":"nimtc|${requestId}|%`,
+        ],
       );
       for (const row of rows) {
         try {
           const content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
           if (
             content.type === 'exit_plan_mode_response'
-            && content.requestId === requestId
+            && isMatchingPlanApprovalRequestId(content.requestId, requestId)
             && typeof content.approved === 'boolean'
           ) {
             return {
@@ -1069,7 +1085,11 @@ export class MetaAgentService {
           // Non-JSON transcript rows cannot be durable prompt responses.
         }
       }
-      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      const elapsedMs = Date.now() - pollStartedAt;
+      const pollIntervalMs = elapsedMs < PLAN_APPROVAL_FAST_POLL_WINDOW_MS
+        ? PLAN_APPROVAL_FAST_POLL_INTERVAL_MS
+        : PLAN_APPROVAL_SLOW_POLL_INTERVAL_MS;
+      await new Promise<void>((resolve) => setTimeout(resolve, pollIntervalMs));
     }
 
     throw new Error('Timed out waiting for plan approval response');

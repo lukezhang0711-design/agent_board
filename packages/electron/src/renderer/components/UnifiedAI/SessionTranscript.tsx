@@ -21,6 +21,8 @@ import type { SessionData, ChatAttachment, TranscriptViewMessage } from '@nimbal
 import { AgentTranscriptPanel } from '@nimbalyst/runtime/ui/AgentTranscript/components/AgentTranscriptPanel';
 import { ClaudeCliTerminalStrip } from './ClaudeCliTerminalStrip';
 import { ClaudeCliNotInstalledNotice } from './ClaudeCliNotInstalledNotice';
+import { STOP_CLEAR_QUEUE_STATUS, getStopRequestStatusMessage } from './stopCopy';
+import { registerPlanApprovalWidget } from './PlanApprovalWidget';
 import type { InteractiveWidgetHost, PermissionScope } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets/InteractiveWidgetHost';
 import type { TodoItem } from '@nimbalyst/runtime/ui/AgentTranscript/types';
 import { isToolLikeMessage } from '@nimbalyst/runtime/ui/AgentTranscript/utils/messageTypeHelpers';
@@ -111,6 +113,8 @@ import { autoCommitEnabledAtom, setAutoCommitEnabledAtom } from '../../store/ato
 import { diffPeekSizeAtom, setDiffPeekSizeAtom } from '../../store/atoms/diffPeekSizeAtoms';
 import { registerSessionWorkspace, loadInitialSessionFileState } from '../../store/listeners/fileStateListeners';
 import { SESSION_PHASE_COLUMNS, setSessionPhaseAtom, type SessionPhase } from '../../store/atoms/sessionKanban';
+
+registerPlanApprovalWidget();
 
 /**
  * Detect a metadata value that's the artifact of `{...stringValue, ...}` -
@@ -2510,9 +2514,9 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     : 0;
   const isPausedQueueActionInFlight = cancelFeedback.phase === 'stopped'
     && cancelFeedback.queueAction !== undefined;
-  let cancelStatusMessage = 'Stopping pauses and keeps the queued messages';
+  let cancelStatusMessage = STOP_CLEAR_QUEUE_STATUS;
   if (cancelFeedback.phase === 'requesting' || cancelFeedback.phase === 'awaiting-terminal') {
-    cancelStatusMessage = `${cancelFeedback.action === 'clear' ? 'Stop & clear' : 'Stop'} request sent, waiting for it to take effect…`;
+    cancelStatusMessage = getStopRequestStatusMessage(cancelFeedback.action ?? 'pause');
   } else if (cancelFeedback.phase === 'failed') {
     cancelStatusMessage = `Stop failed: ${cancelFeedback.error}`;
   } else if (cancelFeedback.phase === 'stopped') {

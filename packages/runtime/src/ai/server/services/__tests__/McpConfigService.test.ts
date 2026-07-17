@@ -176,6 +176,21 @@ describe('McpConfigService', () => {
       );
     });
 
+    it('allows submit_plan to wait up to seven days for user approval', async () => {
+      mockDeps.metaAgentServerPort = 3004;
+      service = new McpConfigService(mockDeps);
+      const config = await service.getMcpServersConfig({
+        sessionId: 'session123',
+        workspacePath: '/test/workspace',
+      });
+
+      expect(config['nimbalyst-meta-agent']).toEqual(
+        expect.objectContaining({
+          tool_timeout_sec: 604800,
+        }),
+      );
+    });
+
     it('should include session-naming server when port is set and session ID exists', async () => {
       service = new McpConfigService(mockDeps);
       const config = await service.getMcpServersConfig({

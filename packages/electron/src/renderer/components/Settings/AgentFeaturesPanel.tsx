@@ -31,6 +31,19 @@ interface WorkflowExportSettings {
   claudeGeneratedExtensionWorkflowsEnabled: boolean;
 }
 
+const DEFAULT_META_AGENT_MAX_PARALLEL = 4;
+
+export function normalizeMetaAgentMaxParallel(value: unknown): number {
+  const parsed = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && value.trim() !== ''
+      ? Number(value)
+      : Number.NaN;
+  return Number.isSafeInteger(parsed) && parsed >= 1
+    ? parsed
+    : DEFAULT_META_AGENT_MAX_PARALLEL;
+}
+
 export function AgentFeaturesPanel() {
   const posthog = usePostHog();
   const [settings] = useAtom(advancedSettingsAtom);
@@ -55,6 +68,9 @@ export function AgentFeaturesPanel() {
     codexEnabled: false,
     claudeGeneratedExtensionWorkflowsEnabled: false,
   });
+  const [metaAgentMaxParallelInput, setMetaAgentMaxParallelInput] = useState(
+    String(DEFAULT_META_AGENT_MAX_PARALLEL),
+  );
 
   const isDevelopment = import.meta.env.DEV;
 
@@ -105,6 +121,18 @@ export function AgentFeaturesPanel() {
     loadPreferredAgentLanguage();
   }, []);
 
+  useEffect(() => {
+    const loadMetaAgentMaxParallel = async () => {
+      try {
+        const value = await window.electronAPI.invoke('app-settings:get', 'metaAgentMaxParallel');
+        setMetaAgentMaxParallelInput(String(normalizeMetaAgentMaxParallel(value)));
+      } catch (err) {
+        console.error('Failed to load Meta Agent concurrency limit:', err);
+      }
+    };
+    loadMetaAgentMaxParallel();
+  }, []);
+
   const handlePreferredAgentLanguageChange = useCallback(async (value: string) => {
     setPreferredAgentLanguage(value);
     try {
@@ -113,6 +141,16 @@ export function AgentFeaturesPanel() {
       console.error('Failed to save preferred agent language:', err);
     }
   }, []);
+
+  const persistMetaAgentMaxParallel = useCallback(async () => {
+    const value = normalizeMetaAgentMaxParallel(metaAgentMaxParallelInput);
+    setMetaAgentMaxParallelInput(String(value));
+    try {
+      await window.electronAPI.invoke('app-settings:set', 'metaAgentMaxParallel', value);
+    } catch (err) {
+      console.error('Failed to save Meta Agent concurrency limit:', err);
+    }
+  }, [metaAgentMaxParallelInput]);
 
   const handleWorkflowSourceToggle = useCallback(async (
     key: keyof WorkflowSourceSettings,
@@ -257,13 +295,47 @@ export function AgentFeaturesPanel() {
         </div>
 
         {features.map((feature) => (
-          <SettingsToggle
-            key={feature.tag}
-            checked={alphaFeatures[feature.tag] ?? false}
-            onChange={(checked) => handleAlphaToggle(feature.tag, checked)}
-            name={feature.name}
-            description={feature.description}
-          />
+          <React.Fragment key={feature.tag}>
+            <SettingsToggle
+              checked={alphaFeatures[feature.tag] ?? false}
+              onChange={(checked) => handleAlphaToggle(feature.tag, checked)}
+              name={feature.name}
+              description={feature.description}
+            />
+            {feature.tag === 'meta-agent' && (
+              <div className="meta-agent-max-parallel-setting flex items-start justify-between gap-4 pl-4 pb-3">
+                <div className="flex-1 min-w-0">
+                  <label
+                    htmlFor="meta-agent-max-parallel-input"
+                    className="text-sm font-medium text-[var(--nim-text)] leading-tight"
+                  >
+                    Max parallel child sessions
+                  </label>
+                  <div
+                    id="meta-agent-max-parallel-help"
+                    className="text-xs text-[var(--nim-text-muted)] leading-snug mt-0.5"
+                  >
+                    New child sessions queue when all parallel slots are in use.
+                  </div>
+                </div>
+                <input
+                  id="meta-agent-max-parallel-input"
+                  data-testid="meta-agent-max-parallel-input"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={metaAgentMaxParallelInput}
+                  onChange={(event) => setMetaAgentMaxParallelInput(event.target.value)}
+                  onBlur={() => void persistMetaAgentMaxParallel()}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.currentTarget.blur();
+                  }}
+                  aria-describedby="meta-agent-max-parallel-help"
+                  className="w-24 py-1.5 px-3 rounded-md text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
+                />
+              </div>
+            )}
+          </React.Fragment>
         ))}
 
         <SettingsToggle

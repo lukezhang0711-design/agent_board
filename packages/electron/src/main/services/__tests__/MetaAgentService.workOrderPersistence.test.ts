@@ -162,6 +162,10 @@ describe('MetaAgentService work-order persistence', () => {
     });
   }
 
+  function toCodexTranscriptRequestId(requestId: string): string {
+    return `nimtc|${requestId}|1784297999209|21431`;
+  }
+
   async function createRunningChildren(count: number): Promise<string[]> {
     const sessionIds: string[] = [];
     for (let index = 0; index < count; index += 1) {
@@ -572,6 +576,77 @@ describe('MetaAgentService work-order persistence', () => {
     });
   });
 
+  it('matches the Codex transcript composite request ID for approval', async () => {
+    const requestId = '94471805-5eca-4d66-a448-56e438de6ab3';
+    await persistPlanApprovalResponse(toCodexTranscriptRequestId(requestId), true);
+
+    const startedAt = 1_000;
+    const nowSpy = vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValue(startedAt + (8 * 24 * 60 * 60 * 1000));
+    try {
+      await expect(
+        (service as any).waitForPlanApprovalResponse('head-session', requestId),
+      ).resolves.toMatchObject({ approved: true, respondedBy: 'desktop' });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('matches the Codex transcript composite request ID for rejection feedback', async () => {
+    const requestId = '94471805-5eca-4d66-a448-56e438de6ab3';
+    await persistPlanApprovalResponse(
+      toCodexTranscriptRequestId(requestId),
+      false,
+      'Split persistence from dispatch authorization.',
+    );
+
+    const startedAt = 1_000;
+    const nowSpy = vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValue(startedAt + (8 * 24 * 60 * 60 * 1000));
+    try {
+      await expect(
+        (service as any).waitForPlanApprovalResponse('head-session', requestId),
+      ).resolves.toMatchObject({
+        approved: false,
+        feedback: 'Split persistence from dispatch authorization.',
+        respondedBy: 'desktop',
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('waits for seven days and backs off polling after the first minute', async () => {
+    const dayMs = 24 * 60 * 60 * 1000;
+    let now = 0;
+    const delays: number[] = [];
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation((
+      ((callback: () => void, delay?: number) => {
+        delays.push(Number(delay));
+        if (delays.length === 1) now = (10 * 60 * 1000) + 1;
+        else if (delays.length === 2) now = 7 * dayMs;
+        else now = (7 * dayMs) + 1;
+        queueMicrotask(callback);
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }) as typeof setTimeout
+    ));
+
+    try {
+      await expect(
+        (service as any).waitForPlanApprovalResponse('head-session', 'no-response'),
+      ).rejects.toThrow('Timed out waiting for plan approval response');
+      expect(delays).toEqual([100, 2_000, 2_000]);
+    } finally {
+      timeoutSpy.mockRestore();
+      nowSpy.mockRestore();
+    }
+  });
+
   it('persists the approval prompt and allows implementation only after approval', async () => {
     const submitPromise = (service as any).submitPlan('head-session', workspacePath, {
       title: 'Persist the approval gate',
@@ -596,7 +671,7 @@ describe('MetaAgentService work-order persistence', () => {
     expect(pendingRows).toHaveLength(1);
     expect(parseStoredJson<any>(pendingRows[0].data).status).toBe('in-review');
 
-    await persistPlanApprovalResponse(prompt.requestId, true);
+    await persistPlanApprovalResponse(toCodexTranscriptRequestId(prompt.requestId), true);
     const approval = JSON.parse(await submitPromise);
     expect(approval).toMatchObject({
       approved: true,
@@ -686,7 +761,7 @@ describe('MetaAgentService work-order persistence', () => {
     });
     const firstPrompt = await waitForPlanApprovalPrompt();
     await persistPlanApprovalResponse(
-      firstPrompt.requestId,
+      toCodexTranscriptRequestId(firstPrompt.requestId),
       false,
       'Split persistence from dispatch authorization.',
     );
