@@ -15,6 +15,7 @@ import { database as databaseWorker } from '../database/PGLiteDatabaseWorker';
 import { getDatabase } from '../database/initialize';
 import { gitRefWatcher } from '../file/GitRefWatcher';
 import { AIService } from './ai/AIService';
+import { createBidirectionalLink } from '../mcp/tools/trackerToolHandlers';
 import {
   startMetaAgentServer,
   setMetaAgentToolFns,
@@ -27,6 +28,7 @@ import type { QueueCancelAction, QueueCancelResult } from './PGLiteQueuedPrompts
 
 type SessionStatusValue = 'idle' | 'running' | 'waiting_for_input' | 'error' | 'interrupted';
 type PromptType = 'permission_request' | 'ask_user_question_request' | 'exit_plan_mode_request';
+type WorkOrderStatus = 'dispatched' | 'running' | 'waiting' | 'interrupted' | 'completed' | 'failed';
 
 interface PendingInteractivePrompt {
   id: string;
@@ -171,6 +173,7 @@ export class MetaAgentService {
   private sessionManager: SessionManager | null = null;
   private unsubscribeStateListener: (() => void) | null = null;
   private notificationSignatures = new Map<string, string>();
+  private interruptedChildSessionIds = new Set<string>();
   private ipcHandlersRegistered = false;
 
   private constructor() {}
@@ -228,9 +231,15 @@ export class MetaAgentService {
     const rowById = new Map(rows.map((row) => [row.id, row]));
     const results: InterruptSessionNodeResult[] = [];
     for (const sessionId of targetIds) {
-      const stopResult = await this.aiService.stopSession(sessionId, queueAction);
       const status = rowById.get(sessionId)?.status ?? 'idle';
       const wasActive = status === 'running' || status === 'waiting_for_input';
+      if (wasActive) {
+        // Mark the interrupt intent before aborting the provider. Its stream can
+        // settle during stopSession and publish session:completed before the
+        // canonical session:interrupted event reaches this service.
+        this.interruptedChildSessionIds.add(sessionId);
+      }
+      const stopResult = await this.aiService.stopSession(sessionId, queueAction);
       const inactiveTransport =
         stopResult.error === 'No active provider for session'
         || stopResult.error === 'No active terminal for session';
@@ -249,6 +258,19 @@ export class MetaAgentService {
         nodeResult.reason = stopResult.error || `Session was already ${status}`;
       } else if (outcome === 'failed') {
         nodeResult.reason = stopResult.error || 'Stop failed';
+      }
+      if (outcome !== 'interrupted') {
+        this.interruptedChildSessionIds.delete(sessionId);
+      } else {
+        try {
+          await this.updateWorkOrderStatusForSession(
+            sessionId,
+            'interrupted',
+            'Interrupted by Head Agent',
+          );
+        } catch (error) {
+          console.error(`[MetaAgentService] Failed to update interrupted work-order for child ${sessionId}:`, error);
+        }
       }
       results.push(nodeResult);
     }
@@ -332,6 +354,10 @@ export class MetaAgentService {
         // parent.
         if (event.type === 'session:started' || event.type === 'session:streaming') {
           this.notificationSignatures.delete(event.sessionId);
+          this.interruptedChildSessionIds.delete(event.sessionId);
+          void this.updateWorkOrderStatusForSession(event.sessionId, 'running').catch((error) => {
+            console.error(`[MetaAgentService] Failed to update running work-order for child ${event.sessionId}:`, error);
+          });
           return;
         }
         if (event.type === 'session:completed' || event.type === 'session:error' || event.type === 'session:waiting' || event.type === 'session:interrupted') {
@@ -358,6 +384,7 @@ export class MetaAgentService {
     this.unsubscribeStateListener?.();
     this.unsubscribeStateListener = null;
     this.notificationSignatures.clear();
+    this.interruptedChildSessionIds.clear();
     await shutdownMetaAgentServer();
     ClaudeCodeProvider.setMetaAgentServerPort(null);
     OpenAICodexProvider.setMetaAgentServerPort(null);
@@ -697,6 +724,13 @@ export class MetaAgentService {
     }
 
     const initialPrompt = args.prompt?.trim();
+    try {
+      await this.createWorkOrderTrackerItem(workspaceId, sessionId, title, initialPrompt);
+    } catch (error) {
+      // Dispatch is the primary operation. A missing card can be repaired later,
+      // so tracker persistence/link failures must not strand the child session.
+      console.error(`[MetaAgentService] Failed to create work-order for child ${sessionId}:`, error);
+    }
     const shouldBypassExecution = this.shouldBypassChildAgentExecutionForTests();
 
     if (initialPrompt) {
@@ -1078,6 +1112,12 @@ export class MetaAgentService {
   }
 
   private async handleChildSessionEvent(sessionId: string, eventType: 'session:completed' | 'session:error' | 'session:waiting' | 'session:interrupted'): Promise<void> {
+    if (eventType === 'session:interrupted') {
+      this.interruptedChildSessionIds.add(sessionId);
+    } else if (eventType === 'session:completed' && this.interruptedChildSessionIds.has(sessionId)) {
+      return;
+    }
+
     try {
       if (!this.aiService) {
         return;
@@ -1087,6 +1127,18 @@ export class MetaAgentService {
       if (!session || session.agentRole === 'meta-agent' || !session.createdBySessionId || !session.workspacePath) {
         return;
       }
+
+      const workOrderStatusByEvent: Record<typeof eventType, WorkOrderStatus> = {
+        'session:completed': 'completed',
+        'session:error': 'failed',
+        'session:waiting': 'waiting',
+        'session:interrupted': 'interrupted',
+      };
+      await this.updateWorkOrderStatusForSession(
+        sessionId,
+        workOrderStatusByEvent[eventType],
+        eventType === 'session:interrupted' ? 'Session interrupted' : undefined,
+      );
 
       // Honor fire-and-forget: spawn_session sets metadata.notifyParent=false on
       // the child for /launch-new-session-style hand-offs where the parent does
@@ -1511,6 +1563,98 @@ export class MetaAgentService {
         'meta-agent',
         sourceRef,
       ]
+    );
+
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('document-service:tracker-items-changed', {
+          added: [],
+          updated: [],
+          removed: [],
+          timestamp: new Date(),
+        });
+      }
+    }
+  }
+
+  private async createWorkOrderTrackerItem(
+    workspaceId: string,
+    sessionId: string,
+    sessionTitle: string,
+    prompt?: string,
+  ): Promise<void> {
+    const trackerId = randomUUID();
+    const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
+    const taskSummary = this.deriveTitleFromPrompt(prompt) || title;
+    const dispatchedAt = new Date().toISOString();
+    const sourceRef = `meta-agent-work-order:${sessionId}`;
+    const data = {
+      title,
+      status: 'dispatched',
+      childSessionId: sessionId,
+      taskSummary,
+      dispatchedAt,
+    };
+
+    await databaseWorker.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, $2, $3, $4, $5, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, $6, $7)`,
+      [
+        trackerId,
+        'work-order',
+        ['work-order'],
+        JSON.stringify(data),
+        workspaceId,
+        'meta-agent',
+        sourceRef,
+      ],
+    );
+
+    await createBidirectionalLink(trackerId, sessionId);
+
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('document-service:tracker-items-changed', {
+          added: [],
+          updated: [],
+          removed: [],
+          timestamp: new Date(),
+        });
+      }
+    }
+  }
+
+  private async updateWorkOrderStatusForSession(
+    sessionId: string,
+    status: WorkOrderStatus,
+    interruptionReason?: string,
+  ): Promise<void> {
+    const sourceRef = `meta-agent-work-order:${sessionId}`;
+    const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
+      `SELECT id, data
+       FROM tracker_items
+       WHERE type = 'work-order' AND source_ref = $1
+       LIMIT 1`,
+      [sourceRef],
+    );
+    const row = rows[0];
+    if (!row) {
+      return;
+    }
+
+    const data = typeof row.data === 'string'
+      ? JSON.parse(row.data)
+      : ((row.data as Record<string, unknown> | null) ?? {});
+    data.status = status;
+    if (interruptionReason && !data.interruptionReason) {
+      data.interruptionReason = interruptionReason;
+    }
+    await databaseWorker.query(
+      `UPDATE tracker_items SET data = $1, updated = NOW() WHERE id = $2`,
+      [JSON.stringify(data), row.id],
     );
 
     for (const window of BrowserWindow.getAllWindows()) {

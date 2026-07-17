@@ -1,0 +1,77 @@
+type: work-order
+displayName: Work Order
+displayNamePlural: Work Orders
+icon: assignment
+color: "#0f766e"
+
+modes:
+  inline: true
+  fullDocument: false
+
+sync:
+  mode: local
+  scope: project
+
+idPrefix: wo
+idFormat: ulid
+
+fields:
+  - name: title
+    type: string
+    required: true
+
+  - name: status
+    type: select
+    required: true
+    default: dispatched
+    options:
+      - value: dispatched
+        label: Dispatched
+        icon: outbound
+      - value: running
+        label: Running
+        icon: motion_photos_on
+      - value: waiting
+        label: Waiting
+        icon: pause_circle
+      - value: interrupted
+        label: Interrupted
+        icon: cancel
+      - value: completed
+        label: Completed
+        icon: check_circle
+      - value: failed
+        label: Failed
+        icon: error
+
+  - name: childSessionId
+    type: string
+    required: true
+
+  - name: taskSummary
+    type: text
+    required: true
+
+  - name: dispatchedAt
+    type: datetime
+    required: true
+
+  - name: interruptionReason
+    type: text
+
+roles:
+  title: title
+  workflowStatus: status
+
+inlineTemplate: "{icon} {title} {status}"
+
+tableView:
+  defaultColumns:
+    - title
+    - status
+    - childSessionId
+    - dispatchedAt
+    - updated
+  sortable: true
+  filterable: true
+  exportable: true

@@ -47,6 +47,7 @@ vi.mock('../../database/PGLiteDatabaseWorker', () => ({
 vi.mock('../../database/initialize', () => ({ getDatabase: () => null }));
 vi.mock('../../file/GitRefWatcher', () => ({ gitRefWatcher: {} }));
 vi.mock('../ai/AIService', () => ({ AIService: class {} }));
+vi.mock('../../mcp/tools/trackerToolHandlers', () => ({ createBidirectionalLink: vi.fn() }));
 vi.mock('../../mcp/metaAgentServer', () => ({
   startMetaAgentServer: vi.fn(),
   setMetaAgentToolFns: vi.fn(),

@@ -40,6 +40,7 @@ vi.mock('../../database/PGLiteDatabaseWorker', () => ({
 vi.mock('../../database/initialize', () => ({ getDatabase: () => null }));
 vi.mock('../../file/GitRefWatcher', () => ({ gitRefWatcher: {} }));
 vi.mock('../ai/AIService', () => ({ AIService: class {} }));
+vi.mock('../../mcp/tools/trackerToolHandlers', () => ({ createBidirectionalLink: vi.fn() }));
 vi.mock('../../mcp/metaAgentServer', () => ({
   startMetaAgentServer: vi.fn(),
   setMetaAgentToolFns: vi.fn(),
@@ -75,6 +76,7 @@ describe('MetaAgentService child event queue origin', () => {
     vi.clearAllMocks();
     databaseQuery.mockResolvedValue({ rows: [{ count: '0' }] });
     (service as any).notificationSignatures.clear();
+    (service as any).interruptedChildSessionIds?.clear();
     (service as any).aiService = {
       queuePromptForSession,
       triggerQueuedPromptProcessingForSession,
@@ -134,6 +136,41 @@ describe('MetaAgentService child event queue origin', () => {
     expect(triggerQueuedPromptProcessingForSession).toHaveBeenCalledWith(
       'parent-session',
       '/workspace',
+    );
+  });
+
+  it('does not deliver completed after the same child was interrupted', async () => {
+    const childSessionId = 'child-interrupted-then-completed';
+    vi.spyOn(service as any, 'buildSessionResultData').mockResolvedValue({
+      sessionId: childSessionId,
+      title: 'Interrupted child',
+      provider: 'claude-code',
+      model: null,
+      status: 'interrupted',
+      lastActivity: 1,
+      originalPrompt: 'stop this task',
+      userPrompts: ['stop this task'],
+      lastResponse: null,
+      fullResponse: null,
+      recentMessages: [],
+      editedFiles: [],
+      pendingPrompt: null,
+      createdAt: 1,
+      updatedAt: 2,
+      worktreeId: null,
+      toolScope: null,
+    });
+
+    await (service as any).handleChildSessionEvent(childSessionId, 'session:interrupted');
+    await (service as any).handleChildSessionEvent(childSessionId, 'session:completed');
+
+    expect(queuePromptForSession).toHaveBeenCalledTimes(1);
+    expect(queuePromptForSession).toHaveBeenCalledWith(
+      'parent-session',
+      expect.stringContaining('Event: session:interrupted'),
+      undefined,
+      undefined,
+      'child_session_event',
     );
   });
 });
