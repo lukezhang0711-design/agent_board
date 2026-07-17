@@ -35,6 +35,7 @@ describe('work-order built-in tracker schema', () => {
 
     const statusField = model.fields.find((field) => field.name === 'status');
     expect(statusField?.options?.map((option) => option.value)).toEqual([
+      'queued',
       'dispatched',
       'running',
       'waiting',
@@ -45,6 +46,16 @@ describe('work-order built-in tracker schema', () => {
 
     loadBuiltinTrackers();
     const hardcodedModel = globalRegistry.get('work-order');
+    const hardcodedStatus = hardcodedModel?.fields.find((field) => field.name === 'status');
+    expect(hardcodedStatus?.options?.map((option) => option.value)).toEqual([
+      'queued',
+      'dispatched',
+      'running',
+      'waiting',
+      'interrupted',
+      'completed',
+      'failed',
+    ]);
     expect(hardcodedModel?.fields).toEqual(expect.arrayContaining([
       expect.objectContaining({
         name: 'intent',

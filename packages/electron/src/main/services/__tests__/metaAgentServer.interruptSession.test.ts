@@ -62,6 +62,10 @@ describe('interrupt_session meta-agent tool registration', () => {
           enum: ['investigation', 'implementation'],
         },
         planId: { type: 'string' },
+        effortLevel: {
+          type: 'string',
+          enum: ['low', 'medium', 'high', 'xhigh', 'max'],
+        },
         maxParallelOverride: { type: 'integer', minimum: 1 },
       },
       required: ['intent'],
@@ -87,6 +91,7 @@ describe('interrupt_session meta-agent tool registration', () => {
     const createArgs = {
       prompt: 'Investigate one bounded question',
       intent: 'investigation',
+      effortLevel: 'xhigh',
       maxParallelOverride: 6,
     };
     await expect(dispatchMetaAgentTool(
@@ -101,6 +106,7 @@ describe('interrupt_session meta-agent tool registration', () => {
       prompt: 'Implement the approved plan',
       intent: 'implementation',
       planId: 'plan-1',
+      effortLevel: 'high',
       maxParallelOverride: 6,
     };
     await expect(dispatchMetaAgentTool(
@@ -119,6 +125,7 @@ describe('interrupt_session meta-agent tool registration', () => {
     expect(prompt).toContain(
       'Investigation sessions may be dispatched freely; implementation sessions require an approved plan',
     );
+    expect(prompt).toContain('Keep thinking effort high by default');
   });
 
   it('exposes the schema in both provider paths and dispatches the tool', async () => {

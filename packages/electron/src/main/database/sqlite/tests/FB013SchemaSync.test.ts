@@ -294,7 +294,7 @@ describe('FB-013 migration ledger and schema synchronization', () => {
     await orchestrator.run();
 
     expect(finalSnapshot).toBeDefined();
-    expect(finalSnapshot!.latestVersion).toBe(16);
+    expect(finalSnapshot!.latestVersion).toBe(17);
     expect(finalSnapshot!.columns).toContain('origin');
     expect(finalSnapshot!.tableSql).toContain("'paused'");
     expect(finalSnapshot!.row).toEqual({
@@ -347,7 +347,7 @@ describe('FB-013 migration ledger and schema synchronization', () => {
       const handle = migrated.getRawHandle()!;
       expect(() => assertAppliedMigrationSchema(handle)).not.toThrow();
       expect(startupLogs).toContain(
-        '[SQLite] migrations: applied=none, skipped=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16',
+        '[SQLite] migrations: applied=none, skipped=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17',
       );
       expect(
         handle
@@ -400,13 +400,13 @@ describe('FB-013 migration ledger and schema synchronization', () => {
         .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'queued_prompts'`)
         .get() as { sql: string };
 
-      expect(latestVersion.version).toBe(16);
+      expect(latestVersion.version).toBe(17);
       expect(legacyColumns.map(({ name }) => name)).not.toContain('origin');
       expect(legacyTable.sql).not.toContain("'paused'");
 
       const result = runMigrations(handle, SCHEMA_DIR);
 
-      expect(result.applied).toEqual([15, 16]);
+      expect(result.applied).toEqual([15, 16, 17]);
       expect(result.skipped).toEqual([
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
       ]);
@@ -541,7 +541,7 @@ describe('FB-013 migration ledger and schema synchronization', () => {
         .prepare('SELECT version FROM _migrations ORDER BY version')
         .all() as Array<{ version: number }>;
       expect(versions.map(({ version }) => version)).toEqual([
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
       ]);
 
       const preserved = repairedHandle
@@ -579,7 +579,7 @@ describe('FB-013 migration ledger and schema synchronization', () => {
         );
       }).not.toThrow();
       expect(startupLogs).toContain(
-        '[SQLite] migrations: applied=15,16, skipped=1,2,3,4,5,6,7,8,9,10,11,12,13,14',
+        '[SQLite] migrations: applied=15,16,17, skipped=1,2,3,4,5,6,7,8,9,10,11,12,13,14',
       );
     } finally {
       await restarted.close();

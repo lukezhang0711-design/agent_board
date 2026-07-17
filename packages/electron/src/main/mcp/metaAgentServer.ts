@@ -14,11 +14,13 @@ import { requireMcpAuth } from "./mcpAuth";
 import { resolveProjectPath } from "../utils/workspaceDetection";
 
 type SessionIntent = "investigation" | "implementation";
+type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
 type CreateSessionArgs = {
   title?: string;
   provider?: string;
   model?: string;
+  effortLevel?: EffortLevel;
   prompt?: string;
   useWorktree?: boolean;
   worktreeId?: string;
@@ -33,6 +35,7 @@ type SpawnSessionArgs = {
   prompt: string;
   useWorktree?: boolean;
   model?: string;
+  effortLevel?: EffortLevel;
   notifyOnComplete?: boolean;
   intent: SessionIntent;
   planId?: string;
@@ -229,6 +232,12 @@ const META_AGENT_TOOL_DEFS: Array<{
           type: "string",
           description: "Optional explicit model identifier.",
         },
+        effortLevel: {
+          type: "string",
+          enum: ["low", "medium", "high", "xhigh", "max"],
+          description:
+            "Optional per-session thinking effort. Use high or above for difficult delegated work; prefer a smaller model instead of lowering effort to save cost.",
+        },
         prompt: {
           type: "string",
           description: "Optional initial prompt to queue for the child session immediately after creation.",
@@ -298,6 +307,12 @@ const META_AGENT_TOOL_DEFS: Array<{
           type: "string",
           description:
             "Optional explicit model identifier (e.g. 'claude-code:opus'). When omitted, the new session uses the global default model unless inheritModel=true. Wins over inheritModel when both are set.",
+        },
+        effortLevel: {
+          type: "string",
+          enum: ["low", "medium", "high", "xhigh", "max"],
+          description:
+            "Optional per-session thinking effort. Use high or above for difficult delegated work; prefer a smaller model instead of lowering effort to save cost.",
         },
         inheritModel: {
           type: "boolean",

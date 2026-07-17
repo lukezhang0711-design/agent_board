@@ -156,7 +156,8 @@ describe('0016 queued prompt origin migration (SQLite)', () => {
         .prepare('SELECT version FROM _migrations ORDER BY version')
         .all() as Array<{ version: number }>;
       expect(versions.map(({ version }) => version)).toContain(16);
-      expect(getMigrations(realSchemaDir).at(-1)?.name).toBe('queued_prompts_origin');
+      expect(getMigrations(realSchemaDir).find(({ version }) => version === 16)?.name)
+        .toBe('queued_prompts_origin');
 
       const store = createPGLiteQueuedPromptsStore(upgraded);
       expect((await store.get('prompt-origin-legacy'))?.origin).toBe('user');
@@ -182,6 +183,76 @@ describe('0016 queued prompt origin migration (SQLite)', () => {
       const store = createPGLiteQueuedPromptsStore(restarted);
       expect((await store.get('prompt-origin-legacy'))?.origin).toBe('user');
       expect((await store.get('prompt-origin-child'))?.origin).toBe('child_session_event');
+    } finally {
+      await restarted.close();
+    }
+  }, 30_000);
+});
+
+describe('0017 dispatch queue migration (SQLite)', () => {
+  it('registers the durable queue schema and repairs a recorded migration whose table is missing', async () => {
+    const dbDir = makeTempDir('nim-dispatch-queue-sqlite-');
+    const schemaDir = path.resolve(__dirname, '..', 'schemas');
+    const database = new SQLiteDatabase({
+      dbDir,
+      schemaDir,
+      slowQueryThresholdMs: 1000,
+      sampleRate: 0,
+    });
+    await database.initialize();
+
+    const handle = database.getRawHandle()!;
+    expect(getMigrations(schemaDir).at(-1)).toMatchObject({
+      version: 17,
+      name: 'dispatch_queue',
+    });
+    const columns = handle
+      .prepare('PRAGMA table_info(dispatch_queue)')
+      .all() as Array<{ name: string }>;
+    expect(columns.map(({ name }) => name)).toEqual(expect.arrayContaining([
+      'id',
+      'queue_sequence',
+      'head_session_id',
+      'workspace_id',
+      'reserved_session_id',
+      'request_snapshot',
+      'requested_at',
+      'status',
+      'error_message',
+      'source_ref',
+      'dispatched_session_id',
+    ]));
+    const tableSql = (
+      handle
+        .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'dispatch_queue'`)
+        .get() as { sql: string }
+    ).sql;
+    for (const status of ['queued', 'dispatching', 'dispatched', 'cancelled', 'failed']) {
+      expect(tableSql).toContain(`'${status}'`);
+    }
+
+    handle.exec('DROP TABLE dispatch_queue');
+    await database.close();
+
+    const restarted = new SQLiteDatabase({
+      dbDir,
+      schemaDir,
+      slowQueryThresholdMs: 1000,
+      sampleRate: 0,
+    });
+    await restarted.initialize();
+    try {
+      const repaired = restarted.getRawHandle()!;
+      expect(
+        repaired
+          .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'dispatch_queue'`)
+          .get(),
+      ).toEqual({ name: 'dispatch_queue' });
+      expect(
+        repaired
+          .prepare('SELECT name FROM _migrations WHERE version = 17')
+          .get(),
+      ).toEqual({ name: 'dispatch_queue' });
     } finally {
       await restarted.close();
     }

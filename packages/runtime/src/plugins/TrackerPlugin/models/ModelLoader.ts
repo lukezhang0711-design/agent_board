@@ -392,6 +392,7 @@ const builtinTrackers: TrackerDataModel[] = [
         required: true,
         default: 'dispatched',
         options: [
+          { value: 'queued', label: 'Queued', icon: 'schedule' },
           { value: 'dispatched', label: 'Dispatched', icon: 'outbound' },
           { value: 'running', label: 'Running', icon: 'motion_photos_on' },
           { value: 'waiting', label: 'Waiting', icon: 'pause_circle' },

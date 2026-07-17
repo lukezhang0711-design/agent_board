@@ -7,6 +7,7 @@ const testState = vi.hoisted(() => ({
   db: null as any,
   stateListener: null as ((event: any) => void) | null,
   stateManager: null as any,
+  maxParallel: 4,
 }));
 
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
@@ -37,7 +38,7 @@ vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
   getWorkspaceState: () => ({ issueKeyPrefix: 'NIM' }),
-  store: { get: () => 4 },
+  store: { get: (key: string) => key === 'metaAgentMaxParallel' ? testState.maxParallel : undefined },
 }));
 vi.mock('../../utils/timestampUtils', () => ({ toMillis: (value: unknown) => value }));
 vi.mock('../WorktreeStore', () => ({ createWorktreeStore: vi.fn() }));
@@ -91,6 +92,7 @@ vi.mock('../TrackerSchemaService', () => ({
 }));
 
 import { AgentMessagesRepository, AISessionsRepository } from '@nimbalyst/runtime';
+import { resolveEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { SessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { SQLiteDatabase } from '../../database/sqlite/SQLiteDatabase';
 import { createPGLiteAgentMessagesStore } from '../PGLiteAgentMessagesStore';
@@ -160,6 +162,23 @@ describe('MetaAgentService work-order persistence', () => {
     });
   }
 
+  async function createRunningChildren(count: number): Promise<string[]> {
+    const sessionIds: string[] = [];
+    for (let index = 0; index < count; index += 1) {
+      const child = await (service as any).createChildSessionInternal(
+        'head-session',
+        workspacePath,
+        { title: `Active child ${index + 1}`, prompt: `Hold slot ${index + 1}` },
+      );
+      sessionIds.push(child.sessionId);
+      await db.query(
+        `UPDATE ai_sessions SET status = 'running' WHERE id = $1`,
+        [child.sessionId],
+      );
+    }
+    return sessionIds;
+  }
+
   beforeEach(async () => {
     vi.clearAllMocks();
     dbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nim-work-order-'));
@@ -171,6 +190,7 @@ describe('MetaAgentService work-order persistence', () => {
     });
     await db.initialize();
     testState.db = db;
+    testState.maxParallel = 4;
     AISessionsRepository.setStore(createPGLiteSessionStore(db));
     AgentMessagesRepository.setStore(createPGLiteAgentMessagesStore(db));
     (service as any).notificationSignatures.clear();
@@ -243,6 +263,313 @@ describe('MetaAgentService work-order persistence', () => {
       ? JSON.parse(sessionRows[0].metadata)
       : sessionRows[0].metadata;
     expect(metadata.linkedTrackerItemIds).toEqual([card.id]);
+  });
+
+  it('persists an explicit effort level on the real child session and the existing resolver consumes it', async () => {
+    const child = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Deep investigation',
+        prompt: 'Inspect the difficult routing path',
+        intent: 'investigation',
+        effortLevel: 'xhigh',
+      },
+    ));
+
+    const persisted = await AISessionsRepository.get(child.sessionId);
+    expect(persisted?.metadata).toMatchObject({ effortLevel: 'xhigh' });
+    expect(resolveEffortLevel(persisted?.metadata?.effortLevel, 'low')).toBe('xhigh');
+  });
+
+  it('persists the over-limit dispatch and work-order, then returns its queue position instead of rejecting', async () => {
+    testState.maxParallel = 1;
+    await createRunningChildren(1);
+
+    const receipt = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Queued investigation',
+        prompt: 'Run after the active child releases its slot',
+        provider: 'claude-code',
+        model: 'claude-code:opus',
+        effortLevel: 'max',
+        intent: 'investigation',
+        toolScope: 'read',
+      },
+    ));
+
+    expect(receipt).toMatchObject({
+      status: 'queued',
+      queued: true,
+      queuePosition: 1,
+      queueId: expect.any(String),
+      sessionId: expect.any(String),
+    });
+    expect(receipt.message).toContain('position 1');
+    await expect(AISessionsRepository.get(receipt.sessionId)).resolves.toBeNull();
+
+    const { rows: queueRows } = await db.query<any>(
+      `SELECT id, head_session_id, workspace_id, reserved_session_id,
+              request_snapshot, status, error_message, source_ref
+       FROM dispatch_queue WHERE id = $1`,
+      [receipt.queueId],
+    );
+    expect(queueRows).toHaveLength(1);
+    const snapshot = parseStoredJson<any>(queueRows[0].request_snapshot);
+    expect(queueRows[0]).toMatchObject({
+      head_session_id: 'head-session',
+      workspace_id: workspacePath,
+      reserved_session_id: receipt.sessionId,
+      status: 'queued',
+      error_message: null,
+      source_ref: `meta-agent-work-order:${receipt.sessionId}`,
+    });
+    expect(snapshot).toMatchObject({
+      requestKind: 'create_session',
+      metaSessionId: 'head-session',
+      workspaceId: workspacePath,
+      args: {
+        title: 'Queued investigation',
+        prompt: 'Run after the active child releases its slot',
+        provider: 'claude-code',
+        model: 'claude-code:opus',
+        effortLevel: 'max',
+        intent: 'investigation',
+        toolScope: 'read',
+      },
+    });
+
+    const { rows: cardRows } = await db.query<any>(
+      `SELECT data, source_ref FROM tracker_items WHERE source_ref = $1`,
+      [queueRows[0].source_ref],
+    );
+    expect(cardRows).toHaveLength(1);
+    expect(parseStoredJson<any>(cardRows[0].data)).toMatchObject({
+      status: 'queued',
+      childSessionId: receipt.sessionId,
+      taskSummary: 'Run after the active child releases its slot',
+    });
+  });
+
+  it('dispatches queued work FIFO into real sessions and links each existing card through running', async () => {
+    testState.maxParallel = 2;
+    const running = await createRunningChildren(2);
+    const first = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'FIFO first',
+        prompt: 'Dispatch me first',
+        intent: 'investigation',
+        effortLevel: 'high',
+      },
+    ));
+    const second = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'FIFO second',
+        prompt: 'Dispatch me second',
+        intent: 'investigation',
+        effortLevel: 'low',
+      },
+    ));
+    await service.start((service as any).aiService);
+
+    await db.query(`UPDATE ai_sessions SET status = 'waiting_for_input' WHERE id = $1`, [running[0]]);
+    await (service as any).handleChildSessionEvent(running[0], 'session:waiting');
+
+    const firstSession = await AISessionsRepository.get(first.sessionId);
+    expect(firstSession).toMatchObject({
+      id: first.sessionId,
+      title: 'FIFO first',
+      createdBySessionId: 'head-session',
+      metadata: expect.objectContaining({ effortLevel: 'high' }),
+    });
+    await expect(AISessionsRepository.get(second.sessionId)).resolves.toBeNull();
+    const { rows: afterFirst } = await db.query<any>(
+      `SELECT id, status, dispatched_session_id
+       FROM dispatch_queue
+       WHERE id IN ($1, $2)
+       ORDER BY queue_sequence`,
+      [first.queueId, second.queueId],
+    );
+    expect(afterFirst).toEqual([
+      expect.objectContaining({ id: first.queueId, status: 'dispatched', dispatched_session_id: first.sessionId }),
+      expect.objectContaining({ id: second.queueId, status: 'queued', dispatched_session_id: null }),
+    ]);
+
+    const { rows: dispatchedCardRows } = await db.query<any>(
+      `SELECT id, data FROM tracker_items WHERE source_ref = $1`,
+      [`meta-agent-work-order:${first.sessionId}`],
+    );
+    expect(parseStoredJson<any>(dispatchedCardRows[0].data)).toMatchObject({
+      status: 'dispatched',
+      childSessionId: first.sessionId,
+      linkedSessions: [first.sessionId],
+    });
+    const persistedFirst = await AISessionsRepository.get(first.sessionId);
+    expect(persistedFirst?.metadata?.linkedTrackerItemIds).toEqual([dispatchedCardRows[0].id]);
+
+    testState.stateListener?.({
+      type: 'session:started',
+      sessionId: first.sessionId,
+      workspacePath,
+      timestamp: new Date(),
+    });
+    await vi.waitFor(async () => {
+      const { rows } = await db.query<any>(
+        `SELECT data FROM tracker_items WHERE source_ref = $1`,
+        [`meta-agent-work-order:${first.sessionId}`],
+      );
+      expect(parseStoredJson<any>(rows[0].data).status).toBe('running');
+    });
+
+    await db.query(`UPDATE ai_sessions SET status = 'waiting_for_input' WHERE id = $1`, [running[1]]);
+    await (service as any).handleChildSessionEvent(running[1], 'session:waiting');
+    await expect(AISessionsRepository.get(second.sessionId)).resolves.toMatchObject({
+      id: second.sessionId,
+      title: 'FIFO second',
+      metadata: expect.objectContaining({ effortLevel: 'low' }),
+    });
+    const { rows: finalQueueRows } = await db.query<any>(
+      `SELECT id, status FROM dispatch_queue WHERE id IN ($1, $2) ORDER BY queue_sequence`,
+      [first.queueId, second.queueId],
+    );
+    expect(finalQueueRows).toEqual([
+      { id: first.queueId, status: 'dispatched' },
+      { id: second.queueId, status: 'dispatched' },
+    ]);
+  });
+
+  it('refills the queue when a child reaches a terminal completed state', async () => {
+    testState.maxParallel = 1;
+    const [running] = await createRunningChildren(1);
+    const queued = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'After terminal child',
+        prompt: 'Start after completion',
+        intent: 'investigation',
+      },
+    ));
+
+    await db.query(`UPDATE ai_sessions SET status = 'idle' WHERE id = $1`, [running]);
+    await (service as any).handleChildSessionEvent(running, 'session:completed');
+
+    await expect(AISessionsRepository.get(queued.sessionId)).resolves.toMatchObject({
+      id: queued.sessionId,
+      title: 'After terminal child',
+    });
+    await expect((service as any).dispatchQueueStore.get(queued.queueId)).resolves.toMatchObject({
+      status: 'dispatched',
+      dispatchedSessionId: queued.sessionId,
+    });
+  });
+
+  it('marks a failed dequeue, notifies Head, and continues to the next FIFO item', async () => {
+    testState.maxParallel = 1;
+    const [running] = await createRunningChildren(1);
+    const broken = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Broken queued worktree',
+        prompt: 'Fail reconstruction without blocking the queue',
+        intent: 'investigation',
+        worktreeId: 'missing-worktree',
+      },
+    ));
+    const healthy = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Healthy queued task',
+        prompt: 'Continue after the failed item',
+        intent: 'investigation',
+      },
+    ));
+
+    await db.query(`UPDATE ai_sessions SET status = 'waiting_for_input' WHERE id = $1`, [running]);
+    await (service as any).handleChildSessionEvent(running, 'session:waiting');
+
+    const { rows } = await db.query<any>(
+      `SELECT id, status, error_message
+       FROM dispatch_queue
+       WHERE id IN ($1, $2)
+       ORDER BY queue_sequence`,
+      [broken.queueId, healthy.queueId],
+    );
+    expect(rows[0]).toMatchObject({
+      id: broken.queueId,
+      status: 'failed',
+      error_message: expect.stringContaining('Worktree'),
+    });
+    expect(rows[1]).toMatchObject({ id: healthy.queueId, status: 'dispatched', error_message: null });
+    await expect(AISessionsRepository.get(broken.sessionId)).resolves.toBeNull();
+    await expect(AISessionsRepository.get(healthy.sessionId)).resolves.toMatchObject({
+      id: healthy.sessionId,
+      title: 'Healthy queued task',
+    });
+    const { rows: failedCardRows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE source_ref = $1`,
+      [`meta-agent-work-order:${broken.sessionId}`],
+    );
+    expect(parseStoredJson<any>(failedCardRows[0].data).status).toBe('failed');
+    expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
+      'head-session',
+      expect.stringContaining(`Dispatch queue item ${broken.queueId} failed`),
+      undefined,
+      undefined,
+      'child_session_event',
+    );
+  });
+
+  it('recovers dispatching rows to queued on boot and resumes them when the service starts', async () => {
+    testState.maxParallel = 1;
+    const [running] = await createRunningChildren(1);
+    const queued = JSON.parse(await (service as any).spawnSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Restart-safe spawn',
+        prompt: 'Resume this dispatch after restart',
+        intent: 'investigation',
+        isolated: true,
+        effortLevel: 'max',
+      },
+    ));
+    await db.query(
+      `UPDATE dispatch_queue SET status = 'dispatching' WHERE id = $1`,
+      [queued.queueId],
+    );
+
+    await expect(service.recoverDispatchQueueOnBoot()).resolves.toBe(1);
+    const mainSource = fs.readFileSync(path.resolve(__dirname, '../../index.ts'), 'utf8');
+    expect(mainSource).toContain('MetaAgentService.getInstance().recoverDispatchQueueOnBoot()');
+    const { rows: recoveredRows } = await db.query<any>(
+      `SELECT status FROM dispatch_queue WHERE id = $1`,
+      [queued.queueId],
+    );
+    expect(recoveredRows).toEqual([{ status: 'queued' }]);
+
+    await db.query(`UPDATE ai_sessions SET status = 'waiting_for_input' WHERE id = $1`, [running]);
+    await service.start((service as any).aiService);
+    await vi.waitFor(async () => {
+      await expect(AISessionsRepository.get(queued.sessionId)).resolves.toMatchObject({
+        id: queued.sessionId,
+        title: 'Restart-safe spawn',
+        metadata: expect.objectContaining({ effortLevel: 'max', notifyParent: false }),
+      });
+      const { rows } = await db.query<any>(
+        `SELECT status FROM dispatch_queue WHERE id = $1`,
+        [queued.queueId],
+      );
+      expect(rows).toEqual([{ status: 'dispatched' }]);
+    });
   });
 
   it('persists the approval prompt and allows implementation only after approval', async () => {
@@ -444,11 +771,26 @@ describe('MetaAgentService work-order persistence', () => {
       prompt: 'Missing intent for spawn',
       isolated: true,
     })).rejects.toThrow('intent is required and must be "investigation" or "implementation"');
+    await expect((service as any).createChildSession('head-session', workspacePath, {
+      prompt: 'Implementation without an approved plan',
+      intent: 'implementation',
+      planId: 'not-approved',
+    })).rejects.toThrow(implementationPlanError);
+    await expect((service as any).spawnSession('head-session', workspacePath, {
+      prompt: 'Spawn implementation without an approved plan',
+      intent: 'implementation',
+      planId: 'not-approved',
+      isolated: true,
+    })).rejects.toThrow(implementationPlanError);
     const { rows: missingIntentRows } = await db.query<{ count: number }>(
       `SELECT COUNT(*) AS count FROM ai_sessions WHERE created_by_session_id = $1`,
       ['head-session'],
     );
+    const { rows: unauthorizedQueueRows } = await db.query<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM dispatch_queue`,
+    );
     expect(Number(missingIntentRows[0].count)).toBe(0);
+    expect(Number(unauthorizedQueueRows[0].count)).toBe(0);
 
     const child = JSON.parse(await (service as any).createChildSession(
       'head-session',

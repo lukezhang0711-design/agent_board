@@ -143,6 +143,13 @@ export function getMigrations(schemaDir: string): Migration[] {
           sqlFile: path.join(schemaDir, '0016_queued_prompts_origin.sql'),
         }]
       : []),
+    ...(fs.existsSync(path.join(schemaDir, '0017_dispatch_queue.sql'))
+      ? [{
+          version: 17,
+          name: 'dispatch_queue',
+          sqlFile: path.join(schemaDir, '0017_dispatch_queue.sql'),
+        }]
+      : []),
   ];
 }
 
@@ -171,6 +178,51 @@ const MIGRATION_SCHEMA_REQUIREMENTS: readonly MigrationSchemaRequirement[] = [
       return queuedPromptsHasColumn(db, 'origin')
         ? null
         : 'queued_prompts.origin is missing';
+    },
+  },
+  {
+    version: 17,
+    name: 'dispatch_queue',
+    validate: (db) => {
+      const row = db
+        .prepare(
+          `SELECT sql
+           FROM sqlite_master
+           WHERE type = 'table' AND name = 'dispatch_queue'`,
+        )
+        .get() as { sql?: string } | undefined;
+      if (!row?.sql) return 'dispatch_queue table is missing';
+
+      const requiredColumns = [
+        'queue_sequence',
+        'id',
+        'head_session_id',
+        'workspace_id',
+        'reserved_session_id',
+        'request_snapshot',
+        'requested_at',
+        'status',
+        'error_message',
+        'source_ref',
+        'dispatched_session_id',
+        'dispatched_at',
+        'updated_at',
+      ];
+      const columns = new Set(
+        (db.prepare('PRAGMA table_info(dispatch_queue)').all() as Array<{ name: string }>)
+          .map(({ name }) => name),
+      );
+      const missing = requiredColumns.filter((name) => !columns.has(name));
+      if (missing.length > 0) {
+        return `dispatch_queue is missing column(s): ${missing.join(', ')}`;
+      }
+
+      const statusSql = row.sql.toLowerCase();
+      const missingStatuses = ['queued', 'dispatching', 'dispatched', 'cancelled', 'failed']
+        .filter((status) => !statusSql.includes(`'${status}'`));
+      return missingStatuses.length === 0
+        ? null
+        : `dispatch_queue.status is missing value(s): ${missingStatuses.join(', ')}`;
     },
   },
 ];

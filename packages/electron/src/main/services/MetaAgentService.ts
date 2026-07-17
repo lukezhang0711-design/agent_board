@@ -5,6 +5,7 @@ import { safeHandle } from '../utils/ipcRegistry';
 import { ClaudeCodeProvider, OpenAICodexProvider, OpenAICodexACPProvider, SessionManager } from '@nimbalyst/runtime/ai/server';
 import type { AIProviderType } from '@nimbalyst/runtime/ai/server/types';
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
+import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { AISessionsRepository, AgentMessagesRepository, SessionFilesRepository } from '@nimbalyst/runtime';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { getDefaultAIModel, store } from '../utils/store';
@@ -29,10 +30,16 @@ import { computeNotificationSignature } from './metaAgentNotificationSignature';
 import { extractMessageText, extractUserPrompts } from './metaAgentMessageText';
 import { ClaudeCliLauncherConfig } from './ai/claudeCliLauncherSingleton';
 import type { QueueCancelAction, QueueCancelResult } from './PGLiteQueuedPromptsStore';
+import {
+  createPGLiteDispatchQueueStore,
+  type DispatchQueueItem,
+  type DispatchRequestKind,
+  type DispatchQueueRequestSnapshot,
+} from './PGLiteDispatchQueueStore';
 
 type SessionStatusValue = 'idle' | 'running' | 'waiting_for_input' | 'error' | 'interrupted';
 type PromptType = 'permission_request' | 'ask_user_question_request' | 'exit_plan_mode_request';
-type WorkOrderStatus = 'dispatched' | 'running' | 'waiting' | 'interrupted' | 'completed' | 'failed';
+type WorkOrderStatus = 'queued' | 'dispatched' | 'running' | 'waiting' | 'interrupted' | 'completed' | 'failed';
 type SessionIntent = 'investigation' | 'implementation';
 
 const IMPLEMENTATION_PLAN_APPROVAL_ERROR =
@@ -41,6 +48,19 @@ const SESSION_INTENT_ERROR =
   'intent is required and must be "investigation" or "implementation"';
 const DEFAULT_META_AGENT_MAX_PARALLEL = 4;
 const LIFETIME_BACKSTOP = 50;
+const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max']);
+
+class DispatchCapacityError extends Error {
+  constructor(
+    readonly inFlightCount: number,
+    readonly maxParallel: number,
+  ) {
+    super(
+      `Head Agent concurrency limit reached (${inFlightCount} running, limit ${maxParallel}); adjust the limit in Settings.`,
+    );
+    this.name = 'DispatchCapacityError';
+  }
+}
 
 function isValidMaxParallel(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
@@ -99,6 +119,7 @@ interface CreateChildSessionArgs {
   title?: string;
   provider?: string;
   model?: string;
+  effortLevel?: EffortLevel;
   prompt?: string;
   useWorktree?: boolean;
   worktreeId?: string;
@@ -190,6 +211,7 @@ interface SpawnSessionArgs {
   prompt: string;
   useWorktree?: boolean;
   model?: string;
+  effortLevel?: EffortLevel;
   /**
    * When true and `model` is not explicitly set, the new session uses the
    * caller's model instead of the global app default. Ignored if `model` is
@@ -215,6 +237,42 @@ interface SpawnSessionArgs {
   maxParallelOverride?: number;
 }
 
+type InternalCreateChildSessionArgs = CreateChildSessionArgs & {
+  parentSessionIdOverride?: string | null;
+  sessionIdOverride?: string;
+  workOrderSourceRef?: string;
+  notifyParent?: boolean;
+};
+
+interface CreatedChildSessionResult {
+  sessionId: string;
+  title: string;
+  provider: string;
+  model: string;
+  worktreeId: string | null;
+  worktreePath: string | null;
+  worktreeMode: 'existing' | 'new' | 'none';
+  createdBySessionId: string;
+  queuedInitialPrompt: boolean;
+  parentSessionId: string | null;
+}
+
+interface QueuedChildSessionResult {
+  sessionId: string;
+  status: 'queued';
+  queued: true;
+  queueId: string;
+  queuePosition: number;
+  title: string;
+  provider: string;
+  model: string;
+  createdBySessionId: string;
+  parentSessionId: string | null;
+  message: string;
+}
+
+type ChildDispatchResult = CreatedChildSessionResult | QueuedChildSessionResult;
+
 export class MetaAgentService {
   private static instance: MetaAgentService | null = null;
   private starting: Promise<void> | null = null;
@@ -226,6 +284,8 @@ export class MetaAgentService {
   private notificationSignatures = new Map<string, string>();
   private interruptedChildSessionIds = new Set<string>();
   private ipcHandlersRegistered = false;
+  private readonly dispatchQueueStore = createPGLiteDispatchQueueStore();
+  private readonly dispatchLocks = new Map<string, Promise<void>>();
 
   private constructor() {}
 
@@ -238,6 +298,10 @@ export class MetaAgentService {
 
   public getPort(): number | null {
     return this.serverPort;
+  }
+
+  public async recoverDispatchQueueOnBoot(): Promise<number> {
+    return this.dispatchQueueStore.recoverDispatching();
   }
 
   public async interruptSession(
@@ -420,6 +484,7 @@ export class MetaAgentService {
 
       this.registerIpcHandlers();
       this.started = true;
+      await this.drainAllDispatchQueues();
     })();
 
     try {
@@ -602,6 +667,368 @@ export class MetaAgentService {
         throw error;
       }
       throw new Error(IMPLEMENTATION_PLAN_APPROVAL_ERROR);
+    }
+  }
+
+  private validateEffortLevel(effortLevel: EffortLevel | undefined): void {
+    if (effortLevel !== undefined && !VALID_EFFORT_LEVELS.has(effortLevel)) {
+      throw new Error('effortLevel must be one of low, medium, high, xhigh, or max');
+    }
+  }
+
+  private validateChildDispatchArgs(args: CreateChildSessionArgs): void {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
+    if (args.useWorktree && args.worktreeId) {
+      throw new Error('useWorktree and worktreeId cannot be combined');
+    }
+    this.validateEffortLevel(args.effortLevel);
+
+    const childUpdatePrefix = '[Child Session Update]';
+    const promptHead = args.prompt?.trim() ?? '';
+    const titleHead = args.title?.trim() ?? '';
+    if (promptHead.startsWith(childUpdatePrefix) || titleHead.startsWith(childUpdatePrefix)) {
+      throw new Error(
+        'Refusing to spawn a child session from a child-completion notification ' +
+        '(prompt/title begins with "[Child Session Update]").'
+      );
+    }
+  }
+
+  private async resolveChildRouting(
+    metaSessionId: string,
+    args: Pick<CreateChildSessionArgs, 'provider' | 'model'>,
+  ): Promise<{ provider: AIProviderType; model: string }> {
+    let parentProvider: string | null = null;
+    let parentModel: string | null = null;
+    try {
+      const parentSession = await AISessionsRepository.get(metaSessionId);
+      if (parentSession) {
+        parentProvider = parentSession.provider ?? null;
+        parentModel = normalizeStoredChildModelIdentifier(parentProvider, parentSession.model ?? null);
+      }
+    } catch {
+      // Best-effort lookup; fall through to the configured default.
+    }
+
+    const defaultModel =
+      parentModel
+      || normalizeStoredChildModelIdentifier(null, getDefaultAIModel())
+      || 'claude-code:opus';
+    const explicitModelProvider =
+      args.provider
+      ?? (args.model?.includes(':') ? ModelIdentifier.tryParse(args.model)?.provider ?? null : null)
+      ?? parentProvider;
+    const explicitModel = normalizeStoredChildModelIdentifier(explicitModelProvider, args.model ?? null);
+    const model = explicitModel || defaultModel;
+    const parsed = ModelIdentifier.tryParse(model);
+    const provider = (args.provider || parsed?.provider || parentProvider || 'claude-code') as AIProviderType;
+    const parentModelProvider = parentModel
+      ? (ModelIdentifier.tryParse(parentModel)?.provider ?? parentProvider)
+      : null;
+    const normalizedModel =
+      explicitModel
+      || (parentModel && parentModelProvider === provider ? parentModel : null)
+      || ModelIdentifier.getDefaultModelId(provider);
+
+    return { provider, model: normalizedModel };
+  }
+
+  private async getDispatchCounts(
+    metaSessionId: string,
+    workspaceId: string,
+  ): Promise<{ inFlightCount: number; totalCount: number }> {
+    const { rows } = await databaseWorker.query<{ in_flight: string; total: string }>(
+      `SELECT
+         SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END)::text AS in_flight,
+         COUNT(*)::text AS total
+       FROM ai_sessions
+       WHERE workspace_id = $1
+         AND created_by_session_id = $2
+         AND (is_archived = FALSE OR is_archived IS NULL)`,
+      [workspaceId, metaSessionId],
+    );
+    return {
+      inFlightCount: Number(rows[0]?.in_flight ?? '0'),
+      totalCount: Number(rows[0]?.total ?? '0'),
+    };
+  }
+
+  private async withDispatchLock<T>(
+    metaSessionId: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const previous = this.dispatchLocks.get(metaSessionId) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const current = previous.catch(() => undefined).then(() => gate);
+    this.dispatchLocks.set(metaSessionId, current);
+    await previous.catch(() => undefined);
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.dispatchLocks.get(metaSessionId) === current) {
+        this.dispatchLocks.delete(metaSessionId);
+      }
+    }
+  }
+
+  private async dispatchOrQueueChildSession(
+    metaSessionId: string,
+    workspaceId: string,
+    args: InternalCreateChildSessionArgs,
+    requestKind: DispatchRequestKind,
+  ): Promise<ChildDispatchResult> {
+    this.validateChildDispatchArgs(args);
+    const routing = await this.resolveChildRouting(metaSessionId, args);
+    const reservedSessionId = randomUUID();
+    const preparedArgs: InternalCreateChildSessionArgs = {
+      ...args,
+      provider: routing.provider,
+      model: routing.model,
+      sessionIdOverride: reservedSessionId,
+    };
+
+    return this.withDispatchLock(metaSessionId, async () => {
+      if (!(await this.dispatchQueueStore.hasQueued(metaSessionId))) {
+        try {
+          return await this.createChildSessionInternal(metaSessionId, workspaceId, preparedArgs);
+        } catch (error) {
+          if (!(error instanceof DispatchCapacityError)) {
+            throw error;
+          }
+        }
+      }
+
+      return this.enqueueChildDispatch(
+        metaSessionId,
+        workspaceId,
+        preparedArgs,
+        requestKind,
+      );
+    });
+  }
+
+  private async enqueueChildDispatch(
+    metaSessionId: string,
+    workspaceId: string,
+    args: InternalCreateChildSessionArgs,
+    requestKind: DispatchRequestKind,
+  ): Promise<QueuedChildSessionResult> {
+    const sessionId = args.sessionIdOverride ?? randomUUID();
+    const queueId = randomUUID();
+    const requestedAt = new Date().toISOString();
+    const title = (args.title || this.deriveTitleFromPrompt(args.prompt) || 'Meta Task').trim();
+    const sourceRef = `meta-agent-work-order:${sessionId}`;
+    const workOrderId = await this.createWorkOrderTrackerItem(
+      workspaceId,
+      sessionId,
+      title,
+      args.prompt?.trim(),
+      args.intent ?? 'implementation',
+      args.planId,
+      {
+        status: 'queued',
+        sourceRef,
+        dispatchedAt: requestedAt,
+        linkSession: false,
+      },
+    );
+
+    const snapshot: DispatchQueueRequestSnapshot = {
+      requestKind,
+      metaSessionId,
+      workspaceId,
+      args: {
+        ...args,
+        sessionIdOverride: sessionId,
+        workOrderSourceRef: sourceRef,
+      },
+    };
+
+    try {
+      const { position } = await this.dispatchQueueStore.enqueue({
+        id: queueId,
+        headSessionId: metaSessionId,
+        workspaceId,
+        reservedSessionId: sessionId,
+        requestSnapshot: snapshot,
+        requestedAt,
+        sourceRef,
+      });
+      return {
+        sessionId,
+        status: 'queued',
+        queued: true,
+        queueId,
+        queuePosition: position,
+        title,
+        provider: args.provider!,
+        model: args.model!,
+        createdBySessionId: metaSessionId,
+        parentSessionId: args.parentSessionIdOverride ?? null,
+        message: `Dispatch queued at position ${position}; it will start automatically when a Head Agent slot opens.`,
+      };
+    } catch (error) {
+      await databaseWorker.query(`DELETE FROM tracker_items WHERE id = $1`, [workOrderId]).catch(() => undefined);
+      this.emitTrackerItemsChanged();
+      throw error;
+    }
+  }
+
+  private async drainAllDispatchQueues(): Promise<void> {
+    try {
+      const headSessionIds = await this.dispatchQueueStore.listQueuedHeadSessionIds();
+      for (const headSessionId of headSessionIds) {
+        if (!headSessionId) continue;
+        await this.drainDispatchQueueForHead(headSessionId);
+      }
+    } catch (error) {
+      console.error('[MetaAgentService] Failed to drain persisted dispatch queues:', error);
+    }
+  }
+
+  private async drainDispatchQueueForHead(metaSessionId: string): Promise<void> {
+    await this.withDispatchLock(metaSessionId, async () => {
+      let baselineInFlight: number | null = null;
+      let baselineTotal = 0;
+      let successfulDispatches = 0;
+
+      while (true) {
+        const item = await this.dispatchQueueStore.claimNext(metaSessionId);
+        if (!item) return;
+
+        if (baselineInFlight === null) {
+          const counts = await this.getDispatchCounts(metaSessionId, item.workspaceId);
+          baselineInFlight = counts.inFlightCount;
+          baselineTotal = counts.totalCount;
+        }
+
+        const args = item.requestSnapshot.args as InternalCreateChildSessionArgs;
+        const maxParallel = getEffectiveMaxParallel(args.maxParallelOverride);
+        if (baselineInFlight + successfulDispatches >= maxParallel) {
+          await this.dispatchQueueStore.requeue(item.id);
+          return;
+        }
+
+        try {
+          if (baselineTotal + successfulDispatches >= LIFETIME_BACKSTOP) {
+            throw new Error(
+              `Meta-agent lifetime spawn backstop reached (${LIFETIME_BACKSTOP} total children spawned by this parent); refusing to spawn more`,
+            );
+          }
+          await this.dispatchClaimedQueueItem(item);
+          successfulDispatches += 1;
+        } catch (error) {
+          if (error instanceof DispatchCapacityError) {
+            await this.dispatchQueueStore.requeue(item.id);
+            return;
+          }
+          const message = error instanceof Error ? error.message : String(error);
+          await this.dispatchQueueStore.markFailed(item.id, message);
+          await this.updateWorkOrderStatusBySourceRef(item.sourceRef, 'failed').catch((cardError) => {
+            console.error(`[MetaAgentService] Failed to mark queued work-order ${item.sourceRef} failed:`, cardError);
+          });
+          await this.notifyHeadOfDispatchFailure(item, message);
+        }
+      }
+    });
+  }
+
+  private async dispatchClaimedQueueItem(item: DispatchQueueItem): Promise<void> {
+    const args = item.requestSnapshot.args as InternalCreateChildSessionArgs;
+    const existing = await AISessionsRepository.get(item.reservedSessionId);
+    if (existing) {
+      await this.applyChildSessionMetadata(item.reservedSessionId, args);
+      await this.attachQueuedWorkOrderToSession(item.sourceRef, item.reservedSessionId);
+      await this.ensureRecoveredInitialPrompt(item, args, existing.worktreeId);
+      await this.dispatchQueueStore.markDispatched(item.id, item.reservedSessionId);
+      return;
+    }
+
+    const child = await this.createChildSessionInternal(
+      item.requestSnapshot.metaSessionId,
+      item.requestSnapshot.workspaceId,
+      {
+        ...args,
+        sessionIdOverride: item.reservedSessionId,
+        workOrderSourceRef: item.sourceRef,
+      },
+    );
+    await this.dispatchQueueStore.markDispatched(item.id, child.sessionId);
+  }
+
+  private async ensureRecoveredInitialPrompt(
+    item: DispatchQueueItem,
+    args: InternalCreateChildSessionArgs,
+    worktreeId?: string | null,
+  ): Promise<void> {
+    const initialPrompt = args.prompt?.trim();
+    if (!initialPrompt || !this.aiService) return;
+
+    if (this.shouldBypassChildAgentExecutionForTests()) {
+      const { rows } = await databaseWorker.query<{ count: number | string }>(
+        `SELECT COUNT(*) AS count
+         FROM ai_agent_messages
+         WHERE session_id = $1 AND direction = 'input' AND content = $2`,
+        [item.reservedSessionId, initialPrompt],
+      );
+      if (Number(rows[0]?.count ?? 0) === 0) {
+        await this.persistSyntheticInputMessage(item.reservedSessionId, initialPrompt);
+      }
+      return;
+    }
+
+    const { rows } = await databaseWorker.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM queued_prompts
+       WHERE session_id = $1 AND prompt = $2`,
+      [item.reservedSessionId, initialPrompt],
+    );
+    if (Number(rows[0]?.count ?? '0') === 0) {
+      await this.aiService.queuePromptForSession(item.reservedSessionId, initialPrompt);
+    }
+    let executionPath = item.workspaceId;
+    const db = getDatabase();
+    if (worktreeId && db) {
+      const worktree = await createWorktreeStore(db).get(worktreeId);
+      if (worktree?.path) executionPath = worktree.path;
+    }
+    await this.aiService.triggerQueuedPromptProcessingForSession(item.reservedSessionId, executionPath);
+  }
+
+  private async notifyHeadOfDispatchFailure(
+    item: DispatchQueueItem,
+    errorMessage: string,
+  ): Promise<void> {
+    if (!this.aiService) return;
+    const title = typeof item.requestSnapshot.args.title === 'string'
+      ? item.requestSnapshot.args.title
+      : 'Queued child session';
+    const notification = [
+      '[Dispatch Queue Update]',
+      `Dispatch queue item ${item.id} failed.`,
+      `Task: ${title}`,
+      `Reserved session: ${item.reservedSessionId}`,
+      `Error: ${errorMessage}`,
+      'The next queued item will still be attempted automatically.',
+    ].join('\n');
+    try {
+      await this.aiService.queuePromptForSession(
+        item.headSessionId,
+        notification,
+        undefined,
+        undefined,
+        'child_session_event',
+      );
+      const headStatus = await this.getSessionStatusRow(item.headSessionId, item.workspaceId);
+      if (headStatus?.status === 'idle' || headStatus?.status === 'interrupted' || headStatus?.status === 'error') {
+        await this.aiService.triggerQueuedPromptProcessingForSession(item.headSessionId, item.workspaceId);
+      }
+    } catch (error) {
+      console.error(`[MetaAgentService] Failed to notify Head about dispatch queue item ${item.id}:`, error);
     }
   }
 
@@ -839,47 +1266,24 @@ export class MetaAgentService {
     args: CreateChildSessionArgs
   ): Promise<string> {
     await this.assertDispatchAuthorized(workspaceId, args);
-    const result = await this.createChildSessionInternal(metaSessionId, workspaceId, args);
+    const result = await this.dispatchOrQueueChildSession(
+      metaSessionId,
+      workspaceId,
+      args,
+      'create_session',
+    );
     return JSON.stringify(result, null, 2);
   }
 
   private async createChildSessionInternal(
     metaSessionId: string,
     workspaceId: string,
-    args: CreateChildSessionArgs & { parentSessionIdOverride?: string | null }
-  ): Promise<{
-    sessionId: string;
-    title: string;
-    provider: string;
-    model: string;
-    worktreeId: string | null;
-    worktreePath: string | null;
-    worktreeMode: 'existing' | 'new' | 'none';
-    createdBySessionId: string;
-    queuedInitialPrompt: boolean;
-    parentSessionId: string | null;
-  }> {
-    if (!this.aiService) {
+    args: InternalCreateChildSessionArgs,
+  ): Promise<CreatedChildSessionResult> {
+    this.validateChildDispatchArgs(args);
+    const aiService = this.aiService;
+    if (!aiService) {
       throw new Error('AI service not initialized');
-    }
-    if (args.useWorktree && args.worktreeId) {
-      throw new Error('useWorktree and worktreeId cannot be combined');
-    }
-
-    // Defense-in-depth: a child-completion notification (built in
-    // buildNotificationMessage) starts literally with '[Child Session Update]'.
-    // If such text is ever re-ingested as a spawn prompt/title, the derived
-    // title recurses into '[Child Session Update] Session: "[Child Session
-    // Update]..."'. Refuse outright so an update notification can never become
-    // a new child session.
-    const CHILD_UPDATE_PREFIX = '[Child Session Update]';
-    const promptHead = args.prompt?.trim() ?? '';
-    const titleHead = args.title?.trim() ?? '';
-    if (promptHead.startsWith(CHILD_UPDATE_PREFIX) || titleHead.startsWith(CHILD_UPDATE_PREFIX)) {
-      throw new Error(
-        'Refusing to spawn a child session from a child-completion notification ' +
-        '(prompt/title begins with "[Child Session Update]").'
-      );
     }
 
     // Inherit the calling session's provider+model as the primary fallback so a
@@ -889,53 +1293,24 @@ export class MetaAgentService {
     // through to getDefaultAIModel() / the last-resort default when the parent
     // session cannot be loaded (orphan call) or carries no usable provider+model.
     // An explicit args.provider/args.model still wins; that is what they are for.
-    let parentProvider: string | null = null;
-    let parentModel: string | null = null;
-    try {
-      const parentSession = await AISessionsRepository.get(metaSessionId);
-      if (parentSession) {
-        parentProvider = parentSession.provider ?? null;
-        parentModel = normalizeStoredChildModelIdentifier(parentProvider, parentSession.model ?? null);
-      }
-    } catch {
-      // Best-effort lookup; fall through to the hardcoded default below.
-    }
-
-    const defaultModel =
-      parentModel
-      || normalizeStoredChildModelIdentifier(null, getDefaultAIModel())
-      || 'claude-code:opus';
-    // For an explicit model, the model's own "provider:" prefix is
-    // authoritative (e.g. a claude-code parent launching an
-    // "openai-codex:gpt-5.5" action). Only fall back to the parent's provider
-    // for a bare, prefix-less variant; passing the parent provider for a
-    // self-describing identifier wrongly trips the claude-code mismatch guard.
-    const explicitModelProvider =
-      args.provider
-      ?? (args.model?.includes(':') ? ModelIdentifier.tryParse(args.model)?.provider ?? null : null)
-      ?? parentProvider;
-    const explicitModel = normalizeStoredChildModelIdentifier(explicitModelProvider, args.model ?? null);
-    const model = explicitModel || defaultModel;
-    const parsed = ModelIdentifier.tryParse(model);
-    const provider = (args.provider ||
-      parsed?.provider ||
-      parentProvider ||
-      'claude-code') as AIProviderType;
-    // Provider and model MUST agree. Otherwise a child is persisted with, e.g.,
-    // provider=claude-code + an antigravity-gemini model, gets routed to the
-    // Claude Code provider, is rejected ("requires a claude-code:* identifier"),
-    // and dies with no output. Only reuse the parent model when it actually
-    // belongs to the resolved provider; otherwise use that provider default.
-    const parentModelProvider = parentModel
-      ? (ModelIdentifier.tryParse(parentModel)?.provider ?? parentProvider)
-      : null;
-    const normalizedModel =
-      explicitModel
-      || (parentModel && parentModelProvider === provider ? parentModel : null)
-      || ModelIdentifier.getDefaultModelId(provider);
+    const { provider, model: normalizedModel } = await this.resolveChildRouting(metaSessionId, args);
 
     const callerProvidedTitle = !!args.title?.trim();
     const title = (args.title || this.deriveTitleFromPrompt(args.prompt) || 'Meta Task').trim();
+
+    // Capacity is checked before any worktree or session side effect. Public
+    // Head Agent dispatches catch this typed signal and persist the request;
+    // non-MCP callers retain the existing rejection behavior.
+    const maxParallel = getEffectiveMaxParallel(args.maxParallelOverride);
+    const { inFlightCount, totalCount } = await this.getDispatchCounts(metaSessionId, workspaceId);
+    if (inFlightCount >= maxParallel) {
+      throw new DispatchCapacityError(inFlightCount, maxParallel);
+    }
+    if (totalCount >= LIFETIME_BACKSTOP) {
+      throw new Error(
+        `Meta-agent lifetime spawn backstop reached (${LIFETIME_BACKSTOP} total children spawned by this parent); refusing to spawn more`
+      );
+    }
 
     let worktreeId: string | null = null;
     let worktreePath: string | null = null;
@@ -989,34 +1364,6 @@ export class MetaAgentService {
       worktreePath = worktree.path;
     }
 
-    // The user-controlled parallel limit and the lifetime runaway backstop are
-    // independent. Waiting children do not consume a parallel slot; lowering
-    // the setting affects only later dispatches and never interrupts children
-    // that are already running.
-    const maxParallel = getEffectiveMaxParallel(args.maxParallelOverride);
-    const { rows: gateRows } = await databaseWorker.query<{ in_flight: string; total: string }>(
-      `SELECT
-         SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END)::text AS in_flight,
-         COUNT(*)::text AS total
-       FROM ai_sessions
-       WHERE workspace_id = $1
-         AND created_by_session_id = $2
-         AND (is_archived = FALSE OR is_archived IS NULL)`,
-      [workspaceId, metaSessionId]
-    );
-    const inFlightCount = Number(gateRows[0]?.in_flight ?? '0');
-    const totalCount = Number(gateRows[0]?.total ?? '0');
-    if (inFlightCount >= maxParallel) {
-      throw new Error(
-        `Head Agent concurrency limit reached (${inFlightCount} running, limit ${maxParallel}); adjust the limit in Settings.`
-      );
-    }
-    if (totalCount >= LIFETIME_BACKSTOP) {
-      throw new Error(
-        `Meta-agent lifetime spawn backstop reached (${LIFETIME_BACKSTOP} total children spawned by this parent); refusing to spawn more`
-      );
-    }
-
     // NIM-858: do NOT auto-promote the spawning parent to agent_role='meta-agent'.
     // The renderer META AGENT group is reserved for genuine meta-agents (created
     // via the Meta Agent button, which sets agentRole='meta-agent' at create
@@ -1032,7 +1379,7 @@ export class MetaAgentService {
     // (McpConfigService), and launchActionSession passes a standard parent — so
     // the block actually fired and wrongly relabeled standard parents.
 
-    const sessionId = randomUUID();
+    const sessionId = args.sessionIdOverride ?? randomUUID();
     await AISessionsRepository.create({
       id: sessionId,
       provider,
@@ -1050,25 +1397,22 @@ export class MetaAgentService {
       hasBeenNamed: callerProvidedTitle,
     } as any);
 
-    // Read-only tool segregation: persist a restricted capability scope so the
-    // child is granted only the matching dev tools at turn time (an analyze
-    // child physically cannot run_command, so it cannot build or claim to).
-    const childToolScope =
-      args.toolScope === 'read' || args.toolScope === 'write' ? args.toolScope : undefined;
-    if (childToolScope) {
-      await AISessionsRepository.updateMetadata(sessionId, { metadata: { toolScope: childToolScope } });
-    }
+    await this.applyChildSessionMetadata(sessionId, args);
 
     const initialPrompt = args.prompt?.trim();
     try {
-      await this.createWorkOrderTrackerItem(
-        workspaceId,
-        sessionId,
-        title,
-        initialPrompt,
-        args.intent ?? 'implementation',
-        args.planId,
-      );
+      if (args.workOrderSourceRef) {
+        await this.attachQueuedWorkOrderToSession(args.workOrderSourceRef, sessionId);
+      } else {
+        await this.createWorkOrderTrackerItem(
+          workspaceId,
+          sessionId,
+          title,
+          initialPrompt,
+          args.intent ?? 'implementation',
+          args.planId,
+        );
+      }
     } catch (error) {
       // Dispatch is the primary operation. A missing card can be repaired later,
       // so tracker persistence/link failures must not strand the child session.
@@ -1080,7 +1424,7 @@ export class MetaAgentService {
       if (shouldBypassExecution) {
         await this.persistSyntheticInputMessage(sessionId, initialPrompt);
       } else {
-        await this.aiService.queuePromptForSession(sessionId, initialPrompt);
+        await aiService.queuePromptForSession(sessionId, initialPrompt);
       }
     }
 
@@ -1110,7 +1454,7 @@ export class MetaAgentService {
     }
 
     if (initialPrompt && !shouldBypassExecution) {
-      await this.aiService.triggerQueuedPromptProcessingForSession(sessionId, worktreePath || workspaceId);
+      await aiService.triggerQueuedPromptProcessingForSession(sessionId, worktreePath || workspaceId);
     }
 
     return {
@@ -1171,27 +1515,21 @@ export class MetaAgentService {
     // createChildSessionInternal use the global default.
     const effectiveModel =
       args.model ?? (args.inheritModel ? parent.model ?? undefined : undefined);
+    const notifyOnComplete = args.notifyOnComplete === true;
 
-    const childResult = await this.createChildSessionInternal(parentSessionId, workspaceId, {
+    const childResult = await this.dispatchOrQueueChildSession(parentSessionId, workspaceId, {
       title: args.title,
       prompt: args.prompt,
       useWorktree: !!args.useWorktree,
       worktreeId: inheritedWorktreeId,
       model: effectiveModel,
+      effortLevel: args.effortLevel,
       intent: args.intent,
       planId: args.planId,
       maxParallelOverride: args.maxParallelOverride,
       parentSessionIdOverride: workstreamId,
-    });
-
-    // Default is fire-and-forget: kicking off work in a fresh session is the
-    // common /launch-new-session use case (escape a long parent context).
-    const notifyOnComplete = args.notifyOnComplete === true;
-    if (!notifyOnComplete) {
-      await AISessionsRepository.updateMetadata(childResult.sessionId, {
-        metadata: { notifyParent: false },
-      });
-    }
+      notifyParent: notifyOnComplete,
+    }, 'spawn_session');
 
     return JSON.stringify({
       ...childResult,
@@ -1465,6 +1803,8 @@ export class MetaAgentService {
       return;
     }
 
+    let releasedHeadSessionId: string | null = null;
+    let slotReleased = false;
     try {
       if (!this.aiService) {
         return;
@@ -1474,6 +1814,8 @@ export class MetaAgentService {
       if (!session || session.agentRole === 'meta-agent' || !session.createdBySessionId || !session.workspacePath) {
         return;
       }
+      releasedHeadSessionId = session.createdBySessionId;
+      slotReleased = eventType !== 'session:completed';
 
       const workOrderStatusByEvent: Record<typeof eventType, WorkOrderStatus> = {
         'session:completed': 'completed',
@@ -1490,14 +1832,6 @@ export class MetaAgentService {
       } catch (error) {
         // Tracker state is secondary to the existing Head notification path.
         console.error(`[MetaAgentService] Failed to update work-order for child ${sessionId}:`, error);
-      }
-
-      // Honor fire-and-forget: spawn_session sets metadata.notifyParent=false on
-      // the child for /launch-new-session-style hand-offs where the parent does
-      // not want to receive [Child Session Update] follow-up prompts.
-      const childMetadata = (session.metadata as Record<string, unknown> | undefined) ?? undefined;
-      if (childMetadata && childMetadata.notifyParent === false) {
-        return;
       }
 
       const metaSession = await AISessionsRepository.get(session.createdBySessionId);
@@ -1529,6 +1863,14 @@ export class MetaAgentService {
         if (pendingCount > 0) {
           return;
         }
+        slotReleased = true;
+      }
+
+      // Fire-and-forget suppresses only the Head notification. Capacity release
+      // still drains the durable queue via the finally block below.
+      const childMetadata = (session.metadata as Record<string, unknown> | undefined) ?? undefined;
+      if (childMetadata && childMetadata.notifyParent === false) {
+        return;
       }
 
       const metaStatusRow = await this.getSessionStatusRow(metaSession.id, metaSession.workspacePath);
@@ -1568,6 +1910,12 @@ export class MetaAgentService {
       }
     } catch (error) {
       console.error(`[MetaAgentService] handleChildSessionEvent failed for session ${sessionId} (${eventType}):`, error);
+    } finally {
+      if (slotReleased && releasedHeadSessionId) {
+        await this.drainDispatchQueueForHead(releasedHeadSessionId).catch((error) => {
+          console.error(`[MetaAgentService] Failed to refill a released slot for Head ${releasedHeadSessionId}:`, error);
+        });
+      }
     }
   }
 
@@ -1936,15 +2284,21 @@ export class MetaAgentService {
     prompt?: string,
     intent: SessionIntent = 'implementation',
     planId?: string,
-  ): Promise<void> {
+    options: {
+      status?: WorkOrderStatus;
+      sourceRef?: string;
+      dispatchedAt?: string;
+      linkSession?: boolean;
+    } = {},
+  ): Promise<string> {
     const trackerId = randomUUID();
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
     const taskSummary = this.deriveTitleFromPrompt(prompt) || title;
-    const dispatchedAt = new Date().toISOString();
-    const sourceRef = `meta-agent-work-order:${sessionId}`;
+    const dispatchedAt = options.dispatchedAt ?? new Date().toISOString();
+    const sourceRef = options.sourceRef ?? `meta-agent-work-order:${sessionId}`;
     const data = {
       title,
-      status: 'dispatched',
+      status: options.status ?? 'dispatched',
       childSessionId: sessionId,
       taskSummary,
       dispatchedAt,
@@ -1969,8 +2323,72 @@ export class MetaAgentService {
       ],
     );
 
-    await createBidirectionalLink(trackerId, sessionId);
+    if (options.linkSession !== false) {
+      await createBidirectionalLink(trackerId, sessionId);
+    }
 
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('document-service:tracker-items-changed', {
+          added: [],
+          updated: [],
+          removed: [],
+          timestamp: new Date(),
+        });
+      }
+    }
+    return trackerId;
+  }
+
+  private async applyChildSessionMetadata(
+    sessionId: string,
+    args: Pick<InternalCreateChildSessionArgs, 'effortLevel' | 'toolScope' | 'notifyParent'>,
+  ): Promise<void> {
+    const metadata: Record<string, unknown> = {};
+    if (args.effortLevel) {
+      metadata.effortLevel = args.effortLevel;
+    }
+    if (args.toolScope === 'read' || args.toolScope === 'write') {
+      metadata.toolScope = args.toolScope;
+    }
+    if (args.notifyParent !== undefined) {
+      metadata.notifyParent = args.notifyParent;
+    }
+    if (Object.keys(metadata).length > 0) {
+      await AISessionsRepository.updateMetadata(sessionId, { metadata });
+    }
+  }
+
+  private async attachQueuedWorkOrderToSession(
+    sourceRef: string,
+    sessionId: string,
+  ): Promise<void> {
+    const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
+      `SELECT id, data
+       FROM tracker_items
+       WHERE type = 'work-order' AND source_ref = $1
+       LIMIT 1`,
+      [sourceRef],
+    );
+    const row = rows[0];
+    if (!row) {
+      throw new Error(`Queued work-order ${sourceRef} not found`);
+    }
+    const data = typeof row.data === 'string'
+      ? JSON.parse(row.data)
+      : ((row.data as Record<string, unknown> | null) ?? {});
+    data.status = 'dispatched';
+    data.childSessionId = sessionId;
+    data.dispatchedAt = new Date().toISOString();
+    await databaseWorker.query(
+      `UPDATE tracker_items SET data = $1, updated = NOW() WHERE id = $2`,
+      [JSON.stringify(data), row.id],
+    );
+    await createBidirectionalLink(row.id, sessionId);
+    this.emitTrackerItemsChanged();
+  }
+
+  private emitTrackerItemsChanged(): void {
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed()) {
         window.webContents.send('document-service:tracker-items-changed', {
@@ -1989,6 +2407,14 @@ export class MetaAgentService {
     interruptionReason?: string,
   ): Promise<void> {
     const sourceRef = `meta-agent-work-order:${sessionId}`;
+    await this.updateWorkOrderStatusBySourceRef(sourceRef, status, interruptionReason);
+  }
+
+  private async updateWorkOrderStatusBySourceRef(
+    sourceRef: string,
+    status: WorkOrderStatus,
+    interruptionReason?: string,
+  ): Promise<void> {
     const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
       `SELECT id, data
        FROM tracker_items
@@ -2013,16 +2439,7 @@ export class MetaAgentService {
       [JSON.stringify(data), row.id],
     );
 
-    for (const window of BrowserWindow.getAllWindows()) {
-      if (!window.isDestroyed()) {
-        window.webContents.send('document-service:tracker-items-changed', {
-          added: [],
-          updated: [],
-          removed: [],
-          timestamp: new Date(),
-        });
-      }
-    }
+    this.emitTrackerItemsChanged();
   }
 
   private extractLastAgentResponse(messages: Array<{ direction: string; content: string; metadata?: Record<string, unknown> | null }>, maxLength: number = 500): string | null {

@@ -269,6 +269,8 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     expect(prompt).toContain('## Your Tools');
     expect(prompt).toContain('## Core Behavior');
     expect(prompt).toContain('Delegate all implementation');
+    expect(prompt).toContain('optional effortLevel');
+    expect(prompt).toContain('Keep thinking effort high by default');
     expect(prompt).toContain('## First Turn');
 
     // Blank/whitespace custom role falls back to the built-in default role.

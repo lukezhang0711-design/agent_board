@@ -25,6 +25,9 @@ fields:
     required: true
     default: dispatched
     options:
+      - value: queued
+        label: Queued
+        icon: schedule
       - value: dispatched
         label: Dispatched
         icon: outbound

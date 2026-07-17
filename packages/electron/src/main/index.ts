@@ -2020,6 +2020,14 @@ app.whenReady().then(async () => {
     } catch (sweepErr) {
       logger.main.error('[Main] Boot sweep failed:', sweepErr);
     }
+    try {
+      const recoveredDispatches = await MetaAgentService.getInstance().recoverDispatchQueueOnBoot();
+      if (recoveredDispatches > 0) {
+        logger.main.info(`[Main] Boot sweep: ${recoveredDispatches} interrupted dispatch(es) returned to queued`);
+      }
+    } catch (dispatchSweepErr) {
+      logger.main.error('[Main] Dispatch queue boot sweep failed:', dispatchSweepErr);
+    }
 
     // Check for pending restart continuations and queue continuation prompts
     await checkForRestartContinuation(aiService);

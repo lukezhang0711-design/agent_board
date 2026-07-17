@@ -1731,6 +1731,46 @@ class PGLiteWorker {
       throw error;
     }
 
+    // Durable Head Agent dispatch queue. request_snapshot contains every
+    // resolved input needed to create the reserved child session after a slot
+    // opens, and survives app restarts independently of provider processes.
+    console.log('[PGLite Worker] Creating dispatch_queue table...');
+    try {
+      await this.db.exec(`
+        CREATE TABLE IF NOT EXISTS dispatch_queue (
+          queue_sequence BIGSERIAL PRIMARY KEY,
+          id TEXT NOT NULL UNIQUE,
+          head_session_id TEXT NOT NULL,
+          workspace_id TEXT NOT NULL,
+          reserved_session_id TEXT NOT NULL UNIQUE,
+          request_snapshot JSONB NOT NULL,
+          requested_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          status TEXT NOT NULL DEFAULT 'queued'
+            CHECK (status IN ('queued', 'dispatching', 'dispatched', 'cancelled', 'failed')),
+          error_message TEXT,
+          source_ref TEXT NOT NULL UNIQUE,
+          dispatched_session_id TEXT,
+          dispatched_at TIMESTAMPTZ,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT fk_dispatch_queue_head
+            FOREIGN KEY (head_session_id)
+            REFERENCES ai_sessions(id)
+            ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_dispatch_queue_head_status_sequence
+          ON dispatch_queue(head_session_id, status, queue_sequence);
+        CREATE INDEX IF NOT EXISTS idx_dispatch_queue_status_sequence
+          ON dispatch_queue(status, queue_sequence);
+        CREATE INDEX IF NOT EXISTS idx_dispatch_queue_source_ref
+          ON dispatch_queue(source_ref);
+      `);
+      console.log('[PGLite Worker] dispatch_queue table created successfully');
+    } catch (error) {
+      console.error('[PGLite Worker] Failed to create dispatch_queue table:', error);
+      throw error;
+    }
+
     // Session Wakeups table - scheduled re-invocations of an AI session
     // Persists across app restarts; scheduler in main process arms a single setTimeout
     console.log('[PGLite Worker] Creating ai_session_wakeups table...');
