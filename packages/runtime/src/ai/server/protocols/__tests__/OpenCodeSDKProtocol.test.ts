@@ -79,7 +79,7 @@ function createMockSdkModule(sseEvents: OpenCodeSSEEvent[]) {
     createOpencodeClient: () => mockClient,
   });
 
-  return { loadSdkModule, mockClient, promptFn, createFn, subscribeFn };
+  return { loadSdkModule, mockClient, promptFn, createFn, subscribeFn, abortFn };
 }
 
 describe('OpenCodeSDKProtocol', () => {
@@ -340,6 +340,50 @@ describe('OpenCodeSDKProtocol', () => {
 
     expect(session.id).toBe('oc-session-1');
     expect(createFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('awaits the server abort response and returns it unchanged', async () => {
+    let releaseAbort!: () => void;
+    const abortGate = new Promise<void>((resolve) => {
+      releaseAbort = resolve;
+    });
+    const serverResult = { data: true, response: { status: 200 } };
+    const { loadSdkModule, abortFn } = createMockSdkModule([]);
+    abortFn.mockImplementation(async () => {
+      await abortGate;
+      return serverResult;
+    });
+    const protocol = new OpenCodeSDKProtocol(loadSdkModule);
+    const session = await protocol.createSession({ workspacePath: '/tmp/test' });
+    let settled = false;
+    const resultPromise = Promise.resolve(protocol.abortSession(session)).then((result) => {
+      settled = true;
+      return result;
+    });
+
+    try {
+      expect(abortFn).toHaveBeenCalledWith({
+        path: { id: 'oc-session-1' },
+        query: { directory: '/tmp/test' },
+        throwOnError: true,
+      });
+      await Promise.resolve();
+      expect(settled).toBe(false);
+    } finally {
+      releaseAbort();
+    }
+
+    await expect(resultPromise).resolves.toBe(serverResult);
+  });
+
+  it('propagates the server abort rejection unchanged', async () => {
+    const failure = new Error('OpenCode server rejected abort');
+    const { loadSdkModule, abortFn } = createMockSdkModule([]);
+    abortFn.mockRejectedValue(failure);
+    const protocol = new OpenCodeSDKProtocol(loadSdkModule);
+    const session = await protocol.createSession({ workspacePath: '/tmp/test' });
+
+    await expect(Promise.resolve(protocol.abortSession(session))).rejects.toBe(failure);
   });
 
   it('sends prompt with text parts', async () => {

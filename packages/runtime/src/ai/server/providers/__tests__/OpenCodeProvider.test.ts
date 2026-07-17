@@ -254,4 +254,102 @@ describe('OpenCodeProvider', () => {
 
     expect(protocol.resumeSession).toHaveBeenCalledWith('oc-session-1', expect.anything());
   });
+
+  it('waits for protocol abort confirmation and returns the exact result', async () => {
+    let releaseTurn!: () => void;
+    const turnGate = new Promise<void>((resolve) => {
+      releaseTurn = resolve;
+    });
+    let releaseAbort!: () => void;
+    const abortGate = new Promise<void>((resolve) => {
+      releaseAbort = resolve;
+    });
+    const serverResult = { data: true, response: { status: 200 } };
+    const protocol = createMockProtocol();
+    protocol.sendMessage.mockImplementation(async function* () {
+      yield { type: 'text', content: 'working' };
+      await turnGate;
+      yield { type: 'complete', content: 'done' };
+    });
+    protocol.abortSession.mockImplementation(async () => {
+      await abortGate;
+      return serverResult;
+    });
+    const provider = new OpenCodeProvider({ protocol });
+    await provider.initialize({ model: 'opencode:default' });
+    const iterator = provider.sendMessage(
+      'keep working',
+      undefined,
+      'session-stop',
+      [],
+      process.cwd(),
+    )[Symbol.asyncIterator]();
+    await expect(iterator.next()).resolves.toMatchObject({
+      done: false,
+      value: { type: 'text', content: 'working' },
+    });
+
+    let settled = false;
+    const resultPromise = provider.interruptCurrentTurn().then((result) => {
+      settled = true;
+      return result;
+    });
+
+    try {
+      expect(protocol.abortSession).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'oc-session-1',
+        platform: 'opencode-sdk',
+      }));
+      await Promise.resolve();
+      expect(settled).toBe(false);
+
+      releaseAbort();
+      await expect(resultPromise).resolves.toEqual({
+        method: 'interrupt',
+        result: serverResult,
+      });
+    } finally {
+      releaseAbort();
+      releaseTurn();
+      while (!(await iterator.next()).done) {
+        // Drain the turn so active-session cleanup runs.
+      }
+      provider.destroy();
+    }
+  });
+
+  it('propagates the exact protocol abort failure', async () => {
+    let releaseTurn!: () => void;
+    const turnGate = new Promise<void>((resolve) => {
+      releaseTurn = resolve;
+    });
+    const failure = new Error('OpenCode server rejected abort');
+    const protocol = createMockProtocol();
+    protocol.sendMessage.mockImplementation(async function* () {
+      yield { type: 'text', content: 'working' };
+      await turnGate;
+      yield { type: 'complete', content: 'done' };
+    });
+    protocol.abortSession.mockRejectedValue(failure);
+    const provider = new OpenCodeProvider({ protocol });
+    await provider.initialize({ model: 'opencode:default' });
+    const iterator = provider.sendMessage(
+      'keep working',
+      undefined,
+      'session-stop-failure',
+      [],
+      process.cwd(),
+    )[Symbol.asyncIterator]();
+    await iterator.next();
+
+    try {
+      await expect(provider.interruptCurrentTurn()).rejects.toBe(failure);
+    } finally {
+      releaseTurn();
+      while (!(await iterator.next()).done) {
+        // Drain the turn so active-session cleanup runs.
+      }
+      provider.destroy();
+    }
+  });
 });

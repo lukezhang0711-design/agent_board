@@ -102,6 +102,7 @@ export class CopilotCLIProvider extends BaseAgentProvider {
 
   private readonly protocol: CopilotACPProtocol;
   private readonly mcpConfigService: McpConfigService;
+  private activeProtocolSession: ProtocolSession | null = null;
 
   private _initData: {
     model: string;
@@ -311,6 +312,7 @@ export class CopilotCLIProvider extends BaseAgentProvider {
     this.abortController = abortController;
 
     let fullText = '';
+    let protocolSessionForTurn: ProtocolSession | null = null;
 
     try {
       const permissionResult = await this.requestCopilotTurnPermission(workspacePath, documentContext?.permissionsPath);
@@ -369,6 +371,8 @@ export class CopilotCLIProvider extends BaseAgentProvider {
         attachments as any,
       );
 
+      protocolSessionForTurn = session;
+      this.activeProtocolSession = session;
       for await (const event of this.protocol.sendMessage(session, {
         content: prompt,
         attachments,
@@ -452,6 +456,9 @@ export class CopilotCLIProvider extends BaseAgentProvider {
         }
       }
     } finally {
+      if (this.activeProtocolSession === protocolSessionForTurn) {
+        this.activeProtocolSession = null;
+      }
       if (this.abortController === abortController) {
         this.abortController = null;
       }
@@ -462,7 +469,18 @@ export class CopilotCLIProvider extends BaseAgentProvider {
     this.sessions.deleteSession(sessionId);
   }
 
+  abort(): void {
+    try {
+      if (this.activeProtocolSession) {
+        this.protocol.abortSession(this.activeProtocolSession);
+      }
+    } finally {
+      super.abort();
+    }
+  }
+
   destroy(): void {
+    this.activeProtocolSession = null;
     if ((this.protocol as any).destroy) {
       (this.protocol as any).destroy();
     }

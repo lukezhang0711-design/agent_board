@@ -614,13 +614,23 @@ export class OpenCodeSDKProtocol implements AgentProtocol {
   /**
    * Abort an active session
    */
-  abortSession(session: ProtocolSession): void {
+  async abortSession(session: ProtocolSession): Promise<unknown> {
+    const client = this.getClientIfReady();
+    if (!client) {
+      throw new Error('[OPENCODE-PROTOCOL] Cannot abort before the SDK client is ready');
+    }
+
     this.aborted.add(session.id);
-    // Also call the server abort endpoint
-    this.getClientIfReady()?.session.abort({
-      path: { id: session.id },
-      query: { directory: (session.raw?.options as SessionOptions)?.workspacePath },
-    }).catch(() => {});
+    try {
+      return await client.session.abort({
+        path: { id: session.id },
+        query: { directory: (session.raw?.options as SessionOptions)?.workspacePath },
+        throwOnError: true,
+      });
+    } catch (error) {
+      this.aborted.delete(session.id);
+      throw error;
+    }
   }
 
   /**

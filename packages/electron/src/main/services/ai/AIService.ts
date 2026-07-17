@@ -134,6 +134,15 @@ function cancelErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function isOpenCodeAbortConfirmed(interruptResult: unknown): boolean {
+  if (!interruptResult || typeof interruptResult !== 'object') return false;
+  const result = (interruptResult as { result?: unknown }).result;
+  if (result === true) return true;
+  return !!result
+    && typeof result === 'object'
+    && (result as { data?: unknown }).data === true;
+}
+
 export class AIService {
   private sessionManager: SessionManager;
   private settingsStore: Store<Record<string, unknown>> | null = null;
@@ -322,7 +331,14 @@ export class AIService {
       }
       providerType = (provider as any).providerType || 'unknown';
       cancelCurrent = async () => {
-        provider.abort();
+        if (session.provider === 'opencode') {
+          const interruptResult = await provider.interruptCurrentTurn();
+          if (!isOpenCodeAbortConfirmed(interruptResult)) {
+            throw new Error('OpenCode server did not confirm session abort');
+          }
+        } else {
+          provider.abort();
+        }
       };
     }
 
@@ -2905,8 +2921,13 @@ export class AIService {
           return { success: false, error: 'No active terminal for session' };
         }
 
-        terminalManager.writeToTerminal(sessionId, '\x03');
-        logger.main.info(`[AIService] Interrupted claude-code-cli terminal for session ${sessionId}`);
+        const interrupted = await terminalManager.interruptClaudeCliTurn(sessionId);
+        if (!interrupted.success) {
+          return { success: false, error: 'Terminal interrupt was not confirmed' };
+        }
+        logger.main.info(
+          `[AIService] Interrupted claude-code-cli terminal for session ${sessionId} (resolvedAfter=${interrupted.resolvedAfter || 'unknown'})`
+        );
         return { success: true, method: 'terminal-ctrl-c' };
       }
 

@@ -27,6 +27,7 @@ import {
   ChatAttachment,
 } from '../types';
 import { OpenCodeSDKProtocol } from '../protocols/OpenCodeSDKProtocol';
+import type { ProtocolSession } from '../protocols/ProtocolInterface';
 import { McpConfigService } from '../services/McpConfigService';
 import { MCPServerConfig } from '../../../types/MCPServerConfig';
 import { safeJSONSerialize } from '../../../utils/serialization';
@@ -63,11 +64,17 @@ export interface OpenCodeFileConfig {
   [key: string]: unknown;
 }
 
+export interface OpenCodeProviderInterruptResult {
+  method: 'interrupt';
+  result: unknown;
+}
+
 export class OpenCodeProvider extends BaseAgentProvider {
   static readonly DEFAULT_MODEL = DEFAULT_MODELS['opencode'];
 
   private readonly protocol: OpenCodeSDKProtocol;
   private readonly mcpConfigService: McpConfigService;
+  private activeProtocolSession: ProtocolSession | null = null;
 
   // Analytics initialization data, captured during first sendMessage call
   private _initData: {
@@ -214,6 +221,25 @@ export class OpenCodeProvider extends BaseAgentProvider {
     };
   }
 
+  async interruptCurrentTurn(): Promise<OpenCodeProviderInterruptResult> {
+    if (!this.activeProtocolSession) {
+      throw new Error('[OpenCodeProvider] No active session to stop');
+    }
+
+    const result = await this.protocol.abortSession(this.activeProtocolSession);
+    super.abort();
+    return { method: 'interrupt', result };
+  }
+
+  abort(): void {
+    if (this.activeProtocolSession) {
+      void this.protocol.abortSession(this.activeProtocolSession).catch((error) => {
+        console.warn('[OPENCODE] Failed to abort active session:', error);
+      });
+    }
+    super.abort();
+  }
+
   /**
    * Get available models from OpenCode.
    *
@@ -338,6 +364,7 @@ export class OpenCodeProvider extends BaseAgentProvider {
     this.abortController = abortController;
 
     let fullText = '';
+    let protocolSessionForTurn: ProtocolSession | null = null;
 
     try {
       // Get or create protocol session
@@ -391,6 +418,8 @@ export class OpenCodeProvider extends BaseAgentProvider {
       );
 
       // Send message using protocol -- adapter parses all events
+      protocolSessionForTurn = session;
+      this.activeProtocolSession = session;
       for await (const event of this.protocol.sendMessage(session, {
         content: messageWithContext,
         attachments,
@@ -501,6 +530,9 @@ export class OpenCodeProvider extends BaseAgentProvider {
         yield { type: 'error', error: errorMessage };
       }
     } finally {
+      if (this.activeProtocolSession === protocolSessionForTurn) {
+        this.activeProtocolSession = null;
+      }
       if (this.abortController === abortController) {
         this.abortController = null;
       }
