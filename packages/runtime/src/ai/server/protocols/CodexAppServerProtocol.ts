@@ -523,7 +523,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
     //   cwd,
     //   helperPathEntries: getCodexVendorPathEntries(binary),
     // });
-    const child = spawn(binary, ['app-server', '--listen', 'stdio://'], {
+    const child = spawn(binary, this.buildProcessArgs(options), {
       env,
       cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -605,6 +605,21 @@ export class CodexAppServerProtocol implements AgentProtocol {
   }
 
   /**
+   * `model_catalog_json` is a process-start-only Codex setting. Supplying it
+   * here makes session children use the host-maintained static catalog instead
+   * of refreshing models over the network during thread creation.
+   */
+  private buildProcessArgs(options: SessionOptions): string[] {
+    const catalogPath = options.raw?.codexModelCatalogPath;
+    const args: string[] = [];
+    if (typeof catalogPath === 'string' && catalogPath.trim().length > 0) {
+      args.push('--config', `model_catalog_json=${JSON.stringify(catalogPath)}`);
+    }
+    args.push('app-server', '--listen', 'stdio://');
+    return args;
+  }
+
+  /**
    * Map our SessionOptions onto ThreadStartParams. Mirrors the SDK adapter's
    * `buildThreadOptions` so behavior is preserved across transports.
    */
@@ -626,8 +641,13 @@ export class CodexAppServerProtocol implements AgentProtocol {
     // the SDK transport sends as `--config` flags. We pass through the
     // existing host-computed overrides (which include `mcp_servers`,
     // `model_reasoning_effort`, network access, web_search, etc.) unchanged.
+    const rawConfig = options.raw?.codexConfigOverrides as Record<string, unknown> | undefined;
+    // Startup-only settings are removed from thread/start. The app-server
+    // process received this value in buildProcessArgs; forwarding it here is
+    // too late and newer Codex versions may reject it as a thread override.
+    const { model_catalog_json: _modelCatalogJson, ...threadConfig } = rawConfig ?? {};
     const config: Record<string, unknown> = {
-      ...(options.raw?.codexConfigOverrides as Record<string, unknown> | undefined ?? {}),
+      ...threadConfig,
       // Reasoning effort always sets; the host's override map may also set it
       // but a literal here is fine since codex resolves these later.
       model_reasoning_effort: reasoningEffortRaw,

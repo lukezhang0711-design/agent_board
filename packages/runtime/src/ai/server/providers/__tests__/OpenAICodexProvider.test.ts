@@ -32,6 +32,11 @@ describe('OpenAICodexProvider', () => {
     OpenAICodexProvider.setClaudeSettingsEnvLoader(null);
     OpenAICodexProvider.setShellEnvironmentLoader(null);
     OpenAICodexProvider.setEnhancedPathLoader(null);
+    OpenAICodexProvider.setCodexTransportResolver(null);
+    OpenAICodexProvider.setAppServerHostBindings(null);
+    OpenAICodexProvider.setCodexAuthGate(null);
+    OpenAICodexProvider.setModelRefreshSnapshotResolver(null);
+    OpenAICodexProvider.setModelCatalogPathResolver(null);
 
     // Provide default injected dependencies required by the provider.
     OpenAICodexProvider.setTrustChecker(() => ({ trusted: true, mode: 'allow-all' as any }));
@@ -114,6 +119,73 @@ describe('OpenAICodexProvider', () => {
         provider: 'openai-codex',
       }),
     ]));
+  });
+
+  it('uses the host refresh snapshot without invoking SDK discovery', async () => {
+    const loadSdkModule = vi.fn(async () => {
+      throw new Error('host snapshot must prevent SDK discovery');
+    });
+    OpenAICodexProvider.setModelRefreshSnapshotResolver(() => [{
+      id: 'openai-codex:gpt-5.4',
+      name: 'GPT-5.4 from refresh service',
+      provider: 'openai-codex',
+      contextWindow: 400_000,
+      maxTokens: 128_000,
+    }]);
+
+    const models = await OpenAICodexProvider.getModels(undefined, { loadSdkModule });
+
+    expect(loadSdkModule).not.toHaveBeenCalled();
+    expect(models).toContainEqual(expect.objectContaining({
+      id: 'openai-codex:gpt-5.4',
+      name: 'GPT-5.4 from refresh service',
+      contextWindow: 400_000,
+    }));
+  });
+
+  it('passes the host catalog path in process and SDK config session options', async () => {
+    const createSession = vi.fn(async () => ({
+      id: 'thread-static-model-catalog',
+      platform: 'codex-app-server',
+      raw: { fake: true },
+    }));
+    const protocol = {
+      platform: 'codex-app-server',
+      createSession,
+      resumeSession: vi.fn(),
+      forkSession: vi.fn(),
+      sendMessage: vi.fn(() => createAsyncEventStream([{
+        type: 'complete',
+        content: 'one response',
+        usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+      }])),
+      abortSession: vi.fn(),
+      cleanupSession: vi.fn(),
+    } as any;
+    const catalogPath = '/tmp/nimbalyst model catalog.json';
+    OpenAICodexProvider.setModelCatalogPathResolver(() => catalogPath);
+    const provider = new OpenAICodexProvider({}, { protocol, transport: 'app-server' });
+    await provider.initialize({ model: 'openai-codex:gpt-5.4' });
+
+    for await (const _chunk of provider.sendMessage(
+      'use static catalog',
+      undefined,
+      'session-static-model-catalog',
+      [],
+      process.cwd(),
+    )) {
+      // drain
+    }
+
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(createSession).toHaveBeenCalledWith(expect.objectContaining({
+      raw: expect.objectContaining({
+        codexModelCatalogPath: catalogPath,
+        codexConfigOverrides: expect.objectContaining({
+          model_catalog_json: catalogPath,
+        }),
+      }),
+    }));
   });
 
   it('normalizes legacy codex default aliases to the GPT-5.5 default', () => {

@@ -127,6 +127,7 @@ import {
   type QueuedPromptsStore,
 } from '../PGLiteQueuedPromptsStore';
 import { getQueuedPromptsStore } from '../RepositoryManager';
+import { CodexModelRefreshService } from '../CodexModelRefreshService';
 
 const execFileAsync = promisify(execFile);
 
@@ -182,11 +183,32 @@ export class AIService {
 
   // Owns the streaming send-message lifecycle (extracted from setupIpcHandlers).
   private streamingHandler: MessageStreamingHandler;
+  private readonly codexModelRefreshService: CodexModelRefreshService;
 
   constructor(sessionStore: SessionStore) {
     logger.main.info('[AIService] Constructor called');
     this.sessionManager = new SessionManager(sessionStore);
     this.streamingHandler = new MessageStreamingHandler(this);
+
+    const settingsDirectory = path.dirname(this.getSettingsStore().path);
+    this.codexModelRefreshService = new CodexModelRefreshService({
+      catalogPath: path.join(
+        settingsDirectory,
+        'codex-model-refresh',
+        'models.json',
+      ),
+      loadApiKey: () => {
+        const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
+        return apiKeys['openai-codex'];
+      },
+    });
+    OpenAICodexProvider.setModelRefreshSnapshotResolver(
+      () => this.codexModelRefreshService.getModels(),
+    );
+    OpenAICodexProvider.setModelCatalogPathResolver(
+      () => this.codexModelRefreshService.getCatalogPath(),
+    );
+    this.codexModelRefreshService.registerIpcHandlers();
 
     // Set up persistence callback for DocumentContextService
     // Use AISessionsRepository directly since SessionManager doesn't have a generic updateMetadata
@@ -237,6 +259,10 @@ export class AIService {
     // ANTHROPIC_API_KEY was silently picked up, persisted into settings,
     // and used instead of their subscription — costing them $100+.
     this.setupIpcHandlers();
+
+    this.startCodexModelRefreshIfEnabled(
+      this.getNormalizedProviderSettings() as Record<AIProviderType, any>,
+    );
 
     // Clean up any empty messages from existing sessions on startup
     const cleaned = this.sessionManager.cleanupAllSessions();
@@ -609,6 +635,15 @@ export class AIService {
       this.migrateClaudeCodeModelList();
     }
     return this.settingsStore;
+  }
+
+  private startCodexModelRefreshIfEnabled(
+    providerSettings: Record<AIProviderType, any>,
+  ): void {
+    if (providerSettings['openai-codex']?.enabled !== true) return;
+    void this.codexModelRefreshService.start().catch((error) => {
+      logger.main.error('[AIService] Codex model refresh start failed:', error);
+    });
   }
 
   /**
@@ -3347,6 +3382,7 @@ export class AIService {
       ModelRegistry.clearCache();
 
       const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
+      this.startCodexModelRefreshIfEnabled(providerSettings);
       const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
 
       // Only fetch from providers that are enabled (skip LMStudio network call when disabled)
@@ -3395,7 +3431,13 @@ export class AIService {
     // Clear model cache
     safeHandle('ai:clearModelCache', async () => {
       ModelRegistry.clearCache();
-      return { success: true };
+      const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
+      if (providerSettings['openai-codex']?.enabled === true) {
+        void this.codexModelRefreshService.manualRetry().catch((error) => {
+          logger.main.error('[AIService] Manual Codex model refresh failed:', error);
+        });
+      }
+      return { success: true, modelRefreshStatus: this.codexModelRefreshService.getStatus() };
     });
 
     safeHandle('ai:refreshSessionProvider', async (_event, sessionId: string) => {
@@ -3468,6 +3510,7 @@ export class AIService {
     safeHandle('ai:getModels', async () => {
       // console.log('[AIService] ai:getModels called - fetching enabled models');
       const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
+      this.startCodexModelRefreshIfEnabled(providerSettings);
       const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
       const claudeCodeSettings = providerSettings['claude-code'] || {};
 
@@ -4088,6 +4131,10 @@ export class AIService {
   }
 
   public destroy() {
+    this.codexModelRefreshService.shutdown();
+    OpenAICodexProvider.setModelRefreshSnapshotResolver(null);
+    OpenAICodexProvider.setModelCatalogPathResolver(null);
+
     try {
       // Clean up all providers with error handling
       ProviderFactory.destroyAll();
