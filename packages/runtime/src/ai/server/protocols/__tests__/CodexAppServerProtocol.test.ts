@@ -102,6 +102,42 @@ describe('CodexAppServerProtocol', () => {
     protocol.cleanupSession(session);
   });
 
+  it('pins session children to the host model catalog before app-server startup', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const catalogPath = '/tmp/nimbalyst model catalog.json';
+    const sessionPromise = protocol.createSession({
+      workspacePath: '/tmp/ws',
+      raw: { codexModelCatalogPath: catalogPath },
+    });
+
+    const initReq = await nextWrittenMatching(child, 'initialize');
+    child.emitLine({
+      id: initReq.id,
+      result: {
+        codexHome: '/fake',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+        userAgent: 'fake/0',
+      },
+    });
+    const startReq = await nextWrittenMatching(child, 'thread/start');
+    child.emitLine({ id: startReq.id, result: { thread: { id: 'thread-static-catalog' } } });
+
+    const session = await sessionPromise;
+    const [, args] = spawnMock.mock.calls[0];
+    expect(args).toEqual([
+      '--config',
+      `model_catalog_json=${JSON.stringify(catalogPath)}`,
+      'app-server',
+      '--listen',
+      'stdio://',
+    ]);
+    expect((startReq.params as { config?: Record<string, unknown> }).config)
+      .not.toHaveProperty('model_catalog_json');
+
+    protocol.cleanupSession(session);
+  });
+
   it('streams agentMessage deltas as text events and emits complete on turn/completed', async () => {
     const protocol = new CodexAppServerProtocol();
     const sessionPromise = protocol.createSession({ workspacePath: '/tmp/ws' });

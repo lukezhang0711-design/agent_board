@@ -317,6 +317,25 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     OpenAICodexProvider.codexAuthGate = gate;
   }
 
+  // Main-process-owned model refresh snapshot. When registered, model picker
+  // reads are pure in-memory reads and never instantiate SDK discovery or call
+  // OpenAI directly. An empty snapshot intentionally selects curated fallback
+  // models while the first isolated refresh is still pending.
+  private static modelRefreshSnapshotResolver: (() => AIModel[]) | null = null;
+
+  public static setModelRefreshSnapshotResolver(resolver: (() => AIModel[]) | null): void {
+    OpenAICodexProvider.modelRefreshSnapshotResolver = resolver;
+  }
+
+  // Absolute host-maintained ModelsResponse file. Both transports receive it
+  // as a process-start config value so session children cannot perform their
+  // own network model refresh.
+  private static modelCatalogPathResolver: (() => string | undefined) | null = null;
+
+  public static setModelCatalogPathResolver(resolver: (() => string | undefined) | null): void {
+    OpenAICodexProvider.modelCatalogPathResolver = resolver;
+  }
+
   constructor(config?: { apiKey?: string }, deps?: OpenAICodexProviderDeps) {
     super();
     const apiKey = config?.apiKey || '';
@@ -557,6 +576,10 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     apiKey?: string,
     deps?: OpenAICodexModelDiscoveryDeps,
   ): Promise<AIModel[]> {
+    const hostSnapshot = OpenAICodexProvider.modelRefreshSnapshotResolver?.();
+    if (hostSnapshot) {
+      return OpenAICodexProvider.getPreferredModels(hostSnapshot);
+    }
     const sdkModels = await OpenAICodexProvider.getModelsFromSdk(apiKey, deps);
     const apiModels = await OpenAICodexProvider.getModelsFromOpenAI(apiKey);
     return OpenAICodexProvider.getPreferredModels(sdkModels, apiModels);
@@ -1119,6 +1142,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       const additionalDirectories = OpenAICodexProvider.additionalDirectoriesLoader
         ? OpenAICodexProvider.additionalDirectoriesLoader(workspacePath)
         : [];
+      const codexModelCatalogPath = OpenAICodexProvider.modelCatalogPathResolver?.();
 
       const sessionOptions = {
         workspacePath,
@@ -1132,7 +1156,8 @@ export class OpenAICodexProvider extends BaseAgentProvider {
         } : {}),
         raw: {
           systemPrompt,
-          codexConfigOverrides: this.buildCodexConfigOverrides(mcpServers),
+          codexConfigOverrides: this.buildCodexConfigOverrides(mcpServers, codexModelCatalogPath),
+          ...(codexModelCatalogPath ? { codexModelCatalogPath } : {}),
           ...(codexEnv ? { codexEnv } : {}),
           ...(this.config?.effortLevel ? { effortLevel: this.config.effortLevel } : {}),
           ...(additionalDirectories.length > 0 ? { additionalDirectories } : {}),
@@ -1901,7 +1926,8 @@ export class OpenAICodexProvider extends BaseAgentProvider {
   }
 
   private buildCodexConfigOverrides(
-    mcpServers: Record<string, unknown>
+    mcpServers: Record<string, unknown>,
+    modelCatalogPath?: string,
   ): Record<string, unknown> | undefined {
     const codexMcpServers: Record<string, Record<string, unknown>> = {};
     const usedServerNames = new Set<string>();
@@ -1918,6 +1944,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       // Codex SDK documents this config flag as the switch for surfacing
       // raw agent reasoning in streamed events.
       show_raw_agent_reasoning: true,
+      ...(modelCatalogPath ? { model_catalog_json: modelCatalogPath } : {}),
     };
 
     if (Object.keys(codexMcpServers).length > 0) {
