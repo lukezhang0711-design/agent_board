@@ -401,6 +401,16 @@ const builtinTrackers: TrackerDataModel[] = [
         ],
       },
       { name: 'childSessionId', type: 'string', required: true },
+      {
+        name: 'intent',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'investigation', label: 'Investigation', icon: 'search' },
+          { value: 'implementation', label: 'Implementation', icon: 'construction' },
+        ],
+      },
+      { name: 'planId', type: 'string', required: false },
       { name: 'taskSummary', type: 'text', required: true },
       { name: 'dispatchedAt', type: 'datetime', required: true },
       { name: 'interruptionReason', type: 'text' },

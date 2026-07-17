@@ -53,6 +53,7 @@ import { ClaudeCodeProvider } from '../ClaudeCodeProvider';
 const META_AGENT_ALLOWED_TOOLS = [
   'mcp__nimbalyst-meta-agent__list_spawned_sessions',
   'mcp__nimbalyst-meta-agent__list_worktrees',
+  'mcp__nimbalyst-meta-agent__submit_plan',
   'mcp__nimbalyst-meta-agent__create_session',
   'mcp__nimbalyst-meta-agent__get_session_status',
   'mcp__nimbalyst-meta-agent__get_session_result',

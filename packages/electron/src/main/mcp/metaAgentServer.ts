@@ -13,6 +13,8 @@ import { randomUUID } from "crypto";
 import { requireMcpAuth } from "./mcpAuth";
 import { resolveProjectPath } from "../utils/workspaceDetection";
 
+type SessionIntent = "investigation" | "implementation";
+
 type CreateSessionArgs = {
   title?: string;
   provider?: string;
@@ -21,6 +23,8 @@ type CreateSessionArgs = {
   useWorktree?: boolean;
   worktreeId?: string;
   toolScope?: string;
+  intent: SessionIntent;
+  planId?: string;
 };
 
 type SpawnSessionArgs = {
@@ -29,6 +33,8 @@ type SpawnSessionArgs = {
   useWorktree?: boolean;
   model?: string;
   notifyOnComplete?: boolean;
+  intent: SessionIntent;
+  planId?: string;
   /**
    * When true, the new session is created at the top level — no parent,
    * no workstream container, no shared files-edited or tabs with the
@@ -37,6 +43,13 @@ type SpawnSessionArgs = {
    * spawned as a sibling under the caller's workstream.
    */
   isolated?: boolean;
+};
+
+type SubmitPlanArgs = {
+  title: string;
+  planItems: string[];
+  workOrderCount: number;
+  risks: string;
 };
 
 type RespondToPromptArgs = {
@@ -59,6 +72,11 @@ interface MetaAgentToolFns {
   listWorktrees: (
     metaSessionId: string,
     workspaceId: string
+  ) => Promise<string>;
+  submitPlan: (
+    metaSessionId: string,
+    workspaceId: string,
+    args: SubmitPlanArgs
   ) => Promise<string>;
   createSession: (
     metaSessionId: string,
@@ -161,9 +179,38 @@ const META_AGENT_TOOL_DEFS: Array<{
     },
   },
   {
+    name: "submit_plan",
+    description:
+      "Submit an implementation plan for durable user approval before dispatching implementation work. Creates or updates one plan card for this Head Agent session, then waits for the user to choose Approve or Request changes. Resubmit a revision to update the same card.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "REQUIRED. Concise title for the proposed implementation plan.",
+        },
+        planItems: {
+          type: "array",
+          items: { type: "string" },
+          description: "REQUIRED. Ordered list of concrete plan items to present for approval.",
+        },
+        workOrderCount: {
+          type: "integer",
+          minimum: 0,
+          description: "REQUIRED. Number of implementation work orders expected after approval.",
+        },
+        risks: {
+          type: "string",
+          description: "REQUIRED. The main implementation risks and tradeoffs.",
+        },
+      },
+      required: ["title", "planItems", "workOrderCount", "risks"],
+    },
+  },
+  {
     name: "create_session",
     description:
-      "Spawn a new child session for a focused task. Can optionally create a dedicated worktree or attach the session to an existing worktree, then seed it with an initial prompt. Pass toolScope to control the child's capabilities: use \"read\" or \"write\" for analyze/research tasks so the child cannot run builds or claim to have run them; \"full\" (default) grants run_command.",
+      "Spawn a new child session for a focused task. Set intent=\"investigation\" for read-only investigation, which may be dispatched without a plan. Set intent=\"implementation\" only with planId for a user-approved plan. Can optionally create a dedicated worktree or attach the session to an existing worktree, then seed it with an initial prompt. Pass toolScope to control the child's capabilities: use \"read\" or \"write\" for analyze/research tasks so the child cannot run builds or claim to have run them; \"full\" (default) grants run_command.",
     inputSchema: {
       type: "object",
       properties: {
@@ -199,13 +246,24 @@ const META_AGENT_TOOL_DEFS: Array<{
           description:
             "Capability scope for the child. \"read\" = read_file/list_files/search_files only (pure investigation). \"write\" = those plus write_file but NO run_command, so the child can save a file deliverable (e.g. a report) yet cannot build/test/run anything. \"full\" (default) = all tools including run_command. Use read or write for analyze/research tasks so the child physically cannot run a build, and reserve full for tasks that must build/test.",
         },
+        intent: {
+          type: "string",
+          enum: ["investigation", "implementation"],
+          description:
+            "REQUIRED. investigation is for read-only work and needs no plan; implementation changes the product and requires an approved planId.",
+        },
+        planId: {
+          type: "string",
+          description: "Required when intent is implementation. ID of the approved plan card.",
+        },
       },
+      required: ["intent"],
     },
   },
   {
     name: "spawn_session",
     description:
-      "Spawn a new session from the calling session. By default the new session runs as a sibling under the same workstream as the caller (sharing files-edited, tabs, and get_workstream_overview); if the caller is not yet part of a workstream, a workstream container is created and the caller is reparented under it. The new session also inherits the caller's working directory: if the caller is running in a worktree, the spawned session runs in that same worktree (so its edits land where the user is looking). Pass isolated=true to instead create a top-level session with no parent and no workstream — use this when the new session should fix-and-commit work independently without polluting the caller's workstream. Pass useWorktree=true to give the spawned session its OWN new worktree instead of inheriting the caller's. Fire-and-forget by default — the calling session is not notified when the spawned session completes; pass notifyOnComplete=true to opt in. Use this for the /launch-new-session flow.",
+      "Spawn a new session from the calling session. Set intent=\"investigation\" for read-only investigation, which may be dispatched without a plan. Set intent=\"implementation\" only with planId for a user-approved plan. By default the new session runs as a sibling under the same workstream as the caller (sharing files-edited, tabs, and get_workstream_overview); if the caller is not yet part of a workstream, a workstream container is created and the caller is reparented under it. The new session also inherits the caller's working directory: if the caller is running in a worktree, the spawned session runs in that same worktree (so its edits land where the user is looking). Pass isolated=true to instead create a top-level session with no parent and no workstream — use this when the new session should fix-and-commit work independently without polluting the caller's workstream. Pass useWorktree=true to give the spawned session its OWN new worktree instead of inheriting the caller's. Fire-and-forget by default — the calling session is not notified when the spawned session completes; pass notifyOnComplete=true to opt in. Use this for the /launch-new-session flow.",
     inputSchema: {
       type: "object",
       properties: {
@@ -243,8 +301,18 @@ const META_AGENT_TOOL_DEFS: Array<{
           description:
             "Default false. When false (the default), the calling session receives no follow-up prompt when the spawned session completes/errors/waits — fire and forget. Set true only when the caller specifically wants to be told the result and continue working with it.",
         },
+        intent: {
+          type: "string",
+          enum: ["investigation", "implementation"],
+          description:
+            "REQUIRED. investigation is for read-only work and needs no plan; implementation changes the product and requires an approved planId.",
+        },
+        planId: {
+          type: "string",
+          description: "Required when intent is implementation. ID of the approved plan card.",
+        },
       },
-      required: ["prompt"],
+      required: ["prompt", "intent"],
     },
   },
   {
@@ -385,6 +453,7 @@ const META_AGENT_TOOL_DEFS: Array<{
 // BaseAgentProvider.META_AGENT_ALLOWED_TOOLS.
 const EXTENSION_META_AGENT_ALLOWED_TOOLS = new Set<string>([
   "list_worktrees",
+  "submit_plan",
   "create_session",
   "get_session_status",
   "get_session_result",
@@ -436,6 +505,8 @@ export async function dispatchMetaAgentTool(
   switch (toolName) {
     case "list_worktrees":
       return toolFns.listWorktrees(aiSessionId, effectiveWorkspaceId);
+    case "submit_plan":
+      return toolFns.submitPlan(aiSessionId, effectiveWorkspaceId, (args ?? {}) as SubmitPlanArgs);
     case "create_session":
       return toolFns.createSession(aiSessionId, effectiveWorkspaceId, (args ?? {}) as CreateSessionArgs);
     case "spawn_session":

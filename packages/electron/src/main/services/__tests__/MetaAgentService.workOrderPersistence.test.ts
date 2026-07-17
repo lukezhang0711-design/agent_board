@@ -98,9 +98,66 @@ import { MetaAgentService } from '../MetaAgentService';
 
 describe('MetaAgentService work-order persistence', () => {
   const workspacePath = '/workspace/work-order-test';
+  const implementationPlanError =
+    'implementation sessions require an approved plan. Submit a plan for user approval first, or set intent to "investigation" for read-only work.';
   const service = MetaAgentService.getInstance();
   let dbDir: string;
   let db: SQLiteDatabase;
+
+  const parseStoredJson = <T = Record<string, unknown>>(value: unknown): T =>
+    (typeof value === 'string' ? JSON.parse(value) : value) as T;
+
+  async function waitForPlanApprovalPrompt(excludedRequestIds: string[] = []): Promise<{
+    requestId: string;
+    input: Record<string, unknown>;
+  }> {
+    let prompt: { requestId: string; input: Record<string, unknown> } | undefined;
+    await vi.waitFor(async () => {
+      const { rows } = await db.query<{ content: unknown }>(
+        `SELECT content
+         FROM ai_agent_messages
+         WHERE session_id = $1
+         ORDER BY created_at DESC, id DESC`,
+        ['head-session'],
+      );
+      for (const row of rows) {
+        const content = parseStoredJson<any>(row.content);
+        if (
+          content.type === 'nimbalyst_tool_use'
+          && content.name === 'ExitPlanMode'
+          && typeof content.id === 'string'
+          && !excludedRequestIds.includes(content.id)
+        ) {
+          prompt = { requestId: content.id, input: content.input };
+          break;
+        }
+      }
+      expect(prompt).toBeDefined();
+    }, { timeout: 3000, interval: 10 });
+    return prompt!;
+  }
+
+  async function persistPlanApprovalResponse(
+    requestId: string,
+    approved: boolean,
+    feedback?: string,
+  ): Promise<void> {
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'nimbalyst',
+      direction: 'output',
+      content: JSON.stringify({
+        type: 'exit_plan_mode_response',
+        requestId,
+        approved,
+        feedback,
+        respondedAt: Date.now(),
+        respondedBy: 'desktop',
+      }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+  }
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -185,6 +242,250 @@ describe('MetaAgentService work-order persistence', () => {
       ? JSON.parse(sessionRows[0].metadata)
       : sessionRows[0].metadata;
     expect(metadata.linkedTrackerItemIds).toEqual([card.id]);
+  });
+
+  it('persists the approval prompt and allows implementation only after approval', async () => {
+    const submitPromise = (service as any).submitPlan('head-session', workspacePath, {
+      title: 'Persist the approval gate',
+      planItems: ['Create the durable prompt', 'Gate implementation dispatch'],
+      workOrderCount: 2,
+      risks: 'A stale response could approve the wrong submission',
+    });
+
+    const prompt = await waitForPlanApprovalPrompt();
+    expect(prompt.input).toMatchObject({
+      planId: expect.any(String),
+      title: 'Persist the approval gate',
+      planItems: ['Create the durable prompt', 'Gate implementation dispatch'],
+      workOrderCount: 2,
+      risks: 'A stale response could approve the wrong submission',
+    });
+
+    const { rows: pendingRows } = await db.query<any>(
+      `SELECT id, data FROM tracker_items WHERE id = $1 AND type = 'plan'`,
+      [prompt.input.planId],
+    );
+    expect(pendingRows).toHaveLength(1);
+    expect(parseStoredJson<any>(pendingRows[0].data).status).toBe('in-review');
+
+    await persistPlanApprovalResponse(prompt.requestId, true);
+    const approval = JSON.parse(await submitPromise);
+    expect(approval).toMatchObject({
+      approved: true,
+      planId: prompt.input.planId,
+      status: 'ready-for-development',
+    });
+
+    const { rows: approvedRows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE id = $1 AND type = 'plan'`,
+      [approval.planId],
+    );
+    expect(parseStoredJson<any>(approvedRows[0].data)).toMatchObject({
+      title: 'Persist the approval gate',
+      status: 'ready-for-development',
+      planItems: ['Create the durable prompt', 'Gate implementation dispatch'],
+      workOrderCount: 2,
+      risks: 'A stale response could approve the wrong submission',
+    });
+
+    const { rows: resultRows } = await db.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND content LIKE '%"type":"nimbalyst_tool_result"%'`,
+      ['head-session'],
+    );
+    const toolResult = resultRows
+      .map((row) => parseStoredJson<any>(row.content))
+      .find((content) => content.tool_use_id === prompt.requestId);
+    expect(toolResult).toBeDefined();
+    expect(JSON.parse(toolResult.result)).toMatchObject({
+      approved: true,
+      planId: approval.planId,
+      status: 'approved',
+    });
+
+    const implementation = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Gate implementation',
+        prompt: 'Implement the approved dispatch gate',
+        intent: 'implementation',
+        planId: approval.planId,
+      },
+    ));
+    const spawnedImplementation = JSON.parse(await (service as any).spawnSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Persist implementation',
+        prompt: 'Implement the approved durable approval flow',
+        intent: 'implementation',
+        planId: approval.planId,
+        isolated: true,
+      },
+    ));
+    const { rows: groupedWorkOrders } = await db.query<any>(
+      `SELECT data
+       FROM tracker_items
+       WHERE type = 'work-order'
+         AND json_extract(data, '$.planId') = $1`,
+      [approval.planId],
+    );
+    expect(groupedWorkOrders).toHaveLength(2);
+    const groupedData = groupedWorkOrders.map((row) => parseStoredJson<any>(row.data));
+    expect(groupedData).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        childSessionId: implementation.sessionId,
+        intent: 'implementation',
+        planId: approval.planId,
+      }),
+      expect.objectContaining({
+        childSessionId: spawnedImplementation.sessionId,
+        intent: 'implementation',
+        planId: approval.planId,
+      }),
+    ]));
+  });
+
+  it('returns change feedback, keeps review status, and updates the same plan card', async () => {
+    const firstSubmission = (service as any).submitPlan('head-session', workspacePath, {
+      title: 'Initial dispatch plan',
+      planItems: ['One broad work order'],
+      workOrderCount: 1,
+      risks: 'The work order is too broad',
+    });
+    const firstPrompt = await waitForPlanApprovalPrompt();
+    await persistPlanApprovalResponse(
+      firstPrompt.requestId,
+      false,
+      'Split persistence from dispatch authorization.',
+    );
+    const firstResult = JSON.parse(await firstSubmission);
+    expect(firstResult).toMatchObject({
+      approved: false,
+      planId: firstPrompt.input.planId,
+      status: 'in-review',
+      feedback: 'Split persistence from dispatch authorization.',
+    });
+
+    const { rows: rejectedRows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE id = $1 AND type = 'plan'`,
+      [firstResult.planId],
+    );
+    expect(parseStoredJson<any>(rejectedRows[0].data).status).toBe('in-review');
+
+    await expect((service as any).createChildSession('head-session', workspacePath, {
+      prompt: 'Implement without a plan id',
+      intent: 'implementation',
+    })).rejects.toThrow(implementationPlanError);
+    await expect((service as any).createChildSession('head-session', workspacePath, {
+      prompt: 'Implement an unapproved plan',
+      intent: 'implementation',
+      planId: firstResult.planId,
+    })).rejects.toThrow(implementationPlanError);
+    await expect((service as any).spawnSession('head-session', workspacePath, {
+      prompt: 'Spawn implementation for an unapproved plan',
+      intent: 'implementation',
+      planId: firstResult.planId,
+      isolated: true,
+    })).rejects.toThrow(implementationPlanError);
+    const { rows: rejectedSessionRows } = await db.query<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM ai_sessions WHERE created_by_session_id = $1`,
+      ['head-session'],
+    );
+    const { rows: rejectedWorkOrderRows } = await db.query<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM tracker_items WHERE type = 'work-order'`,
+    );
+    expect(Number(rejectedSessionRows[0].count)).toBe(0);
+    expect(Number(rejectedWorkOrderRows[0].count)).toBe(0);
+
+    const secondSubmission = (service as any).submitPlan('head-session', workspacePath, {
+      title: 'Revised dispatch plan',
+      planItems: ['Persist approval', 'Authorize dispatch'],
+      workOrderCount: 2,
+      risks: 'Concurrent responses could cross submissions',
+    });
+    const secondPrompt = await waitForPlanApprovalPrompt([firstPrompt.requestId]);
+    expect(secondPrompt.input.planId).toBe(firstResult.planId);
+    await persistPlanApprovalResponse(secondPrompt.requestId, false, 'Add the timeout behavior.');
+    const secondResult = JSON.parse(await secondSubmission);
+    expect(secondResult).toMatchObject({
+      approved: false,
+      planId: firstResult.planId,
+      status: 'in-review',
+      feedback: 'Add the timeout behavior.',
+    });
+
+    const { rows: planRows } = await db.query<any>(
+      `SELECT id, data
+       FROM tracker_items
+       WHERE workspace = $1 AND type = 'plan' AND source_ref = $2`,
+      [workspacePath, 'meta-agent-submitted-plan:head-session'],
+    );
+    expect(planRows).toHaveLength(1);
+    expect(planRows[0].id).toBe(firstResult.planId);
+    expect(parseStoredJson<any>(planRows[0].data)).toMatchObject({
+      title: 'Revised dispatch plan',
+      status: 'in-review',
+      planItems: ['Persist approval', 'Authorize dispatch'],
+      workOrderCount: 2,
+      risks: 'Concurrent responses could cross submissions',
+    });
+  });
+
+  it('allows investigation dispatch without a plan and requires an explicit intent', async () => {
+    await expect((service as any).createChildSession('head-session', workspacePath, {
+      prompt: 'Missing intent',
+    })).rejects.toThrow('intent is required and must be "investigation" or "implementation"');
+    await expect((service as any).spawnSession('head-session', workspacePath, {
+      prompt: 'Missing intent for spawn',
+      isolated: true,
+    })).rejects.toThrow('intent is required and must be "investigation" or "implementation"');
+    const { rows: missingIntentRows } = await db.query<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM ai_sessions WHERE created_by_session_id = $1`,
+      ['head-session'],
+    );
+    expect(Number(missingIntentRows[0].count)).toBe(0);
+
+    const child = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Read-only investigation',
+        prompt: 'Inspect the dispatch path without editing',
+        intent: 'investigation',
+        toolScope: 'read',
+      },
+    ));
+    const spawned = JSON.parse(await (service as any).spawnSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Independent investigation',
+        prompt: 'Inspect plan status values without editing',
+        intent: 'investigation',
+        isolated: true,
+      },
+    ));
+
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE type = 'work-order' ORDER BY created`,
+    );
+    expect(rows).toHaveLength(2);
+    const workOrders = rows.map((row) => parseStoredJson<any>(row.data));
+    expect(workOrders).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        childSessionId: child.sessionId,
+        intent: 'investigation',
+      }),
+      expect.objectContaining({
+        childSessionId: spawned.sessionId,
+        intent: 'investigation',
+      }),
+    ]));
+    expect(workOrders.every((workOrder) => workOrder.planId === undefined)).toBe(true);
   });
 
   it('keeps the dispatched child when work-order persistence fails', async () => {

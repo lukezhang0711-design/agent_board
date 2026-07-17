@@ -15,6 +15,7 @@ describe('extension Meta Agent current capability restrictions', () => {
 
     expect(metaToolNames).toEqual([
       'list_worktrees',
+      'submit_plan',
       'create_session',
       'get_session_status',
       'get_session_result',

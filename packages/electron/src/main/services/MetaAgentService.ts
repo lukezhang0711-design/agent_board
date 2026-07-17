@@ -21,6 +21,10 @@ import {
   setMetaAgentToolFns,
   shutdownMetaAgentServer,
 } from '../mcp/metaAgentServer';
+import {
+  persistInteractivePromptToolResult,
+  persistInteractivePromptToolUse,
+} from '../mcp/tools/interactivePromptTranscript';
 import { computeNotificationSignature } from './metaAgentNotificationSignature';
 import { extractMessageText, extractUserPrompts } from './metaAgentMessageText';
 import { ClaudeCliLauncherConfig } from './ai/claudeCliLauncherSingleton';
@@ -29,6 +33,12 @@ import type { QueueCancelAction, QueueCancelResult } from './PGLiteQueuedPrompts
 type SessionStatusValue = 'idle' | 'running' | 'waiting_for_input' | 'error' | 'interrupted';
 type PromptType = 'permission_request' | 'ask_user_question_request' | 'exit_plan_mode_request';
 type WorkOrderStatus = 'dispatched' | 'running' | 'waiting' | 'interrupted' | 'completed' | 'failed';
+type SessionIntent = 'investigation' | 'implementation';
+
+const IMPLEMENTATION_PLAN_APPROVAL_ERROR =
+  'implementation sessions require an approved plan. Submit a plan for user approval first, or set intent to "investigation" for read-only work.';
+const SESSION_INTENT_ERROR =
+  'intent is required and must be "investigation" or "implementation"';
 
 interface PendingInteractivePrompt {
   id: string;
@@ -72,6 +82,22 @@ interface CreateChildSessionArgs {
   useWorktree?: boolean;
   worktreeId?: string;
   toolScope?: string;
+  intent?: SessionIntent;
+  planId?: string;
+}
+
+interface SubmitPlanArgs {
+  title: string;
+  planItems: string[];
+  workOrderCount: number;
+  risks: string;
+}
+
+interface PlanApprovalResponse {
+  approved: boolean;
+  feedback?: string;
+  respondedAt?: number;
+  respondedBy?: string;
 }
 
 interface InterruptSessionArgs {
@@ -162,6 +188,8 @@ interface SpawnSessionArgs {
    * caller's workstream.
    */
   isolated?: boolean;
+  intent?: SessionIntent;
+  planId?: string;
 }
 
 export class MetaAgentService {
@@ -320,6 +348,8 @@ export class MetaAgentService {
       setMetaAgentToolFns({
         listWorktrees: (_metaSessionId, workspaceId) =>
           this.listWorktreesJson(workspaceId),
+        submitPlan: (metaSessionId, workspaceId, args) =>
+          this.submitPlan(metaSessionId, workspaceId, args),
         createSession: (metaSessionId, workspaceId, args) =>
           this.createChildSession(metaSessionId, workspaceId, args),
         spawnSession: (callerSessionId, workspaceId, args) =>
@@ -502,11 +532,290 @@ export class MetaAgentService {
     this.ipcHandlersRegistered = true;
   }
 
+  private validateSessionIntent(intent: SessionIntent | undefined): asserts intent is SessionIntent {
+    if (intent !== 'investigation' && intent !== 'implementation') {
+      throw new Error(SESSION_INTENT_ERROR);
+    }
+  }
+
+  private async assertDispatchAuthorized(
+    workspaceId: string,
+    args: { intent?: SessionIntent; planId?: string },
+  ): Promise<void> {
+    this.validateSessionIntent(args.intent);
+    if (args.intent === 'investigation') {
+      return;
+    }
+
+    const planId = args.planId?.trim();
+    if (!planId) {
+      throw new Error(IMPLEMENTATION_PLAN_APPROVAL_ERROR);
+    }
+
+    const { rows } = await databaseWorker.query<{ data: unknown }>(
+      `SELECT data
+       FROM tracker_items
+       WHERE id = $1
+         AND workspace = $2
+         AND type = 'plan'
+         AND (archived = FALSE OR archived IS NULL)
+       LIMIT 1`,
+      [planId, workspaceId],
+    );
+    const row = rows[0];
+    if (!row) {
+      throw new Error(IMPLEMENTATION_PLAN_APPROVAL_ERROR);
+    }
+
+    try {
+      const data = typeof row.data === 'string'
+        ? JSON.parse(row.data)
+        : ((row.data as Record<string, unknown> | null) ?? {});
+      if (data.status !== 'ready-for-development') {
+        throw new Error(IMPLEMENTATION_PLAN_APPROVAL_ERROR);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === IMPLEMENTATION_PLAN_APPROVAL_ERROR) {
+        throw error;
+      }
+      throw new Error(IMPLEMENTATION_PLAN_APPROVAL_ERROR);
+    }
+  }
+
+  private async waitForPlanApprovalResponse(
+    sessionId: string,
+    requestId: string,
+  ): Promise<PlanApprovalResponse> {
+    const pollStartedAt = Date.now();
+    const maxPollTime = 10 * 60 * 1000;
+
+    while (Date.now() - pollStartedAt <= maxPollTime) {
+      const { rows } = await databaseWorker.query<{ content: unknown }>(
+        `SELECT content
+         FROM ai_agent_messages
+         WHERE session_id = $1
+           AND content LIKE '%"type":"exit_plan_mode_response"%'
+           AND content LIKE $2
+         ORDER BY id DESC
+         LIMIT 20`,
+        [sessionId, `%"requestId":"${requestId}"%`],
+      );
+      for (const row of rows) {
+        try {
+          const content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+          if (
+            content.type === 'exit_plan_mode_response'
+            && content.requestId === requestId
+            && typeof content.approved === 'boolean'
+          ) {
+            return {
+              approved: content.approved,
+              feedback: typeof content.feedback === 'string' ? content.feedback : undefined,
+              respondedAt: typeof content.respondedAt === 'number' ? content.respondedAt : undefined,
+              respondedBy: typeof content.respondedBy === 'string' ? content.respondedBy : undefined,
+            };
+          }
+        } catch {
+          // Non-JSON transcript rows cannot be durable prompt responses.
+        }
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    }
+
+    throw new Error('Timed out waiting for plan approval response');
+  }
+
+  private notifyTrackerItemsChanged(): void {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('document-service:tracker-items-changed', {
+          added: [],
+          updated: [],
+          removed: [],
+          timestamp: new Date(),
+        });
+      }
+    }
+  }
+
+  private async submitPlan(
+    metaSessionId: string,
+    workspaceId: string,
+    args: SubmitPlanArgs,
+  ): Promise<string> {
+    const title = args?.title?.trim();
+    const risks = args?.risks?.trim();
+    const planItems = Array.isArray(args?.planItems)
+      ? args.planItems.map((item) => typeof item === 'string' ? item.trim() : '').filter(Boolean)
+      : [];
+    if (!title) {
+      throw new Error('title is required');
+    }
+    if (planItems.length === 0 || planItems.length !== args.planItems.length) {
+      throw new Error('planItems must be a non-empty list of non-empty strings');
+    }
+    if (!Number.isInteger(args.workOrderCount) || args.workOrderCount < 0) {
+      throw new Error('workOrderCount must be a non-negative integer');
+    }
+    if (!risks) {
+      throw new Error('risks is required');
+    }
+
+    const metaSession = await AISessionsRepository.get(metaSessionId);
+    if (!metaSession || metaSession.workspacePath !== workspaceId) {
+      throw new Error(`Head session ${metaSessionId} not found in this workspace`);
+    }
+
+    const sourceRef = `meta-agent-submitted-plan:${metaSessionId}`;
+    const { rows: existingRows } = await databaseWorker.query<{ id: string; data: unknown }>(
+      `SELECT id, data
+       FROM tracker_items
+       WHERE workspace = $1
+         AND type = 'plan'
+         AND source_ref = $2
+         AND (archived = FALSE OR archived IS NULL)
+       LIMIT 1`,
+      [workspaceId, sourceRef],
+    );
+    const existing = existingRows[0];
+    const planId = existing?.id ?? randomUUID();
+    const requestId = randomUUID();
+    let priorData: Record<string, unknown> = {};
+    if (existing?.data) {
+      try {
+        priorData = typeof existing.data === 'string'
+          ? JSON.parse(existing.data)
+          : ((existing.data as Record<string, unknown> | null) ?? {});
+      } catch {
+        priorData = {};
+      }
+    }
+    const submittedAt = new Date().toISOString();
+    const planData: Record<string, unknown> = {
+      ...priorData,
+      title,
+      status: 'in-review',
+      planItems,
+      workOrderCount: args.workOrderCount,
+      risks,
+      submittedBySessionId: metaSessionId,
+      approvalPromptId: requestId,
+      submittedAt,
+      tags: ['meta-agent', 'user-approval'],
+    };
+    delete planData.approvedAt;
+    delete planData.lastReviewFeedback;
+
+    if (existing) {
+      await databaseWorker.query(
+        `UPDATE tracker_items
+         SET data = $1, content = $2, updated = NOW(), last_indexed = NOW()
+         WHERE id = $3`,
+        [JSON.stringify(planData), JSON.stringify({ planItems, workOrderCount: args.workOrderCount, risks }), planId],
+      );
+    } else {
+      await databaseWorker.query(
+        `INSERT INTO tracker_items (
+          id, type, type_tags, data, workspace, document_path, line_number,
+          created, updated, last_indexed, sync_status,
+          content, archived, source, source_ref
+        ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'pending', $5, FALSE, 'meta-agent', $6)`,
+        [
+          planId,
+          ['plan'],
+          JSON.stringify(planData),
+          workspaceId,
+          JSON.stringify({ planItems, workOrderCount: args.workOrderCount, risks }),
+          sourceRef,
+        ],
+      );
+    }
+    this.notifyTrackerItemsChanged();
+
+    await persistInteractivePromptToolUse({
+      sessionId: metaSessionId,
+      toolUseId: requestId,
+      toolName: 'ExitPlanMode',
+      input: {
+        planFilePath: '',
+        allowedPrompts: [],
+        planId,
+        title,
+        planItems,
+        workOrderCount: args.workOrderCount,
+        risks,
+      },
+    });
+
+    const { rows: promptRows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND content LIKE '%"type":"nimbalyst_tool_use"%'
+         AND content LIKE $2
+       ORDER BY id DESC
+       LIMIT 20`,
+      [metaSessionId, `%"id":"${requestId}"%`],
+    );
+    const promptWasPersisted = promptRows.some((row) => {
+      try {
+        const content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+        return content.type === 'nimbalyst_tool_use'
+          && content.name === 'ExitPlanMode'
+          && content.id === requestId;
+      } catch {
+        return false;
+      }
+    });
+    if (!promptWasPersisted) {
+      throw new Error('Failed to persist plan approval prompt');
+    }
+
+    const response = await this.waitForPlanApprovalResponse(metaSessionId, requestId);
+    const finalStatus = response.approved ? 'ready-for-development' : 'in-review';
+    const finalData: Record<string, unknown> = {
+      ...planData,
+      status: finalStatus,
+    };
+    if (response.approved) {
+      finalData.approvedAt = new Date(response.respondedAt ?? Date.now()).toISOString();
+      delete finalData.lastReviewFeedback;
+    } else if (response.feedback) {
+      finalData.lastReviewFeedback = response.feedback;
+    }
+    await databaseWorker.query(
+      `UPDATE tracker_items SET data = $1, updated = NOW(), last_indexed = NOW() WHERE id = $2`,
+      [JSON.stringify(finalData), planId],
+    );
+    this.notifyTrackerItemsChanged();
+
+    await persistInteractivePromptToolResult({
+      sessionId: metaSessionId,
+      toolUseId: requestId,
+      result: response.approved
+        ? { approved: true, planId, status: 'approved' }
+        : {
+            approved: false,
+            planId,
+            status: 'continue planning',
+            feedback: response.feedback,
+          },
+    });
+
+    return JSON.stringify({
+      planId,
+      approved: response.approved,
+      status: finalStatus,
+      ...(response.feedback ? { feedback: response.feedback } : {}),
+    }, null, 2);
+  }
+
   private async createChildSession(
     metaSessionId: string,
     workspaceId: string,
     args: CreateChildSessionArgs
   ): Promise<string> {
+    await this.assertDispatchAuthorized(workspaceId, args);
     const result = await this.createChildSessionInternal(metaSessionId, workspaceId, args);
     return JSON.stringify(result, null, 2);
   }
@@ -725,7 +1034,14 @@ export class MetaAgentService {
 
     const initialPrompt = args.prompt?.trim();
     try {
-      await this.createWorkOrderTrackerItem(workspaceId, sessionId, title, initialPrompt);
+      await this.createWorkOrderTrackerItem(
+        workspaceId,
+        sessionId,
+        title,
+        initialPrompt,
+        args.intent ?? 'implementation',
+        args.planId,
+      );
     } catch (error) {
       // Dispatch is the primary operation. A missing card can be repaired later,
       // so tracker persistence/link failures must not strand the child session.
@@ -792,6 +1108,7 @@ export class MetaAgentService {
     if (!args?.prompt?.trim()) {
       throw new Error('prompt is required');
     }
+    await this.assertDispatchAuthorized(workspaceId, args);
 
     const parent = await AISessionsRepository.get(parentSessionId);
     if (!parent || parent.workspacePath !== workspaceId) {
@@ -834,6 +1151,8 @@ export class MetaAgentService {
       useWorktree: !!args.useWorktree,
       worktreeId: inheritedWorktreeId,
       model: effectiveModel,
+      intent: args.intent,
+      planId: args.planId,
       parentSessionIdOverride: workstreamId,
     });
 
@@ -1587,6 +1906,8 @@ export class MetaAgentService {
     sessionId: string,
     sessionTitle: string,
     prompt?: string,
+    intent: SessionIntent = 'implementation',
+    planId?: string,
   ): Promise<void> {
     const trackerId = randomUUID();
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
@@ -1599,6 +1920,8 @@ export class MetaAgentService {
       childSessionId: sessionId,
       taskSummary,
       dispatchedAt,
+      intent,
+      ...(planId ? { planId } : {}),
     };
 
     await databaseWorker.query(
