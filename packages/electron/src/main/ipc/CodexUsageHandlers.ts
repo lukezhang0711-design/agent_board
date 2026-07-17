@@ -37,5 +37,13 @@ export function registerCodexUsageHandlers(): void {
     }
   });
 
+  safeHandle('codex-usage:turn-completed', async (): Promise<void> => {
+    try {
+      await codexUsageService.recordTurnCompleted();
+    } catch (error) {
+      logger.main.error('[CodexUsageHandlers] Error refreshing after turn completion:', error);
+    }
+  });
+
   logger.main.info('[CodexUsageHandlers] Codex usage IPC handlers registered');
 }

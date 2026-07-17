@@ -1,8 +1,8 @@
 /**
  * ClaudeUsageIndicator - Circular progress indicator for Claude Code usage
  *
- * Displays the 5-hour session utilization as a circular progress ring
- * in the navigation gutter. Clicking opens a popover with full details.
+ * Displays the highest current pool utilization as a circular progress ring
+ * in the navigation gutter. Clicking opens a popover with every pool.
  */
 
 import React, { useState, useRef, useCallback } from 'react';
@@ -11,11 +11,13 @@ import {
   claudeUsageAtom,
   claudeUsageAvailableAtom,
   claudeUsageSessionColorAtom,
+  claudeUsageSummaryPoolAtom,
   formatResetTime,
 } from '../../store/atoms/claudeUsageAtoms';
 import { useSetting } from '../../hooks/useSetting';
 import { ClaudeUsagePopover } from './ClaudeUsagePopover';
 import { refreshClaudeUsage } from '../../store/listeners/claudeUsageListeners';
+import { formatUsageLastUpdated } from '../UsageIndicator/UsagePoolList';
 
 const RING_RADIUS = 12;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -29,6 +31,7 @@ export const ClaudeUsageIndicator: React.FC<ClaudeUsageIndicatorProps> = ({ clas
   const isAvailable = useAtomValue(claudeUsageAvailableAtom);
   const isEnabled = useSetting('ai.showUsageIndicator');
   const sessionColor = useAtomValue(claudeUsageSessionColorAtom);
+  const summaryPool = useAtomValue(claudeUsageSummaryPoolAtom);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -45,9 +48,9 @@ export const ClaudeUsageIndicator: React.FC<ClaudeUsageIndicatorProps> = ({ clas
     return null;
   }
 
-  const hasLoadError = Boolean(usage?.error);
-  const utilization = hasLoadError ? 0 : usage?.fiveHour?.utilization ?? 0;
-  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - utilization / 100);
+  const utilization = summaryPool?.utilization ?? null;
+  const clampedUtilization = utilization === null ? 0 : Math.max(0, Math.min(100, utilization));
+  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - clampedUtilization / 100);
 
   // Color mapping
   const colorClasses: Record<string, string> = {
@@ -57,17 +60,19 @@ export const ClaudeUsageIndicator: React.FC<ClaudeUsageIndicatorProps> = ({ clas
     muted: 'stroke-nim-muted',
   };
 
-  const effectiveSessionColor = hasLoadError ? 'muted' : sessionColor;
+  const effectiveSessionColor = summaryPool && !summaryPool.stale ? sessionColor : 'muted';
   const strokeColor = colorClasses[effectiveSessionColor] || colorClasses.muted;
 
-  const tooltipContent = usage?.error
-    ? `Claude usage unavailable: ${usage.error}`
-    : usage
-      ? `Session: ${Math.round(utilization)}% (resets ${formatResetTime(usage.fiveHour.resetsAt)})`
+  const tooltipContent = summaryPool
+    ? summaryPool.stale
+      ? `Claude ${summaryPool.name}: ${summaryPool.utilization}% · Last updated ${formatUsageLastUpdated(summaryPool.updatedAt)}`
+      : `Claude ${summaryPool.name}: ${summaryPool.utilization}% (resets ${formatResetTime(summaryPool.resetsAt)})`
+    : usage?.error
+      ? `Claude usage unavailable: ${usage.error}`
       : 'Claude usage unavailable';
 
   return (
-    <div className={`relative ${className || ''}`}>
+    <div className={`claude-usage-indicator relative ${className || ''}`}>
       <button
         ref={buttonRef}
         onClick={handleClick}
@@ -107,7 +112,7 @@ export const ClaudeUsageIndicator: React.FC<ClaudeUsageIndicatorProps> = ({ clas
         </svg>
         {/* Percentage text */}
         <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-nim">
-          {hasLoadError ? '--' : `${Math.round(utilization)}%`}
+          {utilization === null ? '--' : `${utilization}%`}
         </span>
       </button>
 

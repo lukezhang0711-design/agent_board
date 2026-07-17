@@ -1,8 +1,8 @@
 /**
  * CodexUsageIndicator - Circular progress indicator for Codex usage
  *
- * Displays the 5-hour session utilization as a circular progress ring
- * in the navigation gutter. Clicking opens a popover with full details.
+ * Displays the highest current pool utilization as a circular progress ring
+ * in the navigation gutter. Clicking opens a popover with every pool.
  * Error states render as a blank ("--") indicator with hover details.
  */
 
@@ -12,11 +12,13 @@ import {
   codexUsageAtom,
   codexUsageAvailableAtom,
   codexUsageSessionColorAtom,
+  codexUsageSummaryPoolAtom,
   formatResetTime,
 } from '../../store/atoms/codexUsageAtoms';
 import { useSetting } from '../../hooks/useSetting';
 import { CodexUsagePopover } from './CodexUsagePopover';
 import { refreshCodexUsage } from '../../store/listeners/codexUsageListeners';
+import { formatUsageLastUpdated } from '../UsageIndicator/UsagePoolList';
 
 const RING_RADIUS = 12;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -30,6 +32,7 @@ export const CodexUsageIndicator: React.FC<CodexUsageIndicatorProps> = ({ classN
   const isAvailable = useAtomValue(codexUsageAvailableAtom);
   const isEnabled = useSetting('ai.showCodexUsageIndicator');
   const sessionColor = useAtomValue(codexUsageSessionColorAtom);
+  const summaryPool = useAtomValue(codexUsageSummaryPoolAtom);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -46,10 +49,10 @@ export const CodexUsageIndicator: React.FC<CodexUsageIndicatorProps> = ({ classN
     return null;
   }
 
-  const hasLoadError = Boolean(usage?.error);
-  const utilization = hasLoadError ? 0 : usage?.fiveHour?.utilization ?? 0;
-  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - utilization / 100);
-  const limitsAvailable = !hasLoadError && (usage?.limitsAvailable ?? true);
+  const utilization = summaryPool?.utilization ?? null;
+  const clampedUtilization = utilization === null ? 0 : Math.max(0, Math.min(100, utilization));
+  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - clampedUtilization / 100);
+  const limitsAvailable = summaryPool !== null;
 
   const colorClasses: Record<string, string> = {
     green: 'stroke-green-500',
@@ -58,19 +61,19 @@ export const CodexUsageIndicator: React.FC<CodexUsageIndicatorProps> = ({ classN
     muted: 'stroke-nim-muted',
   };
 
-  const effectiveSessionColor = limitsAvailable ? sessionColor : 'muted';
+  const effectiveSessionColor = summaryPool && !summaryPool.stale ? sessionColor : 'muted';
   const strokeColor = colorClasses[effectiveSessionColor] || colorClasses.muted;
 
-  const tooltipContent = usage?.error
-    ? `Codex usage unavailable: ${usage.error}`
-    : usage
-      ? limitsAvailable
-        ? `Codex: ${Math.round(utilization)}% (resets ${formatResetTime(usage.fiveHour.resetsAt)})`
-        : 'Codex usage (limits unavailable)'
+  const tooltipContent = summaryPool
+    ? summaryPool.stale
+      ? `Codex ${summaryPool.name}: ${summaryPool.utilization}% · Last updated ${formatUsageLastUpdated(summaryPool.updatedAt)}`
+      : `Codex ${summaryPool.name}: ${summaryPool.utilization}% (resets ${formatResetTime(summaryPool.resetsAt)})`
+    : usage?.error
+      ? `Codex usage unavailable: ${usage.error}`
       : 'Codex usage unavailable';
 
   return (
-    <div className={`relative ${className || ''}`}>
+    <div className={`codex-usage-indicator relative ${className || ''}`}>
       <button
         ref={buttonRef}
         onClick={handleClick}
@@ -110,7 +113,7 @@ export const CodexUsageIndicator: React.FC<CodexUsageIndicatorProps> = ({ classN
         </svg>
         {/* Percentage text */}
         <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-nim">
-          {limitsAvailable ? `${Math.round(utilization)}%` : '--'}
+          {limitsAvailable ? `${utilization}%` : '--'}
         </span>
       </button>
 
