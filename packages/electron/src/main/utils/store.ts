@@ -70,6 +70,8 @@ interface AppStoreSchema {
   releaseChannel?: ReleaseChannel;
   // Default AI model for new sessions (format: "provider:model" e.g., "claude-code:sonnet")
   defaultAIModel?: string;
+  // Global Head Agent child-session concurrency limit. Task-level dispatches may raise it.
+  metaAgentMaxParallel: number;
   // Default GitHub CLI account login for PR review. A per-project
   // override lives on WorkspaceState.prReviewGhAccountOverride.
   prReviewDefaultGhAccount?: string;
@@ -520,6 +522,7 @@ function getAppStore(): Store<AppStoreSchema> {
           },
           openWorkspaces: [],
           analyticsEnabled: true, // Default to enabled
+          metaAgentMaxParallel: 4,
         },
       });
       console.log('[Store] App store initialized at:', _appStore.path);

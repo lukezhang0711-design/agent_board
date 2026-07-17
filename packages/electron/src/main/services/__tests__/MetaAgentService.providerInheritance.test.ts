@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const appStoreMock = vi.hoisted(() => {
+  const state: { metaAgentMaxParallel: unknown } = { metaAgentMaxParallel: 4 };
+  return {
+    state,
+    get: vi.fn((key: string, defaultValue?: unknown) =>
+      key === 'metaAgentMaxParallel' ? state.metaAgentMaxParallel : defaultValue),
+  };
+});
+
 // Mirrors the mock surface of MetaAgentService.workstreamSync.test.ts, with two
 // additions needed to exercise the child-spawn path:
 //   1. AISessionsRepository.get  - the parent-session lookup the fix relies on.
@@ -72,15 +81,18 @@ vi.mock('electron', () => ({
 
 vi.mock('../SyncManager', () => ({ getSyncProvider: () => ({ pushChange: vi.fn() }) }));
 vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
-vi.mock('../../utils/store', () => ({ getDefaultAIModel: () => null }));
+vi.mock('../../utils/store', () => ({
+  getDefaultAIModel: () => null,
+  store: { get: appStoreMock.get },
+}));
 vi.mock('../../utils/timestampUtils', () => ({ toMillis: (v: unknown) => v }));
 vi.mock('../WorktreeStore', () => ({ createWorktreeStore: vi.fn() }));
 vi.mock('../GitWorktreeService', () => ({ GitWorktreeService: class {} }));
-// createChildSessionInternal runs an IN_FLIGHT_SPAWN_CAP COUNT(*) query and
-// destructures { rows } from the result, so the worker mock must return a shape
-// with rows (count '0' => under the cap, spawn proceeds).
+// createChildSessionInternal runs a spawn-gate query that selects { in_flight,
+// total }, so the worker mock must return a shape with rows (both '0' => under
+// both the parallel limit and the lifetime backstop, spawn proceeds).
 vi.mock('../../database/PGLiteDatabaseWorker', () => ({
-  database: { query: vi.fn().mockResolvedValue({ rows: [{ count: '0' }] }) },
+  database: { query: vi.fn().mockResolvedValue({ rows: [{ in_flight: '0', total: '0' }] }) },
 }));
 vi.mock('../../database/initialize', () => ({ getDatabase: () => null }));
 vi.mock('../../file/GitRefWatcher', () => ({ gitRefWatcher: {} }));
@@ -303,27 +315,109 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
   });
 });
 
-describe('MetaAgentService total spawn cap', () => {
+describe('MetaAgentService dispatch limits', () => {
   beforeEach(() => {
     vi.mocked(AISessionsRepository.create).mockReset();
     vi.mocked(AISessionsRepository.get).mockReset();
+    appStoreMock.state.metaAgentMaxParallel = 4;
+    appStoreMock.get.mockClear();
     // Reset the shared worker-query mock back to the under-cap default so other
     // tests in this file are unaffected by the over-cap override below.
-    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ count: '0' }] } as any);
+    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '0', total: '0' }] } as any);
   });
 
-  it('throws past the total spawn cap (children counted regardless of status)', async () => {
+  it('reads the global setting for every dispatch so the fifth child is rejected at 4 and allowed at 5', async () => {
     const service = MetaAgentService.getInstance();
     (service as any).aiService = { queuePromptForSession: vi.fn() };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
-    // 15 total children already spawned by this parent (>= TOTAL_SPAWN_CAP). The
-    // count includes settled children now, so sequential re-spawning from
-    // completion-wakeups is bounded where the old in-flight-only count was not.
-    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ count: '15' }] } as any);
+    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '4', total: '4' }] } as any);
 
     await expect(
       (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {})
-    ).rejects.toThrow(/spawn cap reached/);
+    ).rejects.toThrow(
+      'Head Agent concurrency limit reached (4 running, limit 4); adjust the limit in Settings.',
+    );
+
+    expect(AISessionsRepository.create).not.toHaveBeenCalled();
+
+    appStoreMock.state.metaAgentMaxParallel = 5;
+    await (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {});
+
+    expect(AISessionsRepository.create).toHaveBeenCalledTimes(1);
+    expect(appStoreMock.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back to the default limit of 4 when the stored setting is missing or invalid', async () => {
+    const service = MetaAgentService.getInstance();
+    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
+    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '4', total: '4' }] } as any);
+
+    for (const invalidValue of [undefined, null, 0, -1, 1.5, Number.NaN, '6']) {
+      appStoreMock.state.metaAgentMaxParallel = invalidValue;
+      await expect(
+        (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {})
+      ).rejects.toThrow(/limit 4/);
+    }
+
+    expect(AISessionsRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('counts only running children, so 3 running plus 2 waiting still allows one dispatch at limit 4', async () => {
+    const service = MetaAgentService.getInstance();
+    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
+    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '3', total: '5' }] } as any);
+
+    await (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {});
+
+    const gateQuery = vi.mocked(databaseWorker.query).mock.calls
+      .map(([sql]) => String(sql))
+      .find((sql) => sql.includes('FROM ai_sessions') && sql.includes('created_by_session_id'));
+    expect(gateQuery).toContain("status = 'running'");
+    expect(gateQuery).not.toContain('waiting_for_input');
+    expect(AISessionsRepository.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the larger per-dispatch override without lowering the global setting', async () => {
+    const service = MetaAgentService.getInstance();
+    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
+    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '4', total: '4' }] } as any);
+
+    await expect(
+      (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {})
+    ).rejects.toThrow(/limit 4/);
+    expect(AISessionsRepository.create).not.toHaveBeenCalled();
+
+    await (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {
+      maxParallelOverride: 6,
+    });
+
+    expect(AISessionsRepository.create).toHaveBeenCalledTimes(1);
+
+    appStoreMock.state.metaAgentMaxParallel = 5;
+    vi.mocked(AISessionsRepository.create).mockClear();
+    await (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {
+      maxParallelOverride: 2,
+    });
+    expect(AISessionsRepository.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the independent lifetime backstop at 50', async () => {
+    const service = MetaAgentService.getInstance();
+    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
+    appStoreMock.state.metaAgentMaxParallel = 50;
+    vi.mocked(databaseWorker.query).mockResolvedValue({
+      rows: [{ in_flight: '0', total: '50' }],
+    } as any);
+
+    await expect(
+      (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {})
+    ).rejects.toThrow(
+      'Meta-agent lifetime spawn backstop reached (50 total children spawned by this parent); refusing to spawn more',
+    );
 
     expect(AISessionsRepository.create).not.toHaveBeenCalled();
   });

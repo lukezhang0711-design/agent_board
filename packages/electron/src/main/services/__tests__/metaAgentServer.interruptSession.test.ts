@@ -15,17 +15,19 @@ import {
 describe('interrupt_session meta-agent tool registration', () => {
   const interruptSession = vi.fn();
   const submitPlan = vi.fn();
+  const createSession = vi.fn();
   const spawnSession = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     interruptSession.mockResolvedValue('{"success":true}');
     submitPlan.mockResolvedValue('{"approved":true}');
+    createSession.mockResolvedValue('{"sessionId":"child-session"}');
     spawnSession.mockResolvedValue('{"sessionId":"spawned-session"}');
     setMetaAgentToolFns({
       listWorktrees: vi.fn(),
       submitPlan,
-      createSession: vi.fn(),
+      createSession,
       spawnSession,
       getSessionStatus: vi.fn(),
       getSessionResult: vi.fn(),
@@ -60,6 +62,7 @@ describe('interrupt_session meta-agent tool registration', () => {
           enum: ['investigation', 'implementation'],
         },
         planId: { type: 'string' },
+        maxParallelOverride: { type: 'integer', minimum: 1 },
       },
       required: ['intent'],
     });
@@ -81,10 +84,24 @@ describe('interrupt_session meta-agent tool registration', () => {
     )).resolves.toBe('{"approved":true}');
     expect(submitPlan).toHaveBeenCalledWith('head-session', '/workspace', planArgs);
 
+    const createArgs = {
+      prompt: 'Investigate one bounded question',
+      intent: 'investigation',
+      maxParallelOverride: 6,
+    };
+    await expect(dispatchMetaAgentTool(
+      'mcp__nimbalyst-meta-agent__create_session',
+      'head-session',
+      '/workspace',
+      createArgs,
+    )).resolves.toBe('{"sessionId":"child-session"}');
+    expect(createSession).toHaveBeenCalledWith('head-session', '/workspace', createArgs);
+
     const spawnArgs = {
       prompt: 'Implement the approved plan',
       intent: 'implementation',
       planId: 'plan-1',
+      maxParallelOverride: 6,
     };
     await expect(dispatchMetaAgentTool(
       'mcp__nimbalyst-meta-agent__spawn_session',

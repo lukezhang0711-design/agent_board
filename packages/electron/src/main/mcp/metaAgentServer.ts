@@ -25,6 +25,7 @@ type CreateSessionArgs = {
   toolScope?: string;
   intent: SessionIntent;
   planId?: string;
+  maxParallelOverride?: number;
 };
 
 type SpawnSessionArgs = {
@@ -35,6 +36,7 @@ type SpawnSessionArgs = {
   notifyOnComplete?: boolean;
   intent: SessionIntent;
   planId?: string;
+  maxParallelOverride?: number;
   /**
    * When true, the new session is created at the top level — no parent,
    * no workstream container, no shared files-edited or tabs with the
@@ -256,6 +258,12 @@ const META_AGENT_TOOL_DEFS: Array<{
           type: "string",
           description: "Required when intent is implementation. ID of the approved plan card.",
         },
+        maxParallelOverride: {
+          type: "integer",
+          minimum: 1,
+          description:
+            "Optional positive integer for this dispatch only. The effective Head Agent concurrency limit is the larger of this value and the global setting.",
+        },
       },
       required: ["intent"],
     },
@@ -310,6 +318,12 @@ const META_AGENT_TOOL_DEFS: Array<{
         planId: {
           type: "string",
           description: "Required when intent is implementation. ID of the approved plan card.",
+        },
+        maxParallelOverride: {
+          type: "integer",
+          minimum: 1,
+          description:
+            "Optional positive integer for this dispatch only. The effective Head Agent concurrency limit is the larger of this value and the global setting.",
         },
       },
       required: ["prompt", "intent"],

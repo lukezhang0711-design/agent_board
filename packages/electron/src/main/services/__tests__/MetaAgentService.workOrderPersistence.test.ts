@@ -37,6 +37,7 @@ vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
   getWorkspaceState: () => ({ issueKeyPrefix: 'NIM' }),
+  store: { get: () => 4 },
 }));
 vi.mock('../../utils/timestampUtils', () => ({ toMillis: (value: unknown) => value }));
 vi.mock('../WorktreeStore', () => ({ createWorktreeStore: vi.fn() }));

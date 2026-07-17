@@ -7,7 +7,7 @@ import type { AIProviderType } from '@nimbalyst/runtime/ai/server/types';
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
 import { AISessionsRepository, AgentMessagesRepository, SessionFilesRepository } from '@nimbalyst/runtime';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
-import { getDefaultAIModel } from '../utils/store';
+import { getDefaultAIModel, store } from '../utils/store';
 import { toMillis } from '../utils/timestampUtils';
 import { createWorktreeStore } from './WorktreeStore';
 import { GitWorktreeService } from './GitWorktreeService';
@@ -39,6 +39,27 @@ const IMPLEMENTATION_PLAN_APPROVAL_ERROR =
   'implementation sessions require an approved plan. Submit a plan for user approval first, or set intent to "investigation" for read-only work.';
 const SESSION_INTENT_ERROR =
   'intent is required and must be "investigation" or "implementation"';
+const DEFAULT_META_AGENT_MAX_PARALLEL = 4;
+const LIFETIME_BACKSTOP = 50;
+
+function isValidMaxParallel(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+function getEffectiveMaxParallel(override: number | undefined): number {
+  const storedValue = store.get('metaAgentMaxParallel') as unknown;
+  const configuredMax = isValidMaxParallel(storedValue)
+    ? storedValue
+    : DEFAULT_META_AGENT_MAX_PARALLEL;
+
+  if (override === undefined) {
+    return configuredMax;
+  }
+  if (!isValidMaxParallel(override)) {
+    throw new Error('maxParallelOverride must be a positive safe integer');
+  }
+  return Math.max(configuredMax, override);
+}
 
 interface PendingInteractivePrompt {
   id: string;
@@ -84,6 +105,7 @@ interface CreateChildSessionArgs {
   toolScope?: string;
   intent?: SessionIntent;
   planId?: string;
+  maxParallelOverride?: number;
 }
 
 interface SubmitPlanArgs {
@@ -190,6 +212,7 @@ interface SpawnSessionArgs {
   isolated?: boolean;
   intent?: SessionIntent;
   planId?: string;
+  maxParallelOverride?: number;
 }
 
 export class MetaAgentService {
@@ -966,27 +989,31 @@ export class MetaAgentService {
       worktreePath = worktree.path;
     }
 
-    // Backstop: cap the TOTAL number of children a single parent can ever spawn.
-    // Without this, a feedback loop can create unbounded children. The prior
-    // in-flight-only count (status running / waiting_for_input) did NOT bound
-    // SEQUENTIAL re-spawning: a completion-wakeup re-drives the parent, a weak
-    // model spawns another child, the child settles in milliseconds, so the
-    // in-flight count stays ~0 and the cap never fires. Counting ALL children
-    // ever created by this parent (regardless of status, non-archived) bounds
-    // that runaway. A normal 3-child spawn is unaffected. Mirrors the
-    // created_by_session_id query in getSpawnedSessions.
-    const TOTAL_SPAWN_CAP = 6;
-    const { rows: totalRows } = await databaseWorker.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM ai_sessions
+    // The user-controlled parallel limit and the lifetime runaway backstop are
+    // independent. Waiting children do not consume a parallel slot; lowering
+    // the setting affects only later dispatches and never interrupts children
+    // that are already running.
+    const maxParallel = getEffectiveMaxParallel(args.maxParallelOverride);
+    const { rows: gateRows } = await databaseWorker.query<{ in_flight: string; total: string }>(
+      `SELECT
+         SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END)::text AS in_flight,
+         COUNT(*)::text AS total
+       FROM ai_sessions
        WHERE workspace_id = $1
          AND created_by_session_id = $2
          AND (is_archived = FALSE OR is_archived IS NULL)`,
       [workspaceId, metaSessionId]
     );
-    const totalCount = Number(totalRows[0]?.count ?? '0');
-    if (totalCount >= TOTAL_SPAWN_CAP) {
+    const inFlightCount = Number(gateRows[0]?.in_flight ?? '0');
+    const totalCount = Number(gateRows[0]?.total ?? '0');
+    if (inFlightCount >= maxParallel) {
       throw new Error(
-        `Meta-agent spawn cap reached (${TOTAL_SPAWN_CAP} total children spawned by this parent); refusing to spawn more`
+        `Head Agent concurrency limit reached (${inFlightCount} running, limit ${maxParallel}); adjust the limit in Settings.`
+      );
+    }
+    if (totalCount >= LIFETIME_BACKSTOP) {
+      throw new Error(
+        `Meta-agent lifetime spawn backstop reached (${LIFETIME_BACKSTOP} total children spawned by this parent); refusing to spawn more`
       );
     }
 
@@ -1153,6 +1180,7 @@ export class MetaAgentService {
       model: effectiveModel,
       intent: args.intent,
       planId: args.planId,
+      maxParallelOverride: args.maxParallelOverride,
       parentSessionIdOverride: workstreamId,
     });
 
