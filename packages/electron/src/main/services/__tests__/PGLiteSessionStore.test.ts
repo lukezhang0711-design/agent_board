@@ -205,6 +205,29 @@ describe('PGLiteSessionStore JSON-column read normalization', () => {
     expect(list[0]?.phase).toBe('validating');
     expect(list[0]?.hasUnread).toBe(true);
   });
+
+  // FB-019: the session board reads this to show a queued dispatch as "Queued"
+  // instead of as an idle session that never started. Metadata arrives as a raw
+  // JSON string on the SQLite backend, so it has to survive normalization.
+  it('list() surfaces dispatchQueued from JSON-string metadata', async () => {
+    const db = {
+      query: vi.fn(async () => ({
+        rows: [
+          { ...makeRow({ id: 'queued', metadata: '{"dispatchQueued":true}' }), child_count: 0, effective_updated_at: new Date(0) },
+          { ...makeRow({ id: 'started', metadata: '{"dispatchQueued":false}' }), child_count: 0, effective_updated_at: new Date(0) },
+          { ...makeRow({ id: 'plain', metadata: '{}' }), child_count: 0, effective_updated_at: new Date(0) },
+        ],
+      })),
+    };
+    const store = createPGLiteSessionStore(db as any);
+    const list = await store.list('/ws');
+    const findById = (id: string) => list.find((s) => s.id === id)!;
+    expect(findById('queued').dispatchQueued).toBe(true);
+    // Cleared and never-set both read as "not queued" — the board only ever
+    // special-cases the true case.
+    expect(findById('started').dispatchQueued).toBeUndefined();
+    expect(findById('plain').dispatchQueued).toBeUndefined();
+  });
 });
 
 describe('PGLiteSessionStore.updateMetadata defense-in-depth', () => {

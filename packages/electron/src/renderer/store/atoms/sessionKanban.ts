@@ -201,6 +201,18 @@ export const sessionKanbanTagsAtom = atom((get) => {
     .sort((a, b) => b.count - a.count);
 });
 
+/**
+ * True while a dispatch is queued waiting for a Head Agent slot.
+ *
+ * Derived straight from the registry rather than driven by its own listener:
+ * the flag is persisted in session metadata and the enqueue path already fires
+ * `sessions:refresh-list`, so the registry is the authoritative source and stays
+ * correct across renderer reloads. Same approach as `phase`.
+ */
+export const sessionDispatchQueuedAtom = atomFamily((sessionId: string) =>
+  atom((get): boolean => get(sessionRegistryAtom).get(sessionId)?.dispatchQueued === true)
+);
+
 // ============================================================
 // Child Run State Atoms
 // ============================================================

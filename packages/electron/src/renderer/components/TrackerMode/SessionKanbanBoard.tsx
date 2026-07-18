@@ -40,6 +40,7 @@ import {
   sessionKanbanTagsAtom,
   setSessionPhaseAtom,
   childRunStatesAtom,
+  sessionDispatchQueuedAtom,
   getCardType,
   SESSION_PHASE_COLUMNS,
   type SessionPhase,
@@ -155,12 +156,15 @@ function CardTypeIcon({ type, provider }: { type: KanbanCardType; provider?: str
 // ============================================================
 
 /** The visual state of a card, used for both background tint and status badge */
-type CardVisualState = 'running' | 'waiting' | 'unread' | 'idle';
+type CardVisualState = 'running' | 'waiting' | 'queued' | 'unread' | 'idle';
 
 /** Background + border tints for each visual state */
 const CARD_STATE_STYLES: Record<CardVisualState, { bg: string; border: string }> = {
   running:  { bg: 'rgba(96, 165, 250, 0.06)',  border: 'rgba(96, 165, 250, 0.25)' },
   waiting:  { bg: 'rgba(249, 115, 22, 0.06)',  border: 'rgba(249, 115, 22, 0.25)' },
+  // Deliberately neutral: a queued dispatch is waiting for a slot, not working.
+  // Tinting it like `running` would overstate what the board is showing.
+  queued:   { bg: 'rgba(148, 163, 184, 0.06)', border: 'rgba(148, 163, 184, 0.22)' },
   unread:   { bg: 'rgba(96, 165, 250, 0.04)',  border: 'rgba(96, 165, 250, 0.18)' },
   idle:     { bg: 'transparent',                border: '' },
 };
@@ -179,10 +183,24 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   const hasUnread = useAtomValue(sessionUnreadAtom(sessionId));
   const childStates = useAtomValue(childRunStatesAtom(sessionId));
   const hasChildUnread = useAtomValue(workstreamUnreadAtom(sessionId));
+  const isDispatchQueued = useAtomValue(sessionDispatchQueuedAtom(sessionId));
 
   const isParent = cardType !== 'session';
   const hasChildRunning = isParent && childStates.running > 0;
   const hasChildWaiting = isParent && childStates.waiting > 0;
+
+  // Checked before everything else: a queued placeholder has no messages and is
+  // not processing, so every other branch would fall through to `idle` and the
+  // card would look like a session that simply never started.
+  if (isDispatchQueued && !isProcessing) {
+    return {
+      state: 'queued',
+      badgeLabel: 'queued',
+      badgeIcon: 'schedule',
+      badgeColor: '#94a3b8',
+      spinIcon: false,
+    };
+  }
 
   if (isProcessing || hasChildRunning) {
     return {
@@ -237,6 +255,18 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
     return (
       <span className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-orange-500/10" style={{ color: info.badgeColor }}>
         <MaterialSymbol icon="help_outline" size={12} />
+        {info.badgeLabel}
+      </span>
+    );
+  }
+  if (info.state === 'queued') {
+    return (
+      <span
+        className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-slate-400/10"
+        style={{ color: info.badgeColor }}
+        title="Waiting for a Head Agent slot"
+      >
+        <MaterialSymbol icon="schedule" size={12} />
         {info.badgeLabel}
       </span>
     );

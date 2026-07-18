@@ -39,6 +39,13 @@ export interface SessionMeta {
   // Kanban board phase and tags (from metadata JSONB)
   phase?: string;
   tags?: string[];
+  /**
+   * True while a queued dispatch is waiting for a Head Agent slot. Persisted in
+   * `ai_sessions.metadata.dispatchQueued`; set when the dispatch is enqueued and
+   * cleared when it actually starts. Session surfaces use it to show a "Queued"
+   * state instead of presenting the placeholder as an idle session.
+   */
+  dispatchQueued?: boolean;
   // Linked tracker item IDs (from metadata JSONB)
   linkedTrackerItemIds?: string[];
   // Branch tracking - SEPARATE from hierarchical parentSessionId

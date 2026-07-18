@@ -1295,6 +1295,164 @@ describe('TranscriptTransformer', () => {
     });
   });
 
+  describe('Codex durable-prompt tool results', () => {
+    const CODEX_PROVIDER = 'openai-codex';
+
+    /**
+     * FB-018: Nimbalyst's durable prompts are persisted as synthetic
+     * `nimbalyst_tool_*` rows whatever the provider. The Codex parser understood
+     * the tool_use row but dropped the result row, so a plan-approval card
+     * rendered "Awaiting review" and never flipped -- the tool call stayed
+     * `running` forever, on the live path and on reopen alike.
+     */
+    it('completes an ExitPlanMode tool call when the approval result lands', async () => {
+      const rawStore = createMockRawStore([
+        makeRawMessage({
+          id: 1,
+          sessionId: SESSION_ID,
+          direction: 'output',
+          content: JSON.stringify({
+            type: 'nimbalyst_tool_use',
+            id: 'plan-req-1',
+            name: 'ExitPlanMode',
+            input: { title: 'Ship the queue', planItems: ['Do the thing'] },
+          }),
+        }),
+        makeRawMessage({
+          id: 2,
+          sessionId: SESSION_ID,
+          direction: 'output',
+          content: JSON.stringify({
+            type: 'nimbalyst_tool_result',
+            tool_use_id: 'plan-req-1',
+            result: JSON.stringify({ approved: true, planId: 'plan-1', status: 'approved' }),
+          }),
+        }),
+      ]);
+      const transformer = new TranscriptTransformer(rawStore, transcriptStore, metadataStore);
+
+      await transformer.ensureTransformed(SESSION_ID, CODEX_PROVIDER);
+
+      const toolEvents = (await transcriptStore.getSessionEvents(SESSION_ID))
+        .filter((e) => e.eventType === 'tool_call');
+      expect(toolEvents).toHaveLength(1);
+      const payload = toolEvents[0].payload as any;
+      expect(payload.toolName).toBe('ExitPlanMode');
+      expect(payload.status).toBe('completed');
+      expect(JSON.parse(payload.result)).toMatchObject({ approved: true, status: 'approved' });
+    });
+
+    it('completes the tool call when the result arrives in a later batch (reopen path)', async () => {
+      // The tool_use is transformed first and its synthetic id is persisted; the
+      // result row arrives with only the raw id, so the parser must resolve the
+      // stored id rather than mint a new one.
+      const messages = [
+        makeRawMessage({
+          id: 1,
+          sessionId: SESSION_ID,
+          direction: 'output',
+          content: JSON.stringify({
+            type: 'nimbalyst_tool_use',
+            id: 'plan-req-2',
+            name: 'ExitPlanMode',
+            input: { title: 'Later batch' },
+          }),
+        }),
+      ];
+      const rawStore = createMockRawStore(messages);
+      const transformer = new TranscriptTransformer(rawStore, transcriptStore, metadataStore);
+      await transformer.ensureTransformed(SESSION_ID, CODEX_PROVIDER);
+      expect(((await transcriptStore.getSessionEvents(SESSION_ID))[0].payload as any).status).toBe('running');
+
+      messages.push(makeRawMessage({
+        id: 2,
+        sessionId: SESSION_ID,
+        direction: 'output',
+        content: JSON.stringify({
+          type: 'nimbalyst_tool_result',
+          tool_use_id: 'plan-req-2',
+          result: JSON.stringify({ approved: false, status: 'continue planning' }),
+        }),
+      }));
+      await transformer.processNewMessages(SESSION_ID, CODEX_PROVIDER);
+
+      const toolEvents = (await transcriptStore.getSessionEvents(SESSION_ID))
+        .filter((e) => e.eventType === 'tool_call');
+      expect(toolEvents).toHaveLength(1);
+      expect((toolEvents[0].payload as any).status).toBe('completed');
+      expect(JSON.parse((toolEvents[0].payload as any).result)).toMatchObject({ approved: false });
+    });
+
+    it('completes the plan tool call in an app-server session too', async () => {
+      // Production defaults codex to the app-server transport, but
+      // CodexRawParserDispatcher routes PER MESSAGE on `metadata.transport`, and
+      // the synthetic nimbalyst rows are written without metadata. So they land
+      // on the SDK parser even when the surrounding session is app-server. This
+      // test pins that routing: regress it and the plan card silently stops
+      // flipping again.
+      const rawStore = createMockRawStore([
+        makeRawMessage({
+          id: 1,
+          sessionId: SESSION_ID,
+          direction: 'output',
+          metadata: { transport: 'app-server' },
+          content: JSON.stringify({
+            method: 'codex/event',
+            params: { msg: { type: 'agent_message', message: 'Working on it.' } },
+          }),
+        }),
+        makeRawMessage({
+          id: 2,
+          sessionId: SESSION_ID,
+          direction: 'output',
+          content: JSON.stringify({
+            type: 'nimbalyst_tool_use',
+            id: 'plan-req-3',
+            name: 'ExitPlanMode',
+            input: { title: 'App-server plan' },
+          }),
+        }),
+        makeRawMessage({
+          id: 3,
+          sessionId: SESSION_ID,
+          direction: 'output',
+          content: JSON.stringify({
+            type: 'nimbalyst_tool_result',
+            tool_use_id: 'plan-req-3',
+            result: JSON.stringify({ approved: true, status: 'approved' }),
+          }),
+        }),
+      ]);
+      const transformer = new TranscriptTransformer(rawStore, transcriptStore, metadataStore);
+
+      await transformer.ensureTransformed(SESSION_ID, CODEX_PROVIDER);
+
+      const toolEvents = (await transcriptStore.getSessionEvents(SESSION_ID))
+        .filter((e) => e.eventType === 'tool_call');
+      expect(toolEvents).toHaveLength(1);
+      expect((toolEvents[0].payload as any).status).toBe('completed');
+    });
+
+    it('ignores a result row with no matching tool call', async () => {
+      const rawStore = createMockRawStore([
+        makeRawMessage({
+          id: 1,
+          sessionId: SESSION_ID,
+          direction: 'output',
+          content: JSON.stringify({
+            type: 'nimbalyst_tool_result',
+            tool_use_id: 'never-started',
+            result: 'orphan',
+          }),
+        }),
+      ]);
+      const transformer = new TranscriptTransformer(rawStore, transcriptStore, metadataStore);
+
+      await expect(transformer.ensureTransformed(SESSION_ID, CODEX_PROVIDER)).resolves.not.toThrow();
+      expect(await transcriptStore.getSessionEvents(SESSION_ID)).toHaveLength(0);
+    });
+  });
+
   describe('Codex reasoning and todo_list transformation', () => {
     const CODEX_PROVIDER = 'openai-codex';
 

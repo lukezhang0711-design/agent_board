@@ -136,6 +136,20 @@ export class CodexRawParser implements IRawMessageParser {
     try {
       const parsed = JSON.parse(msg.content);
 
+      // Nimbalyst's own durable prompts (ExitPlanMode, AskUserQuestion,
+      // ToolPermission) are persisted as synthetic `nimbalyst_tool_*` rows no
+      // matter which provider drives the session -- they come from our MCP
+      // handlers, not from the model's stream. The `nimbalyst_tool_use` row
+      // already lands as a tool call further down (it carries name+input, which
+      // parseCodexEvent understands), but without this branch the matching
+      // result row is dropped, so the widget stays pending forever -- on the
+      // live path AND when the transcript is rebuilt from the raw log.
+      if (parsed?.type === 'nimbalyst_tool_result') {
+        const completed = await this.completeNimbalystToolCall(parsed, context);
+        if (completed) descriptors.push(completed);
+        return descriptors;
+      }
+
       // Handle todo_list items directly from raw JSON (not in ParsedCodexEvent)
       const item = parsed.item;
       if (item && typeof item === 'object' && !Array.isArray(item)) {
@@ -304,6 +318,55 @@ export class CodexRawParser implements IRawMessageParser {
     }
 
     return descriptors;
+  }
+
+  /**
+   * Complete the tool call belonging to a synthetic `nimbalyst_tool_result` row.
+   *
+   * The matching `nimbalyst_tool_use` row was stored under a synthetic
+   * `nimtc|<rawId>|<ts>|<idx>` id derived from ITS OWN timestamp and row id, which
+   * this result row cannot reconstruct. So resolve the real id instead: in-batch
+   * map first (both rows in one transformer run), then the active canonical event
+   * on disk (the reopen / rebuild path).
+   *
+   * Deliberately does NOT mint a fresh id the way `resolveEditGroupId` does -- a
+   * result with no matching tool call is a no-op, and minting would leave a bogus
+   * entry in the in-flight map.
+   */
+  private async completeNimbalystToolCall(
+    parsed: any,
+    context: ParseContext,
+  ): Promise<CanonicalEventDescriptor | null> {
+    const rawToolUseId = parsed.tool_use_id || parsed.id;
+    if (typeof rawToolUseId !== 'string' || !rawToolUseId) return null;
+
+    let providerToolCallId = this.inFlightSyntheticIds.get(rawToolUseId);
+    if (!providerToolCallId) {
+      try {
+        const existing = await context.findActiveToolCallByRawProviderId(rawToolUseId);
+        if (existing && typeof existing.providerToolCallId === 'string' && existing.providerToolCallId) {
+          providerToolCallId = existing.providerToolCallId;
+        }
+      } catch {
+        // Lookup failure just means we cannot complete this one; never throw
+        // out of parsing and lose the rest of the batch.
+      }
+    }
+    if (!providerToolCallId) return null;
+
+    const isError = parsed.is_error === true;
+    const result = typeof parsed.result === 'string'
+      ? parsed.result
+      : JSON.stringify(parsed.result ?? '');
+
+    this.inFlightSyntheticIds.delete(rawToolUseId);
+    return {
+      type: 'tool_call_completed',
+      providerToolCallId,
+      status: isError ? 'error' : 'completed',
+      result,
+      isError,
+    };
   }
 
   /**
