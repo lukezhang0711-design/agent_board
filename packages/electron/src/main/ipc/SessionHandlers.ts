@@ -591,6 +591,7 @@ export async function registerSessionHandlers() {
                     // Kanban board phase and tags
                     phase: (entry as any).phase || undefined,
                     tags: (entry as any).tags || undefined,
+                    dispatchQueued: entry.dispatchQueued === true ? true : undefined,
                     // Linked tracker item IDs
                     linkedTrackerItemIds: (entry as any).linkedTrackerItemIds || undefined,
                     metadata: {}

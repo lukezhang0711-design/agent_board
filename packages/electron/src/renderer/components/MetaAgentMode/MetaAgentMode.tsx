@@ -328,10 +328,12 @@ export function MetaAgentMode({
   const summary = useMemo(() => {
     const waitingCount = childSessions.filter((session) => session.status === 'waiting_for_input').length;
     const runningCount = childSessions.filter((session) => session.status === 'running').length;
+    const queuedCount = childSessions.filter((session) => session.status === 'queued').length;
     return {
       total: childSessions.length,
       waitingCount,
       runningCount,
+      queuedCount,
     };
   }, [childSessions]);
 
@@ -493,6 +495,11 @@ export function MetaAgentMode({
             <span className="px-2 py-1 rounded-full bg-[rgba(245,158,11,0.16)] text-[var(--nim-warning)]">
               {summary.waitingCount} waiting
             </span>
+            {summary.queuedCount > 0 && (
+              <span className="px-2 py-1 rounded-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                {summary.queuedCount} queued
+              </span>
+            )}
           </div>
         </div>
 

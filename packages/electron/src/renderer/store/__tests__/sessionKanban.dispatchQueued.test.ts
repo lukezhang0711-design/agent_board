@@ -1,7 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createStore } from 'jotai';
 import type { SessionMeta } from '@nimbalyst/runtime';
-import { sessionRegistryAtom } from '../atoms/sessions';
+import {
+  refreshSessionListAtom,
+  sessionListWorkspaceAtom,
+  sessionRegistryAtom,
+} from '../atoms/sessions';
 import { sessionDispatchQueuedAtom } from '../atoms/sessionKanban';
 
 /**
@@ -40,6 +44,10 @@ describe('sessionDispatchQueuedAtom (FB-019)', () => {
     store = createStore();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   function seed(metas: SessionMeta[]): void {
     store.set(sessionRegistryAtom, new Map(metas.map((m) => [m.id, m])));
   }
@@ -47,6 +55,32 @@ describe('sessionDispatchQueuedAtom (FB-019)', () => {
   it('is true for a session still waiting for a dispatch slot', () => {
     seed([makeMeta({ id: 'queued-1', dispatchQueued: true })]);
     expect(store.get(sessionDispatchQueuedAtom('queued-1'))).toBe(true);
+  });
+
+  it('preserves the queued flag through the sessions:list registry refresh', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      success: true,
+      sessions: [
+        {
+          id: 'queued-from-list',
+          title: 'Queued through IPC',
+          createdAt: 1,
+          updatedAt: 2,
+          provider: 'claude-code',
+          dispatchQueued: true,
+        },
+      ],
+    });
+    vi.stubGlobal('window', { electronAPI: { invoke } });
+    store.set(sessionListWorkspaceAtom, '/workspace');
+
+    await store.set(refreshSessionListAtom);
+
+    expect(invoke).toHaveBeenCalledWith('sessions:list', '/workspace', {
+      includeArchived: false,
+    });
+    expect(store.get(sessionRegistryAtom).get('queued-from-list')?.dispatchQueued).toBe(true);
+    expect(store.get(sessionDispatchQueuedAtom('queued-from-list'))).toBe(true);
   });
 
   it('is false once the dispatch has started and the flag is cleared', () => {

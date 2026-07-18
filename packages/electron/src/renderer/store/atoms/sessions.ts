@@ -2099,6 +2099,7 @@ export const refreshSessionListAtom = atom(
             // Kanban board phase and tags from metadata JSONB
             ...(s.phase && { phase: s.phase }),
             ...(s.tags && { tags: s.tags }),
+            ...(s.dispatchQueued && { dispatchQueued: s.dispatchQueued }),
             // Linked tracker item IDs from metadata JSONB
             ...(s.linkedTrackerItemIds && { linkedTrackerItemIds: s.linkedTrackerItemIds }),
             ...(s.agentRole && { agentRole: s.agentRole }),
