@@ -294,6 +294,9 @@ export class MetaAgentService {
   private unsubscribeStateListener: (() => void) | null = null;
   private notificationSignatures = new Map<string, string>();
   private interruptedChildSessionIds = new Set<string>();
+  // A completion event arrives before its queued prompt leaves `executing`.
+  // Remember that exact prompt so its stale row cannot reclaim a released slot.
+  private releasedDispatchPromptIdsByHead = new Map<string, Map<string, Set<string>>>();
   private ipcHandlersRegistered = false;
   private readonly dispatchQueueStore = createPGLiteDispatchQueueStore();
   private readonly dispatchLocks = new Map<string, Promise<void>>();
@@ -483,6 +486,7 @@ export class MetaAgentService {
         if (event.type === 'session:started' || event.type === 'session:streaming') {
           this.notificationSignatures.delete(event.sessionId);
           this.interruptedChildSessionIds.delete(event.sessionId);
+          this.clearReleasedDispatchPromptsForSession(event.sessionId);
           void this.updateWorkOrderStatusForSession(event.sessionId, 'running').catch((error) => {
             console.error(`[MetaAgentService] Failed to update running work-order for child ${event.sessionId}:`, error);
           });
@@ -514,6 +518,7 @@ export class MetaAgentService {
     this.unsubscribeStateListener = null;
     this.notificationSignatures.clear();
     this.interruptedChildSessionIds.clear();
+    this.releasedDispatchPromptIdsByHead.clear();
     await shutdownMetaAgentServer();
     ClaudeCodeProvider.setMetaAgentServerPort(null);
     OpenAICodexProvider.setMetaAgentServerPort(null);
@@ -758,26 +763,119 @@ export class MetaAgentService {
     // baseline it read). Excluding every reserved session whose queue row has not
     // reached 'dispatched' keeps both numbers identical to the pre-placeholder
     // behaviour: a child counts exactly when it becomes a real dispatch.
+    const releasedPromptIds = await this.getReleasedExecutingPromptIds(metaSessionId);
+    // Pending work always occupies a slot. Only an `executing` row that has
+    // already emitted its completion boundary is ignored until the child starts again.
+    const unreleasedExecutingPredicate = releasedPromptIds.length > 0
+      ? `AND prompts.id NOT IN (${releasedPromptIds.map((_, index) => `$${index + 3}`).join(', ')})`
+      : '';
     const { rows } = await databaseWorker.query<{ in_flight: string; total: string }>(
       `SELECT
-         SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END)::text AS in_flight,
+         SUM(
+           CASE
+             WHEN sessions.status = 'running' THEN 1
+             WHEN COALESCE(sessions.status, 'idle') = 'idle'
+               AND EXISTS (
+                 SELECT 1
+                 FROM queued_prompts prompts
+                 WHERE prompts.session_id = sessions.id
+                   AND (
+                     prompts.status = 'pending'
+                     OR (
+                       prompts.status = 'executing'
+                       ${unreleasedExecutingPredicate}
+                     )
+                   )
+               )
+             THEN 1
+             ELSE 0
+           END
+         )::text AS in_flight,
          COUNT(*)::text AS total
-       FROM ai_sessions
-       WHERE workspace_id = $1
-         AND created_by_session_id = $2
-         AND (is_archived = FALSE OR is_archived IS NULL)
-         AND id NOT IN (
+       FROM ai_sessions sessions
+       WHERE sessions.workspace_id = $1
+         AND sessions.created_by_session_id = $2
+         AND (sessions.is_archived = FALSE OR sessions.is_archived IS NULL)
+         AND sessions.id NOT IN (
            SELECT reserved_session_id
            FROM dispatch_queue
            WHERE status <> 'dispatched'
              AND reserved_session_id IS NOT NULL
          )`,
-      [workspaceId, metaSessionId],
+      [workspaceId, metaSessionId, ...releasedPromptIds],
     );
     return {
       inFlightCount: Number(rows[0]?.in_flight ?? '0'),
       totalCount: Number(rows[0]?.total ?? '0'),
     };
+  }
+
+  private markDispatchPromptsReleased(
+    metaSessionId: string,
+    sessionId: string,
+    promptIds: string[],
+  ): void {
+    if (promptIds.length === 0) {
+      return;
+    }
+    let releasedPromptsBySession = this.releasedDispatchPromptIdsByHead.get(metaSessionId);
+    if (!releasedPromptsBySession) {
+      releasedPromptsBySession = new Map<string, Set<string>>();
+      this.releasedDispatchPromptIdsByHead.set(metaSessionId, releasedPromptsBySession);
+    }
+    releasedPromptsBySession.set(sessionId, new Set(promptIds));
+  }
+
+  private async getReleasedExecutingPromptIds(metaSessionId: string): Promise<string[]> {
+    const releasedPromptsBySession = this.releasedDispatchPromptIdsByHead.get(metaSessionId);
+    if (!releasedPromptsBySession) {
+      return [];
+    }
+    const markedPromptIds = Array.from(releasedPromptsBySession.values())
+      .flatMap((promptIds) => [...promptIds]);
+    if (markedPromptIds.length === 0) {
+      this.releasedDispatchPromptIdsByHead.delete(metaSessionId);
+      return [];
+    }
+
+    const { rows } = await databaseWorker.query<{ id: string }>(
+      `SELECT id FROM queued_prompts
+       WHERE status = 'executing'
+         AND id IN (${markedPromptIds.map((_, index) => `$${index + 1}`).join(', ')})`,
+      markedPromptIds,
+    );
+    const queriedPromptIds = new Set(markedPromptIds);
+    const executingPromptIds = new Set(rows.map((row) => row.id));
+    for (const [sessionId, promptIds] of releasedPromptsBySession) {
+      for (const promptId of promptIds) {
+        // A different completion can add a marker while the status query is
+        // in flight. Never prune an ID that was not in this query snapshot.
+        if (queriedPromptIds.has(promptId) && !executingPromptIds.has(promptId)) {
+          promptIds.delete(promptId);
+        }
+      }
+      if (promptIds.size === 0) {
+        releasedPromptsBySession.delete(sessionId);
+      }
+    }
+    if (
+      releasedPromptsBySession.size === 0
+      && this.releasedDispatchPromptIdsByHead.get(metaSessionId) === releasedPromptsBySession
+    ) {
+      this.releasedDispatchPromptIdsByHead.delete(metaSessionId);
+    }
+    return Array.from(
+      this.releasedDispatchPromptIdsByHead.get(metaSessionId)?.values() ?? [],
+    ).flatMap((promptIds) => [...promptIds]);
+  }
+
+  private clearReleasedDispatchPromptsForSession(sessionId: string): void {
+    for (const [metaSessionId, releasedPromptsBySession] of this.releasedDispatchPromptIdsByHead) {
+      releasedPromptsBySession.delete(sessionId);
+      if (releasedPromptsBySession.size === 0) {
+        this.releasedDispatchPromptIdsByHead.delete(metaSessionId);
+      }
+    }
   }
 
   private async withDispatchLock<T>(
@@ -1953,7 +2051,24 @@ export class MetaAgentService {
         return;
       }
 
-      const session = await AISessionsRepository.get(sessionId);
+      // Capture the active rows before the first await in this event handler.
+      // The state listener is fire-and-forget, so a later query could see the
+      // next prompt after it has already been claimed and release the wrong row.
+      const completionPromptSnapshotPromise = eventType === 'session:completed'
+        ? databaseWorker.query<{
+            id: string;
+            status: 'executing';
+          }>(
+            `SELECT id, status FROM queued_prompts
+             WHERE session_id = $1 AND status = 'executing'`,
+            [sessionId],
+          )
+        : null;
+
+      const [completionPromptSnapshot, session] = await Promise.all([
+        completionPromptSnapshotPromise,
+        AISessionsRepository.get(sessionId),
+      ]);
       if (!session || session.agentRole === 'meta-agent' || !session.createdBySessionId || !session.workspacePath) {
         return;
       }
@@ -1997,16 +2112,23 @@ export class MetaAgentService {
       // The other event types (error/waiting/interrupted) are always
       // meaningful and pass through.
       if (eventType === 'session:completed') {
+        // Pending work is a forward-looking decision, so read it now rather
+        // than trusting the event snapshot: a concurrent CLI flush may have
+        // already claimed and failed that follow-up without another lifecycle event.
         const { rows: pendingRows } = await databaseWorker.query<{ count: string }>(
           `SELECT COUNT(*)::text AS count FROM queued_prompts
            WHERE session_id = $1 AND status = 'pending'`,
-          [sessionId]
+          [sessionId],
         );
-        const pendingCount = Number(pendingRows[0]?.count ?? '0');
-        if (pendingCount > 0) {
+        if (Number(pendingRows[0]?.count ?? '0') > 0) {
           return;
         }
         slotReleased = true;
+        this.markDispatchPromptsReleased(
+          session.createdBySessionId,
+          sessionId,
+          (completionPromptSnapshot?.rows ?? []).map((row) => row.id),
+        );
       }
 
       // Fire-and-forget suppresses only the Head notification. Capacity release

@@ -77,6 +77,7 @@ describe('MetaAgentService child event queue origin', () => {
     databaseQuery.mockResolvedValue({ rows: [{ count: '0' }] });
     (service as any).notificationSignatures.clear();
     (service as any).interruptedChildSessionIds?.clear();
+    (service as any).releasedDispatchPromptIdsByHead?.clear();
     (service as any).aiService = {
       queuePromptForSession,
       triggerQueuedPromptProcessingForSession,
@@ -178,6 +179,7 @@ describe('MetaAgentService child event queue origin', () => {
     const childSessionId = 'child-with-tracker-failure';
     const trackerError = new Error('tracker status unavailable');
     databaseQuery
+      .mockResolvedValueOnce({ rows: [] })
       .mockRejectedValueOnce(trackerError)
       .mockResolvedValue({ rows: [{ count: '0' }] });
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);

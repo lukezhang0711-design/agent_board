@@ -225,6 +225,7 @@ describe('MetaAgentService work-order persistence', () => {
     AgentMessagesRepository.setStore(createPGLiteAgentMessagesStore(db));
     (service as any).notificationSignatures.clear();
     (service as any).interruptedChildSessionIds.clear();
+    (service as any).releasedDispatchPromptIdsByHead.clear();
     await AISessionsRepository.create({
       id: 'head-session',
       provider: 'claude-code',
@@ -434,6 +435,125 @@ describe('MetaAgentService work-order persistence', () => {
     });
   });
 
+  it('serializes simultaneous public create and spawn dispatches and queues one at a limit of two', async () => {
+    testState.maxParallel = 2;
+    const bypassSpy = vi.spyOn(service as any, 'shouldBypassChildAgentExecutionForTests')
+      .mockReturnValue(false);
+    const aiService = (service as any).aiService;
+    aiService.queuePromptForSession.mockImplementation(async (sessionId: string, prompt: string) => {
+      const promptId = `initial-${sessionId}`;
+      await db.query(
+        `INSERT INTO queued_prompts (id, session_id, prompt, status)
+         VALUES ($1, $2, $3, 'pending')`,
+        [promptId, sessionId, prompt],
+      );
+      return { id: promptId, prompt, createdAt: Date.now() };
+    });
+    aiService.triggerQueuedPromptProcessingForSession.mockResolvedValue(false);
+
+    try {
+      await service.start(aiService);
+      expect(testState.metaAgentToolFns?.createSession).toBeTypeOf('function');
+      expect(testState.metaAgentToolFns?.spawnSession).toBeTypeOf('function');
+
+      const receipts = await Promise.all([1, 2, 3].map(async (index) => JSON.parse(
+        await (index === 2
+          ? testState.metaAgentToolFns.spawnSession('head-session', workspacePath, {
+              title: `Concurrent dispatch ${index}`,
+              prompt: `Hold the initial dispatch slot ${index}`,
+              intent: 'investigation',
+              isolated: true,
+            })
+          : testState.metaAgentToolFns.createSession('head-session', workspacePath, {
+              title: `Concurrent dispatch ${index}`,
+              prompt: `Hold the initial dispatch slot ${index}`,
+              intent: 'investigation',
+            })),
+      )));
+      const direct = receipts.filter((receipt) => receipt.queued !== true);
+      const queued = receipts.filter((receipt) => receipt.queued === true);
+
+      expect(direct).toHaveLength(2);
+      expect(queued).toHaveLength(1);
+      expect(queued[0]).toMatchObject({
+        status: 'queued',
+        queued: true,
+        queuePosition: 1,
+        queueId: expect.any(String),
+        sessionId: expect.any(String),
+        message: expect.stringContaining('position 1'),
+      });
+      await expect(AISessionsRepository.get(queued[0].sessionId)).resolves.toMatchObject({
+        id: queued[0].sessionId,
+        createdBySessionId: 'head-session',
+        metadata: expect.objectContaining({ dispatchQueued: true }),
+      });
+
+      const { rows: queueRows } = await db.query<any>(
+        `SELECT id, reserved_session_id, status
+         FROM dispatch_queue
+         WHERE id = $1`,
+        [queued[0].queueId],
+      );
+      expect(queueRows).toEqual([{
+        id: queued[0].queueId,
+        reserved_session_id: queued[0].sessionId,
+        status: 'queued',
+      }]);
+      await expect(
+        (service as any).getDispatchCounts('head-session', workspacePath),
+      ).resolves.toEqual({ inFlightCount: 2, totalCount: 2 });
+    } finally {
+      bypassSpy.mockRestore();
+    }
+  });
+
+  it('counts only idle children with an active prompt during the pre-running dispatch window', async () => {
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      { title: 'Lifecycle probe', prompt: 'Probe the initial dispatch lifecycle' },
+    );
+    const promptId = `lifecycle-${child.sessionId}`;
+    await db.query(
+      `INSERT INTO queued_prompts (id, session_id, prompt, status)
+       VALUES ($1, $2, $3, 'pending')`,
+      [promptId, child.sessionId, 'Probe the initial dispatch lifecycle'],
+    );
+
+    await expect(
+      (service as any).getDispatchCounts('head-session', workspacePath),
+    ).resolves.toEqual({ inFlightCount: 1, totalCount: 1 });
+
+    await db.query(`UPDATE queued_prompts SET status = 'executing' WHERE id = $1`, [promptId]);
+    await expect(
+      (service as any).getDispatchCounts('head-session', workspacePath),
+    ).resolves.toEqual({ inFlightCount: 1, totalCount: 1 });
+
+    await db.query(`UPDATE ai_sessions SET status = 'waiting_for_input' WHERE id = $1`, [child.sessionId]);
+    await expect(
+      (service as any).getDispatchCounts('head-session', workspacePath),
+    ).resolves.toEqual({ inFlightCount: 0, totalCount: 1 });
+
+    await db.query(`UPDATE ai_sessions SET status = 'idle' WHERE id = $1`, [child.sessionId]);
+    await db.query(`UPDATE queued_prompts SET status = 'completed' WHERE id = $1`, [promptId]);
+    await expect(
+      (service as any).getDispatchCounts('head-session', workspacePath),
+    ).resolves.toEqual({ inFlightCount: 0, totalCount: 1 });
+
+    await db.query(`UPDATE ai_sessions SET status = 'error' WHERE id = $1`, [child.sessionId]);
+    await db.query(`UPDATE queued_prompts SET status = 'pending' WHERE id = $1`, [promptId]);
+    await expect(
+      (service as any).getDispatchCounts('head-session', workspacePath),
+    ).resolves.toEqual({ inFlightCount: 0, totalCount: 1 });
+
+    await db.query(`UPDATE ai_sessions SET status = 'idle' WHERE id = $1`, [child.sessionId]);
+    await db.query(`UPDATE queued_prompts SET status = 'paused' WHERE id = $1`, [promptId]);
+    await expect(
+      (service as any).getDispatchCounts('head-session', workspacePath),
+    ).resolves.toEqual({ inFlightCount: 0, totalCount: 1 });
+  });
+
   it('dispatches queued work FIFO into real sessions and links each existing card through running', async () => {
     testState.maxParallel = 2;
     const running = await createRunningChildren(2);
@@ -555,6 +675,172 @@ describe('MetaAgentService work-order persistence', () => {
       status: 'dispatched',
       dispatchedSessionId: queued.sessionId,
     });
+  });
+
+  it('refills the queue when completion fires before the executing prompt is marked completed', async () => {
+    testState.maxParallel = 1;
+    const [running] = await createRunningChildren(1);
+    await db.query(
+      `INSERT INTO queued_prompts (id, session_id, prompt, status)
+       VALUES ($1, $2, $3, 'executing')`,
+      [`settling-${running}`, running, 'Prompt still settling after the completion event'],
+    );
+    const queued = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'After executing completion edge',
+        prompt: 'Start even while the completed prompt row is still settling',
+        intent: 'investigation',
+      },
+    ));
+
+    await db.query(`UPDATE ai_sessions SET status = 'idle' WHERE id = $1`, [running]);
+    await (service as any).handleChildSessionEvent(running, 'session:completed');
+
+    await expect((service as any).dispatchQueueStore.get(queued.queueId)).resolves.toMatchObject({
+      status: 'dispatched',
+      dispatchedSessionId: queued.sessionId,
+    });
+  });
+
+  it('counts a newly executing prompt even before its next started event', async () => {
+    const [childSessionId] = await createRunningChildren(1);
+    const settlingPromptId = `settling-${childSessionId}`;
+    const nextPromptId = `next-${childSessionId}`;
+    await db.query(
+      `INSERT INTO queued_prompts (id, session_id, prompt, status)
+       VALUES ($1, $2, $3, 'executing')`,
+      [settlingPromptId, childSessionId, 'The turn that is finishing'],
+    );
+
+    await db.query(`UPDATE ai_sessions SET status = 'idle' WHERE id = $1`, [childSessionId]);
+    await (service as any).handleChildSessionEvent(childSessionId, 'session:completed');
+    await db.query(`UPDATE queued_prompts SET status = 'completed' WHERE id = $1`, [settlingPromptId]);
+    await db.query(
+      `INSERT INTO queued_prompts (id, session_id, prompt, status)
+       VALUES ($1, $2, $3, 'pending')`,
+      [nextPromptId, childSessionId, 'The next turn'],
+    );
+
+    await expect((service as any).getDispatchCounts('head-session', workspacePath)).resolves.toMatchObject({
+      inFlightCount: 1,
+    });
+    expect((service as any).releasedDispatchPromptIdsByHead.get('head-session')).toBeUndefined();
+
+    // claim() changes the row before startSession emits session:started. The
+    // new executing prompt must still occupy the slot in that window.
+    await db.query(`UPDATE queued_prompts SET status = 'executing' WHERE id = $1`, [nextPromptId]);
+    await expect((service as any).getDispatchCounts('head-session', workspacePath)).resolves.toMatchObject({
+      inFlightCount: 1,
+    });
+  });
+
+  it('binds completion release to the prompt active when the event arrived', async () => {
+    const [childSessionId] = await createRunningChildren(1);
+    const settlingPromptId = `event-settling-${childSessionId}`;
+    const nextPromptId = `event-next-${childSessionId}`;
+    await db.query(
+      `INSERT INTO queued_prompts (id, session_id, prompt, status)
+       VALUES ($1, $2, $3, 'executing')`,
+      [settlingPromptId, childSessionId, 'The prompt active at completion'],
+    );
+    await db.query(`UPDATE ai_sessions SET status = 'idle' WHERE id = $1`, [childSessionId]);
+
+    const originalGet = AISessionsRepository.get.bind(AISessionsRepository);
+    let releaseSessionRead!: () => void;
+    let sessionReadStarted!: () => void;
+    const sessionReadGate = new Promise<void>((resolve) => {
+      releaseSessionRead = resolve;
+    });
+    const sessionReadStartedPromise = new Promise<void>((resolve) => {
+      sessionReadStarted = resolve;
+    });
+    const getSpy = vi.spyOn(AISessionsRepository, 'get').mockImplementationOnce(async (sessionId) => {
+      sessionReadStarted();
+      await sessionReadGate;
+      return originalGet(sessionId);
+    });
+
+    try {
+      const completion = (service as any).handleChildSessionEvent(childSessionId, 'session:completed');
+      await sessionReadStartedPromise;
+      await db.query(`UPDATE queued_prompts SET status = 'completed' WHERE id = $1`, [settlingPromptId]);
+      await db.query(
+        `INSERT INTO queued_prompts (id, session_id, prompt, status)
+         VALUES ($1, $2, $3, 'executing')`,
+        [nextPromptId, childSessionId, 'Claimed after the completion event'],
+      );
+      releaseSessionRead();
+      await completion;
+
+      await expect((service as any).getDispatchCounts('head-session', workspacePath)).resolves.toMatchObject({
+        inFlightCount: 1,
+      });
+    } finally {
+      releaseSessionRead();
+      getSpy.mockRestore();
+    }
+  });
+
+  it('releases the slot when a snapshotted pending prompt fails before the completion decision', async () => {
+    testState.maxParallel = 1;
+    const [childSessionId] = await createRunningChildren(1);
+    const settlingPromptId = `pending-edge-settling-${childSessionId}`;
+    const pendingPromptId = `pending-edge-next-${childSessionId}`;
+    await db.query(
+      `INSERT INTO queued_prompts (id, session_id, prompt, status)
+       VALUES ($1, $2, $3, 'executing'), ($4, $2, $5, 'pending')`,
+      [
+        settlingPromptId,
+        childSessionId,
+        'The prompt finishing at the idle boundary',
+        pendingPromptId,
+        'The follow-up that fails before submission',
+      ],
+    );
+    const queued = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Dispatch after failed follow-up',
+        prompt: 'Must refill after the pending follow-up fails',
+        intent: 'investigation',
+      },
+    ));
+    await db.query(`UPDATE ai_sessions SET status = 'idle' WHERE id = $1`, [childSessionId]);
+
+    const originalGet = AISessionsRepository.get.bind(AISessionsRepository);
+    let releaseSessionRead!: () => void;
+    let sessionReadStarted!: () => void;
+    const sessionReadGate = new Promise<void>((resolve) => {
+      releaseSessionRead = resolve;
+    });
+    const sessionReadStartedPromise = new Promise<void>((resolve) => {
+      sessionReadStarted = resolve;
+    });
+    const getSpy = vi.spyOn(AISessionsRepository, 'get').mockImplementationOnce(async (sessionId) => {
+      sessionReadStarted();
+      await sessionReadGate;
+      return originalGet(sessionId);
+    });
+
+    try {
+      const completion = (service as any).handleChildSessionEvent(childSessionId, 'session:completed');
+      await sessionReadStartedPromise;
+      await db.query(`UPDATE queued_prompts SET status = 'completed' WHERE id = $1`, [settlingPromptId]);
+      await db.query(`UPDATE queued_prompts SET status = 'failed' WHERE id = $1`, [pendingPromptId]);
+      releaseSessionRead();
+      await completion;
+
+      await expect((service as any).dispatchQueueStore.get(queued.queueId)).resolves.toMatchObject({
+        status: 'dispatched',
+        dispatchedSessionId: queued.sessionId,
+      });
+    } finally {
+      releaseSessionRead();
+      getSpy.mockRestore();
+    }
   });
 
   it('marks a failed dequeue, notifies Head, and continues to the next FIFO item', async () => {

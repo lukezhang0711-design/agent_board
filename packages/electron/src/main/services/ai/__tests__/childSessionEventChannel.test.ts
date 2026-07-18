@@ -223,6 +223,111 @@ describe('child session event hidden delivery channel', () => {
   let dbDir: string;
   let db: SQLiteDatabase;
 
+  async function runFirstMessageTitleCase(options: {
+    sessionId: string;
+    title: string;
+    hasBeenNamed: boolean;
+    metadata: Record<string, unknown>;
+    message: string;
+  }): Promise<{
+    updateSessionTitle: ReturnType<typeof vi.fn>;
+    row: { title: string; has_been_named: number | boolean; metadata: unknown };
+  }> {
+    await AISessionsRepository.create({
+      id: options.sessionId,
+      provider: 'openai',
+      workspaceId: '/workspace',
+      title: options.title,
+      hasBeenNamed: options.hasBeenNamed,
+    } as any);
+    await db.query(
+      `UPDATE ai_sessions
+       SET has_been_named = $2, metadata = $3
+       WHERE id = $1`,
+      [options.sessionId, options.hasBeenNamed ? 1 : 0, JSON.stringify(options.metadata)],
+    );
+
+    handlerTestState.provider = {
+      initialize: vi.fn().mockResolvedValue(undefined),
+      registerToolHandler: vi.fn(),
+      async *sendMessage() {},
+    };
+    const updateSessionTitle = vi.fn(async (
+      sessionId: string,
+      title: string,
+      updateOptions?: { markAsNamed?: boolean },
+    ) => {
+      await db.query(
+        `UPDATE ai_sessions
+         SET title = $2, has_been_named = $3
+         WHERE id = $1`,
+        [sessionId, title, updateOptions?.markAsNamed === false ? 0 : 1],
+      );
+    });
+    const sessionManager = {
+      loadSession: vi.fn().mockResolvedValue({
+        id: options.sessionId,
+        provider: 'openai',
+        workspacePath: '/workspace',
+        title: options.title,
+        hasBeenNamed: options.hasBeenNamed,
+        messages: [],
+        metadata: options.metadata,
+        providerConfig: {},
+      }),
+      addMessage: vi.fn().mockResolvedValue(undefined),
+      updateSessionTitle,
+      updateProviderSessionData: vi.fn().mockResolvedValue(undefined),
+    };
+    const handler = new MessageStreamingHandler({
+      sessionManager,
+      analytics: { sendEvent: vi.fn() },
+      sendMessageHandler: null,
+      processingQueuedPromptIds: new Set<string>(),
+      matchDebounceTimers: new Map(),
+      sessionsProcessingQueue: new Set<string>(),
+      documentContextService: {
+        prepareContext: () => ({ documentContext: {}, userMessageAdditions: {} }),
+      },
+      hooklessWatcher: {
+        ensureForSession: vi.fn().mockResolvedValue(undefined),
+        stopForSession: vi.fn().mockResolvedValue(undefined),
+        scheduleStop: vi.fn(),
+      },
+      getSettingsStore: () => ({ get: vi.fn() }),
+      getApiKeyForProvider: () => undefined,
+      buildClaudeCodeRuntimeConfig: vi.fn(),
+      continueQueuedPromptChain: vi.fn(),
+      tryDispatchNextQueuedPrompt: vi.fn(),
+      isSessionQueuePaused: vi.fn().mockResolvedValue(false),
+      runAutoContextCommand: vi.fn(),
+      createToolHandler: () => ({}),
+      inferWorktreePathFromFilePath: () => null,
+      inferWorktreePathFromCommand: () => null,
+      adoptWorktreeForSession: vi.fn(),
+    } as any);
+
+    try {
+      await handler.handle(
+        { sender: { id: 1 } } as any,
+        options.message,
+        {} as any,
+        options.sessionId,
+        '/workspace',
+      );
+    } finally {
+      handler.destroy();
+    }
+
+    const { rows } = await db.query<any>(
+      `SELECT title, has_been_named, metadata
+       FROM ai_sessions
+       WHERE id = $1`,
+      [options.sessionId],
+    );
+    return { updateSessionTitle, row: rows[0] };
+  }
+
   beforeEach(async () => {
     vi.clearAllMocks();
     handlerTestState.provider = null;
@@ -467,6 +572,44 @@ describe('child session event hidden delivery channel', () => {
     expect(rows).toEqual([
       { direction: 'output', message_kind: 'assistant', searchable_text: reply },
     ]);
+  });
+
+  it('preserves a dispatch-sourced title and named flag through the first user message', async () => {
+    const result = await runFirstMessageTitleCase({
+      sessionId: 'dispatch-title-session',
+      title: 'X-queue-1',
+      hasBeenNamed: true,
+      metadata: { titleSource: 'dispatch' },
+      message: 'D'.repeat(120),
+    });
+
+    expect(result.updateSessionTitle).not.toHaveBeenCalled();
+    expect(result.row.title).toBe('X-queue-1');
+    expect(Boolean(result.row.has_been_named)).toBe(true);
+    const metadata = typeof result.row.metadata === 'string'
+      ? JSON.parse(result.row.metadata)
+      : result.row.metadata;
+    expect(metadata).toMatchObject({ titleSource: 'dispatch' });
+  });
+
+  it('still assigns an unlocked provisional title to an ordinary first user message', async () => {
+    const message = 'P'.repeat(120);
+    const provisionalTitle = `${message.substring(0, 97)}...`;
+    const result = await runFirstMessageTitleCase({
+      sessionId: 'ordinary-title-session',
+      title: 'New conversation',
+      hasBeenNamed: false,
+      metadata: {},
+      message,
+    });
+
+    expect(result.updateSessionTitle).toHaveBeenCalledWith(
+      'ordinary-title-session',
+      provisionalTitle,
+      { force: true, markAsNamed: false },
+    );
+    expect(result.row.title).toBe(provisionalTitle);
+    expect(Boolean(result.row.has_been_named)).toBe(false);
   });
 
   it('keeps ordinary queued prompts as visible user messages by default', async () => {
