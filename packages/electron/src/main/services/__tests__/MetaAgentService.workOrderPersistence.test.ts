@@ -7,6 +7,7 @@ const testState = vi.hoisted(() => ({
   db: null as any,
   stateListener: null as ((event: any) => void) | null,
   stateManager: null as any,
+  metaAgentToolFns: null as any,
   maxParallel: 4,
 }));
 
@@ -53,7 +54,9 @@ vi.mock('../../file/GitRefWatcher', () => ({ gitRefWatcher: {} }));
 vi.mock('../ai/AIService', () => ({ AIService: class {} }));
 vi.mock('../../mcp/metaAgentServer', () => ({
   startMetaAgentServer: vi.fn().mockResolvedValue({ port: 49152 }),
-  setMetaAgentToolFns: vi.fn(),
+  setMetaAgentToolFns: vi.fn((toolFns: unknown) => {
+    testState.metaAgentToolFns = toolFns;
+  }),
   shutdownMetaAgentServer: vi.fn(),
 }));
 vi.mock('../metaAgentNotificationSignature', () => ({
@@ -162,6 +165,16 @@ describe('MetaAgentService work-order persistence', () => {
     });
   }
 
+  async function getSubmitPlanTool(): Promise<(
+    metaSessionId: string,
+    workspaceId: string,
+    args: Record<string, unknown>,
+  ) => Promise<string>> {
+    await service.start((service as any).aiService);
+    expect(testState.metaAgentToolFns?.submitPlan).toBeTypeOf('function');
+    return testState.metaAgentToolFns.submitPlan;
+  }
+
   function toCodexTranscriptRequestId(requestId: string): string {
     return `nimtc|${requestId}|1784297999209|21431`;
   }
@@ -194,6 +207,7 @@ describe('MetaAgentService work-order persistence', () => {
     });
     await db.initialize();
     testState.db = db;
+    testState.metaAgentToolFns = null;
     testState.maxParallel = 4;
     AISessionsRepository.setStore(createPGLiteSessionStore(db));
     AgentMessagesRepository.setStore(createPGLiteAgentMessagesStore(db));
@@ -620,6 +634,32 @@ describe('MetaAgentService work-order persistence', () => {
     }
   });
 
+  it('rejects a malformed composite request ID even when its second segment matches', async () => {
+    const requestId = '94471805-5eca-4d66-a448-56e438de6ab3';
+    await persistPlanApprovalResponse(`nimtc|${requestId}|not-a-timestamp|21431`, true);
+
+    const startedAt = 1_000;
+    const expiredAt = startedAt + (8 * 24 * 60 * 60 * 1000);
+    const nowSpy = vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValue(expiredAt);
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation((
+      ((callback: () => void) => {
+        queueMicrotask(callback);
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }) as typeof setTimeout
+    ));
+    try {
+      await expect(
+        (service as any).waitForPlanApprovalResponse('head-session', requestId),
+      ).rejects.toThrow('Timed out waiting for plan approval response');
+    } finally {
+      timeoutSpy.mockRestore();
+      nowSpy.mockRestore();
+    }
+  });
+
   it('waits for seven days and backs off polling after the first minute', async () => {
     const dayMs = 24 * 60 * 60 * 1000;
     let now = 0;
@@ -648,7 +688,8 @@ describe('MetaAgentService work-order persistence', () => {
   });
 
   it('persists the approval prompt and allows implementation only after approval', async () => {
-    const submitPromise = (service as any).submitPlan('head-session', workspacePath, {
+    const submitPlan = await getSubmitPlanTool();
+    const submitPromise = submitPlan('head-session', workspacePath, {
       title: 'Persist the approval gate',
       planItems: ['Create the durable prompt', 'Gate implementation dispatch'],
       workOrderCount: 2,
@@ -753,7 +794,8 @@ describe('MetaAgentService work-order persistence', () => {
   });
 
   it('returns change feedback, keeps review status, and updates the same plan card', async () => {
-    const firstSubmission = (service as any).submitPlan('head-session', workspacePath, {
+    const submitPlan = await getSubmitPlanTool();
+    const firstSubmission = submitPlan('head-session', workspacePath, {
       title: 'Initial dispatch plan',
       planItems: ['One broad work order'],
       workOrderCount: 1,
@@ -804,7 +846,7 @@ describe('MetaAgentService work-order persistence', () => {
     expect(Number(rejectedSessionRows[0].count)).toBe(0);
     expect(Number(rejectedWorkOrderRows[0].count)).toBe(0);
 
-    const secondSubmission = (service as any).submitPlan('head-session', workspacePath, {
+    const secondSubmission = submitPlan('head-session', workspacePath, {
       title: 'Revised dispatch plan',
       planItems: ['Persist approval', 'Authorize dispatch'],
       workOrderCount: 2,

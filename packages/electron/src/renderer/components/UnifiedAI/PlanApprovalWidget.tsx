@@ -35,7 +35,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   const toolCall = message.toolCall!;
 
   const host = useAtomValue(interactiveWidgetHostAtom(sessionId));
-  const requestId = toolCall.providerToolCallId || `exit-plan-${message.id}`;
+  const requestId = toolCall.providerToolCallId?.trim() || null;
   const title = typeof args.title === 'string' && args.title.trim()
     ? args.title.trim()
     : 'Submitted plan';
@@ -54,7 +54,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [localResult, setLocalResult] = useState<'approved' | 'changes-requested' | null>(null);
+  const [responseSubmitted, setResponseSubmitted] = useState(false);
   const feedbackInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -70,34 +70,34 @@ const SubmittedPlanApprovalCard: React.FC<{
     if (normalized.includes('approved')) return 'approved';
     return null;
   }, [toolResult]);
-  const displayResult = localResult ?? completedResult;
+  const displayResult = completedResult;
 
   const handleApprove = useCallback(async () => {
-    if (!host || !isPending || isSubmitting || localResult) return;
+    if (!host || !requestId || !isPending || isSubmitting || responseSubmitted) return;
     setIsSubmitting(true);
     try {
       await host.exitPlanModeApprove(requestId);
-      setLocalResult('approved');
+      setResponseSubmitted(true);
     } catch (error) {
       console.error('[PlanApprovalWidget] Failed to approve plan:', error);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, isPending, isSubmitting, localResult, requestId]);
+  }, [host, isPending, isSubmitting, requestId, responseSubmitted]);
 
   const handleRequestChanges = useCallback(async () => {
     const trimmedFeedback = feedback.trim();
-    if (!host || !isPending || isSubmitting || localResult || !trimmedFeedback) return;
+    if (!host || !requestId || !isPending || isSubmitting || responseSubmitted || !trimmedFeedback) return;
     setIsSubmitting(true);
     try {
       await host.exitPlanModeDeny(requestId, trimmedFeedback);
-      setLocalResult('changes-requested');
+      setResponseSubmitted(true);
     } catch (error) {
       console.error('[PlanApprovalWidget] Failed to request plan changes:', error);
     } finally {
       setIsSubmitting(false);
     }
-  }, [feedback, host, isPending, isSubmitting, localResult, requestId]);
+  }, [feedback, host, isPending, isSubmitting, requestId, responseSubmitted]);
 
   return (
     <div
@@ -107,7 +107,7 @@ const SubmittedPlanApprovalCard: React.FC<{
     >
       <div className="flex items-start gap-3 px-4 py-3 border-b border-nim bg-nim-tertiary">
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-nim-primary mb-1">Plan approval</div>
+          <div className="text-xs font-medium text-nim mb-1">Plan approval</div>
           <div className="text-sm font-semibold text-nim">{title}</div>
         </div>
         <span className="text-xs text-nim-muted shrink-0">
@@ -137,7 +137,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         </div>
 
-        {!displayResult && isPending && host && (
+        {!displayResult && isPending && host && requestId && !responseSubmitted && (
           <div className="mt-4 flex flex-col gap-2">
             <button
               type="button"
@@ -211,7 +211,17 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         )}
 
-        {!displayResult && isPending && !host && (
+        {!displayResult && isPending && responseSubmitted && (
+          <div className="mt-4 text-xs text-nim-muted">
+            Response submitted. Waiting for durable confirmation…
+          </div>
+        )}
+
+        {!displayResult && isPending && !requestId && !responseSubmitted && (
+          <div className="mt-4 text-xs text-nim-muted">Waiting for a durable approval ID…</div>
+        )}
+
+        {!displayResult && isPending && requestId && !host && !responseSubmitted && (
           <div className="mt-4 text-xs text-nim-muted">Waiting for an active approval surface…</div>
         )}
       </div>

@@ -1744,28 +1744,34 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         response: { approved: true },
       });
 
-      if (success) {
-        setAiMode('agent');
-
-        // Track exit plan mode response
-        posthog?.capture('exit_plan_mode_response', {
-          decision: 'approved',
-        });
+      if (!success) {
+        throw new Error('Failed to persist ExitPlanMode approval');
       }
+
+      setAiMode('agent');
+
+      // Track exit plan mode response
+      posthog?.capture('exit_plan_mode_response', {
+        decision: 'approved',
+      });
     } catch (error) {
       console.error('[SessionTranscript] Failed to send ExitPlanMode approval:', error);
+      throw error;
     }
   }, [respondToPrompt, setAiMode, posthog]);
 
   const handleExitPlanModeDeny = useCallback(async (requestId: string, confirmSessionId: string, feedback?: string) => {
     try {
       // Use the unified respondToPromptAtom which persists to DB and notifies provider
-      await respondToPrompt({
+      const success = await respondToPrompt({
         sessionId: confirmSessionId,
         promptId: requestId,
         promptType: 'exit_plan_mode_request',
         response: { approved: false, feedback },
       });
+      if (!success) {
+        throw new Error('Failed to persist ExitPlanMode denial');
+      }
 
       // Track exit plan mode response
       posthog?.capture('exit_plan_mode_response', {
@@ -1774,6 +1780,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       });
     } catch (error) {
       console.error('[SessionTranscript] Failed to send ExitPlanMode denial:', error);
+      throw error;
     }
   }, [respondToPrompt, posthog]);
 

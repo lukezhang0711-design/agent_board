@@ -19,7 +19,10 @@ import {
 const sessionId = 'plan-approval-session';
 const compositeRequestId = 'nimtc|94471805-5eca-4d66-a448-56e438de6ab3|1784297999209|21431';
 
-function makeMessage(arguments_: Record<string, unknown>): TranscriptViewMessage {
+function makeMessage(
+  arguments_: Record<string, unknown>,
+  providerToolCallId: string | null = compositeRequestId,
+): TranscriptViewMessage {
   return {
     id: 1,
     sequence: 1,
@@ -35,7 +38,7 @@ function makeMessage(arguments_: Record<string, unknown>): TranscriptViewMessage
       targetFilePath: null,
       mcpServer: null,
       mcpTool: null,
-      providerToolCallId: compositeRequestId,
+      providerToolCallId,
       progress: [],
     },
   };
@@ -44,6 +47,7 @@ function makeMessage(arguments_: Record<string, unknown>): TranscriptViewMessage
 function renderWidget(
   arguments_: Record<string, unknown>,
   hostOverrides: Partial<InteractiveWidgetHost> = {},
+  providerToolCallId: string | null = compositeRequestId,
 ) {
   const jotaiStore = createStore();
   jotaiStore.set(interactiveWidgetHostAtom(sessionId), {
@@ -53,7 +57,7 @@ function renderWidget(
   return render(
     <JotaiProvider store={jotaiStore}>
       <PlanApprovalWidget
-        message={makeMessage(arguments_)}
+        message={makeMessage(arguments_, providerToolCallId)}
         isExpanded={false}
         onToggle={() => {}}
         sessionId={sessionId}
@@ -98,6 +102,14 @@ describe('PlanApprovalWidget', () => {
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
   });
 
+  it('does not invent a response ID when the durable provider tool-call ID is missing', () => {
+    renderWidget(planArguments, {}, null);
+
+    expect(screen.queryByRole('button', { name: 'Approve plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Request changes' })).toBeNull();
+    expect(screen.getByText('Waiting for a durable approval ID…')).toBeTruthy();
+  });
+
   it('reuses the existing approve response route with the composite request ID', async () => {
     const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
     renderWidget(planArguments, { exitPlanModeApprove });
@@ -107,6 +119,34 @@ describe('PlanApprovalWidget', () => {
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId);
     });
+  });
+
+  it('waits for the durable tool result before showing an approved completion state', async () => {
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    renderWidget(planArguments, { exitPlanModeApprove });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+
+    await waitFor(() => {
+      expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId);
+    });
+    expect(screen.getByTestId('plan-approval-widget').getAttribute('data-state')).toBe('pending');
+    expect(screen.getByText('Awaiting review')).toBeTruthy();
+    expect(screen.queryByText('Plan approved')).toBeNull();
+  });
+
+  it('keeps the approval action available when the existing response route fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitPlanModeApprove = vi.fn().mockRejectedValue(new Error('persist failed'));
+    renderWidget(planArguments, { exitPlanModeApprove });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Approve plan' }).hasAttribute('disabled')).toBe(false);
+    });
+    expect(screen.getByTestId('plan-approval-widget').getAttribute('data-state')).toBe('pending');
+    expect(screen.queryByText('Response submitted. Waiting for durable confirmation…')).toBeNull();
   });
 
   it('sends requested changes through the existing deny plus feedback route', async () => {

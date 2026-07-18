@@ -6,6 +6,7 @@ import { ClaudeCodeProvider, OpenAICodexProvider, OpenAICodexACPProvider, Sessio
 import type { AIProviderType } from '@nimbalyst/runtime/ai/server/types';
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
 import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
 import { AISessionsRepository, AgentMessagesRepository, SessionFilesRepository } from '@nimbalyst/runtime';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { getDefaultAIModel, store } from '../utils/store';
@@ -71,12 +72,8 @@ function isValidMaxParallel(value: unknown): value is number {
 }
 
 function isMatchingPlanApprovalRequestId(candidate: unknown, requestId: string): boolean {
-  if (candidate === requestId) return true;
   if (typeof candidate !== 'string') return false;
-  const segments = candidate.split('|');
-  return segments.length === 4
-    && segments[0] === 'nimtc'
-    && segments[1] === requestId;
+  return getCodexToolLookupAliases(candidate).includes(requestId);
 }
 
 function getEffectiveMaxParallel(override: number | undefined): number {
