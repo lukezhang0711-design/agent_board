@@ -213,6 +213,15 @@ export const sessionDispatchQueuedAtom = atomFamily((sessionId: string) =>
   atom((get): boolean => get(sessionRegistryAtom).get(sessionId)?.dispatchQueued === true)
 );
 
+/**
+ * True after a Head Agent interrupts a child session. Like the queued state,
+ * this derives from the refreshed registry so the board stays correct after a
+ * renderer reload rather than depending on a transient event listener.
+ */
+export const sessionInterruptedAtom = atomFamily((sessionId: string) =>
+  atom((get): boolean => get(sessionRegistryAtom).get(sessionId)?.interruptedByHead === true)
+);
+
 // ============================================================
 // Child Run State Atoms
 // ============================================================

@@ -391,6 +391,9 @@ export class MetaAgentService {
       if (outcome !== 'interrupted') {
         this.interruptedChildSessionIds.delete(sessionId);
       } else {
+        await AISessionsRepository.updateMetadata(sessionId, {
+          metadata: { interruptedByHead: true },
+        });
         try {
           await this.updateWorkOrderStatusForSession(
             sessionId,
@@ -428,6 +431,16 @@ export class MetaAgentService {
       content: prompt,
       createdAt: new Date(),
       searchable: true,
+    });
+  }
+
+  private async clearInterruptedByHeadMarker(sessionId: string): Promise<void> {
+    const session = await AISessionsRepository.get(sessionId);
+    if (session?.metadata?.interruptedByHead !== true) {
+      return;
+    }
+    await AISessionsRepository.updateMetadata(sessionId, {
+      metadata: { interruptedByHead: false },
     });
   }
 
@@ -486,6 +499,12 @@ export class MetaAgentService {
         if (event.type === 'session:started' || event.type === 'session:streaming') {
           this.notificationSignatures.delete(event.sessionId);
           this.interruptedChildSessionIds.delete(event.sessionId);
+          // `interruptedChildSessionIds` only survives this process. Persist the
+          // clear too, so a child that resumes after a reload no longer appears
+          // interrupted in the session list or Kanban board.
+          void this.clearInterruptedByHeadMarker(event.sessionId).catch((error) => {
+            console.error(`[MetaAgentService] Failed to clear interrupted marker for child ${event.sessionId}:`, error);
+          });
           this.clearReleasedDispatchPromptsForSession(event.sessionId);
           void this.updateWorkOrderStatusForSession(event.sessionId, 'running').catch((error) => {
             console.error(`[MetaAgentService] Failed to update running work-order for child ${event.sessionId}:`, error);
@@ -2007,11 +2026,12 @@ export class MetaAgentService {
         ? (() => { try { return JSON.parse(row.metadata); } catch { return null; } })()
         : row.metadata;
       const isQueued = metadata?.dispatchQueued === true;
+      const isInterrupted = metadata?.interruptedByHead === true && row.status !== 'running';
       const data = await this.buildSessionResultData(row.id, workspaceId, {
         title: row.title || 'Untitled Session',
         provider: row.provider,
         model: row.model || null,
-        status: isQueued ? 'queued' : (row.status || 'idle'),
+        status: isQueued ? 'queued' : (isInterrupted ? 'interrupted' : (row.status || 'idle')),
         lastActivity: toMillis(row.last_activity),
         createdAt: toMillis(row.created_at)!,
         updatedAt: toMillis(row.updated_at)!,

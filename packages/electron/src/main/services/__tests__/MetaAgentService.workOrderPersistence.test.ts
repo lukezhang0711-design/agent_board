@@ -1535,6 +1535,78 @@ describe('MetaAgentService work-order persistence', () => {
     });
   });
 
+  it('persists Head interruption state and clears it when the child becomes active again', async () => {
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      { prompt: 'Interrupt and resume this delegated task' },
+    );
+    await db.query(
+      `UPDATE ai_sessions SET status = 'running' WHERE id = $1`,
+      [child.sessionId],
+    );
+    (service as any).aiService = {
+      ...(service as any).aiService,
+      stopSession: vi.fn(async (sessionId: string) => {
+        // Match the post-stop state that used to make the delegated list show
+        // an ordinary idle session even though Head had interrupted it.
+        await db.query(`UPDATE ai_sessions SET status = 'idle' WHERE id = $1`, [sessionId]);
+        return { success: true, queue: 'paused', paused: 0 };
+      }),
+    };
+
+    const result = JSON.parse(await service.interruptSession('head-session', workspacePath, {
+      sessionId: child.sessionId,
+    }));
+    expect(result.results).toEqual([
+      expect.objectContaining({ sessionId: child.sessionId, outcome: 'interrupted' }),
+    ]);
+
+    const interruptedSession = (await (service as any).getSpawnedSessions('head-session', workspacePath))
+      .find((session: { sessionId: string }) => session.sessionId === child.sessionId);
+    expect(interruptedSession).toMatchObject({ status: 'interrupted' });
+
+    const metadataAfterInterrupt = parseStoredJson<Record<string, unknown>>((await db.query<any>(
+      `SELECT metadata FROM ai_sessions WHERE id = $1`,
+      [child.sessionId],
+    )).rows[0]?.metadata);
+    expect(metadataAfterInterrupt.interruptedByHead).toBe(true);
+
+    await service.start((service as any).aiService);
+    testState.stateListener?.({
+      type: 'session:started',
+      sessionId: child.sessionId,
+      workspacePath,
+      timestamp: new Date(),
+    });
+
+    await vi.waitFor(async () => {
+      const metadata = parseStoredJson<Record<string, unknown>>((await db.query<any>(
+        `SELECT metadata FROM ai_sessions WHERE id = $1`,
+        [child.sessionId],
+      )).rows[0]?.metadata);
+      expect(metadata.interruptedByHead).toBe(false);
+    });
+
+    await AISessionsRepository.updateMetadata(child.sessionId, {
+      metadata: { interruptedByHead: true },
+    });
+    testState.stateListener?.({
+      type: 'session:streaming',
+      sessionId: child.sessionId,
+      workspacePath,
+      timestamp: new Date(),
+    });
+
+    await vi.waitFor(async () => {
+      const metadata = parseStoredJson<Record<string, unknown>>((await db.query<any>(
+        `SELECT metadata FROM ai_sessions WHERE id = $1`,
+        [child.sessionId],
+      )).rows[0]?.metadata);
+      expect(metadata.interruptedByHead).toBe(false);
+    });
+  });
+
   it('filters the real interrupt-then-end event sequence before it reaches Head', async () => {
     const child = await (service as any).createChildSessionInternal(
       'head-session',

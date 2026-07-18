@@ -46,6 +46,12 @@ export interface SessionMeta {
    * state instead of presenting the placeholder as an idle session.
    */
   dispatchQueued?: boolean;
+  /**
+   * True after a Head Agent successfully interrupts this child session. Cleared
+   * when the child begins its next run so session surfaces do not present it as
+   * an ordinary idle session.
+   */
+  interruptedByHead?: boolean;
   // Linked tracker item IDs (from metadata JSONB)
   linkedTrackerItemIds?: string[];
   // Branch tracking - SEPARATE from hierarchical parentSessionId

@@ -74,8 +74,9 @@ function getStatusTone(status: string): string {
       return 'text-[var(--nim-text-secondary)] bg-[var(--nim-bg-tertiary)]';
     case 'waiting_for_input':
       return 'text-[var(--nim-warning)] bg-[rgba(245,158,11,0.16)]';
-    case 'error':
     case 'interrupted':
+      return 'text-[var(--nim-warning)] bg-[rgba(245,158,11,0.16)]';
+    case 'error':
       return 'text-[var(--nim-error)] bg-[rgba(239,68,68,0.14)]';
     default:
       return 'text-[var(--nim-text-muted)] bg-[var(--nim-bg-tertiary)]';

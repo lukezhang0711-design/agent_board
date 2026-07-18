@@ -707,6 +707,9 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
           // only so the operator can see it queued; it is not running and has no
           // messages yet, so surfaces must not present it as an idle child.
           dispatchQueued: metadata.dispatchQueued === true ? true : undefined,
+          // A Head Agent interruption must survive renderer and app reloads so
+          // session surfaces can distinguish it from an ordinary idle child.
+          interruptedByHead: metadata.interruptedByHead === true ? true : undefined,
           // Linked tracker item IDs from metadata JSONB
           linkedTrackerItemIds: Array.isArray(metadata.linkedTrackerItemIds) ? metadata.linkedTrackerItemIds : undefined,
         } satisfies SessionMeta & { hasPendingInteractivePrompt?: boolean; phase?: string; tags?: string[]; linkedTrackerItemIds?: string[] };

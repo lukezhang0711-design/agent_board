@@ -592,6 +592,7 @@ export async function registerSessionHandlers() {
                     phase: (entry as any).phase || undefined,
                     tags: (entry as any).tags || undefined,
                     dispatchQueued: entry.dispatchQueued === true ? true : undefined,
+                    interruptedByHead: entry.interruptedByHead === true ? true : undefined,
                     // Linked tracker item IDs
                     linkedTrackerItemIds: (entry as any).linkedTrackerItemIds || undefined,
                     metadata: {}

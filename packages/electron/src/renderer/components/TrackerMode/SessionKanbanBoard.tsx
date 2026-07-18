@@ -41,6 +41,7 @@ import {
   setSessionPhaseAtom,
   childRunStatesAtom,
   sessionDispatchQueuedAtom,
+  sessionInterruptedAtom,
   getCardType,
   SESSION_PHASE_COLUMNS,
   type SessionPhase,
@@ -156,7 +157,7 @@ function CardTypeIcon({ type, provider }: { type: KanbanCardType; provider?: str
 // ============================================================
 
 /** The visual state of a card, used for both background tint and status badge */
-type CardVisualState = 'running' | 'waiting' | 'queued' | 'unread' | 'idle';
+type CardVisualState = 'running' | 'waiting' | 'queued' | 'interrupted' | 'unread' | 'idle';
 
 /** Background + border tints for each visual state */
 const CARD_STATE_STYLES: Record<CardVisualState, { bg: string; border: string }> = {
@@ -165,6 +166,7 @@ const CARD_STATE_STYLES: Record<CardVisualState, { bg: string; border: string }>
   // Deliberately neutral: a queued dispatch is waiting for a slot, not working.
   // Tinting it like `running` would overstate what the board is showing.
   queued:   { bg: 'rgba(148, 163, 184, 0.06)', border: 'rgba(148, 163, 184, 0.22)' },
+  interrupted: { bg: 'rgba(249, 115, 22, 0.06)', border: 'rgba(249, 115, 22, 0.25)' },
   unread:   { bg: 'rgba(96, 165, 250, 0.04)',  border: 'rgba(96, 165, 250, 0.18)' },
   idle:     { bg: 'transparent',                border: '' },
 };
@@ -184,6 +186,7 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   const childStates = useAtomValue(childRunStatesAtom(sessionId));
   const hasChildUnread = useAtomValue(workstreamUnreadAtom(sessionId));
   const isDispatchQueued = useAtomValue(sessionDispatchQueuedAtom(sessionId));
+  const isInterrupted = useAtomValue(sessionInterruptedAtom(sessionId));
 
   const isParent = cardType !== 'session';
   const hasChildRunning = isParent && childStates.running > 0;
@@ -198,6 +201,16 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
       badgeLabel: 'queued',
       badgeIcon: 'schedule',
       badgeColor: '#94a3b8',
+      spinIcon: false,
+    };
+  }
+
+  if (isInterrupted && !isProcessing) {
+    return {
+      state: 'interrupted',
+      badgeLabel: 'interrupted',
+      badgeIcon: 'cancel',
+      badgeColor: '#f97316',
       spinIcon: false,
     };
   }
@@ -267,6 +280,18 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
         title="Waiting for a Head Agent slot"
       >
         <MaterialSymbol icon="schedule" size={12} />
+        {info.badgeLabel}
+      </span>
+    );
+  }
+  if (info.state === 'interrupted') {
+    return (
+      <span
+        className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-orange-500/10"
+        style={{ color: info.badgeColor }}
+        title="Interrupted by Head Agent"
+      >
+        <MaterialSymbol icon="cancel" size={12} />
         {info.badgeLabel}
       </span>
     );
@@ -911,6 +936,7 @@ interface UnphasedColumnProps {
 function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase, onRemovePhase, focusedCardId, selectedIds, peekCardId, onCardClick, onPeekToggle, onDragStart: onDragStartProp, onSelectAll, onHeaderContextMenu }: UnphasedColumnProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const queuedCount = sessions.filter((session) => session.dispatchQueued === true).length;
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -968,9 +994,20 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
           <span
             className="w-2 h-2 rounded-full shrink-0 bg-neutral-600"
           />
-          <span className="text-[10px] font-semibold text-nim-faint">
-            {sessions.length}
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-semibold text-nim-faint">
+              {sessions.length}
+            </span>
+            {queuedCount > 0 && (
+              <span
+                className="flex items-center gap-0.5 rounded bg-[rgba(245,158,11,0.16)] px-1 py-px text-[9px] font-semibold text-[var(--nim-warning)]"
+                title={`${queuedCount} dispatch${queuedCount === 1 ? '' : 'es'} waiting for a Head Agent slot`}
+              >
+                <MaterialSymbol icon="schedule" size={11} />
+                {queuedCount} queued
+              </span>
+            )}
+          </div>
           <span
             className="text-[10px] font-semibold text-nim-faint uppercase tracking-wide"
             style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}

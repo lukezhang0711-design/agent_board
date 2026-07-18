@@ -228,6 +228,27 @@ describe('PGLiteSessionStore JSON-column read normalization', () => {
     expect(findById('started').dispatchQueued).toBeUndefined();
     expect(findById('plain').dispatchQueued).toBeUndefined();
   });
+
+  // FB-023: Head interruptions must survive the SQLite JSON-string boundary so
+  // every session surface can distinguish an interrupted child from an idle one.
+  it('list() surfaces interruptedByHead from JSON-string metadata', async () => {
+    const db = {
+      query: vi.fn(async () => ({
+        rows: [
+          { ...makeRow({ id: 'interrupted', metadata: '{"interruptedByHead":true}' }), child_count: 0, effective_updated_at: new Date(0) },
+          { ...makeRow({ id: 'resumed', metadata: '{"interruptedByHead":false}' }), child_count: 0, effective_updated_at: new Date(0) },
+          { ...makeRow({ id: 'plain', metadata: '{}' }), child_count: 0, effective_updated_at: new Date(0) },
+        ],
+      })),
+    };
+    const store = createPGLiteSessionStore(db as any);
+    const list = await store.list('/ws');
+    const findById = (id: string) => list.find((s) => s.id === id)!;
+
+    expect(findById('interrupted').interruptedByHead).toBe(true);
+    expect(findById('resumed').interruptedByHead).toBeUndefined();
+    expect(findById('plain').interruptedByHead).toBeUndefined();
+  });
 });
 
 describe('PGLiteSessionStore.updateMetadata defense-in-depth', () => {

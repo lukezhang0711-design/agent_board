@@ -92,4 +92,21 @@ describe('MetaAgentMode queued summary', () => {
     expect(await screen.findByText('1 running')).toBeTruthy();
     expect(screen.queryByText('0 queued')).toBeNull();
   });
+
+  it('renders interrupted delegated sessions with the warning tone', async () => {
+    invoke.mockResolvedValueOnce({
+      success: true,
+      sessions: [makeSpawnedSession('interrupted', 'interrupted-1')],
+    });
+
+    render(
+      <Provider store={createStore()}>
+        <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
+      </Provider>,
+    );
+
+    const badge = await screen.findByText('interrupted');
+    expect(badge.className).toContain('text-[var(--nim-warning)]');
+    expect(badge.className).toContain('bg-[rgba(245,158,11,0.16)]');
+  });
 });

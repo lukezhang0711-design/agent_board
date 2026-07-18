@@ -2100,6 +2100,7 @@ export const refreshSessionListAtom = atom(
             ...(s.phase && { phase: s.phase }),
             ...(s.tags && { tags: s.tags }),
             ...(s.dispatchQueued && { dispatchQueued: s.dispatchQueued }),
+            ...(s.interruptedByHead && { interruptedByHead: s.interruptedByHead }),
             // Linked tracker item IDs from metadata JSONB
             ...(s.linkedTrackerItemIds && { linkedTrackerItemIds: s.linkedTrackerItemIds }),
             ...(s.agentRole && { agentRole: s.agentRole }),

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createStore } from 'jotai';
+import { createStore, type Atom } from 'jotai';
 import type { SessionMeta } from '@nimbalyst/runtime';
+import * as sessionKanbanAtoms from '../atoms/sessionKanban';
 import {
   refreshSessionListAtom,
   sessionListWorkspaceAtom,
@@ -104,5 +105,35 @@ describe('sessionDispatchQueuedAtom (FB-019)', () => {
 
     seed([makeMeta({ id: 'queued-2', dispatchQueued: false })]);
     expect(store.get(sessionDispatchQueuedAtom('queued-2'))).toBe(false);
+  });
+
+  it('preserves an interrupted marker through sessions:list and clears its derived atom on resume', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      success: true,
+      sessions: [
+        {
+          id: 'interrupted-from-list',
+          title: 'Interrupted through IPC',
+          createdAt: 1,
+          updatedAt: 2,
+          provider: 'claude-code',
+          interruptedByHead: true,
+        },
+      ],
+    });
+    vi.stubGlobal('window', { electronAPI: { invoke } });
+    store.set(sessionListWorkspaceAtom, '/workspace');
+
+    await store.set(refreshSessionListAtom);
+
+    expect(store.get(sessionRegistryAtom).get('interrupted-from-list')?.interruptedByHead).toBe(true);
+    const interruptedAtom = (sessionKanbanAtoms as {
+      sessionInterruptedAtom?: (sessionId: string) => Atom<boolean>;
+    }).sessionInterruptedAtom;
+    expect(interruptedAtom).toBeTypeOf('function');
+    expect(store.get(interruptedAtom!('interrupted-from-list'))).toBe(true);
+
+    seed([makeMeta({ id: 'interrupted-from-list', interruptedByHead: false })]);
+    expect(store.get(interruptedAtom!('interrupted-from-list'))).toBe(false);
   });
 });
