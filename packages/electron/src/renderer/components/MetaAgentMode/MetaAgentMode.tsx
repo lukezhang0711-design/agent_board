@@ -68,6 +68,10 @@ function getStatusTone(status: string): string {
   switch (status) {
     case 'running':
       return 'text-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)]';
+    // Dispatched but still waiting for a Head Agent slot — deliberately muted, it
+    // is not yet doing work and should not read as active.
+    case 'queued':
+      return 'text-[var(--nim-text-secondary)] bg-[var(--nim-bg-tertiary)]';
     case 'waiting_for_input':
       return 'text-[var(--nim-warning)] bg-[rgba(245,158,11,0.16)]';
     case 'error':

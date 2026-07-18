@@ -27,6 +27,7 @@ import {
   persistInteractivePromptToolResult,
   persistInteractivePromptToolUse,
 } from '../mcp/tools/interactivePromptTranscript';
+import { broadcastMessageLogged } from './ai/claudeCliUserPromptLog';
 import { computeNotificationSignature } from './metaAgentNotificationSignature';
 import { extractMessageText, extractUserPrompts } from './metaAgentMessageText';
 import { ClaudeCliLauncherConfig } from './ai/claudeCliLauncherSingleton';
@@ -749,6 +750,14 @@ export class MetaAgentService {
     metaSessionId: string,
     workspaceId: string,
   ): Promise<{ inFlightCount: number; totalCount: number }> {
+    // Queued dispatches now own a placeholder `ai_sessions` row from the moment
+    // they are enqueued (so they are visible on the board). Those rows must not
+    // affect capacity: a placeholder is not running, and counting it toward the
+    // lifetime total would double-count it once the drain loop dispatches it
+    // (`drainDispatchQueueForHead` adds `successfulDispatches` on top of the
+    // baseline it read). Excluding every reserved session whose queue row has not
+    // reached 'dispatched' keeps both numbers identical to the pre-placeholder
+    // behaviour: a child counts exactly when it becomes a real dispatch.
     const { rows } = await databaseWorker.query<{ in_flight: string; total: string }>(
       `SELECT
          SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END)::text AS in_flight,
@@ -756,7 +765,13 @@ export class MetaAgentService {
        FROM ai_sessions
        WHERE workspace_id = $1
          AND created_by_session_id = $2
-         AND (is_archived = FALSE OR is_archived IS NULL)`,
+         AND (is_archived = FALSE OR is_archived IS NULL)
+         AND id NOT IN (
+           SELECT reserved_session_id
+           FROM dispatch_queue
+           WHERE status <> 'dispatched'
+             AND reserved_session_id IS NOT NULL
+         )`,
       [workspaceId, metaSessionId],
     );
     return {
@@ -868,6 +883,7 @@ export class MetaAgentService {
         requestedAt,
         sourceRef,
       });
+      await this.createQueuedPlaceholderSession(metaSessionId, workspaceId, args, sessionId, title, sourceRef);
       return {
         sessionId,
         status: 'queued',
@@ -885,6 +901,94 @@ export class MetaAgentService {
       await databaseWorker.query(`DELETE FROM tracker_items WHERE id = $1`, [workOrderId]).catch(() => undefined);
       this.emitTrackerItemsChanged();
       throw error;
+    }
+  }
+
+  /**
+   * Give a queued dispatch a real `ai_sessions` row up front, so it is visible in
+   * Delegated Sessions and on the board while it waits for a slot. Without this a
+   * queued item exists only in `dispatch_queue` and in a tracker card, so the
+   * operator sees nothing between "queued" and "started".
+   *
+   * The row is a placeholder: `metadata.dispatchQueued` marks it, and
+   * `getDispatchCounts` excludes it from both capacity numbers until the queue row
+   * reaches 'dispatched'. `dispatchClaimedQueueItem` then reuses this exact row via
+   * its existing-session branch, so nothing is created twice.
+   *
+   * Best-effort: the dispatch is already durably queued, and auto-resume falls back
+   * to creating the session itself, so a failure here must not fail the enqueue.
+   */
+  private async createQueuedPlaceholderSession(
+    metaSessionId: string,
+    workspaceId: string,
+    args: InternalCreateChildSessionArgs,
+    sessionId: string,
+    title: string,
+    sourceRef: string,
+  ): Promise<void> {
+    try {
+      await AISessionsRepository.create({
+        id: sessionId,
+        provider: args.provider!,
+        model: args.model!,
+        title,
+        workspaceId,
+        agentRole: 'standard',
+        createdBySessionId: metaSessionId,
+        parentSessionId: args.parentSessionIdOverride ?? null,
+        hasBeenNamed: !!args.title?.trim(),
+      } as any);
+      await AISessionsRepository.updateMetadata(sessionId, { metadata: { dispatchQueued: true } });
+      await this.applyChildSessionMetadata(sessionId, args);
+      await this.linkQueuedWorkOrderToPlaceholder(sourceRef, sessionId);
+
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) {
+          window.webContents.send('sessions:refresh-list', { workspacePath: workspaceId, sessionId });
+        }
+      }
+    } catch (error) {
+      console.error(`[MetaAgentService] Failed to create queued placeholder session ${sessionId}:`, error);
+    }
+  }
+
+  /**
+   * Link the already-created queued work-order card to its placeholder session
+   * WITHOUT promoting the card out of 'queued' — that promotion belongs to
+   * `attachQueuedWorkOrderToSession`, which runs when the item is really dispatched.
+   */
+  private async linkQueuedWorkOrderToPlaceholder(sourceRef: string, sessionId: string): Promise<void> {
+    const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
+      `SELECT id, data
+       FROM tracker_items
+       WHERE type = 'work-order' AND source_ref = $1
+       LIMIT 1`,
+      [sourceRef],
+    );
+    const row = rows[0];
+    if (!row) return;
+    const data = typeof row.data === 'string'
+      ? JSON.parse(row.data)
+      : ((row.data as Record<string, unknown> | null) ?? {});
+    data.childSessionId = sessionId;
+    await databaseWorker.query(
+      `UPDATE tracker_items SET data = $1, updated = NOW() WHERE id = $2`,
+      [JSON.stringify(data), row.id],
+    );
+    await createBidirectionalLink(row.id, sessionId);
+    this.emitTrackerItemsChanged();
+  }
+
+  /** Reflect a permanently failed queue item on its placeholder session. */
+  private async markPlaceholderSessionFailed(sessionId: string): Promise<void> {
+    try {
+      await databaseWorker.query(
+        `UPDATE ai_sessions SET status = 'error' WHERE id = $1`,
+        [sessionId],
+      );
+      await AISessionsRepository.updateMetadata(sessionId, { metadata: { dispatchQueued: false } });
+    } catch (error) {
+      console.error(`[MetaAgentService] Failed to mark placeholder session ${sessionId} failed:`, error);
     }
   }
 
@@ -941,6 +1045,7 @@ export class MetaAgentService {
           await this.updateWorkOrderStatusBySourceRef(item.sourceRef, 'failed').catch((cardError) => {
             console.error(`[MetaAgentService] Failed to mark queued work-order ${item.sourceRef} failed:`, cardError);
           });
+          await this.markPlaceholderSessionFailed(item.reservedSessionId);
           await this.notifyHeadOfDispatchFailure(item, message);
         }
       }
@@ -950,7 +1055,15 @@ export class MetaAgentService {
   private async dispatchClaimedQueueItem(item: DispatchQueueItem): Promise<void> {
     const args = item.requestSnapshot.args as InternalCreateChildSessionArgs;
     const existing = await AISessionsRepository.get(item.reservedSessionId);
-    if (existing) {
+    // A queued item always has a placeholder row now, so "row exists" alone no
+    // longer means "this session was already fully created". Only a genuinely
+    // recovered session (one that got past createChildSessionInternal before a
+    // crash) may take the shortcut below — a placeholder must still go through
+    // full creation, or it would silently skip worktree setup and the initial
+    // prompt. `AISessionsRepository.create` upserts, so it adopts the placeholder
+    // row rather than conflicting with it.
+    const isQueuedPlaceholder = existing?.metadata?.dispatchQueued === true;
+    if (existing && !isQueuedPlaceholder) {
       await this.applyChildSessionMetadata(item.reservedSessionId, args);
       await this.attachQueuedWorkOrderToSession(item.sourceRef, item.reservedSessionId);
       await this.ensureRecoveredInitialPrompt(item, args, existing.worktreeId);
@@ -1268,6 +1381,12 @@ export class MetaAgentService {
             feedback: response.feedback,
           },
     });
+    // Persisting the row notifies nobody on its own (AgentMessagesRepository is a
+    // plain store). Without this the plan card in an already-open session sits at
+    // "Awaiting review" forever, because nothing tells the renderer to re-read the
+    // session. Same reload signal the other durable prompts use after they settle
+    // -- see interactiveToolHandlers.ts persistToolResult.
+    broadcastMessageLogged(metaSessionId, workspaceId);
 
     return JSON.stringify({
       planId,
@@ -1772,7 +1891,7 @@ export class MetaAgentService {
 
   private async getSpawnedSessions(metaSessionId: string, workspaceId: string): Promise<Array<Record<string, unknown>>> {
     const { rows } = await databaseWorker.query<any>(
-      `SELECT id, title, provider, model, status, last_activity, created_at, updated_at, worktree_id, agent_role, created_by_session_id
+      `SELECT id, title, provider, model, status, last_activity, created_at, updated_at, worktree_id, agent_role, created_by_session_id, metadata
        FROM ai_sessions
        WHERE workspace_id = $1
          AND created_by_session_id = $2
@@ -1783,11 +1902,18 @@ export class MetaAgentService {
 
     const sessions: Array<Record<string, unknown>> = [];
     for (const row of rows) {
+      // A dispatch that is still waiting for a slot has a placeholder row whose
+      // raw status is 'idle'. Report it as 'queued' so Delegated Sessions shows
+      // it as waiting rather than as an idle child that never started.
+      const metadata = typeof row.metadata === 'string'
+        ? (() => { try { return JSON.parse(row.metadata); } catch { return null; } })()
+        : row.metadata;
+      const isQueued = metadata?.dispatchQueued === true;
       const data = await this.buildSessionResultData(row.id, workspaceId, {
         title: row.title || 'Untitled Session',
         provider: row.provider,
         model: row.model || null,
-        status: row.status || 'idle',
+        status: isQueued ? 'queued' : (row.status || 'idle'),
         lastActivity: toMillis(row.last_activity),
         createdAt: toMillis(row.created_at)!,
         updatedAt: toMillis(row.updated_at)!,
@@ -2359,9 +2485,16 @@ export class MetaAgentService {
 
   private async applyChildSessionMetadata(
     sessionId: string,
-    args: Pick<InternalCreateChildSessionArgs, 'effortLevel' | 'toolScope' | 'notifyParent'>,
+    args: Pick<InternalCreateChildSessionArgs, 'effortLevel' | 'toolScope' | 'notifyParent' | 'title'>,
   ): Promise<void> {
     const metadata: Record<string, unknown> = {};
+    // Record that this title came from the dispatch call, not from a model. The
+    // auto-namer (SessionNamingService.applySessionTitle) renames with
+    // `force: true`, which bypasses `hasBeenNamed`, so it needs this explicit
+    // marker to leave operator-chosen dispatch titles alone.
+    if (args.title?.trim()) {
+      metadata.titleSource = 'dispatch';
+    }
     if (args.effortLevel) {
       metadata.effortLevel = args.effortLevel;
     }

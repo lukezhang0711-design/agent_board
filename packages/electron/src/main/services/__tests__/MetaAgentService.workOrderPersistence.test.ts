@@ -9,6 +9,8 @@ const testState = vi.hoisted(() => ({
   stateManager: null as any,
   metaAgentToolFns: null as any,
   maxParallel: 4,
+  /** Every `webContents.send` the service makes, so tests can assert IPC signals. */
+  sentIpc: [] as { channel: string; args: unknown[] }[],
 }));
 
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
@@ -33,7 +35,16 @@ vi.mock('../ai/providerResolution', () => ({
   resolveExtensionAgentRef: () => null,
   isExtensionAgentProvider: () => false,
 }));
-vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] } }));
+vi.mock('electron', () => ({
+  BrowserWindow: {
+    getAllWindows: () => [{
+      isDestroyed: () => false,
+      webContents: {
+        send: (channel: string, ...args: unknown[]) => { testState.sentIpc.push({ channel, args }); },
+      },
+    }],
+  },
+}));
 vi.mock('../SyncManager', () => ({ getSyncProvider: () => null }));
 vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
 vi.mock('../../utils/store', () => ({
@@ -209,6 +220,7 @@ describe('MetaAgentService work-order persistence', () => {
     testState.db = db;
     testState.metaAgentToolFns = null;
     testState.maxParallel = 4;
+    testState.sentIpc = [];
     AISessionsRepository.setStore(createPGLiteSessionStore(db));
     AgentMessagesRepository.setStore(createPGLiteAgentMessagesStore(db));
     (service as any).notificationSignatures.clear();
@@ -300,6 +312,39 @@ describe('MetaAgentService work-order persistence', () => {
     expect(resolveEffortLevel(persisted?.metadata?.effortLevel, 'low')).toBe('xhigh');
   });
 
+  // FB-020: SessionNamingService.applySessionTitle renames with `force: true`,
+  // which bypasses `hasBeenNamed`. It keys off this marker instead so an
+  // operator-chosen dispatch title survives the auto-namer.
+  it('marks a caller-supplied child title as dispatch-sourced so auto-naming skips it', async () => {
+    const child = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'X-queue-1',
+        prompt: 'Run the queued verification pass',
+        intent: 'investigation',
+      },
+    ));
+
+    const persisted = await AISessionsRepository.get(child.sessionId);
+    expect(persisted?.title).toBe('X-queue-1');
+    expect(persisted?.metadata).toMatchObject({ titleSource: 'dispatch' });
+  });
+
+  it('leaves a title-less dispatch auto-nameable', async () => {
+    const child = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        prompt: 'Investigate the routing regression without a caller title',
+        intent: 'investigation',
+      },
+    ));
+
+    const persisted = await AISessionsRepository.get(child.sessionId);
+    expect(persisted?.metadata?.titleSource).toBeUndefined();
+  });
+
   it('persists the over-limit dispatch and work-order, then returns its queue position instead of rejecting', async () => {
     testState.maxParallel = 1;
     await createRunningChildren(1);
@@ -326,7 +371,25 @@ describe('MetaAgentService work-order persistence', () => {
       sessionId: expect.any(String),
     });
     expect(receipt.message).toContain('position 1');
-    await expect(AISessionsRepository.get(receipt.sessionId)).resolves.toBeNull();
+    // FB-019: a queued dispatch now owns a placeholder session row from the moment
+    // it is enqueued, so it is visible while it waits instead of appearing only
+    // once a slot frees up.
+    await expect(AISessionsRepository.get(receipt.sessionId)).resolves.toMatchObject({
+      id: receipt.sessionId,
+      title: 'Queued investigation',
+      createdBySessionId: 'head-session',
+      metadata: expect.objectContaining({ dispatchQueued: true }),
+    });
+    // The placeholder must not consume capacity: it is neither in flight nor
+    // counted toward the lifetime total until it is really dispatched.
+    const queuedCounts = await (service as any).getDispatchCounts('head-session', workspacePath);
+    expect(queuedCounts).toEqual({ inFlightCount: 1, totalCount: 1 });
+
+    // Delegated Sessions reads this list; the placeholder must report as queued
+    // rather than as an idle child that silently never started.
+    const spawned = await (service as any).getSpawnedSessions('head-session', workspacePath);
+    const queuedEntry = spawned.find((s: any) => s.sessionId === receipt.sessionId);
+    expect(queuedEntry).toMatchObject({ title: 'Queued investigation', status: 'queued' });
 
     const { rows: queueRows } = await db.query<any>(
       `SELECT id, head_session_id, workspace_id, reserved_session_id,
@@ -406,7 +469,13 @@ describe('MetaAgentService work-order persistence', () => {
       createdBySessionId: 'head-session',
       metadata: expect.objectContaining({ effortLevel: 'high' }),
     });
-    await expect(AISessionsRepository.get(second.sessionId)).resolves.toBeNull();
+    // FB-019: the still-queued second item keeps its placeholder (and its queued
+    // marker), while the dispatched first item has had the marker cleared.
+    await expect(AISessionsRepository.get(second.sessionId)).resolves.toMatchObject({
+      id: second.sessionId,
+      metadata: expect.objectContaining({ dispatchQueued: true }),
+    });
+    expect(firstSession?.metadata?.dispatchQueued).toBeFalsy();
     const { rows: afterFirst } = await db.query<any>(
       `SELECT id, status, dispatched_session_id
        FROM dispatch_queue
@@ -527,7 +596,14 @@ describe('MetaAgentService work-order persistence', () => {
       error_message: expect.stringContaining('Worktree'),
     });
     expect(rows[1]).toMatchObject({ id: healthy.queueId, status: 'dispatched', error_message: null });
-    await expect(AISessionsRepository.get(broken.sessionId)).resolves.toBeNull();
+    // FB-019: the failed item's placeholder stays visible and carries the failure,
+    // rather than silently disappearing from the board.
+    const brokenSession = await db.query<any>(
+      `SELECT status, metadata FROM ai_sessions WHERE id = $1`,
+      [broken.sessionId],
+    );
+    expect(brokenSession.rows[0].status).toBe('error');
+    expect(parseStoredJson<any>(brokenSession.rows[0].metadata).dispatchQueued).toBe(false);
     await expect(AISessionsRepository.get(healthy.sessionId)).resolves.toMatchObject({
       id: healthy.sessionId,
       title: 'Healthy queued task',
@@ -747,6 +823,15 @@ describe('MetaAgentService work-order persistence', () => {
       approved: true,
       planId: approval.planId,
       status: 'approved',
+    });
+
+    // FB-018: persisting the result row notifies nobody by itself, so an already-open
+    // session would keep showing "Awaiting review". Assert the existing transcript
+    // reload signal fires for this session after the decision lands.
+    const reloadSignals = testState.sentIpc.filter((sent) => sent.channel === 'ai:message-logged');
+    expect(reloadSignals).toContainEqual({
+      channel: 'ai:message-logged',
+      args: [{ sessionId: 'head-session', workspacePath }],
     });
 
     const implementation = JSON.parse(await (service as any).createChildSession(

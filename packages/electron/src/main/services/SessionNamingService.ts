@@ -197,10 +197,12 @@ export class SessionNamingService {
     // Check if this session belongs to a blitz (parent_session_id points to a blitz session)
     let parentBlitzId: string | undefined;
     let worktreeId: string | undefined;
+    let titleSource: unknown;
 
     try {
       const session = await AISessionsRepository.get(sessionId);
       worktreeId = session?.worktreeId;
+      titleSource = session?.metadata?.titleSource;
 
       if (session?.parentSessionId) {
         const parent = await AISessionsRepository.get(session.parentSessionId);
@@ -210,6 +212,18 @@ export class SessionNamingService {
       }
     } catch (error) {
       console.error('[SessionNamingService] Failed to check blitz membership:', error);
+    }
+
+    // A Head Agent dispatch that supplied an explicit title owns that title: it is
+    // how the operator identifies the child on the board. The rename below is
+    // `force: true` — it deliberately bypasses `hasBeenNamed` — so without this
+    // guard the auto-namer replaces a meaningful dispatch title with a generic one.
+    // Keyed on the dedicated `titleSource` marker rather than `hasBeenNamed`
+    // because an agent renaming its own session later is intended behaviour, and
+    // a manual rename goes through `sessions:update-title`, not this path.
+    if (titleSource === 'dispatch') {
+      console.log(`[SessionNamingService] Keeping dispatch title for ${sessionId}; ignoring auto-name "${title}"`);
+      return;
     }
 
     if (parentBlitzId) {
