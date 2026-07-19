@@ -271,7 +271,7 @@ const META_AGENT_TOOL_DEFS: Array<{
           type: "integer",
           minimum: 1,
           description:
-            "Optional positive integer for this dispatch only. The effective Head Agent concurrency limit is the larger of this value and the global setting.",
+            "Optional positive integer for this dispatch only. It can only lower the global Head Agent concurrency limit; values above the global setting are capped to that setting.",
         },
       },
       required: ["intent"],
@@ -338,7 +338,7 @@ const META_AGENT_TOOL_DEFS: Array<{
           type: "integer",
           minimum: 1,
           description:
-            "Optional positive integer for this dispatch only. The effective Head Agent concurrency limit is the larger of this value and the global setting.",
+            "Optional positive integer for this dispatch only. It can only lower the global Head Agent concurrency limit; values above the global setting are capped to that setting.",
         },
       },
       required: ["prompt", "intent"],

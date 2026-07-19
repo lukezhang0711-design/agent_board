@@ -42,6 +42,8 @@ describe('interrupt_session meta-agent tool registration', () => {
     const tools = getMetaAgentOpenAITools();
     const submitPlanTool = tools.find((candidate) => candidate.function.name === 'submit_plan');
     const createSessionTool = tools.find((candidate) => candidate.function.name === 'create_session');
+    const maxParallelOverrideDescription =
+      'Optional positive integer for this dispatch only. It can only lower the global Head Agent concurrency limit; values above the global setting are capped to that setting.';
 
     expect(submitPlanTool?.function.description).toContain('user approval');
     expect(submitPlanTool?.function.parameters).toMatchObject({
@@ -66,7 +68,11 @@ describe('interrupt_session meta-agent tool registration', () => {
           type: 'string',
           enum: ['low', 'medium', 'high', 'xhigh', 'max'],
         },
-        maxParallelOverride: { type: 'integer', minimum: 1 },
+        maxParallelOverride: {
+          type: 'integer',
+          minimum: 1,
+          description: maxParallelOverrideDescription,
+        },
       },
       required: ['intent'],
     });

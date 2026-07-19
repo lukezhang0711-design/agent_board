@@ -379,29 +379,28 @@ describe('MetaAgentService dispatch limits', () => {
     expect(AISessionsRepository.create).toHaveBeenCalledTimes(1);
   });
 
-  it('uses the larger per-dispatch override without lowering the global setting', async () => {
+  it('clamps a higher override and keeps a lower override effective', async () => {
     const service = MetaAgentService.getInstance();
     (service as any).aiService = { queuePromptForSession: vi.fn() };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
-    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '4', total: '4' }] } as any);
+    appStoreMock.state.metaAgentMaxParallel = 2;
+    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '2', total: '2' }] } as any);
 
     await expect(
-      (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {})
-    ).rejects.toThrow(/limit 4/);
+      (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {
+        maxParallelOverride: 3,
+      })
+    ).rejects.toThrow(/limit 2/);
     expect(AISessionsRepository.create).not.toHaveBeenCalled();
 
-    await (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {
-      maxParallelOverride: 6,
-    });
-
-    expect(AISessionsRepository.create).toHaveBeenCalledTimes(1);
-
-    appStoreMock.state.metaAgentMaxParallel = 5;
-    vi.mocked(AISessionsRepository.create).mockClear();
-    await (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {
-      maxParallelOverride: 2,
-    });
-    expect(AISessionsRepository.create).toHaveBeenCalledTimes(1);
+    appStoreMock.state.metaAgentMaxParallel = 4;
+    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '1', total: '1' }] } as any);
+    await expect(
+      (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {
+        maxParallelOverride: 1,
+      })
+    ).rejects.toThrow(/limit 1/);
+    expect(AISessionsRepository.create).not.toHaveBeenCalled();
   });
 
   it('keeps the independent lifetime backstop at 50', async () => {

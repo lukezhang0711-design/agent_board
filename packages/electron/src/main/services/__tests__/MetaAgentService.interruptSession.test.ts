@@ -8,6 +8,7 @@ import {
 } from '../PGLiteQueuedPromptsStore';
 
 const databaseQuery = vi.hoisted(() => vi.fn());
+const browserWindowsMock = vi.hoisted(() => ({ windows: [] as any[] }));
 
 vi.mock('@nimbalyst/runtime', () => ({
   AISessionsRepository: { create: vi.fn(), updateMetadata: vi.fn(), get: vi.fn() },
@@ -34,7 +35,9 @@ vi.mock('../ai/providerResolution', () => ({
   resolveExtensionAgentRef: () => null,
   isExtensionAgentProvider: () => false,
 }));
-vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] } }));
+vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: () => browserWindowsMock.windows },
+}));
 vi.mock('../SyncManager', () => ({ getSyncProvider: () => null }));
 vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
 vi.mock('../../utils/store', () => ({ getDefaultAIModel: () => null }));
@@ -64,6 +67,7 @@ vi.mock('../ai/claudeCliLauncherSingleton', () => ({
   ClaudeCliLauncherConfig: { setMetaAgentServerPort: vi.fn() },
 }));
 
+import { AISessionsRepository } from '@nimbalyst/runtime';
 import { MetaAgentService } from '../MetaAgentService';
 
 function createMemoryQueueStore(): QueuedPromptsStore {
@@ -164,6 +168,9 @@ describe('MetaAgentService.interruptSession', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(AISessionsRepository.get).mockReset();
+    vi.mocked(AISessionsRepository.updateMetadata).mockReset();
+    browserWindowsMock.windows = [];
     queueStore = createMemoryQueueStore();
     running = new Set(['child', 'grandchild']);
     databaseQuery.mockResolvedValue({
@@ -345,5 +352,43 @@ describe('MetaAgentService.interruptSession', () => {
       queue: 'cleared',
     }]);
     expect(await queueStore.get('child-clear')).toBeNull();
+  });
+
+  it('broadcasts a session-list refresh after persisting an interrupted marker', async () => {
+    const send = vi.fn();
+    browserWindowsMock.windows = [{
+      isDestroyed: () => false,
+      webContents: { send },
+    }];
+
+    await service.interruptSession('head', '/workspace', { sessionId: 'child' });
+
+    expect(AISessionsRepository.updateMetadata).toHaveBeenCalledWith('child', {
+      metadata: { interruptedByHead: true },
+    });
+    expect(send.mock.calls.filter(([channel]) => channel === 'sessions:refresh-list')).toEqual([
+      ['sessions:refresh-list', { workspacePath: '/workspace', sessionId: 'child' }],
+    ]);
+  });
+
+  it('broadcasts a session-list refresh after clearing an interrupted marker', async () => {
+    const send = vi.fn();
+    browserWindowsMock.windows = [{
+      isDestroyed: () => false,
+      webContents: { send },
+    }];
+    vi.mocked(AISessionsRepository.get).mockResolvedValue({
+      workspacePath: '/workspace',
+      metadata: { interruptedByHead: true },
+    } as any);
+
+    await (service as any).clearInterruptedByHeadMarker('child');
+
+    expect(AISessionsRepository.updateMetadata).toHaveBeenCalledWith('child', {
+      metadata: { interruptedByHead: false },
+    });
+    expect(send.mock.calls.filter(([channel]) => channel === 'sessions:refresh-list')).toEqual([
+      ['sessions:refresh-list', { workspacePath: '/workspace', sessionId: 'child' }],
+    ]);
   });
 });

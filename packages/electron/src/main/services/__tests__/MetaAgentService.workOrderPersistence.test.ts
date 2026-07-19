@@ -346,7 +346,7 @@ describe('MetaAgentService work-order persistence', () => {
     expect(persisted?.metadata?.titleSource).toBeUndefined();
   });
 
-  it('persists the over-limit dispatch and work-order, then returns its queue position instead of rejecting', async () => {
+  it('keeps no-override dispatch behavior: persists the over-limit request and returns its queue position', async () => {
     testState.maxParallel = 1;
     await createRunningChildren(1);
 
@@ -432,6 +432,58 @@ describe('MetaAgentService work-order persistence', () => {
       status: 'queued',
       childSessionId: receipt.sessionId,
       taskSummary: 'Run after the active child releases its slot',
+    });
+  });
+
+  it('caps an override above the global setting and queues the third dispatch', async () => {
+    testState.maxParallel = 2;
+    await createRunningChildren(2);
+
+    const receipt = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Capped third dispatch',
+        prompt: 'Wait for one of the two configured slots to open',
+        intent: 'investigation',
+        maxParallelOverride: 3,
+      },
+    ));
+
+    expect(receipt).toMatchObject({
+      status: 'queued',
+      queued: true,
+      queuePosition: 1,
+    });
+    await expect((service as any).getDispatchCounts('head-session', workspacePath)).resolves.toEqual({
+      inFlightCount: 2,
+      totalCount: 2,
+    });
+  });
+
+  it('honors a lower override and queues the second dispatch', async () => {
+    testState.maxParallel = 4;
+    await createRunningChildren(1);
+
+    const receipt = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Lowered second dispatch',
+        prompt: 'Wait because this dispatch lowers the cap to one',
+        intent: 'investigation',
+        maxParallelOverride: 1,
+      },
+    ));
+
+    expect(receipt).toMatchObject({
+      status: 'queued',
+      queued: true,
+      queuePosition: 1,
+    });
+    await expect((service as any).getDispatchCounts('head-session', workspacePath)).resolves.toEqual({
+      inFlightCount: 1,
+      totalCount: 1,
     });
   });
 

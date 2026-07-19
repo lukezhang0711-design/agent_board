@@ -89,7 +89,7 @@ function getEffectiveMaxParallel(override: number | undefined): number {
   if (!isValidMaxParallel(override)) {
     throw new Error('maxParallelOverride must be a positive safe integer');
   }
-  return Math.max(configuredMax, override);
+  return Math.min(configuredMax, override);
 }
 
 interface PendingInteractivePrompt {
@@ -394,6 +394,7 @@ export class MetaAgentService {
         await AISessionsRepository.updateMetadata(sessionId, {
           metadata: { interruptedByHead: true },
         });
+        this.broadcastSessionListRefresh(workspaceId, sessionId);
         try {
           await this.updateWorkOrderStatusForSession(
             sessionId,
@@ -434,7 +435,18 @@ export class MetaAgentService {
     });
   }
 
-  private async clearInterruptedByHeadMarker(sessionId: string): Promise<void> {
+  private broadcastSessionListRefresh(workspacePath: string, sessionId: string): void {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('sessions:refresh-list', { workspacePath, sessionId });
+      }
+    }
+  }
+
+  private async clearInterruptedByHeadMarker(
+    sessionId: string,
+    workspacePath?: string,
+  ): Promise<void> {
     const session = await AISessionsRepository.get(sessionId);
     if (session?.metadata?.interruptedByHead !== true) {
       return;
@@ -442,6 +454,10 @@ export class MetaAgentService {
     await AISessionsRepository.updateMetadata(sessionId, {
       metadata: { interruptedByHead: false },
     });
+    const refreshWorkspacePath = workspacePath ?? session.workspacePath;
+    if (refreshWorkspacePath) {
+      this.broadcastSessionListRefresh(refreshWorkspacePath, sessionId);
+    }
   }
 
   public async start(aiService: AIService): Promise<void> {
@@ -502,7 +518,7 @@ export class MetaAgentService {
           // `interruptedChildSessionIds` only survives this process. Persist the
           // clear too, so a child that resumes after a reload no longer appears
           // interrupted in the session list or Kanban board.
-          void this.clearInterruptedByHeadMarker(event.sessionId).catch((error) => {
+          void this.clearInterruptedByHeadMarker(event.sessionId, event.workspacePath).catch((error) => {
             console.error(`[MetaAgentService] Failed to clear interrupted marker for child ${event.sessionId}:`, error);
           });
           this.clearReleasedDispatchPromptsForSession(event.sessionId);
