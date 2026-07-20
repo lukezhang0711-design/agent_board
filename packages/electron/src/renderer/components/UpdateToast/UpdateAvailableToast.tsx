@@ -2,16 +2,14 @@ import React from 'react';
 
 interface UpdateAvailableToastProps {
   version: string;
-  onUpdateNow: () => void;
-  onViewReleaseNotes: () => void;
+  releaseNotes?: string;
   onRemindLater: () => void;
   onDismiss: () => void;
 }
 
 export function UpdateAvailableToast({
   version,
-  onUpdateNow,
-  onViewReleaseNotes,
+  releaseNotes,
   onRemindLater,
   onDismiss,
 }: UpdateAvailableToastProps): React.ReactElement {
@@ -40,26 +38,15 @@ export function UpdateAvailableToast({
       >
         New Version: Nimbalyst {version}
       </div>
-      <div className="update-toast-subtitle text-xs text-[var(--nim-text-muted)] leading-normal mb-4">
-        There's a new app update available to download
+      <div className="update-toast-subtitle text-xs text-[var(--nim-text-muted)] leading-normal mb-3" data-testid="customized-build-notice">
+        This is a customized build; updates are review-and-merge, not auto-installed.
+      </div>
+      <div className="update-toast-notes text-xs text-[var(--nim-text-muted)] leading-normal mb-4 max-h-24 overflow-y-auto whitespace-pre-wrap" data-testid="update-release-notes">
+        {releaseNotes || 'No release notes available.'}
       </div>
 
       {/* Action buttons */}
       <div className="update-toast-actions flex gap-2 flex-wrap">
-        <button
-          className="update-toast-btn update-toast-btn-primary flex-1 py-2 px-3.5 border-none rounded-md text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-primary)] text-white hover:brightness-110"
-          onClick={onUpdateNow}
-          data-testid="update-now-btn"
-        >
-          Update Now
-        </button>
-        <button
-          className="update-toast-btn update-toast-btn-secondary py-2 px-3.5 border border-[var(--nim-border)] rounded-md text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
-          onClick={onViewReleaseNotes}
-          data-testid="release-notes-btn"
-        >
-          Release Notes
-        </button>
         <button
           className="update-toast-btn update-toast-btn-text py-2 px-3 border-none rounded-md text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           onClick={onRemindLater}

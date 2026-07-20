@@ -1,14 +1,10 @@
 import { autoUpdater } from 'electron-updater';
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import log from 'electron-log/main';
-import * as fs from 'fs';
-import * as path from 'path';
 import { getReleaseChannel, store } from '../utils/store';
 import { safeHandle, safeOn } from '../utils/ipcRegistry';
 import { AnalyticsService } from './analytics/AnalyticsService';
 import { hasActiveStreamingSessions } from '../ipc/SessionStateHandlers';
-import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
-import { getDatabase } from '../database/initialize';
 import {
   categorizeDownloadDuration,
   classifyUpdateError,
@@ -33,20 +29,11 @@ const GITHUB_UPDATE_PROVIDER = {
   repo: 'nimbalyst'
 };
 
-// classifyUpdateError, categorizeDownloadDuration, isWindowsRenameLockError
-// moved to ./autoUpdaterUtils so unit tests can import them without pulling
-// in this module's Electron-app-global load chain (see #245). Alias keeps
-// the original call-site name (`getDurationCategory`) in scope.
-const getDurationCategory = categorizeDownloadDuration;
-
 export class AutoUpdaterService {
   private updateCheckInterval: NodeJS.Timeout | null = null;
   private isCheckingForUpdate = false;
   private isManualCheck = false; // Track if this is a user-initiated check (for showing up-to-date toast)
   private static isUpdating = false;
-  private pendingUpdateInfo: { version: string; releaseNotes?: string; releaseDate?: string } | null = null;
-  private downloadStartTime: number | null = null; // Track download start time for duration analytics
-  private downloadRetryAttempted = false; // Windows EPERM rename retry guard (one retry per user-initiated download)
   // Dedup `update_error` analytics: the hourly background check produces a
   // fresh `error` event every poll on networks that can't reach the update
   // endpoint, which buries any real signal. Only emit when the
@@ -58,11 +45,11 @@ export class AutoUpdaterService {
     log.transports.file.level = 'info';
     autoUpdater.logger = log;
 
-    // Configure auto-updater. autoDownload=true: both background polls and the
-    // manual "Check for Updates" trigger download immediately, then surface a
-    // single "Ready to install" toast. Per maintainer direction on #327.
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
+    // This customized build only reports upstream releases. It never downloads
+    // or installs an official package because that package would replace local
+    // customizations before they can be reviewed and merged.
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = false;
 
     // Configure feed URL based on release channel
     this.configureFeedURL();
@@ -101,6 +88,7 @@ export class AutoUpdaterService {
       log.info('Update available:', info);
       this.isCheckingForUpdate = false;
       this.lastUpdateErrorKey = null;
+      const isManualCheck = this.isManualCheck;
       this.isManualCheck = false;
 
       let releaseNotes = info.releaseNotes as string | undefined;
@@ -109,19 +97,16 @@ export class AutoUpdaterService {
 
       log.info(`Final releaseNotes being sent to window: "${releaseNotes?.substring(0, 100)}..."`);
 
-      // Store pending update info for later use
-      this.pendingUpdateInfo = {
-        version: info.version,
-        releaseNotes: releaseNotes,
-        releaseDate: info.releaseDate
-      };
-
-      // With autoDownload=true the download starts immediately. Per maintainer
-      // direction on #327 we no longer surface an "Update Available" toast - the
-      // download runs in the background and only the "Ready to install" toast
-      // (update-downloaded) is shown. The update-available event is still
-      // broadcast so renderer state stays in sync.
-      this.sendToAllWindows('update-available', info);
+      // Surface the upstream version and notes for review. This customized build
+      // does not download or install official releases from this notification.
+      this.sendToFrontmostWindow('update-toast:show-available', {
+        currentVersion: app.getVersion(),
+        newVersion: info.version,
+        releaseNotes,
+        releaseDate: info.releaseDate,
+        releaseChannel: channel,
+        isManualCheck,
+      });
     });
 
     autoUpdater.on('update-not-available', (info) => {
@@ -144,25 +129,7 @@ export class AutoUpdaterService {
       const wasManualCheck = this.isManualCheck;
       this.isManualCheck = false;
 
-      // Windows-only: antivirus often holds a transient handle on the freshly
-      // downloaded installer, so electron-updater's temp -> final rename throws
-      // EPERM. Clean the pending dir and retry once after a short delay.
-      const wasDownloading = this.downloadStartTime !== null;
-      if (wasDownloading && !this.downloadRetryAttempted && isWindowsRenameLockError(err)) {
-        this.downloadRetryAttempted = true;
-        log.warn('Windows rename lock during update; cleaning pending dir and retrying once');
-        this.cleanupWindowsPendingDirectory();
-        setTimeout(() => {
-          autoUpdater.downloadUpdate().catch(retryErr => {
-            log.error('Retry of downloadUpdate failed:', retryErr);
-          });
-        }, 3000);
-        return;
-      }
-
-      // Track update error - determine stage based on context
-      // If downloadStartTime is set, we were downloading; otherwise it was a check error
-      const stage = wasDownloading ? 'download' : 'check';
+      const stage = 'check';
       const errorType = classifyUpdateError(err);
       const errorKey = `${stage}:${errorType}`;
       if (this.lastUpdateErrorKey !== errorKey) {
@@ -173,18 +140,14 @@ export class AutoUpdaterService {
           release_channel: getReleaseChannel()
         });
       }
-      this.downloadStartTime = null;
-      this.downloadRetryAttempted = false;
-
       // Suppress the user-facing toast for transient network errors on
       // automatic background checks (#56). Users on networks that can't
       // resolve the update endpoint (LAN-only, captive portal, restrictive
       // firewall) were getting an "Update Error: net::ERR_NAME_NOT_RESOLVED"
       // toast every hour because the auto-updater retries on a 60-minute
       // schedule. The error is still logged and reported to analytics.
-      // Manual checks (`Check for Updates` menu item) and download errors
-      // still surface so the user gets feedback when they asked for it
-      // or are mid-download.
+      // Manual checks (`Check for Updates` menu item) still surface so the
+      // user gets feedback when they asked for it.
       //
       // Same treatment for `release_pending` (404 on `latest-*.yml`): the
       // release workflow pushes the tag minutes before it uploads metadata,
@@ -209,73 +172,15 @@ export class AutoUpdaterService {
     });
 
     autoUpdater.on('download-progress', (progressObj) => {
-      let logMessage = `Download speed: ${progressObj.bytesPerSecond}`;
-      logMessage = `${logMessage} - Downloaded ${progressObj.percent}%`;
-      logMessage = `${logMessage} (${progressObj.transferred}/${progressObj.total})`;
-      log.info(logMessage);
-
-      // Send progress to frontmost window via toast system
-      this.sendToFrontmostWindow('update-toast:progress', {
-        bytesPerSecond: progressObj.bytesPerSecond,
-        percent: progressObj.percent,
-        transferred: progressObj.transferred,
-        total: progressObj.total
-      });
-
-      this.sendToAllWindows('update-download-progress', progressObj);
+      log.warn(`Ignoring download progress for official update at ${progressObj.percent}% in notification-only mode`);
     });
 
     autoUpdater.on('update-downloaded', (info) => {
-      log.info('Update downloaded:', info);
-
-      // Track download completed with duration
-      const downloadDuration = this.downloadStartTime ? Date.now() - this.downloadStartTime : 0;
-      AnalyticsService.getInstance().sendEvent('update_download_completed', {
-        release_channel: getReleaseChannel(),
-        new_version: info.version,
-        duration_category: getDurationCategory(downloadDuration)
-      });
-      this.downloadStartTime = null;
-
-      // Reset retry guard now that we have a successful download in pending
-      this.downloadRetryAttempted = false;
-
-      // Send ready notification to frontmost window via toast system
-      this.sendToFrontmostWindow('update-toast:show-ready', {
-        version: info.version
-      });
-
-      this.sendToAllWindows('update-downloaded', info);
+      // A notification-only build should never download an official package.
+      // Ignore an unexpected/stale electron-updater event rather than exposing
+      // a path that invites installation of that package.
+      log.warn(`Ignoring downloaded official update ${info.version} in notification-only mode`);
     });
-  }
-
-  /**
-   * Compute the electron-updater pending download directory on Windows.
-   * Mirrors electron-updater's path resolution: `${baseCachePath}\${appName}-updater\pending`,
-   * where baseCachePath on Windows is %LOCALAPPDATA% and appName is `app.getName()`.
-   */
-  private getWindowsPendingDirectory(): string | null {
-    if (process.platform !== 'win32') return null;
-    const baseCachePath = process.env['LOCALAPPDATA'] || path.join(app.getPath('home'), 'AppData', 'Local');
-    return path.join(baseCachePath, `${app.getName()}-updater`, 'pending');
-  }
-
-  /**
-   * Delete the pending download directory on Windows. Stale or AV-locked files
-   * here are the most common cause of EPERM on the final temp -> installer rename.
-   * Non-fatal: best-effort, logs and continues on failure.
-   */
-  private cleanupWindowsPendingDirectory(): void {
-    const pendingDir = this.getWindowsPendingDirectory();
-    if (!pendingDir) return;
-    try {
-      if (fs.existsSync(pendingDir)) {
-        log.info(`Removing stale pending update directory: ${pendingDir}`);
-        fs.rmSync(pendingDir, { recursive: true, force: true });
-      }
-    } catch (err) {
-      log.warn('Failed to clean pending update directory:', err);
-    }
   }
 
   /**
@@ -317,82 +222,6 @@ export class AutoUpdaterService {
     }
   }
 
-  /**
-   * Close the database and release the PID lock before force-quitting.
-   * quitAndInstall() bypasses the before-quit handler, so the normal
-   * cleanup in index.ts never runs. Without this, a stale lock file
-   * persists and blocks relaunch -- especially after a system reboot
-   * where the old PID gets reused by a different process.
-   */
-  private async closeDatabaseBeforeQuit() {
-    try {
-      const db = getDatabase();
-      if (db) {
-        log.info('Closing database before quit-and-install...');
-        const closePromise = db.close();
-        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000));
-        await Promise.race([closePromise, timeoutPromise]);
-        log.info('Database closed before quit-and-install');
-      }
-    } catch (err) {
-      log.warn('Database close failed before quit-and-install:', err);
-    }
-
-    // Fallback: if db.close() didn't release the lock (timeout or error),
-    // delete the PID file directly so the next launch isn't blocked.
-    try {
-      const lockPath = path.join(app.getPath('userData'), 'nimbalyst-db.pid');
-      if (fs.existsSync(lockPath)) {
-        fs.unlinkSync(lockPath);
-        log.info('Removed residual PID lock file');
-      }
-    } catch (lockErr) {
-      log.warn('Failed to remove PID lock file:', lockErr);
-    }
-  }
-
-  private performQuitAndInstall() {
-    setImmediate(async () => {
-      try {
-        log.info('Performing quit and install...');
-
-        // Persist open-window list BEFORE we tear listeners down. We remove
-        // the index.ts `before-quit` handler below, which is what normally
-        // calls saveSessionState() during a clean quit. Without saving here
-        // the window-close cascade triggered by quitAndInstall() iterates
-        // each window's WindowManager `close` handler, which deletes the
-        // window from windowStates and re-saves session state minus that
-        // window -- the last window ends up writing `{ windows: [] }`, so
-        // no workspaces restore after the update relaunch (issue #232).
-        //
-        // Mark restarting first so those close handlers short-circuit their
-        // own save (same path the MCP restart flow uses).
-        try {
-          const { setRestarting } = await import('../index');
-          setRestarting(true);
-          const { saveSessionState } = await import('../session/SessionState');
-          await saveSessionState();
-          log.info('Session state saved before quit-and-install');
-        } catch (saveErr) {
-          log.error('Failed to save session state before quit-and-install:', saveErr);
-        }
-
-        await this.closeDatabaseBeforeQuit();
-        AutoUpdaterService.isUpdating = true;
-        app.removeAllListeners('before-quit');
-        app.removeAllListeners('window-all-closed');
-        autoUpdater.quitAndInstall(true, true);
-      } catch (error) {
-        log.error('Failed to quit and install:', error);
-        AutoUpdaterService.isUpdating = true;
-        app.removeAllListeners('before-quit');
-        app.removeAllListeners('window-all-closed');
-        app.relaunch();
-        app.exit(0);
-      }
-    });
-  }
-
   public reconfigureFeedURL() {
     this.configureFeedURL();
   }
@@ -404,27 +233,22 @@ export class AutoUpdaterService {
       }
 
       try {
-        const result = await autoUpdater.checkForUpdatesAndNotify();
-        return result;
+        await this.checkForUpdatesWithUI();
+        return { checking: false };
       } catch (error) {
         log.error('Failed to check for updates:', error);
         throw error;
       }
     });
 
-    safeHandle('download-update', async () => {
-      try {
-        await autoUpdater.downloadUpdate();
-        return { success: true };
-      } catch (error) {
-        log.error('Failed to download update:', error);
-        throw error;
-      }
+    safeHandle('download-update', () => {
+      log.warn('Ignoring download request in notification-only update mode');
+      return { success: false, reason: 'Official updates must be reviewed and merged.' };
     });
 
     safeHandle('quit-and-install', () => {
-      // Reuse the same quit flow as performQuitAndInstall
-      this.performQuitAndInstall();
+      log.warn('Ignoring install request in notification-only update mode');
+      return { success: false, reason: 'Official updates must be reviewed and merged.' };
     });
 
     safeHandle('get-current-version', () => {
@@ -432,55 +256,12 @@ export class AutoUpdaterService {
     });
 
     // Toast-based update IPC handlers
-    safeOn('update-toast:download', async () => {
-      try {
-        log.info('Update toast: Starting download...');
-
-        // Track download started (user action tracking is done in renderer)
-        this.downloadStartTime = Date.now();
-        this.downloadRetryAttempted = false;
-        AnalyticsService.getInstance().sendEvent('update_download_started', {
-          release_channel: getReleaseChannel(),
-          new_version: this.pendingUpdateInfo?.version || 'unknown'
-        });
-
-        // Windows: clear out any stale/locked installer left in the pending dir
-        // before starting a fresh download, to avoid EPERM on the final rename.
-        this.cleanupWindowsPendingDirectory();
-
-        // In test mode, skip the actual download (tests will manually trigger progress)
-        if (process.env.NODE_ENV !== 'test' && process.env.PLAYWRIGHT !== '1') {
-          // Re-check for the latest version before downloading in case a newer update
-          // was released while the update window was sitting idle
-          await this.checkAndDownloadLatest();
-        } else {
-          log.info('Test mode: Skipping actual download');
-        }
-      } catch (error) {
-        log.error('Failed to download update from toast:', error);
-
-        // Track download error
-        AnalyticsService.getInstance().sendEvent('update_error', {
-          stage: 'download',
-          error_type: classifyUpdateError(error instanceof Error ? error : new Error(String(error))),
-          release_channel: getReleaseChannel()
-        });
-
-        this.sendToFrontmostWindow('update-toast:error', {
-          message: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
+    safeOn('update-toast:download', () => {
+      log.warn('Ignoring update toast download request in notification-only update mode');
     });
 
     safeOn('update-toast:install', () => {
-      log.info('Update toast: Installing update...');
-
-      // Track install initiated
-      AnalyticsService.getInstance().sendEvent('update_install_initiated', {
-        new_version: this.pendingUpdateInfo?.version || 'unknown'
-      });
-
-      this.performQuitAndInstall();
+      log.warn('Ignoring update toast install request in notification-only update mode');
     });
 
     // Check if any AI sessions are currently active
@@ -490,29 +271,7 @@ export class AutoUpdaterService {
 
     // Deferred install: wait for all AI sessions to finish, then install
     safeOn('update-toast:install-when-idle', () => {
-      log.info('Update toast: Deferring install until AI sessions finish...');
-
-      AnalyticsService.getInstance().sendEvent('update_install_deferred', {
-        new_version: this.pendingUpdateInfo?.version || 'unknown'
-      });
-
-      // Subscribe to session state changes to detect when all sessions complete
-      const stateManager = getSessionStateManager();
-      const unsubscribe = stateManager.subscribe((event) => {
-        if (event.type === 'session:completed' || event.type === 'session:interrupted') {
-          // Check if there are still active sessions
-          if (!hasActiveStreamingSessions()) {
-            log.info('Update toast: All AI sessions finished, proceeding with install');
-            unsubscribe();
-            // Notify renderer that we're about to install
-            this.sendToFrontmostWindow('update-toast:sessions-finished');
-            // Small delay to let the user see the transition
-            setTimeout(() => {
-              this.performQuitAndInstall();
-            }, 1500);
-          }
-        }
-      });
+      log.warn('Ignoring deferred install request in notification-only update mode');
     });
 
     // Reminder suppression handlers
@@ -630,33 +389,6 @@ export class AutoUpdaterService {
     }
   }
 
-  private async checkAndDownloadLatest() {
-    try {
-      // Previously this method called `autoUpdater.checkForUpdates()` immediately
-      // before `downloadUpdate()` to "get the absolute latest version" - but on
-      // macOS each `checkForUpdates()` call spins up a new Squirrel.Mac proxy
-      // server, and the new proxy tears down the prior one that the original
-      // `update-available` event had already handed Squirrel's `SQRLUpdater` a
-      // reference to. By the time `quitAndInstall` fires, Squirrel's internal
-      // downloader points at a closed proxy and rejects the install with
-      // "The command is disabled and cannot be executed." adambhenry hit
-      // exactly this on macOS arm64 (#245); the race is sensitive to process
-      // scheduling so arm64 reproduces it more reliably than x86_64.
-      //
-      // The `update-available` event has already populated `pendingUpdateInfo`
-      // with the version that triggered this download path. Go straight to
-      // `downloadUpdate()` and let the existing event handlers keep the toast
-      // in sync. The single-check flow does not break the proxy lifecycle and
-      // matches how Squirrel.Mac is documented to be driven.
-      log.info('Starting update download (single-check path to avoid Squirrel.Mac proxy race)...');
-      await autoUpdater.downloadUpdate();
-    } catch (error) {
-      log.error('Failed to download latest:', error);
-      this.sendToFrontmostWindow('update-toast:error', {
-        message: error instanceof Error ? error.message : 'Failed to download the update'
-      });
-    }
-  }
 }
 
 // Export singleton instance
@@ -674,26 +406,6 @@ if (process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT === '1') {
         newVersion: updateInfo.version,
         releaseNotes: updateInfo.releaseNotes || '',
         releaseDate: updateInfo.releaseDate
-      });
-    }
-  });
-
-  safeHandle('test:trigger-download-progress', (_event, progress: { bytesPerSecond: number; percent: number; transferred: number; total: number }) => {
-    log.info(`Test: Triggering download progress ${progress.percent}%`);
-    const focused = BrowserWindow.getFocusedWindow();
-    const window = focused || BrowserWindow.getAllWindows().find(w => !w.isDestroyed() && w.isVisible());
-    if (window && !window.isDestroyed()) {
-      window.webContents.send('update-toast:progress', progress);
-    }
-  });
-
-  safeHandle('test:trigger-update-ready', (_event, updateInfo: { version: string }) => {
-    log.info('Test: Triggering update ready');
-    const focused = BrowserWindow.getFocusedWindow();
-    const window = focused || BrowserWindow.getAllWindows().find(w => !w.isDestroyed() && w.isVisible());
-    if (window && !window.isDestroyed()) {
-      window.webContents.send('update-toast:show-ready', {
-        version: updateInfo.version
       });
     }
   });

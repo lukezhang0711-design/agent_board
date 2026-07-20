@@ -2,7 +2,6 @@ import React, { useCallback } from 'react';
 import { useAtom } from 'jotai';
 import { usePostHog } from 'posthog-js/react';
 import { UpdateAvailableToast } from './UpdateAvailableToast';
-import { ReleaseNotesDialog } from './ReleaseNotesDialog';
 import { DownloadProgressToast } from './DownloadProgressToast';
 import { UpdateReadyToast } from './UpdateReadyToast';
 import { updateStateAtom } from '../../store/atoms/updateState';
@@ -16,25 +15,6 @@ export function UpdateToast(): React.ReactElement | null {
   const posthog = usePostHog();
 
   // Action handlers
-  const handleUpdateNow = useCallback(() => {
-    console.log('[UpdateToast] Update now clicked');
-    posthog?.capture('update_toast_action', {
-      action: 'download_clicked',
-      new_version: updateInfo?.version || 'unknown'
-    });
-    setUpdateState((prev) => ({ ...prev, state: 'downloading' }));
-    window.electronAPI.send('update-toast:download');
-  }, [posthog, updateInfo?.version, setUpdateState]);
-
-  const handleViewReleaseNotes = useCallback(() => {
-    console.log('[UpdateToast] View release notes clicked');
-    posthog?.capture('update_toast_action', {
-      action: 'release_notes_clicked',
-      new_version: updateInfo?.version || 'unknown'
-    });
-    setUpdateState((prev) => ({ ...prev, state: 'viewing-notes' }));
-  }, [posthog, updateInfo?.version, setUpdateState]);
-
   const handleRemindLater = useCallback(async () => {
     console.log('[UpdateToast] Remind later clicked');
     posthog?.capture('update_toast_action', {
@@ -54,17 +34,6 @@ export function UpdateToast(): React.ReactElement | null {
   const handleDismiss = useCallback(() => {
     console.log('[UpdateToast] Dismiss clicked');
     setUpdateState((prev) => ({ ...prev, state: 'idle', updateInfo: null }));
-  }, [setUpdateState]);
-
-  const handleCloseReleaseNotes = useCallback(() => {
-    console.log('[UpdateToast] Close release notes clicked');
-    setUpdateState((prev) => ({ ...prev, state: 'available' }));
-  }, [setUpdateState]);
-
-  const handleUpdateFromNotes = useCallback(() => {
-    console.log('[UpdateToast] Update from release notes clicked');
-    setUpdateState((prev) => ({ ...prev, state: 'downloading' }));
-    window.electronAPI.send('update-toast:download');
   }, [setUpdateState]);
 
   const handleCancelDownload = useCallback(() => {
@@ -162,8 +131,7 @@ export function UpdateToast(): React.ReactElement | null {
           {state === 'available' && updateInfo && (
             <UpdateAvailableToast
               version={updateInfo.version}
-              onUpdateNow={handleUpdateNow}
-              onViewReleaseNotes={handleViewReleaseNotes}
+              releaseNotes={updateInfo.releaseNotes}
               onRemindLater={handleRemindLater}
               onDismiss={handleDismiss}
             />
@@ -227,17 +195,6 @@ export function UpdateToast(): React.ReactElement | null {
             </div>
           )}
         </div>
-      )}
-
-      {/* Release notes dialog (modal) */}
-      {state === 'viewing-notes' && updateInfo && (
-        <ReleaseNotesDialog
-          currentVersion={currentVersion}
-          newVersion={updateInfo.version}
-          releaseNotes={updateInfo.releaseNotes || ''}
-          onClose={handleCloseReleaseNotes}
-          onUpdate={handleUpdateFromNotes}
-        />
       )}
     </>
   );
