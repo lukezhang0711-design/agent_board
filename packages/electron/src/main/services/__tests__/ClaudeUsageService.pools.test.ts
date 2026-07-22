@@ -4,6 +4,12 @@ vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] },
 }));
 
+vi.mock('../ClaudeAuthStateService', () => ({
+  claudeAuthStateService: {
+    getState: vi.fn(),
+  },
+}));
+
 import { mapClaudeUsageResponse } from '../ClaudeUsageService';
 
 describe('ClaudeUsageService pool mapping', () => {

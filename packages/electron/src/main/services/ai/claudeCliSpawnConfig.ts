@@ -166,7 +166,13 @@ export interface ClaudeCliSpawnConfig {
  *   the main process inherits `CLAUDECODE=1` and would forward it to our spawned
  *   CLI, which can then refuse to start.
  */
-const FORBIDDEN_ENV_KEYS: readonly string[] = ['ANTHROPIC_API_KEY', 'CLAUDECODE'];
+const FORBIDDEN_ENV_KEYS: readonly string[] = [
+  'ANTHROPIC_API_KEY',
+  'ANTHROPIC_AUTH_TOKEN',
+  'CLAUDE_CODE_OAUTH_TOKEN',
+  'CLAUDE_CODE_OAUTH_REFRESH_TOKEN',
+  'CLAUDECODE',
+];
 
 /**
  * Built-in CLI tools we deny so the model uses our MCP equivalents instead.

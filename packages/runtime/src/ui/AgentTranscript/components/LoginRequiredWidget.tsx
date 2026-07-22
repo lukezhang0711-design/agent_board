@@ -37,6 +37,7 @@ export const LoginRequiredWidget: React.FC = () => {
   const [loginStatus, setLoginStatus] = useState<{
     message: string;
     success: boolean;
+    authState?: 'logged-in' | 'logged-out' | 'check-failed' | 'unknown';
     accountInfo?: {
       email?: string;
       organization?: string;
@@ -49,7 +50,50 @@ export const LoginRequiredWidget: React.FC = () => {
     injectLoginWidgetStyles();
   }, []);
 
-  const handleRefreshStatus = useCallback(async () => {
+  const applySharedStatus = useCallback((status: any) => {
+    if (status.authState === 'logged-in') {
+      setLoginStatus({
+        message: 'Login successful! You can now use Claude Agent.',
+        success: true,
+        authState: 'logged-in',
+        accountInfo: {
+          email: status.email,
+          organization: status.organization,
+          subscriptionType: status.subscriptionType
+        }
+      });
+    } else if (status.authState === 'check-failed') {
+      setLoginStatus({
+        message: status.error
+          ? `Failed to check Claude login status: ${status.error}`
+          : 'Failed to check Claude login status. Please try again.',
+        success: false,
+        authState: 'check-failed'
+      });
+    } else if (status.authState === 'unknown') {
+      setLoginStatus({
+        message: status.error
+          ? `Claude login status is unknown: ${status.error}`
+          : 'Claude login status is unknown. Please try again.',
+        success: false,
+        authState: 'unknown'
+      });
+    } else if (status.authState === 'logged-out') {
+      setLoginStatus({
+        message: status.error || 'Not logged in. Please complete the authentication flow.',
+        success: false,
+        authState: 'logged-out'
+      });
+    } else {
+      setLoginStatus({
+        message: 'Claude login status is unknown. Please try again.',
+        success: false,
+        authState: 'unknown'
+      });
+    }
+  }, []);
+
+  const handleRefreshStatus = useCallback(async (forceRefresh = true) => {
     setIsChecking(true);
     setLoginStatus(null);
 
@@ -63,24 +107,10 @@ export const LoginRequiredWidget: React.FC = () => {
         return;
       }
 
-      const status = await window.electronAPI.invoke('claude-code:check-login');
-
-      if (status.isLoggedIn) {
-        setLoginStatus({
-          message: 'Login successful! You can now use Claude Agent.',
-          success: true,
-          accountInfo: {
-            email: status.email,
-            organization: status.organization,
-            subscriptionType: status.subscriptionType
-          }
-        });
-      } else {
-        setLoginStatus({
-          message: status.error || 'Not logged in. Please complete the authentication flow.',
-          success: false
-        });
-      }
+      const status = forceRefresh
+        ? await window.electronAPI.invoke('claude-code:check-login', { forceRefresh: true })
+        : await window.electronAPI.invoke('claude-code:check-login');
+      applySharedStatus(status);
     } catch (error: any) {
       setLoginStatus({
         message: `Failed to check status: ${error.message || 'Unknown error'}`,
@@ -89,11 +119,12 @@ export const LoginRequiredWidget: React.FC = () => {
     } finally {
       setIsChecking(false);
     }
-  }, []);
+  }, [applySharedStatus]);
 
-  // Check login status when component mounts
+  // Read the shared TTL-backed state on mount. Only an explicit user refresh
+  // bypasses the main-process cache.
   useEffect(() => {
-    handleRefreshStatus();
+    void handleRefreshStatus(false);
   }, [handleRefreshStatus]);
 
   const handleLogin = async () => {
@@ -134,7 +165,7 @@ export const LoginRequiredWidget: React.FC = () => {
     }
   };
 
-  const isLoggedIn = loginStatus?.success && loginStatus?.accountInfo;
+  const isLoggedIn = loginStatus?.authState === 'logged-in';
   const loginButtonLabel = isLoggingIn
     ? 'Opening Login...'
     : isLoggedIn
@@ -185,7 +216,7 @@ export const LoginRequiredWidget: React.FC = () => {
         </button>
 
         <button
-          onClick={handleRefreshStatus}
+          onClick={() => { void handleRefreshStatus(true); }}
           disabled={isChecking}
           className="status-button w-full py-3 px-5 rounded-md text-sm font-semibold cursor-pointer transition-all border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] whitespace-nowrap hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:bg-[var(--nim-bg-tertiary)] disabled:opacity-60"
         >

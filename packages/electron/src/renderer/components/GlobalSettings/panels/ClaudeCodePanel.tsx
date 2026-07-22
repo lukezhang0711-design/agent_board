@@ -27,6 +27,22 @@ interface ClaudeCodePanelProps {
 }
 
 type AuthMethod = 'login' | 'api-key';
+type ClaudeAuthState = 'logged-in' | 'logged-out' | 'check-failed' | 'unknown';
+
+interface ClaudeLoginStatus {
+  isLoggedIn: boolean;
+  hasOAuthToken: boolean;
+  isExpired: boolean;
+  authState: ClaudeAuthState;
+  source?: string;
+  checkedAt?: number | null;
+  email?: string;
+  organization?: string;
+  subscriptionType?: string;
+  tokenSource?: string;
+  apiKeySource?: string;
+  error?: string;
+}
 
 export function ClaudeCodePanel({
   config,
@@ -42,18 +58,7 @@ export function ClaudeCodePanel({
   scope = 'user',
   workspacePath,
 }: ClaudeCodePanelProps) {
-  const [loginStatus, setLoginStatus] = useState<{
-    isLoggedIn: boolean;
-    hasOAuthToken: boolean;
-    isExpired: boolean;
-    expiresAt?: string;
-    scopes?: string[];
-    email?: string;
-    organization?: string;
-    subscriptionType?: string;
-    tokenSource?: string;
-    apiKeySource?: string;
-  } | null>(null);
+  const [loginStatus, setLoginStatus] = useState<ClaudeLoginStatus | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [selectedAuthMethod, setSelectedAuthMethod] = useState<AuthMethod>(
     config.authMethod as AuthMethod || 'login'
@@ -154,13 +159,22 @@ export function ClaudeCodePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadEnvVars, scope, workspacePath]);
 
-  const checkLoginStatus = async () => {
+  const checkLoginStatus = async (forceRefresh = false) => {
     try {
-      const status = await window.electronAPI.invoke('claude-code:check-login');
+      const status = await window.electronAPI.invoke(
+        'claude-code:check-login',
+        forceRefresh ? { forceRefresh: true } : undefined,
+      ) as ClaudeLoginStatus;
       setLoginStatus(status);
     } catch (error) {
       console.error('Failed to check login status:', error);
-      setLoginStatus({ isLoggedIn: false, hasOAuthToken: false, isExpired: true });
+      setLoginStatus({
+        isLoggedIn: false,
+        hasOAuthToken: false,
+        isExpired: false,
+        authState: 'check-failed',
+        error: error instanceof Error ? error.message : 'Unknown status check error',
+      });
     }
   };
 
@@ -291,6 +305,12 @@ export function ClaudeCodePanel({
     try {
       const result = await window.electronAPI.invoke('claude-code:login');
       if (result.success) {
+        setLoginStatus({
+          isLoggedIn: false,
+          hasOAuthToken: false,
+          isExpired: false,
+          authState: 'unknown',
+        });
         alert(result.message || 'Login initiated! Please complete authentication in the Terminal window (you may have to type /login to complete the process), then click "Refresh Status" to verify.');
       }
     } catch (error: any) {
@@ -304,6 +324,12 @@ export function ClaudeCodePanel({
     try {
       const result = await window.electronAPI.invoke('claude-code:logout');
       if (result.success) {
+        setLoginStatus({
+          isLoggedIn: false,
+          hasOAuthToken: false,
+          isExpired: false,
+          authState: 'unknown',
+        });
         alert(result.message || 'Logout initiated! Please wait for the Terminal window to complete, then click "Refresh Status" to verify.');
       }
     } catch (error: any) {
@@ -502,7 +528,7 @@ export function ClaudeCodePanel({
               {/* Claude Plan Authentication */}
               {selectedAuthMethod === 'login' && (
                 <>
-                  {loginStatus?.isLoggedIn ? (
+                  {loginStatus?.authState === 'logged-in' ? (
                     <>
                       {/* Logged In State */}
                       <div className="status-box-success mb-4 py-3.5 px-4 rounded-lg text-[13px] flex items-center gap-3 justify-between bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)]">
@@ -519,7 +545,7 @@ export function ClaudeCodePanel({
                           </div>
                         </div>
                         <div className="status-box-actions flex gap-2 shrink-0">
-                          <button className="btn-small py-1.5 px-3 rounded text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]" onClick={checkLoginStatus}>
+                          <button className="btn-small py-1.5 px-3 rounded text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]" onClick={() => checkLoginStatus(true)}>
                             Refresh
                           </button>
                           <button className="btn-small py-1.5 px-3 rounded text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]" onClick={handleLogout}>
@@ -533,12 +559,12 @@ export function ClaudeCodePanel({
                         Need to use a different Claude account? Logout above and login again.
                       </p>
                     </>
-                  ) : (
+                  ) : loginStatus?.authState === 'logged-out' ? (
                     <>
                       {/* Not Logged In State */}
                       <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg">
                         <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
-                          Authenticate with your Claude Pro or Team subscription. No API credits needed.
+                          Your Claude login is no longer active. Log in again with your Claude Pro or Team subscription.
                         </p>
                         <div className="flex gap-2">
                           <button
@@ -548,7 +574,7 @@ export function ClaudeCodePanel({
                           >
                             {isLoggingIn ? 'Opening Login...' : 'Login with Claude Plan'}
                           </button>
-                          <button className="nim-btn-secondary" onClick={checkLoginStatus}>
+                          <button className="nim-btn-secondary" onClick={() => checkLoginStatus(true)}>
                             Refresh
                           </button>
                         </div>
@@ -557,6 +583,17 @@ export function ClaudeCodePanel({
                         </p>
                       </div>
                     </>
+                  ) : (
+                    <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg">
+                      <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
+                        {loginStatus?.authState === 'check-failed'
+                          ? `Claude login status check failed${loginStatus.error ? `: ${loginStatus.error}` : '.'}`
+                          : 'Claude login status is unknown. Complete the Terminal action, then refresh status.'}
+                      </p>
+                      <button className="nim-btn-secondary" onClick={() => checkLoginStatus(true)}>
+                        Refresh Status
+                      </button>
+                    </div>
                   )}
                 </>
               )}

@@ -121,6 +121,27 @@ describe('buildClaudeCliSpawnConfig', () => {
     expect(cfg.env.ANTHROPIC_API_KEY).toBeUndefined();
   });
 
+  it('strips every inherited Claude credential so CLI auth status and sessions see the same account', () => {
+    const cfg = buildClaudeCliSpawnConfig({
+      ...base,
+      baseEnv: {
+        ANTHROPIC_API_KEY: 'api-key',
+        ANTHROPIC_AUTH_TOKEN: 'auth-token',
+        CLAUDE_CODE_OAUTH_TOKEN: 'oauth-token',
+        CLAUDE_CODE_OAUTH_REFRESH_TOKEN: 'refresh-token',
+        CLAUDECODE: '1',
+        HOME: '/Users/me',
+      },
+    });
+
+    expect(cfg.env).toMatchObject({ HOME: '/Users/me' });
+    expect(cfg.env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(cfg.env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+    expect(cfg.env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
+    expect(cfg.env.CLAUDE_CODE_OAUTH_REFRESH_TOKEN).toBeUndefined();
+    expect(cfg.env.CLAUDECODE).toBeUndefined();
+  });
+
   it('drops undefined env values', () => {
     const cfg = buildClaudeCliSpawnConfig({ ...base, baseEnv: { FOO: undefined, BAR: 'x' } });
     expect('FOO' in cfg.env).toBe(false);

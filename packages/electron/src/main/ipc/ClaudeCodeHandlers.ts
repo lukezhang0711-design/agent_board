@@ -2,7 +2,8 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { claudeCodeDetector } from '../services/ClaudeCodeDetector';
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import { claudeAuthStateService } from '../services/ClaudeAuthStateService';
+import { claudeUsageService } from '../services/ClaudeUsageService';
 import { logger } from '../utils/logger';
 import { setupClaudeCodeEnvironment, resolveClaudeCodeExecutablePath } from '@nimbalyst/runtime/electron/claudeCodeEnvironment';
 import { AnalyticsService } from "../services/analytics/AnalyticsService.ts";
@@ -40,65 +41,50 @@ export function registerClaudeCodeHandlers() {
     return status;
   });
   // Check login status
-  safeHandle('claude-code:check-login', async () => {
+  safeHandle('claude-code:check-login', async (_event, options?: { forceRefresh?: boolean }) => {
     try {
-      // Setup environment for packaged builds
-      const env = setupClaudeCodeEnvironment();
-
-      // Build options for query - CRITICAL: pass env to options so SDK can find credentials
-      // This is especially important on Intel Macs where HOME may not be set correctly
-      // in packaged builds without explicitly passing the environment.
-      const nativeBinaryPath = resolveClaudeCodeExecutablePath({
-        pathValue: env.PATH,
-        allowSystemFallback: true,
-      });
-      const options: any = {
-        env,
-        ...(nativeBinaryPath ? { pathToClaudeCodeExecutable: nativeBinaryPath } : {}),
-      };
-
-      // Call query with proper signature: { prompt, options }
-      // Use empty string prompt - SDK will write it directly without async iteration
-      const session = query({
-        prompt: '',
-        options
-      });
-
-      // Get account info
-      const accountInfo = await session.accountInfo();
-
-      // If we got account info, user is logged in
-      if (accountInfo && accountInfo.email) {
-        analytics.sendEvent('check_claude_login_status', { isLoggedIn: true });
-        return {
-          isLoggedIn: true,
-          hasOAuthToken: true,
-          isExpired: false,
-          email: accountInfo.email,
-          organization: accountInfo.organization,
-          subscriptionType: accountInfo.subscriptionType,
-          tokenSource: accountInfo.tokenSource,
-          apiKeySource: accountInfo.apiKeySource
-        };
+      if (options?.forceRefresh) {
+        claudeCodeDetector.clearCache();
       }
-
-      // No account info means not logged in
-      analytics.sendEvent('check_claude_login_status', { isLoggedIn: false });
-      return {
-        isLoggedIn: false,
-        hasOAuthToken: false,
-        isExpired: true
+      const authState = await claudeAuthStateService.getState();
+      const isLoggedIn = authState.status === 'logged-in';
+      if (options?.forceRefresh && isLoggedIn) {
+        claudeUsageService.invalidateCache();
+        void claudeUsageService.refresh();
+      }
+      analytics.sendEvent('check_claude_login_status', {
+        isLoggedIn,
+        state: authState.status,
+      });
+      const status = {
+        isLoggedIn,
+        hasOAuthToken: isLoggedIn,
+        isExpired: authState.status === 'logged-out',
+        authState: authState.status,
+        source: authState.source,
+        checkedAt: authState.checkedAt,
+        email: authState.email,
+        organization: authState.organization,
+        subscriptionType: authState.subscriptionType,
+        tokenSource: authState.authMethod,
+        apiKeySource: authState.apiProvider,
+        error: authState.error,
       };
+      return status;
     } catch (error: any) {
       log.error('[ClaudeCodeHandlers] Login check failed:', error.message);
       analytics.sendEvent('check_claude_login_error');
 
-      return {
+      const status = {
         isLoggedIn: false,
         hasOAuthToken: false,
-        isExpired: true,
+        isExpired: false,
+        authState: 'check-failed',
+        source: 'claude-cli-auth-status',
+        checkedAt: Date.now(),
         error: error.message
       };
+      return status;
     }
   });
 
@@ -155,6 +141,8 @@ end tell`;
         }
       }
 
+      claudeCodeDetector.clearCache();
+      claudeUsageService.invalidateCache();
       return {
         success: true,
         message: 'Terminal window opened. Type /login and press Enter to authenticate, then click "Refresh Status" to verify.'
@@ -218,6 +206,8 @@ end tell`;
         }
       }
 
+      claudeCodeDetector.clearCache();
+      claudeUsageService.invalidateCache();
       return {
         success: true,
         message: 'Terminal window opened. Type /logout and press Enter to complete logout.'

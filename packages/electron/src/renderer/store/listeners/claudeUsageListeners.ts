@@ -9,6 +9,7 @@
 
 import { store } from '../index';
 import { claudeUsageAtom, ClaudeUsageData } from '../atoms/claudeUsageAtoms';
+import { settingAtom } from '../atoms/settingAtomFamily';
 
 /**
  * Initialize Claude usage IPC listeners.
@@ -20,7 +21,7 @@ export function initClaudeUsageListeners(): () => void {
   const cleanups: Array<() => void> = [];
 
   // Handle usage updates from main process
-  const handleUsageUpdate = (data: ClaudeUsageData) => {
+  const handleUsageUpdate = (data: ClaudeUsageData | null) => {
     store.set(claudeUsageAtom, data);
   };
 
@@ -28,15 +29,18 @@ export function initClaudeUsageListeners(): () => void {
     window.electronAPI.on('claude-usage:update', handleUsageUpdate)
   );
 
-  // Fetch initial usage data on startup
-  // This will wake up the service if credentials are available
-  window.electronAPI.invoke('claude-usage:get').then((data: ClaudeUsageData | null) => {
-    if (data) {
-      store.set(claudeUsageAtom, data);
-    }
-  }).catch((error: Error) => {
-    console.error('[ClaudeUsageListeners] Failed to get initial usage:', error);
-  });
+  // Settings are hydrated before renderer listeners start. Keep the update
+  // subscription active so another window can clear/publish data, but do not
+  // wake the Usage service while the indicator is disabled.
+  if (store.get(settingAtom('ai.showUsageIndicator'))) {
+    window.electronAPI.invoke('claude-usage:get').then((data: ClaudeUsageData | null) => {
+      if (data) {
+        store.set(claudeUsageAtom, data);
+      }
+    }).catch((error: Error) => {
+      console.error('[ClaudeUsageListeners] Failed to get initial usage:', error);
+    });
+  }
 
   // Cleanup function
   return () => {

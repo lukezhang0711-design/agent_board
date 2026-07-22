@@ -2,10 +2,23 @@ import { spawn } from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
 import { logger } from '../utils/logger';
+import {
+  claudeAuthStateService,
+  type ClaudeAuthStateKind,
+} from './ClaudeAuthStateService';
 
 export interface ClaudeCodeStatus {
   installed: boolean;
   loggedIn: boolean;
+  authState: ClaudeAuthStateKind;
+  authSource: 'claude-cli-auth-status';
+  authCheckedAt: number | null;
+  authError?: string;
+  authMethod?: string;
+  apiProvider?: string;
+  email?: string;
+  organization?: string;
+  subscriptionType?: string;
   version?: string;
   hasSession?: boolean;
   hasApiKey?: boolean;
@@ -15,16 +28,18 @@ export interface ClaudeCodeStatus {
  * Service to detect Claude Code CLI installation and login status
  */
 export class ClaudeCodeDetector {
-  private cachedStatus: ClaudeCodeStatus | null = null;
-  private cacheTimestamp: number = 0;
+  private cachedInstallation: { installed: boolean; version?: string } | null = null;
+  private installationCacheTimestamp: number = 0;
+  private installationCheck: Promise<{ installed: boolean; version?: string }> | null = null;
+  private cacheGeneration = 0;
   private readonly CACHE_DURATION = 30000; // 30 seconds
 
   /**
    * Check if Claude Code CLI is installed
    */
   async isInstalled(): Promise<boolean> {
-    const status = await this.getStatus();
-    return status.installed;
+    const installation = await this.getInstallationStatus();
+    return installation.installed;
   }
 
   /**
@@ -39,30 +54,27 @@ export class ClaudeCodeDetector {
    * Get full installation and login status
    */
   async getStatus(): Promise<ClaudeCodeStatus> {
-    const now = Date.now();
-
-    // Return cached result if still valid
-    if (this.cachedStatus && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
-      return this.cachedStatus;
-    }
-
-    // Check installation
-    const installed = await this.checkInstallation();
-
-    // Check login status
-    const loginStatus = await this.checkLoginStatus();
+    const [installed, authState] = await Promise.all([
+      this.getInstallationStatus(),
+      claudeAuthStateService.getState(),
+    ]);
 
     const status: ClaudeCodeStatus = {
       installed: installed.installed,
       version: installed.version,
-      loggedIn: loginStatus.loggedIn,
-      hasSession: loginStatus.hasSession,
-      hasApiKey: loginStatus.hasApiKey,
+      loggedIn: authState.status === 'logged-in',
+      authState: authState.status,
+      authSource: authState.source,
+      authCheckedAt: authState.checkedAt,
+      authError: authState.error,
+      authMethod: authState.authMethod,
+      apiProvider: authState.apiProvider,
+      email: authState.email,
+      organization: authState.organization,
+      subscriptionType: authState.subscriptionType,
+      hasSession: authState.status === 'logged-in',
+      hasApiKey: false,
     };
-
-    // Cache the result
-    this.cachedStatus = status;
-    this.cacheTimestamp = now;
 
     return status;
   }
@@ -71,8 +83,43 @@ export class ClaudeCodeDetector {
    * Clear the cache to force a fresh check
    */
   clearCache(): void {
-    this.cachedStatus = null;
-    this.cacheTimestamp = 0;
+    this.cacheGeneration += 1;
+    this.cachedInstallation = null;
+    this.installationCacheTimestamp = 0;
+    this.installationCheck = null;
+    claudeAuthStateService.invalidate();
+  }
+
+  private async getInstallationStatus(): Promise<{ installed: boolean; version?: string }> {
+    const now = Date.now();
+    if (
+      this.cachedInstallation
+      && now - this.installationCacheTimestamp < this.CACHE_DURATION
+    ) {
+      return this.cachedInstallation;
+    }
+
+    if (this.installationCheck) {
+      return this.installationCheck;
+    }
+
+    const generation = this.cacheGeneration;
+    const check = this.checkInstallation().then((installation) => {
+      if (generation === this.cacheGeneration) {
+        this.cachedInstallation = installation;
+        this.installationCacheTimestamp = Date.now();
+      }
+      return installation;
+    });
+    this.installationCheck = check;
+
+    try {
+      return await check;
+    } finally {
+      if (this.installationCheck === check) {
+        this.installationCheck = null;
+      }
+    }
   }
 
   /**
@@ -162,80 +209,6 @@ export class ClaudeCodeDetector {
     });
   }
 
-  /**
-   * Check login status by running `claude -p status`
-   */
-  private async checkLoginStatus(): Promise<{
-    loggedIn: boolean;
-    hasSession?: boolean;
-    hasApiKey?: boolean;
-  }> {
-    return new Promise((resolve) => {
-      try {
-        logger.main.info('[ClaudeCodeDetector] Checking login status with claude -p status...');
-
-        // Use enhanced PATH and set vars to indicate non-interactive mode
-        const env = {
-          ...process.env,
-          PATH: this.getEnhancedPath(),
-          TERM: 'dumb', // Indicate non-interactive terminal
-          CI: 'true',   // Some CLIs use this to detect non-interactive mode
-        };
-
-        const childProcess = spawn('claude', ['-p', 'status'], {
-          timeout: 10000, // 10 seconds should be enough - fails fast when not logged in
-          shell: true,
-          env,
-          stdio: ['ignore', 'pipe', 'pipe'], // Ignore stdin, capture stdout/stderr
-        });
-
-        let output = '';
-        let errorOutput = '';
-
-        childProcess.stdout?.on('data', (data) => {
-          output += data.toString();
-        });
-
-        childProcess.stderr?.on('data', (data) => {
-          errorOutput += data.toString();
-        });
-
-        childProcess.on('close', (code) => {
-          const combinedOutput = output + errorOutput;
-
-          // If output contains "Invalid API key" or "Please run /login", user is not logged in
-          if (combinedOutput.includes('Invalid API key') || combinedOutput.includes('Please run /login')) {
-            logger.main.info('[ClaudeCodeDetector] User not logged in');
-            resolve({ loggedIn: false });
-          } else if (code === 0) {
-            // Exit code 0 and no error message means logged in
-            logger.main.info('[ClaudeCodeDetector] User is logged in (exit code 0)');
-            resolve({ loggedIn: true, hasSession: true });
-          } else if (code === 143 || code === null) {
-            // Exit code 143 = SIGTERM timeout, or null = process was killed by timeout
-            // The command times out when it's actually working (generating status output),
-            // which only happens when logged in. When not logged in, it fails fast with
-            // "Invalid API key" message.
-            logger.main.info('[ClaudeCodeDetector] User is logged in (command timed out but was working)');
-            resolve({ loggedIn: true, hasSession: true });
-          } else {
-            logger.main.info('[ClaudeCodeDetector] Unexpected output from status command:', combinedOutput, 'Exit code:', code);
-            // Some other error
-            logger.main.info('[ClaudeCodeDetector] Login status check failed, assuming not logged in');
-            resolve({ loggedIn: false });
-          }
-        });
-
-        childProcess.on('error', (error) => {
-          logger.main.error('[ClaudeCodeDetector] Failed to run claude -p status:', error);
-          resolve({ loggedIn: false });
-        });
-      } catch (error) {
-        logger.main.error('[ClaudeCodeDetector] Login status check failed:', error);
-        resolve({ loggedIn: false });
-      }
-    });
-  }
 }
 
 // Singleton instance
