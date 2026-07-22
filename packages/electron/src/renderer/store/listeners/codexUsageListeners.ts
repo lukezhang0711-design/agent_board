@@ -10,6 +10,23 @@
 import { store } from '../index';
 import { codexUsageAtom, CodexUsageData } from '../atoms/codexUsageAtoms';
 import { sessionStoreAtom } from '../atoms/sessions';
+import { settingAtom } from '../atoms/settingAtomFamily';
+
+const codexUsageEnabledAtom = settingAtom('ai.showCodexUsageIndicator');
+
+function isCodexUsageEnabled(): boolean {
+  return store.get(codexUsageEnabledAtom);
+}
+
+function fetchUsage(channel: 'codex-usage:get' | 'codex-usage:refresh'): void {
+  window.electronAPI.invoke(channel).then((data: CodexUsageData | null) => {
+    if (data) {
+      store.set(codexUsageAtom, data);
+    }
+  }).catch((error: Error) => {
+    console.error('[CodexUsageListeners] Failed to get initial usage:', error);
+  });
+}
 
 export function initCodexUsageListeners(): () => void {
   const cleanups: Array<() => void> = [];
@@ -27,6 +44,7 @@ export function initCodexUsageListeners(): () => void {
       sessionId?: string;
       isComplete?: boolean;
     }) => {
+      if (!isCodexUsageEnabled()) return;
       if (!data.sessionId || !data.isComplete) return;
       const session = store.get(sessionStoreAtom(data.sessionId));
       if (session?.provider !== 'openai-codex') return;
@@ -37,14 +55,13 @@ export function initCodexUsageListeners(): () => void {
     })
   );
 
-  // Fetch initial usage data on startup
-  window.electronAPI.invoke('codex-usage:get').then((data: CodexUsageData | null) => {
-    if (data) {
-      store.set(codexUsageAtom, data);
-    }
-  }).catch((error: Error) => {
-    console.error('[CodexUsageListeners] Failed to get initial usage:', error);
-  });
+  let wasEnabled = isCodexUsageEnabled();
+  if (wasEnabled) fetchUsage('codex-usage:get');
+  cleanups.push(store.sub(codexUsageEnabledAtom, () => {
+    const enabled = isCodexUsageEnabled();
+    if (enabled && !wasEnabled) fetchUsage('codex-usage:refresh');
+    wasEnabled = enabled;
+  }));
 
   return () => {
     cleanups.forEach(fn => fn?.());
@@ -52,6 +69,7 @@ export function initCodexUsageListeners(): () => void {
 }
 
 export async function recordCodexActivity(): Promise<void> {
+  if (!isCodexUsageEnabled()) return;
   try {
     await window.electronAPI.invoke('codex-usage:activity');
   } catch (error) {

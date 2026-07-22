@@ -3431,12 +3431,6 @@ export class AIService {
     // Clear model cache
     safeHandle('ai:clearModelCache', async () => {
       ModelRegistry.clearCache();
-      const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
-      if (providerSettings['openai-codex']?.enabled === true) {
-        void this.codexModelRefreshService.manualRetry().catch((error) => {
-          logger.main.error('[AIService] Manual Codex model refresh failed:', error);
-        });
-      }
       return { success: true, modelRefreshStatus: this.codexModelRefreshService.getStatus() };
     });
 

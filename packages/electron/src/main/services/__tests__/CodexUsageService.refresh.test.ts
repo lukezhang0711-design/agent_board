@@ -3,8 +3,17 @@ import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
+const electronMocks = vi.hoisted(() => ({
+  send: vi.fn(),
+}));
+
 vi.mock('electron', () => ({
-  BrowserWindow: { getAllWindows: () => [] },
+  BrowserWindow: {
+    getAllWindows: () => [{
+      isDestroyed: () => false,
+      webContents: { send: electronMocks.send },
+    }],
+  },
 }));
 
 import { CodexUsageService } from '../CodexUsageService';
@@ -41,6 +50,7 @@ async function createCodexSnapshot(): Promise<string> {
 
 afterEach(async () => {
   vi.useRealTimers();
+  electronMocks.send.mockClear();
   await Promise.all(tempRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
@@ -96,6 +106,63 @@ describe('CodexUsageService refresh resilience', () => {
     expect(service.getCachedUsage()?.pools['openai-codex:codex'].utilization).toBe(55);
   });
 
+  it('shares one in-flight refresh promise and emits one ordered update', async () => {
+    const sessionsDir = await createCodexSnapshot();
+    const service = new CodexUsageService({ sessionsDir });
+    const originalScan = (service as any).findLatestUsageSnapshot.bind(service);
+    let releaseScan!: () => void;
+    const scanGate = new Promise<void>((resolve) => {
+      releaseScan = resolve;
+    });
+    const scan = vi.spyOn(service as any, 'findLatestUsageSnapshot').mockImplementation(async () => {
+      await scanGate;
+      return originalScan();
+    });
+
+    const first = service.refresh();
+    const second = service.refresh();
+
+    expect(second).toBe(first);
+    expect(scan).toHaveBeenCalledTimes(1);
+    releaseScan();
+    const [firstUsage, secondUsage] = await Promise.all([first, second]);
+
+    expect(secondUsage).toBe(firstUsage);
+    expect(electronMocks.send).toHaveBeenCalledTimes(1);
+    expect(service.getCachedUsage()).toBe(firstUsage);
+  });
+
+  it('runs exactly one trailing refresh when turns complete during an external refresh', async () => {
+    const sessionsDir = await createCodexSnapshot();
+    const service = new CodexUsageService({ sessionsDir, turnRefreshDelayMs: 1_000 });
+    const originalScan = (service as any).findLatestUsageSnapshot.bind(service);
+    let releaseFirstScan!: () => void;
+    const firstScanGate = new Promise<void>((resolve) => {
+      releaseFirstScan = resolve;
+    });
+    let scanCalls = 0;
+    vi.spyOn(service as any, 'findLatestUsageSnapshot').mockImplementation(async () => {
+      scanCalls += 1;
+      if (scanCalls === 1) await firstScanGate;
+      return originalScan();
+    });
+    vi.useFakeTimers();
+
+    const externalRefresh = service.refresh();
+    const turnRefresh = service.recordTurnCompleted();
+    service.recordTurnCompleted();
+    service.recordTurnCompleted();
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(scanCalls).toBe(1);
+    releaseFirstScan();
+    await externalRefresh;
+    await vi.waitFor(() => expect(scanCalls).toBe(2));
+    await turnRefresh;
+
+    expect(scanCalls).toBe(2);
+  });
+
   it('runs a trailing refresh when another Codex turn completes during a refresh', async () => {
     const pendingRefreshes: Array<(usage: CodexUsageData) => void> = [];
     const emptyUsage: CodexUsageData = {
@@ -118,7 +185,10 @@ describe('CodexUsageService refresh resilience', () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(service.refreshCalls).toBe(1);
 
-    service.recordTurnCompleted();
+    const secondTurn = service.recordTurnCompleted();
+    const thirdTurn = service.recordTurnCompleted();
+    expect(secondTurn).toBe(refreshQueue);
+    expect(thirdTurn).toBe(refreshQueue);
     pendingRefreshes.shift()?.(emptyUsage);
     await vi.advanceTimersByTimeAsync(1_000);
 

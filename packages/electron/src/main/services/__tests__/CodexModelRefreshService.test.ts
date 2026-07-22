@@ -460,6 +460,31 @@ describe('CodexModelRefreshService', () => {
     fs.rmSync(harness.tempDir, { recursive: true, force: true });
   });
 
+  it('coalesces repeated explicit retries for two seconds', async () => {
+    const harness = createHarness({
+      children: [new FakeCodexChild(), new FakeCodexChild()],
+    });
+    try {
+      const first = harness.service.manualRetry();
+      const concurrent = harness.service.manualRetry();
+      await Promise.all([first, concurrent]);
+
+      expect(concurrent).toBe(first);
+      expect(harness.spawned).toHaveLength(1);
+
+      await vi.advanceTimersByTimeAsync(1_999);
+      await harness.service.manualRetry();
+      expect(harness.spawned).toHaveLength(1);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await harness.service.manualRetry();
+      expect(harness.spawned).toHaveLength(2);
+    } finally {
+      harness.service.shutdown();
+      fs.rmSync(harness.tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('atomically promotes Codex full cache metadata after a successful refresh', async () => {
     const tempCodexHome = fs.mkdtempSync(path.join(process.cwd(), '.codex-home-test-'));
     const cachedModels = [fullModelInfo()];

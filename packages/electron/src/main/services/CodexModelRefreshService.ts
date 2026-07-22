@@ -86,6 +86,7 @@ export interface CodexModelRefreshServiceOptions {
   retryDelaysMs?: number[];
   requestTimeoutMs?: number;
   terminationGraceMs?: number;
+  manualRetryDedupeMs?: number;
   resolveBinaryPath?: () => string;
   buildEnv?: (binaryPath: string) => NodeJS.ProcessEnv;
   loadApiKey?: () => string | undefined;
@@ -96,6 +97,7 @@ export interface CodexModelRefreshServiceOptions {
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 5_000, 30_000];
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
 const DEFAULT_TERMINATION_GRACE_MS = 2_000;
+const DEFAULT_MANUAL_RETRY_DEDUPE_MS = 2_000;
 const MAX_MODEL_LIST_PAGES = 20;
 const SENTINEL_SLUG = '__nimbalyst_offline_catalog__';
 
@@ -236,6 +238,7 @@ export class CodexModelRefreshService {
   private readonly retryDelaysMs: number[];
   private readonly requestTimeoutMs: number;
   private readonly terminationGraceMs: number;
+  private readonly manualRetryDedupeMs: number;
   private readonly resolveBinaryPath: () => string;
   private readonly buildEnv: (binaryPath: string) => NodeJS.ProcessEnv;
   private readonly loadApiKey: () => string | undefined;
@@ -251,6 +254,8 @@ export class CodexModelRefreshService {
   private attempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private inFlight: Promise<CodexModelRefreshState> | null = null;
+  private manualRetryInFlight: Promise<CodexModelRefreshState> | null = null;
+  private manualRetryCooldownUntil = 0;
   private activeChild: ChildProcessWithoutNullStreams | null = null;
   private activeClient: JsonRpcClient | null = null;
 
@@ -259,6 +264,10 @@ export class CodexModelRefreshService {
     this.retryDelaysMs = [...(options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS)];
     this.requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.terminationGraceMs = options.terminationGraceMs ?? DEFAULT_TERMINATION_GRACE_MS;
+    this.manualRetryDedupeMs = Math.max(
+      0,
+      options.manualRetryDedupeMs ?? DEFAULT_MANUAL_RETRY_DEDUPE_MS,
+    );
     this.resolveBinaryPath = options.resolveBinaryPath
       ?? (() => resolveCodexBinaryPath(() => resolvePackagedCodexBinaryPath()));
     this.buildEnv = options.buildEnv ?? defaultBuildEnv;
@@ -320,20 +329,33 @@ export class CodexModelRefreshService {
   }
 
   manualRetry(): Promise<CodexModelRefreshState> {
+    if (this.manualRetryInFlight) return this.manualRetryInFlight;
+    if (Date.now() < this.manualRetryCooldownUntil) {
+      return Promise.resolve(this.getStatus());
+    }
+
     this.started = true;
     this.shuttingDown = false;
     this.clearRetryTimer();
     this.attempt = 0;
     const cycle = ++this.cycle;
     const active = this.inFlight;
-    if (active) {
-      return active.then(() => (
+    const run = active
+      ? active.then(() => (
         cycle === this.cycle && !this.shuttingDown
           ? this.launchAttempt(cycle)
           : this.getStatus()
-      ));
-    }
-    return this.launchAttempt(cycle);
+      ))
+      : this.launchAttempt(cycle);
+    const tracked = run.finally(() => {
+      if (this.manualRetryInFlight !== tracked) return;
+      this.manualRetryInFlight = null;
+      if (!this.shuttingDown) {
+        this.manualRetryCooldownUntil = Date.now() + this.manualRetryDedupeMs;
+      }
+    });
+    this.manualRetryInFlight = tracked;
+    return tracked;
   }
 
   registerIpcHandlers(register: IpcRegister = safeHandle as IpcRegister): void {
@@ -356,6 +378,8 @@ export class CodexModelRefreshService {
   shutdown(): void {
     this.shuttingDown = true;
     this.started = false;
+    this.manualRetryInFlight = null;
+    this.manualRetryCooldownUntil = 0;
     ++this.cycle;
     this.clearRetryTimer();
     try { this.activeClient?.close('model refresh shutdown'); } catch { /* noop */ }

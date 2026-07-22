@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   isTerminalActive: vi.fn(),
   interruptClaudeCliTurn: vi.fn(),
   writeToTerminal: vi.fn(),
+  clearModelCache: vi.fn(),
   ipcHandlers: new Map<string, (...args: any[]) => any>(),
 }));
 
@@ -25,7 +26,7 @@ vi.mock('../../../utils/ipcRegistry', async (importOriginal) => {
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
   SessionManager: class {},
   ProviderFactory: { getProvider: mocks.getProvider },
-  ModelRegistry: class {},
+  ModelRegistry: { clearCache: mocks.clearModelCache },
   isAskUserQuestionProvider: () => false,
   isAgentProvider: () => false,
   isSlashCommandCatalogProvider: () => false,
@@ -108,6 +109,37 @@ describe('AIService.stopSession', () => {
         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+  });
+
+  it('clears the generic model cache without forcing a Codex model retry', async () => {
+    const manualRetry = vi.fn(async () => ({ phase: 'normal' }));
+    const modelRefreshStatus = {
+      phase: 'normal',
+      attempt: 0,
+      maxAttempts: 4,
+      inFlight: false,
+      nextRetryAt: null,
+      lastError: null,
+      lastSuccessAt: null,
+    };
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, {
+      codexModelRefreshService: {
+        manualRetry,
+        getStatus: () => modelRefreshStatus,
+      },
+      getNormalizedProviderSettings: () => ({
+        'openai-codex': { enabled: true },
+      }),
+      streamingHandler: { handle: vi.fn() },
+    });
+    (service as any).setupIpcHandlers();
+
+    const result = await mocks.ipcHandlers.get('ai:clearModelCache')?.({} as any);
+
+    expect(mocks.clearModelCache).toHaveBeenCalledTimes(1);
+    expect(manualRetry).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: true, modelRefreshStatus });
   });
 
   afterEach(async () => {
