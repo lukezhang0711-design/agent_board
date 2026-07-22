@@ -33,7 +33,11 @@ vi.mock('../../utils/logger', () => ({
   },
 }));
 
-import { buildClaudeCliCommand, ClaudeAuthStateService } from '../ClaudeAuthStateService';
+import {
+  buildClaudeCliCommand,
+  buildSystemClaudeCliCommand,
+  ClaudeAuthStateService,
+} from '../ClaudeAuthStateService';
 
 const loggedInJson = JSON.stringify({
   loggedIn: true,
@@ -101,6 +105,15 @@ describe('ClaudeAuthStateService', () => {
         '""C:\\Users\\me\\AppData\\Roaming\\npm\\claude.cmd" "auth" "status" "--json""',
       ],
     });
+  });
+
+  it('does not treat the bundled Agent SDK binary as a system Claude CLI', () => {
+    const command = buildSystemClaudeCliCommand(['-p', '/usage'], {
+      platform: 'darwin',
+      preferredExecutable: '/Applications/Nimbalyst.app/Contents/Resources/app.asar.unpacked/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude',
+    });
+
+    expect(command).toBeNull();
   });
 
   it.each([

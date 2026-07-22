@@ -89,23 +89,75 @@ function quoteCmdArgument(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-/**
- * Resolve a directly executable Claude binary, or safely wrap a Windows npm
- * `.cmd` shim with cmd.exe. The arguments are controlled constants at each
- * call site; no user-provided shell text is interpolated.
- */
-export function buildClaudeCliCommand(
+function isBundledClaudeExecutable(candidate: string): boolean {
+  const normalized = candidate.replace(/\\/g, '/').toLowerCase();
+  return normalized.includes('/app.asar/')
+    || normalized.includes('/app.asar.unpacked/')
+    || normalized.includes('/node_modules/@anthropic-ai/claude-agent-sdk')
+    || normalized.includes('/claude-agent-sdk-');
+}
+
+function systemClaudeExecutableCandidates(options: ClaudeCliCommandOptions): string[] {
+  const platform = options.platform ?? process.platform;
+  const enhancedPath = options.enhancedPath ?? getEnhancedPath();
+  const homedir = options.homedir ?? os.homedir();
+
+  if (platform === 'win32') {
+    const windowsPath = path.win32;
+    const appData = options.appData ?? process.env.APPDATA;
+    const candidates = [
+      windowsPath.join(homedir, '.local', 'bin', 'claude.exe'),
+      windowsPath.join(homedir, '.local', 'bin', 'claude.cmd'),
+      ...(appData ? [windowsPath.join(appData, 'npm', 'claude.cmd')] : []),
+      windowsPath.join(homedir, 'AppData', 'Roaming', 'npm', 'claude.cmd'),
+    ];
+    for (const entry of enhancedPath.split(';')) {
+      const cleanEntry = entry.trim().replace(/^"(.*)"$/, '$1');
+      if (!cleanEntry) continue;
+      candidates.push(
+        windowsPath.join(cleanEntry, 'claude.exe'),
+        windowsPath.join(cleanEntry, 'claude.cmd'),
+      );
+    }
+    return candidates;
+  }
+
+  const candidates = [
+    path.join(homedir, '.local', 'bin', 'claude'),
+    path.join(homedir, '.npm-global', 'bin', 'claude'),
+    path.join(homedir, 'bin', 'claude'),
+    '/usr/local/bin/claude',
+    '/opt/homebrew/bin/claude',
+    '/usr/bin/claude',
+  ];
+  for (const entry of enhancedPath.split(':')) {
+    const cleanEntry = entry.trim().replace(/^"(.*)"$/, '$1');
+    if (cleanEntry) candidates.push(path.join(cleanEntry, 'claude'));
+  }
+  return candidates;
+}
+
+function resolveSystemClaudeExecutable(options: ClaudeCliCommandOptions): string | undefined {
+  if (options.preferredExecutable) {
+    return isBundledClaudeExecutable(options.preferredExecutable)
+      ? undefined
+      : options.preferredExecutable;
+  }
+  const pathExists = options.pathExists ?? fs.existsSync;
+  return systemClaudeExecutableCandidates(options).find(
+    (candidate) => !isBundledClaudeExecutable(candidate) && pathExists(candidate),
+  );
+}
+
+function buildCommandForExecutable(
   args: readonly string[],
-  options: ClaudeCliCommandOptions = {},
+  resolvedExecutable: string | undefined,
+  options: ClaudeCliCommandOptions,
 ): ClaudeCliCommand {
   const platform = options.platform ?? process.platform;
   const enhancedPath = options.enhancedPath ?? getEnhancedPath();
   const homedir = options.homedir ?? os.homedir();
   const pathExists = options.pathExists ?? fs.existsSync;
-  const resolvedExecutable = options.preferredExecutable ?? resolveClaudeCodeExecutablePath({
-    pathValue: enhancedPath,
-    allowSystemFallback: true,
-  });
 
   if (platform !== 'win32') {
     return { file: resolvedExecutable ?? 'claude', args: [...args] };
@@ -147,6 +199,38 @@ export function buildClaudeCliCommand(
     file: options.comSpec ?? process.env.ComSpec ?? 'cmd.exe',
     args: ['/d', '/s', '/c', `"${commandLine}"`],
   };
+}
+
+/**
+ * Resolve a directly executable Claude binary, or safely wrap a Windows npm
+ * `.cmd` shim with cmd.exe. The arguments are controlled constants at each
+ * call site; no user-provided shell text is interpolated.
+ */
+export function buildClaudeCliCommand(
+  args: readonly string[],
+  options: ClaudeCliCommandOptions = {},
+): ClaudeCliCommand {
+  const enhancedPath = options.enhancedPath ?? getEnhancedPath();
+  const resolvedExecutable = options.preferredExecutable ?? resolveClaudeCodeExecutablePath({
+    pathValue: enhancedPath,
+    allowSystemFallback: true,
+  });
+  return buildCommandForExecutable(args, resolvedExecutable, options);
+}
+
+/**
+ * Build a command for a user-installed, full Claude CLI. The bundled Agent
+ * SDK binary deliberately never qualifies: it does not support the local
+ * `/usage` refresh command used by ClaudeUsageService.
+ */
+export function buildSystemClaudeCliCommand(
+  args: readonly string[],
+  options: ClaudeCliCommandOptions = {},
+): ClaudeCliCommand | null {
+  const systemExecutable = resolveSystemClaudeExecutable(options);
+  return systemExecutable
+    ? buildCommandForExecutable(args, systemExecutable, options)
+    : null;
 }
 
 export class ClaudeAuthStateService {

@@ -40,11 +40,16 @@ const loggedInState: ClaudeAuthState = {
   apiProvider: 'firstParty',
 };
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(
+  body: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
     statusText: status === 401 ? 'Unauthorized' : 'OK',
+    headers: new Headers(headers),
     json: async () => body,
     text: async () => JSON.stringify(body),
   } as Response;
@@ -61,6 +66,14 @@ function successResponse(utilization = 21): Response {
 
 function unauthorizedResponse(): Response {
   return jsonResponse({ error: { message: 'Invalid authentication credentials' } }, 401);
+}
+
+function rateLimitedResponse(retryAfter?: string): Response {
+  return jsonResponse(
+    { error: { message: 'Rate limited' } },
+    429,
+    retryAfter ? { 'Retry-After': retryAfter } : {},
+  );
 }
 
 type KeychainRound = Record<string, string | null>;
@@ -142,9 +155,7 @@ describe('ClaudeUsageService authentication recovery', () => {
 
     const usage = await service.refresh();
 
-    expect(usage.error).toContain('Usage authorization failed');
-    expect(usage.error).toContain('Claude Code is logged in');
-    expect(usage.error).not.toContain('re-login');
+    expect(usage.error).toBe('额度授权失败,已暂停自动重试;修复登录后点 Refresh 立即重试');
     expect(getState).toHaveBeenCalledWith({ forceRefresh: true });
     expect(authStateService.getCachedState()).toMatchObject({ status: 'logged-in' });
     expect(runAuthStatus).toHaveBeenCalledOnce();
@@ -189,6 +200,47 @@ describe('ClaudeUsageService authentication recovery', () => {
 
     expect(usage.pools['claude-code:five_hour'].utilization).toBe(42);
     expect(bearerTokens(fetchMock)).toEqual(['stale-primary', 'valid-backup']);
+  });
+
+  it('accepts the newer flat accessToken credential shape after an empty legacy candidate', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(49));
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'linux',
+      readFile: async () => JSON.stringify({
+        claudeAiOauth: { accessToken: '   ' },
+        accessToken: 'flat-shape-token',
+      }),
+      fetchFn: fetchMock,
+      authStateService: authReader(loggedInState),
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    const usage = await service.refresh();
+
+    expect(usage.pools['claude-code:five_hour'].utilization).toBe(49);
+    expect(bearerTokens(fetchMock)).toEqual(['flat-shape-token']);
+  });
+
+  it('treats unknown or empty credential fields as unavailable without requesting usage', async () => {
+    const fetchMock = vi.fn();
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'linux',
+      readFile: async () => JSON.stringify({
+        claudeAiOauth: { accessToken: ' ' },
+        accessToken: 42,
+        oauthToken: null,
+      }),
+      fetchFn: fetchMock,
+      authStateService: authReader(loggedInState),
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    const usage = await service.refresh();
+
+    expect(usage.error).toContain('no quota credential was found');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('re-reads credentials after 401 and succeeds with a rotated token', async () => {
@@ -328,6 +380,209 @@ describe('ClaudeUsageService authentication recovery', () => {
 
     expect(usage.error).toContain('status check failed');
     expect(usage.error).not.toContain('log in again');
+  });
+
+  it('pauses automatic refreshes after two 401s for the same credential and lets manual Refresh through', async () => {
+    let now = 100;
+    const fetchMock = vi.fn().mockResolvedValue(unauthorizedResponse());
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'linux',
+      readFile: async () => JSON.stringify({ claudeAiOauth: { accessToken: 'cooldown-token' } }),
+      fetchFn: fetchMock,
+      authStateService: authReader({
+        status: 'logged-out',
+        source: 'claude-cli-auth-status',
+        checkedAt: 100,
+        authMethod: 'none',
+        apiProvider: 'firstParty',
+      }),
+      now: () => now,
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    await service.refresh({ manual: false });
+    const paused = await service.refresh({ manual: false });
+    const skipped = await service.refresh({ manual: false });
+
+    expect(paused.error).toBe('额度授权失败,已暂停自动重试;修复登录后点 Refresh 立即重试');
+    expect(skipped.error).toBe('额度授权失败,已暂停自动重试;修复登录后点 Refresh 立即重试');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    now += 60_000;
+    const manual = await service.refresh();
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(manual.error).not.toBe('额度授权失败,已暂停自动重试;修复登录后点 Refresh 立即重试');
+  });
+
+  it('uses Retry-After for a rate-limit cooldown and allows manual Refresh to reset it', async () => {
+    let now = 200;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(rateLimitedResponse('120'))
+      .mockResolvedValueOnce(successResponse(83));
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'linux',
+      readFile: async () => JSON.stringify({ claudeAiOauth: { accessToken: 'rate-limit-token' } }),
+      fetchFn: fetchMock,
+      authStateService: authReader(loggedInState),
+      now: () => now,
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    const rateLimited = await service.refresh({ manual: false });
+    const skipped = await service.refresh({ manual: false });
+
+    expect(rateLimited.error).toBe('接口限流,2 分钟后自动恢复');
+    expect(skipped.error).toBe('接口限流,2 分钟后自动恢复');
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    now += 60_000;
+    const manual = await service.refresh();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(manual.pools['claude-code:five_hour'].utilization).toBe(83);
+  });
+
+  it('defaults a missing Retry-After header to a five-minute automatic cooldown', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(rateLimitedResponse());
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'linux',
+      readFile: async () => JSON.stringify({ claudeAiOauth: { accessToken: 'default-rate-token' } }),
+      fetchFn: fetchMock,
+      authStateService: authReader(loggedInState),
+      now: () => 300,
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    const rateLimited = await service.refresh({ manual: false });
+    const skipped = await service.refresh({ manual: false });
+
+    expect(rateLimited.error).toBe('接口限流,5 分钟后自动恢复');
+    expect(skipped.error).toBe('接口限流,5 分钟后自动恢复');
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('skips the credential-refresh fallback when only the bundled SDK executable is available', async () => {
+    const bundledExecutable = '/Applications/Nimbalyst.app/Contents/Resources/app.asar.unpacked/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude';
+    const execFileFn = makeKeychainExec([
+      { 'Claude Code-credentials': 'bundled-only-token', 'Claude Code': null },
+      { 'Claude Code-credentials': 'bundled-only-token', 'Claude Code': null },
+    ]);
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'darwin',
+      execFileFn,
+      fetchFn: vi.fn().mockResolvedValue(unauthorizedResponse()),
+      authStateService: authReader(loggedInState),
+      claudeExecutable: bundledExecutable,
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    await service.refresh();
+    await service.refresh();
+
+    expect(execFileFn.mock.calls.filter(([file]) => file === bundledExecutable)).toHaveLength(0);
+  });
+
+  it('disables a failed system CLI credential refresh until the credential fingerprint changes', async () => {
+    const systemExecutable = '/test/bin/claude';
+    const execFileFn = vi.fn((file, args: readonly string[], _options, callback) => {
+      if (file === 'security') {
+        callback(null, JSON.stringify({ claudeAiOauth: { accessToken: 'cli-failure-token' } }), '');
+        return;
+      }
+      expect(file).toBe(systemExecutable);
+      expect(args).toContain('/usage');
+      callback(new Error('fixture command failure'), '', '');
+    });
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'darwin',
+      execFileFn,
+      fetchFn: vi.fn().mockResolvedValue(unauthorizedResponse()),
+      authStateService: authReader(loggedInState),
+      claudeExecutable: systemExecutable,
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    await service.refresh();
+    await service.refresh();
+
+    expect(execFileFn.mock.calls.filter(([file]) => file === systemExecutable)).toHaveLength(1);
+  });
+
+  it('keeps a failed CLI refresh disabled when the credential source is temporarily unavailable', async () => {
+    const systemExecutable = '/test/bin/claude';
+    const credentialPayloads = [
+      { claudeAiOauth: { accessToken: 'same-credential' } },
+      { claudeAiOauth: { accessToken: 'same-credential' } },
+      {},
+      { claudeAiOauth: { accessToken: 'same-credential' } },
+      { claudeAiOauth: { accessToken: 'same-credential' } },
+    ];
+    let credentialRead = 0;
+    const execFileFn = vi.fn((file, _args: readonly string[], _options, callback) => {
+      expect(file).toBe(systemExecutable);
+      callback(new Error('fixture command failure'), '', '');
+    });
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'linux',
+      readFile: async () => JSON.stringify(
+        credentialPayloads[Math.min(credentialRead++, credentialPayloads.length - 1)],
+      ),
+      execFileFn,
+      fetchFn: vi.fn().mockResolvedValue(unauthorizedResponse()),
+      authStateService: authReader(loggedInState),
+      claudeExecutable: systemExecutable,
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    await service.refresh();
+    await service.refresh();
+    await service.refresh();
+
+    expect(execFileFn).toHaveBeenCalledOnce();
+  });
+
+  it('reenables the system CLI fallback after the credential fingerprint changes', async () => {
+    const systemExecutable = '/test/bin/claude';
+    const persistedTokens = [
+      'first-credential',
+      'first-credential',
+      'first-credential',
+      'first-credential',
+      'changed-credential',
+      'changed-credential',
+      'changed-credential',
+      'changed-credential',
+    ];
+    let credentialRead = 0;
+    const execFileFn = vi.fn((file, _args: readonly string[], _options, callback) => {
+      if (file === 'security') {
+        const accessToken = persistedTokens[Math.min(credentialRead++, persistedTokens.length - 1)];
+        callback(null, JSON.stringify({ claudeAiOauth: { accessToken } }), '');
+        return;
+      }
+      callback(new Error('fixture command failure'), '', '');
+    });
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'darwin',
+      execFileFn,
+      fetchFn: vi.fn().mockResolvedValue(unauthorizedResponse()),
+      authStateService: authReader(loggedInState),
+      claudeExecutable: systemExecutable,
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    await service.refresh();
+    await service.refresh();
+
+    expect(execFileFn.mock.calls.filter(([file]) => file === systemExecutable)).toHaveLength(2);
   });
 
   it('times out a hung request, releases the shared promise, and allows the next refresh', async () => {
