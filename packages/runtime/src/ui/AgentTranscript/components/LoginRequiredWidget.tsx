@@ -1,4 +1,76 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+
+type ClaudeAuthStateKind = 'logged-in' | 'logged-out' | 'check-failed' | 'unknown';
+
+interface ClaudeAuthSnapshot {
+  status: ClaudeAuthStateKind;
+  source: 'claude-cli-auth-status';
+  checkedAt: number | null;
+  email?: string;
+  organization?: string;
+  subscriptionType?: string;
+  error?: string;
+}
+
+interface StatusMessage {
+  message: string;
+  success: boolean;
+}
+
+const CLAUDE_AUTH_STATE_UPDATED_EVENT = 'claude-auth:state-updated';
+const UNKNOWN_CLAUDE_AUTH_STATE: ClaudeAuthSnapshot = {
+  status: 'unknown',
+  source: 'claude-cli-auth-status',
+  checkedAt: null,
+};
+
+type RuntimeAuthWindow = Window & {
+  __nimbalystClaudeAuthState?: ClaudeAuthSnapshot;
+  __nimbalystRefreshClaudeAuthState?: () => Promise<unknown>;
+};
+
+function readClaudeAuthState(): ClaudeAuthSnapshot {
+  if (typeof window === 'undefined') return UNKNOWN_CLAUDE_AUTH_STATE;
+  return (window as RuntimeAuthWindow).__nimbalystClaudeAuthState ?? UNKNOWN_CLAUDE_AUTH_STATE;
+}
+
+function subscribeToClaudeAuthState(onStoreChange: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(CLAUDE_AUTH_STATE_UPDATED_EVENT, onStoreChange);
+  return () => window.removeEventListener(CLAUDE_AUTH_STATE_UPDATED_EVENT, onStoreChange);
+}
+
+function useClaudeAuthState(): ClaudeAuthSnapshot {
+  return useSyncExternalStore(
+    subscribeToClaudeAuthState,
+    readClaudeAuthState,
+    () => UNKNOWN_CLAUDE_AUTH_STATE,
+  );
+}
+
+function statusMessageFor(authState: ClaudeAuthSnapshot): StatusMessage | null {
+  if (authState.status === 'logged-in') return null;
+  if (authState.status === 'logged-out') {
+    return {
+      message: authState.error || 'Not logged in. Please complete the authentication flow.',
+      success: false,
+    };
+  }
+  if (authState.status === 'check-failed') {
+    return {
+      message: authState.error
+        ? `Failed to check Claude login status: ${authState.error}`
+        : 'Failed to check Claude login status. Please try again.',
+      success: false,
+    };
+  }
+  return {
+    message: authState.error
+      ? `Claude login status is unknown: ${authState.error}`
+      : 'Claude login status is unknown. Please try again.',
+    success: false,
+  };
+}
 
 // Inject login widget styles once (for color-mix patterns)
 const injectLoginWidgetStyles = () => {
@@ -34,107 +106,53 @@ const injectLoginWidgetStyles = () => {
 export const LoginRequiredWidget: React.FC = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<{
-    message: string;
-    success: boolean;
-    authState?: 'logged-in' | 'logged-out' | 'check-failed' | 'unknown';
-    accountInfo?: {
-      email?: string;
-      organization?: string;
-      subscriptionType?: string;
-    };
-  } | null>(null);
+  const [actionStatus, setActionStatus] = useState<StatusMessage | null>(null);
+  const authState = useClaudeAuthState();
 
   // Inject styles on mount
   useEffect(() => {
     injectLoginWidgetStyles();
   }, []);
 
-  const applySharedStatus = useCallback((status: any) => {
-    if (status.authState === 'logged-in') {
-      setLoginStatus({
-        message: 'Login successful! You can now use Claude Agent.',
-        success: true,
-        authState: 'logged-in',
-        accountInfo: {
-          email: status.email,
-          organization: status.organization,
-          subscriptionType: status.subscriptionType
-        }
-      });
-    } else if (status.authState === 'check-failed') {
-      setLoginStatus({
-        message: status.error
-          ? `Failed to check Claude login status: ${status.error}`
-          : 'Failed to check Claude login status. Please try again.',
-        success: false,
-        authState: 'check-failed'
-      });
-    } else if (status.authState === 'unknown') {
-      setLoginStatus({
-        message: status.error
-          ? `Claude login status is unknown: ${status.error}`
-          : 'Claude login status is unknown. Please try again.',
-        success: false,
-        authState: 'unknown'
-      });
-    } else if (status.authState === 'logged-out') {
-      setLoginStatus({
-        message: status.error || 'Not logged in. Please complete the authentication flow.',
-        success: false,
-        authState: 'logged-out'
-      });
-    } else {
-      setLoginStatus({
-        message: 'Claude login status is unknown. Please try again.',
-        success: false,
-        authState: 'unknown'
-      });
-    }
-  }, []);
-
-  const handleRefreshStatus = useCallback(async (forceRefresh = true) => {
+  const handleRefreshStatus = useCallback(async () => {
     setIsChecking(true);
-    setLoginStatus(null);
+    setActionStatus(null);
 
     try {
+      const runtimeWindow = window as RuntimeAuthWindow;
+      if (runtimeWindow.__nimbalystRefreshClaudeAuthState) {
+        await runtimeWindow.__nimbalystRefreshClaudeAuthState();
+        return;
+      }
       if (!window.electronAPI?.invoke) {
-        setLoginStatus({
+        setActionStatus({
           message: 'Cannot access Electron API. Please restart the application.',
           success: false
         });
-        setIsChecking(false);
         return;
       }
 
-      const status = forceRefresh
-        ? await window.electronAPI.invoke('claude-code:check-login', { forceRefresh: true })
-        : await window.electronAPI.invoke('claude-code:check-login');
-      applySharedStatus(status);
+      // The centralized renderer listener receives and mirrors the response
+      // broadcast. This action requests a recheck but never owns auth state.
+      await window.electronAPI.invoke('claude-code:check-login', { forceRefresh: true });
     } catch (error: any) {
-      setLoginStatus({
+      setActionStatus({
         message: `Failed to check status: ${error.message || 'Unknown error'}`,
         success: false
       });
     } finally {
       setIsChecking(false);
     }
-  }, [applySharedStatus]);
-
-  // Read the shared TTL-backed state on mount. Only an explicit user refresh
-  // bypasses the main-process cache.
-  useEffect(() => {
-    void handleRefreshStatus(false);
-  }, [handleRefreshStatus]);
+  }, []);
 
   const handleLogin = async () => {
     setIsLoggingIn(true);
-    setLoginStatus(null);
+    setActionStatus(null);
 
     try {
       // Check if we have the electronAPI available
       if (!window.electronAPI?.invoke) {
-        setLoginStatus({
+        setActionStatus({
           message: 'Cannot access Electron API. Please restart the application.',
           success: false
         });
@@ -144,19 +162,14 @@ export const LoginRequiredWidget: React.FC = () => {
 
       const result = await window.electronAPI.invoke('claude-code:login');
 
-      if (result.success) {
-        setLoginStatus({
-          message: 'Login initiated! Complete authentication in the Terminal window (you may have to type /login to complete the process), then click "Check Status".',
-          success: true
-        });
-      } else {
-        setLoginStatus({
+      if (!result.success) {
+        setActionStatus({
           message: result.error || 'Login failed. Please try again.',
           success: false
         });
       }
     } catch (error: any) {
-      setLoginStatus({
+      setActionStatus({
         message: `Login failed: ${error.message || 'Unknown error'}`,
         success: false
       });
@@ -165,7 +178,8 @@ export const LoginRequiredWidget: React.FC = () => {
     }
   };
 
-  const isLoggedIn = loginStatus?.authState === 'logged-in';
+  const isLoggedIn = authState.status === 'logged-in';
+  const authStatusMessage = statusMessageFor(authState);
   const loginButtonLabel = isLoggingIn
     ? 'Opening Login...'
     : isLoggedIn
@@ -186,22 +200,31 @@ export const LoginRequiredWidget: React.FC = () => {
         )}
       </div>
 
-      {loginStatus && loginStatus.accountInfo && (
+      {isLoggedIn && (authState.email || authState.organization) && (
         <div className={`login-account-info text-xs flex flex-col gap-1 ${isLoggedIn ? 'pl-0' : 'pl-6'} text-[var(--nim-text-muted)]`}>
-          {loginStatus.accountInfo.email && (
-            <div>Account: {loginStatus.accountInfo.email}</div>
+          {authState.email && (
+            <div>Account: {authState.email}</div>
           )}
-          {loginStatus.accountInfo.organization && (
-            <div>Organization: {loginStatus.accountInfo.organization}</div>
+          {authState.organization && (
+            <div>Organization: {authState.organization}</div>
           )}
         </div>
       )}
 
-      {loginStatus && !loginStatus.success && (
+      {actionStatus && !actionStatus.success && (
         <div className="login-status-message error text-[0.85rem] p-4 rounded-md flex flex-col gap-2 leading-relaxed text-[var(--nim-error)]">
           <div className="login-status-header flex items-center gap-2">
             <span className="login-status-icon text-base">&#9888;</span>
-            <span>{loginStatus.message}</span>
+            <span>{actionStatus.message}</span>
+          </div>
+        </div>
+      )}
+
+      {authStatusMessage && !authStatusMessage.success && (
+        <div className="login-status-message error text-[0.85rem] p-4 rounded-md flex flex-col gap-2 leading-relaxed text-[var(--nim-error)]">
+          <div className="login-status-header flex items-center gap-2">
+            <span className="login-status-icon text-base">&#9888;</span>
+            <span>{authStatusMessage.message}</span>
           </div>
         </div>
       )}
@@ -216,7 +239,7 @@ export const LoginRequiredWidget: React.FC = () => {
         </button>
 
         <button
-          onClick={() => { void handleRefreshStatus(true); }}
+          onClick={() => { void handleRefreshStatus(); }}
           disabled={isChecking}
           className="status-button w-full py-3 px-5 rounded-md text-sm font-semibold cursor-pointer transition-all border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] whitespace-nowrap hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:bg-[var(--nim-bg-tertiary)] disabled:opacity-60"
         >

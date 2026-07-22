@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { execFileMock, resolveSharedExecutableMock } = vi.hoisted(() => ({
+const { execFileMock, resolveSharedExecutableMock, getAllWindowsMock } = vi.hoisted(() => ({
   execFileMock: vi.fn(),
   resolveSharedExecutableMock: vi.fn(),
+  getAllWindowsMock: vi.fn(),
 }));
 
 vi.mock('child_process', () => ({
   execFile: execFileMock,
+}));
+
+vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: getAllWindowsMock },
 }));
 
 vi.mock('../CLIManager', () => ({
@@ -39,6 +44,12 @@ const loggedInJson = JSON.stringify({
   subscriptionType: 'pro',
 });
 
+const loggedOutJson = JSON.stringify({
+  loggedIn: false,
+  authMethod: 'none',
+  apiProvider: 'firstParty',
+});
+
 function result(
   stdout: string,
   exitCode = 0,
@@ -51,6 +62,7 @@ describe('ClaudeAuthStateService', () => {
   beforeEach(() => {
     execFileMock.mockReset();
     resolveSharedExecutableMock.mockReset().mockReturnValue('/bundled/claude');
+    getAllWindowsMock.mockReset().mockReturnValue([]);
   });
 
   it('accepts logged-in only when auth method and API provider are present', async () => {
@@ -104,16 +116,40 @@ describe('ClaudeAuthStateService', () => {
     await expect(service.getState()).resolves.toMatchObject({ status: 'check-failed' });
   });
 
-  it('maps a complete logged-out payload to logged-out', async () => {
+  it('keeps a complete logged-out payload with exit code 0 as logged-out', async () => {
     const service = new ClaudeAuthStateService({
-      runAuthStatus: async () => result(JSON.stringify({
-        loggedIn: false,
-        authMethod: 'none',
-        apiProvider: 'firstParty',
-      })),
+      runAuthStatus: async () => result(loggedOutJson),
     });
 
     await expect(service.getState()).resolves.toMatchObject({ status: 'logged-out' });
+  });
+
+  it('accepts a complete self-consistent logged-out payload even when auth status exits 1', async () => {
+    const service = new ClaudeAuthStateService({
+      runAuthStatus: async () => result(loggedOutJson, 1, Object.assign(new Error('not logged in'), { code: 1 })),
+    });
+
+    await expect(service.getState()).resolves.toMatchObject({ status: 'logged-out' });
+  });
+
+  it('keeps exit code 1 with damaged auth status output as check-failed', async () => {
+    const service = new ClaudeAuthStateService({
+      runAuthStatus: async () => result('{not-json', 1, Object.assign(new Error('not logged in'), { code: 1 })),
+    });
+
+    await expect(service.getState()).resolves.toMatchObject({ status: 'check-failed' });
+  });
+
+  it('does not apply the exit-code exception when the auth process was terminated', async () => {
+    const service = new ClaudeAuthStateService({
+      runAuthStatus: async () => result(
+        loggedOutJson,
+        1,
+        Object.assign(new Error('process terminated'), { code: 1, signal: 'SIGKILL' }),
+      ),
+    });
+
+    await expect(service.getState()).resolves.toMatchObject({ status: 'check-failed' });
   });
 
   it.each([
@@ -173,6 +209,56 @@ describe('ClaudeAuthStateService', () => {
     expect(service.getCachedState()).toMatchObject({ status: 'unknown', checkedAt: null });
     await service.getState();
     expect(runAuthStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it('rechecks once on window focus only while the shared state is unknown', async () => {
+    const runAuthStatus = vi.fn().mockResolvedValue(result(loggedInJson));
+    const service = new ClaudeAuthStateService({ runAuthStatus });
+
+    await service.recheckIfUnknownOnWindowFocus();
+    await service.recheckIfUnknownOnWindowFocus();
+
+    expect(runAuthStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishes the final state after a forced recheck and an explicit invalidation', async () => {
+    const publishState = vi.fn();
+    const runAuthStatus = vi.fn()
+      .mockResolvedValueOnce(result(loggedInJson))
+      .mockResolvedValueOnce(result(loggedOutJson));
+    const service = new ClaudeAuthStateService({ runAuthStatus, publishState });
+
+    await service.getState();
+    await service.getState({ forceRefresh: true });
+
+    expect(publishState).toHaveBeenNthCalledWith(1, expect.objectContaining({ status: 'logged-in' }));
+    expect(publishState).toHaveBeenNthCalledWith(2, expect.objectContaining({ status: 'unknown' }));
+    expect(publishState).toHaveBeenNthCalledWith(3, expect.objectContaining({ status: 'logged-out' }));
+  });
+
+  it('broadcasts state changes to every live renderer window', async () => {
+    const send = vi.fn();
+    getAllWindowsMock.mockReturnValue([{
+      isDestroyed: () => false,
+      webContents: { send },
+    }]);
+    const service = new ClaudeAuthStateService({
+      runAuthStatus: async () => result(loggedInJson),
+    });
+
+    await service.getState();
+    service.invalidate();
+
+    expect(send).toHaveBeenNthCalledWith(
+      1,
+      'claude-auth:update',
+      expect.objectContaining({ status: 'logged-in' }),
+    );
+    expect(send).toHaveBeenNthCalledWith(
+      2,
+      'claude-auth:update',
+      expect.objectContaining({ status: 'unknown' }),
+    );
   });
 
   it('does not return a stale in-flight result after invalidation', async () => {

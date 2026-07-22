@@ -2,6 +2,7 @@ import React, { useEffect, type RefObject } from 'react';
 import { useAtomValue } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { claudeUsageAtom } from '../../store/atoms/claudeUsageAtoms';
+import { claudeAuthStateAtom } from '../../store/atoms/claudeAuthAtoms';
 import { useSetSetting } from '../../hooks/useSetting';
 import { useFloatingMenu, FloatingPortal } from '../../hooks/useFloatingMenu';
 import { UsagePoolList, formatUsageLastUpdated } from '../UsageIndicator/UsagePoolList';
@@ -18,6 +19,7 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
   onRefresh,
 }) => {
   const usage = useAtomValue(claudeUsageAtom);
+  const authState = useAtomValue(claudeAuthStateAtom);
   const setUsageIndicatorEnabled = useSetSetting('ai.showUsageIndicator');
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const menu = useFloatingMenu({
@@ -41,6 +43,15 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
 
   if (!usage) return null;
   const hasPools = Object.keys(usage.pools).length > 0;
+  const authorizationHint = usage.error?.includes('Usage authorization failed')
+    ? authState.status === 'logged-out'
+      ? 'Claude login is no longer valid. Sign in again, then refresh quota information.'
+      : authState.status === 'logged-in'
+        ? 'Claude is signed in, but the Usage API rejected quota authorization.'
+        : authState.status === 'check-failed'
+          ? 'Claude login status could not be verified; the quota authorization failure is separate.'
+          : 'Claude login status is being rechecked; the quota authorization failure is separate.'
+    : null;
 
   return (
     <FloatingPortal>
@@ -86,11 +97,19 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
 
         <div className="px-4 py-3">
           {usage.error && !hasPools ? (
-            <div className="text-[13px] text-nim-error">{usage.error}</div>
+            <div className="text-[13px] text-nim-error">
+              <div>{usage.error}</div>
+              {authorizationHint && (
+                <div className="mt-1 text-[11px] text-nim-muted">{authorizationHint}</div>
+              )}
+            </div>
           ) : (
             <>
               {usage.error && (
-                <div className="mb-3 text-[11px] text-nim-warning">Refresh failed: {usage.error}</div>
+                <div className="mb-3 text-[11px] text-nim-warning">
+                  <div>Refresh failed: {usage.error}</div>
+                  {authorizationHint && <div className="mt-1">{authorizationHint}</div>}
+                </div>
               )}
               <UsagePoolList
                 pools={usage.pools}

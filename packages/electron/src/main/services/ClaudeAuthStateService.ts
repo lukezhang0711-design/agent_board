@@ -1,4 +1,5 @@
 import { execFile } from 'child_process';
+import { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -35,6 +36,7 @@ interface ClaudeAuthStateServiceOptions {
   now?: () => number;
   cacheTtlMs?: number;
   runAuthStatus?: () => Promise<AuthStatusCommandResult>;
+  publishState?: (state: ClaudeAuthState) => void;
 }
 
 interface ClaudeAuthStatusJson {
@@ -154,11 +156,13 @@ export class ClaudeAuthStateService {
   private readonly now: () => number;
   private readonly cacheTtlMs: number;
   private readonly runAuthStatus: () => Promise<AuthStatusCommandResult>;
+  private readonly publishState: (state: ClaudeAuthState) => void;
 
   constructor(options: ClaudeAuthStateServiceOptions = {}) {
     this.now = options.now ?? Date.now;
     this.cacheTtlMs = options.cacheTtlMs ?? AUTH_CACHE_TTL_MS;
     this.runAuthStatus = options.runAuthStatus ?? (() => this.runCliAuthStatus());
+    this.publishState = options.publishState ?? ((state) => this.broadcastState(state));
   }
 
   getCachedState(): ClaudeAuthState {
@@ -188,8 +192,7 @@ export class ClaudeAuthStateService {
       if (generation !== this.generation) {
         return this.getState();
       }
-      this.cachedState = state;
-      return state;
+      return this.commitState(state);
     });
     this.inflightCheck = check;
 
@@ -204,8 +207,20 @@ export class ClaudeAuthStateService {
 
   invalidate(): void {
     this.generation += 1;
-    this.cachedState = unknownState();
+    this.commitState(unknownState());
     this.inflightCheck = null;
+  }
+
+  /**
+   * An unknown state is never TTL-cacheable, so this starts (or joins) exactly
+   * one fresh CLI check. It intentionally does not call forceRefresh: repeated
+   * focus events must share the pending check instead of restarting it.
+   */
+  async recheckIfUnknownOnWindowFocus(): Promise<ClaudeAuthState | null> {
+    if (this.cachedState.status !== 'unknown') {
+      return null;
+    }
+    return this.getState();
   }
 
   private async checkState(): Promise<ClaudeAuthState> {
@@ -220,16 +235,14 @@ export class ClaudeAuthStateService {
       );
     }
 
-    if (result.error || result.exitCode !== 0) {
-      const timedOut = result.error?.code === 'ETIMEDOUT'
-        || result.error?.killed === true
-        || result.error?.signal === 'SIGTERM';
-      const detail = timedOut
-        ? `Claude authentication check timed out after ${AUTH_CHECK_TIMEOUT_MS}ms.`
-        : result.stderr.trim()
-          || result.error?.message
-          || `claude auth status exited with code ${String(result.exitCode)}.`;
-      return this.checkFailed(checkedAt, detail);
+    const timedOut = result.error?.code === 'ETIMEDOUT'
+      || result.error?.killed === true
+      || result.error?.signal === 'SIGTERM';
+    const processFailed = result.error?.killed === true
+      || Boolean(result.error?.signal)
+      || typeof result.error?.code === 'string';
+    if (processFailed) {
+      return this.commandFailed(checkedAt, result, timedOut);
     }
 
     let parsed: ClaudeAuthStatusJson;
@@ -242,6 +255,25 @@ export class ClaudeAuthStateService {
       );
     }
 
+    const parsedState = this.stateFromPayload(parsed, checkedAt);
+    const exitedNonZero = typeof result.exitCode === 'number' && result.exitCode !== 0;
+    const commandFailed = Boolean(result.error) || result.exitCode !== 0;
+
+    // Claude 1.x reports a complete logged-out JSON payload with exit code 1.
+    // The payload is authoritative only for this self-consistent logged-out
+    // shape; timeouts, process errors, malformed data, and logged-in payloads
+    // on a non-zero exit remain check failures.
+    if (commandFailed) {
+      if (exitedNonZero && parsedState.status === 'logged-out') {
+        return parsedState;
+      }
+      return this.commandFailed(checkedAt, result, false);
+    }
+
+    return parsedState;
+  }
+
+  private stateFromPayload(parsed: ClaudeAuthStatusJson, checkedAt: number): ClaudeAuthState {
     if (!parsed || typeof parsed !== 'object' || typeof parsed.loggedIn !== 'boolean') {
       return this.checkFailed(checkedAt, 'Claude authentication check returned an incomplete status payload.');
     }
@@ -279,6 +311,33 @@ export class ClaudeAuthStateService {
       authMethod,
       apiProvider,
     };
+  }
+
+  private commandFailed(
+    checkedAt: number,
+    result: AuthStatusCommandResult,
+    timedOut: boolean,
+  ): ClaudeAuthState {
+    const detail = timedOut
+      ? `Claude authentication check timed out after ${AUTH_CHECK_TIMEOUT_MS}ms.`
+      : result.stderr.trim()
+        || result.error?.message
+        || `claude auth status exited with code ${String(result.exitCode)}.`;
+    return this.checkFailed(checkedAt, detail);
+  }
+
+  private commitState(state: ClaudeAuthState): ClaudeAuthState {
+    this.cachedState = state;
+    this.publishState(state);
+    return state;
+  }
+
+  private broadcastState(state: ClaudeAuthState): void {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('claude-auth:update', state);
+      }
+    }
   }
 
   private checkFailed(checkedAt: number, error: string): ClaudeAuthState {

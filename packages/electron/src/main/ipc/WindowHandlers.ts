@@ -7,6 +7,7 @@ import { tmpdir } from 'os';
 import { reportDesktopActivity, setWindowFocused, setScreenLocked, setIdleThresholdMs, attemptReconnect } from '../services/SyncManager';
 import { startNetworkAvailability, onNetworkAvailable, notifyNetworkAvailable } from '../services/NetworkAvailability';
 import { AnalyticsService } from '../services/analytics/AnalyticsService';
+import { claudeAuthStateService } from '../services/ClaudeAuthStateService';
 import { getPackageRoot } from '../utils/appPaths';
 
 /** Timestamp of last app_foregrounded event, used to throttle to once per 30 minutes */
@@ -208,6 +209,9 @@ export function registerWindowHandlers() {
     // Note: setWindowFocused() is app-level; the per-window send below is not.
     app.on('browser-window-focus', (_event, win) => {
         setWindowFocused(true);
+        if (claudeAuthStateService.getCachedState().status === 'unknown') {
+            void claudeAuthStateService.recheckIfUnknownOnWindowFocus();
+        }
 
         if (win && !win.isDestroyed()) {
             win.webContents.send('window:focus-changed', true);

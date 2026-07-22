@@ -99,6 +99,7 @@ import { initActionPromptListeners } from './store/listeners/actionPromptListene
 import { initAiCommandListeners } from './store/listeners/aiCommandListeners';
 import { initAppCommandListeners } from './store/listeners/appCommandListeners';
 import { initClaudeUsageListeners } from './store/listeners/claudeUsageListeners';
+import { initClaudeAuthListeners } from './store/listeners/claudeAuthListeners';
 import { initClaudeCliTerminalListeners } from './store/listeners/claudeCliTerminalListeners';
 import { initWindowFocusListeners } from './store/listeners/windowFocusListeners';
 import { initCodexUsageListeners } from './store/listeners/codexUsageListeners';
@@ -303,6 +304,7 @@ export default function App() {
     const cleanupActionPrompts = initActionPromptListeners();
     const cleanupAiCommands = initAiCommandListeners();
     const cleanupAppCommands = initAppCommandListeners();
+    const cleanupClaudeAuth = initClaudeAuthListeners();
     const cleanupClaude = initClaudeUsageListeners();
     const cleanupClaudeCliTerminal = initClaudeCliTerminalListeners();
     const cleanupWindowFocus = initWindowFocusListeners();
@@ -331,6 +333,7 @@ export default function App() {
       cleanupActionPrompts?.();
       cleanupAiCommands?.();
       cleanupAppCommands?.();
+      cleanupClaudeAuth?.();
       cleanupClaude?.();
       cleanupClaudeCliTerminal?.();
       cleanupWindowFocus?.();
