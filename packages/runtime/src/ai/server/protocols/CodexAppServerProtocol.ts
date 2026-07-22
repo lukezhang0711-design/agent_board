@@ -42,7 +42,10 @@ import {
 import { JsonRpcClient } from './codexAppServer/jsonRpcClient';
 import {
   getCodexVendorPathEntries,
-  resolveCodexBinaryPath,
+  markSystemCodexBinaryIncompatible,
+  resolveBundledCodexBinaryPath,
+  resolveSystemCodexBinaryPath,
+  takeSystemCodexFallbackNotice,
 } from './codexAppServer/codexAppServerBinary';
 import type {
   AnyItem,
@@ -128,6 +131,8 @@ interface AppServerSessionRaw {
   activeTurnId: string | null;
   /** stderr buffer for diagnostic surface on failure. */
   stderrTail: string[];
+  runtimeSource: 'system' | 'bundled';
+  runtimeFallbackNotice?: string;
 }
 
 interface TurnRetryState {
@@ -515,7 +520,27 @@ export class CodexAppServerProtocol implements AgentProtocol {
   }
 
   private async spawnAndInit(options: SessionOptions): Promise<AppServerSessionRaw> {
-    const binary = resolveCodexBinaryPath(this.resolveCodexPathOverride);
+    const pathValue = (options.raw?.codexEnv as Record<string, string> | undefined)?.PATH;
+    const systemBinary = resolveSystemCodexBinaryPath(pathValue);
+    const bundledBinary = () => resolveBundledCodexBinaryPath(this.resolveCodexPathOverride);
+    try {
+      const raw = await this.spawnAndInitAt(options, systemBinary ?? bundledBinary(), systemBinary ? 'system' : 'bundled');
+      if (takeSystemCodexFallbackNotice()) raw.runtimeFallbackNotice = '系统版 Codex 不兼容，已回退内置版';
+      return raw;
+    } catch (error) {
+      if (!systemBinary) throw error;
+      markSystemCodexBinaryIncompatible(systemBinary);
+      const raw = await this.spawnAndInitAt(options, bundledBinary(), 'bundled');
+      if (takeSystemCodexFallbackNotice()) raw.runtimeFallbackNotice = '系统版 Codex 不兼容，已回退内置版';
+      return raw;
+    }
+  }
+
+  private async spawnAndInitAt(
+    options: SessionOptions,
+    binary: string,
+    runtimeSource: 'system' | 'bundled',
+  ): Promise<AppServerSessionRaw> {
     const env = this.buildEnv(options, binary);
     const cwd = options.workspacePath || process.cwd();
     // console.log('[CODEX][APPSERVER] spawning child:', {
@@ -569,6 +594,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
       dynamicTools: this.extractDynamicTools(options),
       activeTurnId: null,
       stderrTail,
+      runtimeSource,
     };
   }
 

@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenAICodexProvider } from '../OpenAICodexProvider';
-import * as codexBinaryPath from '../codex/codexBinaryPath';
+import * as codexAppServerBinary from '../../protocols/codexAppServer/codexAppServerBinary';
 import * as codexSdkLoader from '../codex/codexSdkLoader';
 import { AISessionsRepository } from '../../../../storage/repositories/AISessionsRepository';
 
@@ -195,6 +195,7 @@ describe('OpenAICodexProvider', () => {
   });
 
   it('uses SDK-provided model discovery when available', async () => {
+    vi.spyOn(OpenAICodexProvider as any, 'getModelsFromOpenAI').mockResolvedValue([]);
     let codexConstructorOptions: Record<string, unknown> | undefined;
     const listModels = vi.fn(async () => ({
       data: [
@@ -723,15 +724,15 @@ describe('OpenAICodexProvider', () => {
     });
   });
 
-  it('wires packaged codex resolver in default provider construction path', async () => {
+  it('wires the system-first Codex resolver in the legacy SDK construction path', async () => {
     OpenAICodexProvider.setTrustChecker(() => ({ trusted: true, mode: 'allow-all' as any }));
     OpenAICodexProvider.setPermissionPatternChecker(async () => false);
     OpenAICodexProvider.setPermissionPatternSaver(async () => {});
     OpenAICodexProvider.setSecurityLogger(() => {});
 
-    const resolvedBinaryPath = '/tmp/codex-resolved-by-default';
+    const resolvedBinaryPath = '/tmp/system-codex';
     const resolveSpy = vi
-      .spyOn(codexBinaryPath, 'resolvePackagedCodexBinaryPath')
+      .spyOn(codexAppServerBinary, 'resolveCodexBinaryPath')
       .mockReturnValue(resolvedBinaryPath);
 
     let codexConstructorOptions: Record<string, unknown> | undefined;
@@ -742,7 +743,7 @@ describe('OpenAICodexProvider', () => {
           type: 'item.completed',
           item: {
             type: 'agent_message',
-            text: 'default resolver wired',
+            text: 'system-first resolver wired',
           },
         },
       ]),
@@ -1402,6 +1403,33 @@ describe('OpenAICodexProvider', () => {
     provider.cleanupSession('session-reuse');
     expect(cleanupSession).toHaveBeenCalledTimes(1);
     expect(cleanupSession).toHaveBeenCalledWith(turn1Session);
+  });
+
+  it('emits the Codex runtime fallback notice only once per live session', async () => {
+    const session = {
+      id: 'thread-fallback',
+      platform: 'codex-app-server',
+      raw: { runtimeFallbackNotice: '系统版 Codex 不兼容，已回退内置版' },
+    };
+    const protocol = {
+      platform: 'codex-app-server',
+      createSession: vi.fn(async () => session),
+      resumeSession: vi.fn(),
+      forkSession: vi.fn(),
+      sendMessage: () => createAsyncEventStream([{ type: 'complete', content: 'ok', usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } }]),
+      abortSession: vi.fn(),
+      cleanupSession: vi.fn(),
+    } as any;
+    const provider = new OpenAICodexProvider({}, { protocol, transport: 'app-server' });
+    await provider.initialize({ model: 'openai-codex:gpt-5.5' });
+
+    const first: any[] = [];
+    for await (const chunk of provider.sendMessage('first', undefined, 'fallback-session', [], process.cwd())) first.push(chunk);
+    const second: any[] = [];
+    for await (const chunk of provider.sendMessage('second', undefined, 'fallback-session', [], process.cwd())) second.push(chunk);
+
+    expect(first).toContainEqual({ type: 'text', content: '系统版 Codex 不兼容，已回退内置版', isSystem: true });
+    expect(second).not.toContainEqual(expect.objectContaining({ isSystem: true }));
   });
 
   it('denies Codex turns when workspace is not trusted', async () => {

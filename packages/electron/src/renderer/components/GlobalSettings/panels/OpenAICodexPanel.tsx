@@ -26,6 +26,7 @@ interface CodexAuthStatus {
   authMode: 'apikey' | 'chatgpt' | 'chatgptAuthTokens' | null;
   email: string | null;
   planType: string | null;
+  runtime: { source: 'system' | 'bundled'; version: string };
   message: string;
   error?: string;
 }
@@ -71,7 +72,6 @@ export function OpenAICodexPanel({
   }, []);
 
   useEffect(() => {
-    if (!config.enabled) return;
     checkStatus();
     const off = window.electronAPI.on('openai-codex:auth-updated', () => {
       checkStatus();
@@ -79,7 +79,7 @@ export function OpenAICodexPanel({
     return () => {
       if (typeof off === 'function') off();
     };
-  }, [config.enabled, checkStatus]);
+  }, [checkStatus]);
 
   const handleChatGptLogin = async () => {
     setAuthBusy('chatgpt');
@@ -162,6 +162,12 @@ export function OpenAICodexPanel({
         checked={usageIndicatorEnabled}
         onChange={setUsageIndicatorEnabled}
       />
+
+      {authStatus?.runtime && (
+        <p className="text-xs text-[var(--nim-text-muted)] mt-2">
+          Current runtime (当前使用): {authStatus.runtime.source === 'system' ? 'System' : 'Built-in'} {authStatus.runtime.version}
+        </p>
+      )}
 
       {acpEnabled && (
         <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">

@@ -1423,6 +1423,13 @@ export class MessageStreamingHandler {
         }
         switch (chunk.type) {
           case 'text':
+            if (chunk.isSystem && session.provider === 'openai-codex') {
+              await notificationService.showNotification({
+                title: 'Codex Runtime', body: chunk.content || '系统版 Codex 不兼容，已回退内置版',
+                sessionId: session.id, workspacePath, provider: session.provider,
+              });
+              break;
+            }
             textChunks++;
             const chunkContent = chunk.content || '';
             fullResponse += chunkContent;

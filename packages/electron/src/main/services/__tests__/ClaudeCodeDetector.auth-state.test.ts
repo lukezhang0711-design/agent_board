@@ -1,14 +1,21 @@
 import { EventEmitter } from 'events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { spawnMock, getStateMock, invalidateMock } = vi.hoisted(() => ({
+const { spawnMock, execFileSyncMock, getStateMock, invalidateMock, resolveClaudePathMock } = vi.hoisted(() => ({
   spawnMock: vi.fn(),
+  execFileSyncMock: vi.fn(),
   getStateMock: vi.fn(),
   invalidateMock: vi.fn(),
+  resolveClaudePathMock: vi.fn(),
 }));
 
 vi.mock('child_process', () => ({
+  execFileSync: execFileSyncMock,
   spawn: spawnMock,
+}));
+
+vi.mock('@nimbalyst/runtime/electron/claudeCodeEnvironment', () => ({
+  resolveClaudeCodeExecutablePath: resolveClaudePathMock,
 }));
 
 vi.mock('../ClaudeAuthStateService', () => ({
@@ -50,8 +57,10 @@ function fakeProcess(output: string, code: number | null) {
 describe('ClaudeCodeDetector authentication state', () => {
   beforeEach(() => {
     spawnMock.mockReset();
+    execFileSyncMock.mockReset();
     getStateMock.mockReset();
     invalidateMock.mockReset();
+    resolveClaudePathMock.mockReturnValue('/bundled/claude');
   });
 
   it('reports a timed-out auth check as check-failed instead of logged in', async () => {
@@ -99,5 +108,15 @@ describe('ClaudeCodeDetector authentication state', () => {
     await expect(detector.getStatus()).resolves.toMatchObject({ authState: 'logged-in' });
     expect(spawnMock).toHaveBeenCalledTimes(1);
     expect(getStateMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports the bundled native runtime version beside the system CLI version', async () => {
+    spawnMock.mockImplementationOnce(() => fakeProcess('2.1.208 (Claude Code)\n', 0));
+    execFileSyncMock.mockReturnValue('2.1.161 (Claude Code)\n');
+    getStateMock.mockResolvedValue({ status: 'logged-out', source: 'claude-cli-auth-status', checkedAt: 100 });
+
+    await expect(new ClaudeCodeDetector().getStatus()).resolves.toMatchObject({
+      version: '2.1.208 (Claude Code)', bundledVersion: '2.1.161',
+    });
   });
 });

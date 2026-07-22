@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -86,6 +87,19 @@ describe('OpenCodeSDKProtocol', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockResolvedValue({ ok: true });
+  });
+
+  it('locks the system opencode command and enhanced PATH used for its server process', async () => {
+    const { loadSdkModule } = createMockSdkModule([]);
+    const protocol = new OpenCodeSDKProtocol(loadSdkModule);
+    const session = await protocol.createSession({ workspacePath: '/tmp/test', env: { PATH: '/system/opencode/bin' } });
+    const spawnMock = vi.mocked(spawn);
+
+    expect(spawnMock).toHaveBeenCalledWith('opencode', expect.arrayContaining(['serve']), expect.objectContaining({
+      env: expect.objectContaining({ PATH: '/system/opencode/bin' }),
+    }));
+    protocol.cleanupSession(session);
+    (spawnMock.mock.results[0]?.value as EventEmitter | undefined)?.emit('exit', 0, null);
   });
 
   it('emits a raw_event for every SSE event', async () => {

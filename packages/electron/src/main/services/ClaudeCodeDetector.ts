@@ -1,7 +1,8 @@
-import { spawn } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
 import { logger } from '../utils/logger';
+import { resolveClaudeCodeExecutablePath } from '@nimbalyst/runtime/electron/claudeCodeEnvironment';
 import {
   claudeAuthStateService,
   type ClaudeAuthStateKind,
@@ -20,6 +21,7 @@ export interface ClaudeCodeStatus {
   organization?: string;
   subscriptionType?: string;
   version?: string;
+  bundledVersion?: string;
   hasSession?: boolean;
   hasApiKey?: boolean;
 }
@@ -62,6 +64,7 @@ export class ClaudeCodeDetector {
     const status: ClaudeCodeStatus = {
       installed: installed.installed,
       version: installed.version,
+      bundledVersion: this.getBundledVersion(),
       loggedIn: authState.status === 'logged-in',
       authState: authState.status,
       authSource: authState.source,
@@ -207,6 +210,16 @@ export class ClaudeCodeDetector {
         resolve({ installed: false });
       }
     });
+  }
+
+  private getBundledVersion(): string | undefined {
+    try {
+      const binary = resolveClaudeCodeExecutablePath({ allowSystemFallback: false });
+      const output = binary && execFileSync(binary, ['--version'], { encoding: 'utf8', timeout: 5_000 });
+      return output?.match(/\d+\.\d+\.\d+/)?.[0];
+    } catch {
+      return undefined;
+    }
   }
 
 }

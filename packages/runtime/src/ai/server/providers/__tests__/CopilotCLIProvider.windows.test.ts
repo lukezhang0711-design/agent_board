@@ -69,6 +69,16 @@ describe('CopilotCLIProvider Windows runtime resolution', () => {
     expect(resolved).toBe('C:\\Users\\test\\AppData\\Roaming\\npm\\copilot.cmd');
   });
 
+  it('keeps the system binary ahead of the bare copilot fallback', () => {
+    const enhancedPath = 'C:\\Users\\test\\AppData\\Roaming\\npm;C:\\Program Files\\nodejs';
+    existsSyncMock.mockImplementation((candidate: string) =>
+      candidate === 'C:\\Users\\test\\AppData\\Roaming\\npm\\copilot.cmd'
+    );
+
+    expect((CopilotCLIProvider as any).resolveCopilotExecutableForRuntime(enhancedPath))
+      .toBe('C:\\Users\\test\\AppData\\Roaming\\npm\\copilot.cmd');
+  });
+
   it('configureProtocol uses the resolved Windows copilot.cmd path', () => {
     const enhancedPath = 'C:\\Users\\test\\AppData\\Roaming\\npm;C:\\Program Files\\nodejs';
     CopilotCLIProvider.setEnhancedPathLoader(() => enhancedPath);

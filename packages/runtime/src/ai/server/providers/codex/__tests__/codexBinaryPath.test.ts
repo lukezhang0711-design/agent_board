@@ -1,9 +1,29 @@
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { getCodexTargetTriple, resolvePackagedCodexBinaryPath } from '../codexBinaryPath';
-import { getCodexVendorPathEntries } from '../../../protocols/codexAppServer/codexAppServerBinary';
+import {
+  getCodexVendorPathEntries,
+  markSystemCodexBinaryIncompatible,
+  resolveSystemCodexBinaryPath,
+} from '../../../protocols/codexAppServer/codexAppServerBinary';
 
 describe('codexBinaryPath', () => {
+  it('prefers a system codex binary on PATH until its handshake marks it incompatible', () => {
+    const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-system-bin-'));
+    const binary = path.join(binDir, process.platform === 'win32' ? 'codex.exe' : 'codex');
+    fs.writeFileSync(binary, 'fixture');
+    try {
+      expect(resolveSystemCodexBinaryPath(binDir)).toBe(binary);
+      markSystemCodexBinaryIncompatible(binary);
+      expect(resolveSystemCodexBinaryPath(binDir)).toBeUndefined();
+    } finally {
+      markSystemCodexBinaryIncompatible();
+      fs.rmSync(binDir, { recursive: true, force: true });
+    }
+  });
+
   it('maps supported platform/arch combinations to codex target triples', () => {
     expect(getCodexTargetTriple('darwin', 'arm64')).toBe('aarch64-apple-darwin');
     expect(getCodexTargetTriple('darwin', 'x64')).toBe('x86_64-apple-darwin');

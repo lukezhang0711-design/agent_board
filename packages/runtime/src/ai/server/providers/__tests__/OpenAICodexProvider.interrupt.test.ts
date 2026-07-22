@@ -6,8 +6,11 @@ vi.mock('node:child_process', () => ({
 }));
 
 vi.mock('../../protocols/codexAppServer/codexAppServerBinary', () => ({
-  resolveCodexBinaryPath: () => '/fake/codex',
+  markSystemCodexBinaryIncompatible: () => {},
+  resolveBundledCodexBinaryPath: () => '/fake/codex',
   resolveCodexBinaryFromModules: () => '/fake/codex',
+  resolveSystemCodexBinaryPath: () => undefined,
+  takeSystemCodexFallbackNotice: () => false,
   getCodexVendorPathEntries: () => [],
 }));
 

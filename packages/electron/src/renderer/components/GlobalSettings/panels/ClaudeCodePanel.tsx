@@ -30,6 +30,7 @@ interface ClaudeCodePanelProps {
 }
 
 type AuthMethod = 'login' | 'api-key';
+type ClaudeCodeRuntimeStatus = { version?: string; bundledVersion?: string };
 
 export function ClaudeCodePanel({
   config,
@@ -52,6 +53,7 @@ export function ClaudeCodePanel({
   );
   const [isCheckingClaudeWindowsStatus, setIsCheckingClaudeWindowsStatus] = useState(true);
   const [claudeCodeWindowsStatus, setClaudeCodeWindowsStatus] = useState<ClaudeForWindowsInstallation | null>(null);
+  const [runtimeStatus, setRuntimeStatus] = useState<ClaudeCodeRuntimeStatus | null>(null);
   const posthog = usePostHog();
 
   // Environment variables state
@@ -80,6 +82,18 @@ export function ClaudeCodePanel({
   const [planTrackingEnabled, setPlanTrackingEnabledState] = useState(true);
 
   const isWindowsPlatform = process.platform === 'win32';
+  const systemVersion = runtimeStatus?.version?.match(/\d+\.\d+\.\d+/)?.[0];
+  const bundledVersion = runtimeStatus?.bundledVersion;
+  const systemIsNewer = !!systemVersion && !!bundledVersion
+    && systemVersion.localeCompare(bundledVersion, undefined, { numeric: true }) > 0;
+
+  useEffect(() => {
+    let mounted = true;
+    window.electronAPI.invoke('claude-code:get-status')
+      .then((status: ClaudeCodeRuntimeStatus) => mounted && setRuntimeStatus(status))
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   // Load environment variables
   const loadEnvVars = useCallback(async () => {
@@ -430,13 +444,15 @@ export function ClaudeCodePanel({
               <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Claude Agent SDK</h4>
               <div className="installation-status p-4 rounded-lg bg-[rgba(16,185,129,0.05)] border border-[rgba(16,185,129,0.2)]">
                 <div className="installation-status-row flex items-center gap-3 py-1">
-                  <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">Version:</span>
-                  <span className="installation-status-value text-sm text-[var(--nim-text)]">{BUNDLED_SDK_VERSION}</span>
+                  <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">Current runtime (当前使用):</span>
+                  <span className="installation-status-value text-sm text-[var(--nim-text)]">Built-in {bundledVersion ?? 'unknown'}</span>
                 </div>
                 <div className="installation-status-row flex items-center gap-3 py-1">
-                  <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">Source:</span>
-                  <span className="installation-status-value text-sm text-[var(--nim-text)]">Built-in (bundled with app)</span>
+                  <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">SDK package:</span>
+                  <span className="installation-status-value text-sm text-[var(--nim-text)]">{BUNDLED_SDK_VERSION}</span>
                 </div>
+                {systemVersion && <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mt-3">System Claude Code: {systemVersion}</p>}
+                {systemIsNewer && <p className="text-xs leading-relaxed text-[var(--nim-warning)] mt-2">System Claude Code is newer, but SDK sessions stay on the built-in runtime to preserve resumable multi-turn sessions.</p>}
                 <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mt-3">
                   Nimbalyst includes the Claude Agent SDK. No additional installation required.
                 </p>

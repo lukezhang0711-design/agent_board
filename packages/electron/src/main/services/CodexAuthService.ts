@@ -10,13 +10,15 @@
  * read on their own startup -- no need to coordinate state in memory.
  */
 
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { BrowserWindow } from 'electron';
 import { JsonRpcClient } from '@nimbalyst/runtime/ai/server/protocols/codexAppServer/jsonRpcClient';
 import {
   getCodexVendorPathEntries,
+  markSystemCodexBinaryIncompatible,
   resolveCodexBinaryPath,
+  resolveSystemCodexBinaryPath,
 } from '@nimbalyst/runtime/ai/server/protocols/codexAppServer/codexAppServerBinary';
 import { resolvePackagedCodexBinaryPath } from '@nimbalyst/runtime/ai/server/providers/codex/codexBinaryPath';
 import type {
@@ -36,6 +38,7 @@ export interface CodexAuthStatus {
   requiresOpenaiAuth: boolean;
   authMode: AccountAuthMode;
   planType: string | null;
+  runtime: { source: 'system' | 'bundled'; version: string };
 }
 
 export interface CodexLoginStartedChatGpt {
@@ -50,6 +53,7 @@ class CodexAuthServiceImpl {
   private initializing: Promise<JsonRpcClient> | null = null;
   private currentLoginId: string | null = null;
   private cachedStatus: CodexAuthStatus | null = null;
+  private runtime: CodexAuthStatus['runtime'] = { source: 'bundled', version: 'unknown' };
 
   async getStatus(refreshToken = false): Promise<CodexAuthStatus> {
     const client = await this.ensureChild();
@@ -64,6 +68,7 @@ class CodexAuthServiceImpl {
       requiresOpenaiAuth: res.requiresOpenaiAuth,
       authMode: this.deriveAuthMode(res.account),
       planType: res.account && res.account.type === 'chatgpt' ? res.account.planType : null,
+      runtime: this.runtime,
     };
     this.cachedStatus = status;
     return status;
@@ -132,7 +137,9 @@ class CodexAuthServiceImpl {
     if (this.initializing) return this.initializing;
 
     this.initializing = (async () => {
-      const binaryPath = resolveCodexBinaryPath(() => resolvePackagedCodexBinaryPath());
+      const enhancedPath = getEnhancedPath();
+      const systemBinary = resolveSystemCodexBinaryPath(enhancedPath);
+      const binaryPath = resolveCodexBinaryPath(() => resolvePackagedCodexBinaryPath(), enhancedPath);
       const env = this.buildEnv(binaryPath);
       const child = spawn(binaryPath, ['app-server', '--listen', 'stdio://'], {
         env,
@@ -164,8 +171,14 @@ class CodexAuthServiceImpl {
       } catch (err) {
         try { client.close('init failed'); } catch { /* noop */ }
         try { child.kill(); } catch { /* noop */ }
+        if (binaryPath === systemBinary) {
+          markSystemCodexBinaryIncompatible(binaryPath);
+          this.initializing = null;
+          return this.ensureChild();
+        }
         throw err;
       }
+      this.runtime = { source: binaryPath === systemBinary ? 'system' : 'bundled', version: this.readRuntimeVersion(binaryPath, env) };
       this.child = child;
       this.client = client;
       return client;
@@ -192,6 +205,14 @@ class CodexAuthServiceImpl {
     return baseEnv;
   }
 
+  private readRuntimeVersion(binaryPath: string, env: NodeJS.ProcessEnv): string {
+    try {
+      return String(execFileSync(binaryPath, ['--version'], { encoding: 'utf8', env, timeout: 5_000 })).match(/\d+\.\d+\.\d+/)?.[0] ?? 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
   private handleNotification(method: string, params: unknown): void {
     if (method === 'account/updated') {
       const n = params as AccountUpdatedNotification;
@@ -205,6 +226,7 @@ class CodexAuthServiceImpl {
         requiresOpenaiAuth: !account,
         authMode: n.authMode,
         planType,
+        runtime: this.runtime,
       };
       this.broadcast('openai-codex:auth-updated', this.cachedStatus);
       return;

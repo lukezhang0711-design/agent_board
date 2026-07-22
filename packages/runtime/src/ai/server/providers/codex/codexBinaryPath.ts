@@ -1,7 +1,20 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 type SupportedPlatform = NodeJS.Platform;
+
+/** Resolve a user-installed Codex CLI from PATH and conventional install directories. */
+export function resolveSystemCodexBinaryPath(pathValue = process.env.PATH ?? ''): string | undefined {
+  const names = process.platform === 'win32' ? ['codex.exe', 'codex.cmd'] : ['codex'];
+  const home = os.homedir();
+  const dirs = [
+    ...pathValue.split(process.platform === 'win32' ? ';' : ':').filter(Boolean),
+    path.join(home, '.openai', 'codex', 'bin'), path.join(home, '.local', 'bin'),
+    path.join(home, '.npm-global', 'bin'), '/usr/local/bin', '/opt/homebrew/bin',
+  ];
+  return dirs.flatMap((dir) => names.map((name) => path.join(dir, name))).find(fs.existsSync);
+}
 
 export function getCodexTargetTriple(platform: SupportedPlatform, arch: string): string | undefined {
   if (platform === 'linux' || platform === 'android') {

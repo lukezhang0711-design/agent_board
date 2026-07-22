@@ -20,6 +20,7 @@ interface CheckLoginResult {
   authMode: CodexAuthStatus['authMode'];
   email: string | null;
   planType: string | null;
+  runtime: CodexAuthStatus['runtime'];
   message: string;
   error?: string;
 }
@@ -44,6 +45,7 @@ function toCheckLoginResult(status: CodexAuthStatus): CheckLoginResult {
     authMode: status.authMode,
     email,
     planType,
+    runtime: status.runtime,
     message,
   };
 }
@@ -63,6 +65,7 @@ export function registerCodexAuthHandlers(): void {
         authMode: null,
         email: null,
         planType: null,
+        runtime: { source: 'bundled', version: 'unknown' },
         message: 'Codex CLI is unavailable.',
         error: error?.message ?? 'Codex CLI is unavailable.',
       };

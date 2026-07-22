@@ -27,6 +27,7 @@ import { ToolPermissionService } from '../permissions/ToolPermissionService';
 import { PermissionMode, TrustChecker, PermissionPatternSaver, PermissionPatternChecker, SecurityLogger } from './ProviderPermissionMixin';
 import { CodexSdkModuleLike, loadCodexSdkModule } from './codex/codexSdkLoader';
 import { resolvePackagedCodexBinaryPath } from './codex/codexBinaryPath';
+import { resolveCodexBinaryPath } from '../protocols/codexAppServer/codexAppServerBinary';
 import { McpConfigService } from '../services/McpConfigService';
 import { MCPServerConfig } from '../../../types/MCPServerConfig';
 import { safeJSONSerialize } from '../../../utils/serialization';
@@ -365,13 +366,15 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       });
     } else if (deps?.loadSdkModule || deps?.resolveCodexPathOverride) {
       const loadSdk = deps.loadSdkModule ?? loadCodexSdkModule;
-      const resolveCodexPath = deps.resolveCodexPathOverride ?? resolvePackagedCodexBinaryPath;
+      const resolveCodexPath = deps.resolveCodexPathOverride ?? (() => resolveCodexBinaryPath(
+        resolvePackagedCodexBinaryPath, OpenAICodexProvider.enhancedPathLoader?.(),
+      ));
       this.protocol = new CodexSDKProtocol(apiKey, loadSdk, resolveCodexPath);
     } else {
       this.protocol = new CodexSDKProtocol(
         apiKey,
         OpenAICodexProvider.sdkModuleLoader ?? loadCodexSdkModule,
-        resolvePackagedCodexBinaryPath
+        () => resolveCodexBinaryPath(resolvePackagedCodexBinaryPath, OpenAICodexProvider.enhancedPathLoader?.())
       );
     }
 
@@ -1209,6 +1212,12 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       // to key by) and when we just hit the cache (no-op).
       if (sessionId && !cachedLiveSession) {
         this.liveProtocolSessions.set(sessionId, session);
+      }
+
+      const fallbackNotice = (session.raw as { runtimeFallbackNotice?: unknown }).runtimeFallbackNotice;
+      if (typeof fallbackNotice === 'string') {
+        delete (session.raw as { runtimeFallbackNotice?: unknown }).runtimeFallbackNotice;
+        yield { type: 'text', content: fallbackNotice, isSystem: true };
       }
 
       // Persist a newly created thread ID immediately, before streaming the

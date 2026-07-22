@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { getCodexTargetTriple } from '../../providers/codex/codexBinaryPath';
+import { getCodexTargetTriple, resolveSystemCodexBinaryPath as findSystemCodexBinaryPath } from '../../providers/codex/codexBinaryPath';
 
 const moduleRequire = createRequire(import.meta.url);
 
@@ -23,6 +23,25 @@ const PLATFORM_PACKAGE_BY_TARGET: Record<string, string> = {
   'x86_64-pc-windows-msvc': '@openai/codex-win32-x64',
   'aarch64-pc-windows-msvc': '@openai/codex-win32-arm64',
 };
+
+let incompatibleSystemBinary: string | undefined;
+let fallbackNoticePending = false;
+
+export function resolveSystemCodexBinaryPath(pathValue = process.env.PATH ?? ''): string | undefined {
+  const found = findSystemCodexBinaryPath(pathValue);
+  return found === incompatibleSystemBinary ? undefined : found;
+}
+
+export function markSystemCodexBinaryIncompatible(binaryPath?: string): void {
+  incompatibleSystemBinary = binaryPath;
+  fallbackNoticePending = !!binaryPath;
+}
+
+export function takeSystemCodexFallbackNotice(): boolean {
+  const pending = fallbackNoticePending;
+  fallbackNoticePending = false;
+  return pending;
+}
 
 /**
  * Resolve the codex binary path via npm module resolution. Mirrors the
@@ -58,7 +77,7 @@ export function resolveCodexBinaryFromModules(): string | undefined {
  * Resolve the codex binary path, preferring an explicit override (used in
  * packaged Electron builds) and falling back to module resolution.
  */
-export function resolveCodexBinaryPath(
+export function resolveBundledCodexBinaryPath(
   packagedResolver?: () => string | undefined,
 ): string {
   const packaged = packagedResolver?.();
@@ -68,6 +87,13 @@ export function resolveCodexBinaryPath(
   throw new Error(
     '[CodexAppServer] could not resolve codex binary. Install @openai/codex with optional platform dependencies, or provide a packaged-resources resolver.',
   );
+}
+
+export function resolveCodexBinaryPath(
+  packagedResolver?: () => string | undefined,
+  pathValue?: string,
+): string {
+  return resolveSystemCodexBinaryPath(pathValue) || resolveBundledCodexBinaryPath(packagedResolver);
 }
 
 /**

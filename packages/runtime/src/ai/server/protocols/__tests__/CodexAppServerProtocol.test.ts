@@ -9,14 +9,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // IMPORTANT: mock `node:child_process` BEFORE importing the protocol so the
 // module under test picks up the stub.
 const spawnMock = vi.fn();
+const { markSystemBinaryIncompatibleMock, resolveBundledBinaryMock, resolveSystemBinaryMock, takeFallbackNoticeMock } = vi.hoisted(() => ({
+  markSystemBinaryIncompatibleMock: vi.fn(),
+  resolveBundledBinaryMock: vi.fn(),
+  resolveSystemBinaryMock: vi.fn(),
+  takeFallbackNoticeMock: vi.fn(),
+}));
 vi.mock('node:child_process', () => ({
   spawn: (...args: unknown[]) => spawnMock(...args),
 }));
 
 // Stub binary resolution so we don't depend on @openai/codex being installed.
 vi.mock('../codexAppServer/codexAppServerBinary', () => ({
-  resolveCodexBinaryPath: () => '/fake/codex',
+  markSystemCodexBinaryIncompatible: markSystemBinaryIncompatibleMock,
+  resolveBundledCodexBinaryPath: resolveBundledBinaryMock,
   resolveCodexBinaryFromModules: () => '/fake/codex',
+  resolveSystemCodexBinaryPath: resolveSystemBinaryMock,
+  takeSystemCodexFallbackNotice: takeFallbackNoticeMock,
   getCodexVendorPathEntries: () => [],
 }));
 
@@ -34,6 +43,10 @@ describe('CodexAppServerProtocol', () => {
     child = new FakeCodexAppServer();
     spawnMock.mockReset();
     spawnMock.mockReturnValue(child);
+    markSystemBinaryIncompatibleMock.mockReset();
+    resolveBundledBinaryMock.mockReturnValue('/fake/codex');
+    resolveSystemBinaryMock.mockReturnValue(undefined);
+    takeFallbackNoticeMock.mockReturnValue(false);
   });
 
   afterEach(() => {
@@ -92,6 +105,8 @@ describe('CodexAppServerProtocol', () => {
     const session = await sessionPromise;
     expect(session.id).toBe('thread-abc');
     expect(session.platform).toBe('codex-app-server');
+    expect(session.raw).toMatchObject({ runtimeSource: 'bundled' });
+    expect(session.raw).not.toHaveProperty('runtimeFallbackNotice');
 
     // Spawn arguments
     expect(spawnMock).toHaveBeenCalledTimes(1);
@@ -99,6 +114,40 @@ describe('CodexAppServerProtocol', () => {
     expect(bin).toBe('/fake/codex');
     expect(args).toEqual(['app-server', '--listen', 'stdio://']);
 
+    protocol.cleanupSession(session);
+  });
+
+  it('uses a healthy system binary after the initialize handshake', async () => {
+    resolveSystemBinaryMock.mockReturnValue('/system/codex');
+    resolveBundledBinaryMock.mockImplementation(() => { throw new Error('bundled binary must not be resolved'); });
+    const protocol = new CodexAppServerProtocol();
+    child.scriptResult('initialize', { codexHome: '/system', platformFamily: 'unix', platformOs: 'macos', userAgent: 'system/0.144.1' })
+      .scriptResult('thread/start', { thread: { id: 'system-thread' } });
+
+    const session = await protocol.createSession({ workspacePath: '/tmp/ws' });
+
+    expect(spawnMock).toHaveBeenCalledWith('/system/codex', expect.any(Array), expect.any(Object));
+    expect((session.raw as { runtimeSource: string }).runtimeSource).toBe('system');
+    expect((session.raw as { runtimeFallbackNotice?: string }).runtimeFallbackNotice).toBeUndefined();
+    protocol.cleanupSession(session);
+  });
+
+  it('falls back to bundled Codex and records one visible notice when system initialize fails', async () => {
+    const fallbackChild = new FakeCodexAppServer();
+    resolveSystemBinaryMock.mockReturnValue('/system/codex');
+    resolveBundledBinaryMock.mockReturnValue('/bundled/codex');
+    takeFallbackNoticeMock.mockReturnValue(true);
+    child.scriptError('initialize', { code: -32601, message: 'initialize unsupported' });
+    fallbackChild.scriptResult('initialize', { codexHome: '/bundled', platformFamily: 'unix', platformOs: 'macos', userAgent: 'bundled/0.144.0' })
+      .scriptResult('thread/start', { thread: { id: 'bundled-thread' } });
+    spawnMock.mockReturnValueOnce(child).mockReturnValueOnce(fallbackChild);
+    const protocol = new CodexAppServerProtocol();
+
+    const session = await protocol.createSession({ workspacePath: '/tmp/ws' });
+
+    expect(spawnMock.mock.calls.map(([binary]) => binary)).toEqual(['/system/codex', '/bundled/codex']);
+    expect(markSystemBinaryIncompatibleMock).toHaveBeenCalledWith('/system/codex');
+    expect(session.raw).toMatchObject({ runtimeSource: 'bundled', runtimeFallbackNotice: '系统版 Codex 不兼容，已回退内置版' });
     protocol.cleanupSession(session);
   });
 

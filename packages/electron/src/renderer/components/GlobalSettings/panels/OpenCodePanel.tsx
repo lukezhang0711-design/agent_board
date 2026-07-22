@@ -257,7 +257,7 @@ export function OpenCodePanel({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[var(--nim-success)] shrink-0" />
             <span className="text-[13px] text-[var(--nim-text)]">
-              Installed{cliVersion ? ` (${cliVersion})` : ''}
+              Current runtime (当前使用): System{cliVersion ? ` ${cliVersion}` : ''}
             </span>
           </div>
         )}

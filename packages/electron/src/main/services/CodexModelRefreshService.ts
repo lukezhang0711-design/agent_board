@@ -9,7 +9,9 @@ import type { AIModel, AIProviderType } from '@nimbalyst/runtime/ai/server/types
 import { JsonRpcClient } from '@nimbalyst/runtime/ai/server/protocols/codexAppServer/jsonRpcClient';
 import {
   getCodexVendorPathEntries,
+  markSystemCodexBinaryIncompatible,
   resolveCodexBinaryPath,
+  resolveSystemCodexBinaryPath,
 } from '@nimbalyst/runtime/ai/server/protocols/codexAppServer/codexAppServerBinary';
 import { resolvePackagedCodexBinaryPath } from '@nimbalyst/runtime/ai/server/providers/codex/codexBinaryPath';
 import type { InitializeResponse } from '@nimbalyst/runtime/ai/server/protocols/codexAppServer/types';
@@ -269,7 +271,7 @@ export class CodexModelRefreshService {
       options.manualRetryDedupeMs ?? DEFAULT_MANUAL_RETRY_DEDUPE_MS,
     );
     this.resolveBinaryPath = options.resolveBinaryPath
-      ?? (() => resolveCodexBinaryPath(() => resolvePackagedCodexBinaryPath()));
+      ?? (() => resolveCodexBinaryPath(() => resolvePackagedCodexBinaryPath(), getEnhancedPath()));
     this.buildEnv = options.buildEnv ?? defaultBuildEnv;
     this.loadApiKey = options.loadApiKey ?? (() => undefined);
     this.spawnProcess = options.spawnProcess
@@ -482,12 +484,13 @@ export class CodexModelRefreshService {
 
   private async refreshOnce(): Promise<AIModel[]> {
     let stage: 'spawn' | 'initialize' | 'model/list' = 'spawn';
+    let binaryPath: string | undefined;
     let child: ChildProcessWithoutNullStreams | null = null;
     let client: JsonRpcClient | null = null;
     let stderr = '';
 
     try {
-      const binaryPath = this.resolveBinaryPath();
+      binaryPath = this.resolveBinaryPath();
       const env = this.buildEnv(binaryPath);
       // Match the provider security contract: shell keys are never implicit
       // auth sources. Only the key explicitly saved in Nimbalyst settings is
@@ -580,6 +583,9 @@ export class CodexModelRefreshService {
       }
       return mapModelPresets(presets);
     } catch (error) {
+      if (binaryPath && (stage === 'spawn' || stage === 'initialize') && binaryPath === resolveSystemCodexBinaryPath(getEnhancedPath())) {
+        markSystemCodexBinaryIncompatible(binaryPath);
+      }
       if (error instanceof CategorizedRefreshError) throw error;
       const message = errorMessage(error);
       if (stage === 'spawn' || stage === 'initialize' || /child process exited|spawn/i.test(message)) {
