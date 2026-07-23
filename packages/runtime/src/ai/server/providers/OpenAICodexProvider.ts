@@ -580,8 +580,14 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     deps?: OpenAICodexModelDiscoveryDeps,
   ): Promise<AIModel[]> {
     const hostSnapshot = OpenAICodexProvider.modelRefreshSnapshotResolver?.();
+    if (hostSnapshot && hostSnapshot.length > 0) {
+      return OpenAICodexProvider.getModelsFromRuntimeSnapshot(hostSnapshot);
+    }
     if (hostSnapshot) {
-      return OpenAICodexProvider.getPreferredModels(hostSnapshot);
+      // The Electron host owns the selected runtime. Do not fall through to
+      // SDK or HTTP discovery while its isolated runtime enumeration is
+      // pending or unavailable; use the explicit fallback catalog instead.
+      return OpenAICodexProvider.getFallbackModels();
     }
     const sdkModels = await OpenAICodexProvider.getModelsFromSdk(apiKey, deps);
     const apiModels = await OpenAICodexProvider.getModelsFromOpenAI(apiKey);
@@ -596,6 +602,22 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       contextWindow: model.contextWindow,
       maxTokens: model.maxTokens,
     }));
+  }
+
+  private static getModelsFromRuntimeSnapshot(snapshot: AIModel[]): AIModel[] {
+    const modelsById = new Map<string, AIModel>();
+    for (const model of snapshot) {
+      const rawId = OpenAICodexProvider.toRawModelId(model.id);
+      if (!rawId) continue;
+      const id = ModelIdentifier.create('openai-codex', rawId).combined;
+      if (modelsById.has(id)) continue;
+      modelsById.set(id, {
+        ...model,
+        id,
+        provider: 'openai-codex' as AIProviderType,
+      });
+    }
+    return Array.from(modelsById.values());
   }
 
   private static getPreferredModels(...sourceLists: AIModel[][]): AIModel[] {

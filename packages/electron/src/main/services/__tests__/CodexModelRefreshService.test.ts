@@ -9,6 +9,7 @@ import { CodexModelRefreshService } from '../CodexModelRefreshService';
 
 interface FakeChildOptions {
   codexHome?: string;
+  userAgent?: string;
   modelResult?: unknown;
   modelError?: { code: number; message: string };
   hangModelList?: boolean;
@@ -74,7 +75,7 @@ class FakeCodexChild extends EventEmitter {
         codexHome: this.options.codexHome ?? '/fake/codex-home',
         platformFamily: 'unix',
         platformOs: 'macos',
-        userAgent: 'fake/0.136.0',
+        userAgent: this.options.userAgent ?? 'Codex CLI/0.136.0',
       });
       return;
     }
@@ -147,14 +148,18 @@ function fullModelInfo(slug = 'gpt-5.4') {
 
 function createHarness(options: {
   children?: FakeCodexChild[];
+  catalogPath?: string;
+  binaryPath?: string;
   retryDelaysMs?: number[];
   requestTimeoutMs?: number;
   terminationGraceMs?: number;
   buildEnv?: () => NodeJS.ProcessEnv;
   loadApiKey?: () => string | undefined;
 } = {}) {
-  const tempDir = fs.mkdtempSync(path.join(process.cwd(), '.codex-model-refresh-test-'));
-  const catalogPath = path.join(tempDir, 'nimbalyst-model-catalog.json');
+  const tempDir = options.catalogPath
+    ? path.dirname(options.catalogPath)
+    : fs.mkdtempSync(path.join(process.cwd(), '.codex-model-refresh-test-'));
+  const catalogPath = options.catalogPath ?? path.join(tempDir, 'nimbalyst-model-catalog.json');
   const children = [...(options.children ?? [])];
   const spawned: FakeCodexChild[] = [];
   const spawnTimes: number[] = [];
@@ -170,7 +175,7 @@ function createHarness(options: {
     retryDelaysMs: options.retryDelaysMs ?? [],
     requestTimeoutMs: options.requestTimeoutMs ?? 25,
     terminationGraceMs: options.terminationGraceMs ?? 10,
-    resolveBinaryPath: () => '/fake/codex',
+    resolveBinaryPath: () => options.binaryPath ?? '/fake/codex',
     buildEnv: options.buildEnv ?? (() => ({ PATH: '/fake/bin' })),
     loadApiKey: options.loadApiKey,
     spawnProcess: (_command, _args, spawnOptions) => {
@@ -255,6 +260,40 @@ describe('CodexModelRefreshService', () => {
       CODEX_API_KEY: 'configured-codex-key',
     });
     expect(harness.spawnEnvs[0]).not.toHaveProperty('OPENAI_API_KEY');
+
+    harness.service.shutdown();
+    fs.rmSync(harness.tempDir, { recursive: true, force: true });
+  });
+
+  it('publishes every deduplicated model reported by the selected runtime, including GPT-5.6', async () => {
+    const harness = createHarness({
+      children: [new FakeCodexChild({
+        modelResult: {
+          data: [
+            modelPreset('gpt-5.6-sol', 'GPT-5.6 Sol'),
+            modelPreset('gpt-5.6-terra', 'GPT-5.6 Terra'),
+            modelPreset('gpt-5.6-sol', 'GPT-5.6 Sol duplicate'),
+            modelPreset('gpt-5.6-luna', 'GPT-5.6 Luna'),
+          ],
+          nextCursor: null,
+        },
+      })],
+    });
+    OpenAICodexProvider.setModelRefreshSnapshotResolver(() => harness.service.getModels());
+
+    await harness.service.start();
+    const pickerModels = await OpenAICodexProvider.getModels();
+
+    expect(pickerModels.map((model) => model.id)).toEqual([
+      'openai-codex:gpt-5.6-sol',
+      'openai-codex:gpt-5.6-terra',
+      'openai-codex:gpt-5.6-luna',
+    ]);
+    expect(pickerModels.map((model) => model.name)).toEqual([
+      'GPT-5.6 Sol duplicate',
+      'GPT-5.6 Terra',
+      'GPT-5.6 Luna',
+    ]);
 
     harness.service.shutdown();
     fs.rmSync(harness.tempDir, { recursive: true, force: true });
@@ -371,6 +410,26 @@ describe('CodexModelRefreshService', () => {
     childFailure.service.shutdown();
     fs.rmSync(rejected.tempDir, { recursive: true, force: true });
     fs.rmSync(childFailure.tempDir, { recursive: true, force: true });
+  });
+
+  it('labels the static fallback when selected-runtime model enumeration fails', async () => {
+    const harness = createHarness({
+      children: [new FakeCodexChild({
+        modelError: { code: 429, message: 'upstream rejected: rate limited' },
+      })],
+    });
+
+    await harness.service.start();
+
+    expect(harness.service.getStatus()).toMatchObject({
+      modelSource: 'fallback',
+      lastError: {
+        category: 'upstream_rejected',
+      },
+    });
+
+    harness.service.shutdown();
+    fs.rmSync(harness.tempDir, { recursive: true, force: true });
   });
 
   it('treats the Codex refresh stderr marker as a network failure even when model/list falls back', async () => {
@@ -505,6 +564,63 @@ describe('CodexModelRefreshService', () => {
 
     harness.service.shutdown();
     fs.rmSync(harness.tempDir, { recursive: true, force: true });
+    fs.rmSync(tempCodexHome, { recursive: true, force: true });
+  });
+
+  it.each([
+    ['the resolver switches from bundled to system', '/fake/bundled/codex', 'Codex CLI/0.143.0', '/fake/system/codex', 'Codex CLI/0.143.0'],
+    ['the selected runtime reports a new version', '/fake/system/codex', 'Codex CLI/0.143.0', '/fake/system/codex', 'Codex CLI/0.144.1'],
+  ])('invalidates the cached catalog and starts one refresh when %s', async (
+    _change,
+    priorBinaryPath,
+    priorUserAgent,
+    nextBinaryPath,
+    nextUserAgent,
+  ) => {
+    const tempCodexHome = fs.mkdtempSync(path.join(process.cwd(), '.codex-home-test-'));
+    fs.writeFileSync(
+      path.join(tempCodexHome, 'models_cache.json'),
+      JSON.stringify({ models: [fullModelInfo('gpt-5.4')] }),
+      'utf8',
+    );
+    const prior = createHarness({
+      binaryPath: priorBinaryPath,
+      children: [new FakeCodexChild({
+        codexHome: tempCodexHome,
+        userAgent: priorUserAgent,
+        modelResult: { data: [modelPreset('gpt-5.4', 'GPT-5.4')], nextCursor: null },
+      })],
+    });
+    await prior.service.start();
+    prior.service.shutdown();
+
+    const next = createHarness({
+      catalogPath: prior.catalogPath,
+      binaryPath: nextBinaryPath,
+      children: [new FakeCodexChild({
+        userAgent: nextUserAgent,
+        hangModelList: true,
+      })],
+    });
+    const refresh = next.service.start();
+    await vi.advanceTimersByTimeAsync(1);
+    await settleImmediate();
+
+    const invalidatedCatalog = JSON.parse(fs.readFileSync(next.catalogPath, 'utf8')) as {
+      models: Array<{ slug?: string }>;
+    };
+    expect(invalidatedCatalog.models).toEqual([
+      expect.objectContaining({ slug: '__nimbalyst_offline_catalog__' }),
+    ]);
+    expect(next.service.getModels()).toEqual([]);
+    expect(next.service.getStatus()).toMatchObject({ modelSource: 'fallback' });
+    expect(next.spawned).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(25);
+    await refresh;
+
+    next.service.shutdown();
+    fs.rmSync(prior.tempDir, { recursive: true, force: true });
     fs.rmSync(tempCodexHome, { recursive: true, force: true });
   });
 

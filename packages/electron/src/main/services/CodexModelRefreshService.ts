@@ -20,6 +20,7 @@ import { logger } from '../utils/logger';
 import { getEnhancedPath } from './CLIManager';
 
 export type CodexModelRefreshPhase = 'normal' | 'retrying' | 'stopped';
+export type CodexModelSource = 'runtime' | 'fallback';
 export type CodexModelRefreshErrorCategory =
   | 'network'
   | 'child_process'
@@ -33,6 +34,8 @@ export interface CodexModelRefreshError {
 
 export interface CodexModelRefreshState {
   phase: CodexModelRefreshPhase;
+  /** `runtime` only after the currently selected Codex binary completed model/list. */
+  modelSource: CodexModelSource;
   attempt: number;
   maxAttempts: number;
   inFlight: boolean;
@@ -62,6 +65,11 @@ interface CatalogModel {
 
 interface ModelsCatalog {
   models: CatalogModel[];
+}
+
+interface RuntimeFingerprint {
+  binaryPath: string;
+  version: string;
 }
 
 type SpawnProcess = (
@@ -186,6 +194,19 @@ function parseCatalog(value: unknown): ModelsCatalog | null {
   return { models: models as CatalogModel[] };
 }
 
+function parseRuntimeFingerprint(value: unknown): RuntimeFingerprint | null {
+  if (!value || typeof value !== 'object') return null;
+  const { binaryPath, version } = value as Record<string, unknown>;
+  if (typeof binaryPath !== 'string' || binaryPath.length === 0) return null;
+  if (typeof version !== 'string' || version.length === 0) return null;
+  return { binaryPath, version };
+}
+
+function getRuntimeVersion(userAgent: string): string {
+  const match = userAgent.match(/\bcodex(?:\s+(?:desktop|cli))?\/([^\s(;]+)/i);
+  return match?.[1] ?? userAgent;
+}
+
 function toProviderModelId(rawId: string): string {
   return rawId.startsWith('openai-codex:') ? rawId : `openai-codex:${rawId}`;
 }
@@ -249,6 +270,8 @@ export class CodexModelRefreshService {
 
   private state: CodexModelRefreshState;
   private models: AIModel[] = [];
+  private cachedRuntimeFingerprint: RuntimeFingerprint | null;
+  private readonly invalidatedRuntimeKeys = new Set<string>();
   private catalogReady = false;
   private started = false;
   private shuttingDown = false;
@@ -277,8 +300,10 @@ export class CodexModelRefreshService {
     this.spawnProcess = options.spawnProcess
       ?? ((command, args, spawnOptions) => spawn(command, args, spawnOptions));
     this.log = options.logger ?? logger.main;
+    this.cachedRuntimeFingerprint = this.readRuntimeFingerprint();
     this.state = {
       phase: 'normal',
+      modelSource: 'fallback',
       attempt: 0,
       maxAttempts: this.retryDelaysMs.length + 1,
       inFlight: false,
@@ -296,6 +321,7 @@ export class CodexModelRefreshService {
       this.state = {
         ...this.state,
         phase: 'stopped',
+        modelSource: 'fallback',
         lastError: { category: 'child_process', message, at: Date.now() },
       };
       this.log.error('[CodexModelRefresh][child_process] local catalog initialization failed', {
@@ -425,6 +451,7 @@ export class CodexModelRefreshService {
       this.state = {
         ...this.state,
         phase: 'normal',
+        modelSource: 'runtime',
         attempt: 0,
         inFlight: false,
         nextRetryAt: null,
@@ -451,6 +478,7 @@ export class CodexModelRefreshService {
       this.state = {
         ...this.state,
         phase: hasRetry ? 'retrying' : 'stopped',
+        modelSource: 'fallback',
         attempt: this.attempt,
         inFlight: false,
         nextRetryAt,
@@ -491,6 +519,7 @@ export class CodexModelRefreshService {
 
     try {
       binaryPath = this.resolveBinaryPath();
+      this.invalidateCacheForRuntimePath(binaryPath);
       const env = this.buildEnv(binaryPath);
       // Match the provider security contract: shell keys are never implicit
       // auth sources. Only the key explicitly saved in Nimbalyst settings is
@@ -534,6 +563,8 @@ export class CodexModelRefreshService {
         }, this.requestTimeoutMs),
         childError,
       ]);
+      const runtimeVersion = getRuntimeVersion(initialized.userAgent);
+      this.invalidateCacheForRuntimeVersion(binaryPath, runtimeVersion);
       client.notify('initialized', {});
 
       stage = 'model/list';
@@ -581,6 +612,10 @@ export class CodexModelRefreshService {
           'Codex model/list returned no available models',
         );
       }
+      this.persistRuntimeFingerprint({
+        binaryPath,
+        version: runtimeVersion,
+      });
       return mapModelPresets(presets);
     } catch (error) {
       if (binaryPath && (stage === 'spawn' || stage === 'initialize') && binaryPath === resolveSystemCodexBinaryPath(getEnhancedPath())) {
@@ -666,6 +701,72 @@ export class CodexModelRefreshService {
     return SENTINEL_CATALOG;
   }
 
+  private getRuntimeFingerprintPath(): string {
+    return `${this.catalogPath}.runtime.json`;
+  }
+
+  private readRuntimeFingerprint(): RuntimeFingerprint | null {
+    try {
+      return parseRuntimeFingerprint(JSON.parse(fs.readFileSync(this.getRuntimeFingerprintPath(), 'utf8')));
+    } catch {
+      return null;
+    }
+  }
+
+  private invalidateCacheForRuntimePath(binaryPath: string): void {
+    const cached = this.cachedRuntimeFingerprint;
+    if (cached && cached.binaryPath === binaryPath) return;
+    this.invalidateCachedCatalog('source', { binaryPath });
+  }
+
+  private invalidateCacheForRuntimeVersion(binaryPath: string, version: string): void {
+    const cached = this.cachedRuntimeFingerprint;
+    if (!cached || cached.binaryPath !== binaryPath || cached.version === version) return;
+    this.invalidateCachedCatalog('version', { binaryPath, version });
+  }
+
+  private invalidateCachedCatalog(
+    reason: 'source' | 'version',
+    runtime: Pick<RuntimeFingerprint, 'binaryPath'> & Partial<Pick<RuntimeFingerprint, 'version'>>,
+  ): void {
+    const key = `${reason}:${runtime.binaryPath}:${runtime.version ?? ''}`;
+    if (this.invalidatedRuntimeKeys.has(key)) return;
+    this.invalidatedRuntimeKeys.add(key);
+
+    const previousRuntime = this.cachedRuntimeFingerprint;
+    this.writeCatalogAtomically(SENTINEL_CATALOG);
+    this.catalogReady = true;
+    this.models = [];
+    this.cachedRuntimeFingerprint = null;
+    try {
+      fs.rmSync(this.getRuntimeFingerprintPath(), { force: true });
+    } catch (error) {
+      this.log.warn('[CodexModelRefresh] unable to remove stale runtime fingerprint', {
+        error: errorMessage(error),
+      });
+    }
+    this.state = {
+      ...this.state,
+      modelSource: 'fallback',
+    };
+    this.log.info('[CodexModelRefresh] invalidated cached model catalog for selected runtime', {
+      reason,
+      previousRuntime,
+      selectedRuntime: runtime,
+    });
+  }
+
+  private persistRuntimeFingerprint(fingerprint: RuntimeFingerprint): void {
+    try {
+      this.writeJsonAtomically(this.getRuntimeFingerprintPath(), fingerprint);
+      this.cachedRuntimeFingerprint = fingerprint;
+    } catch (error) {
+      this.log.warn('[CodexModelRefresh] unable to persist runtime fingerprint; cache will refresh next launch', {
+        error: errorMessage(error),
+      });
+    }
+  }
+
   private promoteCodexCache(codexHome: string): void {
     try {
       const cachePath = path.join(codexHome, 'models_cache.json');
@@ -686,15 +787,19 @@ export class CodexModelRefreshService {
   }
 
   private writeCatalogAtomically(catalog: ModelsCatalog): void {
-    const directory = path.dirname(this.catalogPath);
+    this.writeJsonAtomically(this.catalogPath, catalog);
+  }
+
+  private writeJsonAtomically(targetPath: string, value: unknown): void {
+    const directory = path.dirname(targetPath);
     fs.mkdirSync(directory, { recursive: true });
-    const temporaryPath = `${this.catalogPath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const temporaryPath = `${targetPath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     try {
-      fs.writeFileSync(temporaryPath, `${JSON.stringify(catalog)}\n`, {
+      fs.writeFileSync(temporaryPath, `${JSON.stringify(value)}\n`, {
         encoding: 'utf8',
         mode: 0o600,
       });
-      fs.renameSync(temporaryPath, this.catalogPath);
+      fs.renameSync(temporaryPath, targetPath);
     } finally {
       try { fs.rmSync(temporaryPath, { force: true }); } catch { /* noop */ }
     }
