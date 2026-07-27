@@ -68,6 +68,13 @@ class DispatchCapacityError extends Error {
   }
 }
 
+class PlanApprovalSupersededError extends Error {
+  constructor(planId: string, requestId: string) {
+    super(`Plan approval request ${requestId} was superseded by a newer submission for plan ${planId}`);
+    this.name = 'PlanApprovalSupersededError';
+  }
+}
+
 function isValidMaxParallel(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
@@ -202,19 +209,20 @@ function normalizeStoredChildModelIdentifier(
   provider: string | null | undefined,
   model: string | null | undefined
 ): string | null {
-  if (!model) {
+  const normalizedModel = model?.trim();
+  if (!normalizedModel || normalizedModel === 'default') {
     return null;
   }
 
-  if (provider === 'claude-code' || model.startsWith('claude-code:')) {
-    const parsed = ModelIdentifier.parse(model);
+  if (provider === 'claude-code' || normalizedModel.startsWith('claude-code:')) {
+    const parsed = ModelIdentifier.parse(normalizedModel);
     if (provider === 'claude-code' && parsed.provider !== 'claude-code') {
-      throw new Error(`Claude Agent child sessions require a claude-code:* model identifier. Received: ${model}`);
+      throw new Error(`Claude Agent child sessions require a claude-code:* model identifier. Received: ${normalizedModel}`);
     }
     return parsed.combined;
   }
 
-  return model;
+  return normalizedModel;
 }
 
 interface SpawnSessionArgs {
@@ -1291,10 +1299,14 @@ export class MetaAgentService {
   private async waitForPlanApprovalResponse(
     sessionId: string,
     requestId: string,
+    planId?: string,
   ): Promise<PlanApprovalResponse> {
     const pollStartedAt = Date.now();
 
     while (Date.now() - pollStartedAt <= PLAN_APPROVAL_MAX_POLL_TIME_MS) {
+      if (planId) {
+        await this.assertCurrentPlanApprovalRequest(planId, requestId);
+      }
       const { rows } = await databaseWorker.query<{ content: unknown }>(
         `SELECT content
          FROM ai_agent_messages
@@ -1310,22 +1322,27 @@ export class MetaAgentService {
         ],
       );
       for (const row of rows) {
+        let content: any;
         try {
-          const content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
-          if (
-            content.type === 'exit_plan_mode_response'
-            && isMatchingPlanApprovalRequestId(content.requestId, requestId)
-            && typeof content.approved === 'boolean'
-          ) {
-            return {
-              approved: content.approved,
-              feedback: typeof content.feedback === 'string' ? content.feedback : undefined,
-              respondedAt: typeof content.respondedAt === 'number' ? content.respondedAt : undefined,
-              respondedBy: typeof content.respondedBy === 'string' ? content.respondedBy : undefined,
-            };
-          }
+          content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
         } catch {
           // Non-JSON transcript rows cannot be durable prompt responses.
+          continue;
+        }
+        if (
+          content?.type === 'exit_plan_mode_response'
+          && isMatchingPlanApprovalRequestId(content.requestId, requestId)
+          && typeof content.approved === 'boolean'
+        ) {
+          if (planId) {
+            await this.assertCurrentPlanApprovalRequest(planId, requestId);
+          }
+          return {
+            approved: content.approved,
+            feedback: typeof content.feedback === 'string' ? content.feedback : undefined,
+            respondedAt: typeof content.respondedAt === 'number' ? content.respondedAt : undefined,
+            respondedBy: typeof content.respondedBy === 'string' ? content.respondedBy : undefined,
+          };
         }
       }
       const elapsedMs = Date.now() - pollStartedAt;
@@ -1336,6 +1353,30 @@ export class MetaAgentService {
     }
 
     throw new Error('Timed out waiting for plan approval response');
+  }
+
+  private async assertCurrentPlanApprovalRequest(planId: string, requestId: string): Promise<void> {
+    const { rows } = await databaseWorker.query<{ data: unknown }>(
+      `SELECT data
+       FROM tracker_items
+       WHERE id = $1
+       LIMIT 1`,
+      [planId],
+    );
+    const row = rows[0];
+    let approvalPromptId: unknown;
+    try {
+      const data = typeof row?.data === 'string'
+        ? JSON.parse(row.data)
+        : ((row?.data as Record<string, unknown> | null | undefined) ?? {});
+      approvalPromptId = data.approvalPromptId;
+    } catch {
+      approvalPromptId = undefined;
+    }
+
+    if (approvalPromptId !== requestId) {
+      throw new PlanApprovalSupersededError(planId, requestId);
+    }
   }
 
   private notifyTrackerItemsChanged(): void {
@@ -1484,7 +1525,7 @@ export class MetaAgentService {
       throw new Error('Failed to persist plan approval prompt');
     }
 
-    const response = await this.waitForPlanApprovalResponse(metaSessionId, requestId);
+    const response = await this.waitForPlanApprovalResponse(metaSessionId, requestId, planId);
     const finalStatus = response.approved ? 'ready-for-development' : 'in-review';
     const finalData: Record<string, unknown> = {
       ...planData,
@@ -1496,10 +1537,20 @@ export class MetaAgentService {
     } else if (response.feedback) {
       finalData.lastReviewFeedback = response.feedback;
     }
-    await databaseWorker.query(
-      `UPDATE tracker_items SET data = $1, updated = NOW(), last_indexed = NOW() WHERE id = $2`,
-      [JSON.stringify(finalData), planId],
+    const { rows: finalizedRows } = await databaseWorker.query<{ id: string }>(
+      `UPDATE tracker_items
+       SET data = $1, updated = NOW(), last_indexed = NOW()
+       WHERE id = $2
+         AND data->>'approvalPromptId' = $3
+       RETURNING id`,
+      [JSON.stringify(finalData), planId, requestId],
     );
+    if (finalizedRows.length === 0) {
+      console.warn(
+        `[MetaAgentService] Ignored stale plan approval response for plan ${planId}; request ${requestId} no longer matches approvalPromptId.`,
+      );
+      throw new PlanApprovalSupersededError(planId, requestId);
+    }
     this.notifyTrackerItemsChanged();
 
     await persistInteractivePromptToolResult({

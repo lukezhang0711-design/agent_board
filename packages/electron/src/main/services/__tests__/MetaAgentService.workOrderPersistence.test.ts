@@ -346,6 +346,51 @@ describe('MetaAgentService work-order persistence', () => {
     expect(persisted?.metadata?.titleSource).toBeUndefined();
   });
 
+  it('persists a concrete parent model when child model input is default, empty, or omitted', async () => {
+    const parentModel = 'openai-codex:gpt-5.6-luna';
+    await db.query(
+      'UPDATE ai_sessions SET provider = $1, model = $2 WHERE id = $3',
+      ['openai-codex', parentModel, 'head-session'],
+    );
+    const cases = [
+      { label: 'bare default', childModel: 'default', expectedModel: parentModel },
+      { label: 'empty string', childModel: '', expectedModel: parentModel },
+      { label: 'omitted model', childModel: undefined, expectedModel: parentModel },
+      {
+        label: 'explicit other model',
+        childModel: 'openai-codex:gpt-5.6-terra',
+        expectedModel: 'openai-codex:gpt-5.6-terra',
+      },
+    ];
+    const children: Array<{ sessionId: string; expectedModel: string }> = [];
+
+    for (const testCase of cases) {
+      const child = await (service as any).createChildSessionInternal(
+        'head-session',
+        workspacePath,
+        {
+          title: `Model inheritance: ${testCase.label}`,
+          prompt: 'Persist the resolved child model for this inheritance case',
+          model: testCase.childModel,
+        },
+      );
+      children.push({ sessionId: child.sessionId, expectedModel: testCase.expectedModel });
+
+      const { rows } = await db.query<{ model: string }>(
+        'SELECT model FROM ai_sessions WHERE id = $1',
+        [child.sessionId],
+      );
+      expect(rows, testCase.label).toEqual([{ model: testCase.expectedModel }]);
+    }
+
+    const spawned = await (service as any).getSpawnedSessions('head-session', workspacePath);
+    for (const child of children) {
+      expect(
+        spawned.find((session: { sessionId: string }) => session.sessionId === child.sessionId),
+      ).toMatchObject({ model: child.expectedModel });
+    }
+  });
+
   it('keeps no-override dispatch behavior: persists the over-limit request and returns its queue position', async () => {
     testState.maxParallel = 1;
     await createRunningChildren(1);
@@ -1101,6 +1146,24 @@ describe('MetaAgentService work-order persistence', () => {
     }
   });
 
+  it('does not swallow a superseded check after finding a matching approval response', async () => {
+    const requestId = '94471805-5eca-4d66-a448-56e438de6ab3';
+    await persistPlanApprovalResponse(requestId, true);
+    const freshnessSpy = vi.spyOn(service as any, 'assertCurrentPlanApprovalRequest')
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('approval request superseded during response processing'))
+      .mockResolvedValue(undefined);
+
+    try {
+      await expect(
+        (service as any).waitForPlanApprovalResponse('head-session', requestId, 'plan-id'),
+      ).rejects.toThrow('approval request superseded during response processing');
+      expect(freshnessSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      freshnessSpy.mockRestore();
+    }
+  });
+
   it('persists the approval prompt and allows implementation only after approval', async () => {
     const submitPlan = await getSubmitPlanTool();
     const submitPromise = submitPlan('head-session', workspacePath, {
@@ -1301,6 +1364,169 @@ describe('MetaAgentService work-order persistence', () => {
       workOrderCount: 2,
       risks: 'Concurrent responses could cross submissions',
     });
+  });
+
+  it('cancels the old approval waiter when its response arrives before the new response', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const firstSubmission = submitPlan('head-session', workspacePath, {
+      title: 'Old approval plan',
+      planItems: ['Await the old card response'],
+      workOrderCount: 1,
+      risks: 'The first response may arrive after a replacement plan exists',
+    });
+    const firstOutcome = firstSubmission.then(
+      (result) => ({ result }),
+      (error) => ({ error: error instanceof Error ? error.message : String(error) }),
+    );
+    const firstPrompt = await waitForPlanApprovalPrompt();
+
+    const secondSubmission = submitPlan('head-session', workspacePath, {
+      title: 'Current approval plan',
+      planItems: ['Await the current card response'],
+      workOrderCount: 1,
+      risks: 'A stale approval must not authorize the current plan',
+    });
+    const secondPrompt = await waitForPlanApprovalPrompt([firstPrompt.requestId]);
+    expect(secondPrompt.input.planId).toBe(firstPrompt.input.planId);
+
+    try {
+      await persistPlanApprovalResponse(firstPrompt.requestId, true);
+      await expect(firstOutcome).resolves.toEqual({
+        error: expect.stringContaining('superseded'),
+      });
+
+      const { rows: pendingRows } = await db.query<any>(
+        'SELECT data FROM tracker_items WHERE id = $1',
+        [secondPrompt.input.planId],
+      );
+      expect(parseStoredJson<any>(pendingRows[0].data)).toMatchObject({
+        title: 'Current approval plan',
+        status: 'in-review',
+        approvalPromptId: secondPrompt.requestId,
+      });
+    } finally {
+      await persistPlanApprovalResponse(secondPrompt.requestId, true);
+      await secondSubmission.catch(() => undefined);
+    }
+    await expect(secondSubmission).resolves.toEqual(expect.stringContaining('ready-for-development'));
+  });
+
+  it('keeps the current plan approved when its response arrives before an old response', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const firstSubmission = submitPlan('head-session', workspacePath, {
+      title: 'First approval plan',
+      planItems: ['Wait for a response that must become stale'],
+      workOrderCount: 1,
+      risks: 'The old response may arrive after the current plan is approved',
+    });
+    const firstOutcome = firstSubmission.then(
+      (result) => ({ result }),
+      (error) => ({ error: error instanceof Error ? error.message : String(error) }),
+    );
+    const firstPrompt = await waitForPlanApprovalPrompt();
+
+    const secondSubmission = submitPlan('head-session', workspacePath, {
+      title: 'Second approval plan',
+      planItems: ['Approve this current submission'],
+      workOrderCount: 1,
+      risks: 'The current approval must survive a delayed old response',
+    });
+    const secondPrompt = await waitForPlanApprovalPrompt([firstPrompt.requestId]);
+
+    await persistPlanApprovalResponse(secondPrompt.requestId, true);
+    const secondResult = JSON.parse(await secondSubmission);
+    expect(secondResult).toMatchObject({
+      approved: true,
+      planId: secondPrompt.input.planId,
+      status: 'ready-for-development',
+    });
+
+    await persistPlanApprovalResponse(firstPrompt.requestId, false, 'This response belongs to the old card.');
+    await expect(firstOutcome).resolves.toEqual({
+      error: expect.stringContaining('superseded'),
+    });
+
+    const { rows } = await db.query<any>(
+      'SELECT data FROM tracker_items WHERE id = $1',
+      [secondPrompt.input.planId],
+    );
+    expect(parseStoredJson<any>(rows[0].data)).toMatchObject({
+      title: 'Second approval plan',
+      status: 'ready-for-development',
+      approvalPromptId: secondPrompt.requestId,
+    });
+  });
+
+  it('uses approvalPromptId CAS when a stale waiter reaches finalization after replacement', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    let releaseStaleWaiter: ((response: Record<string, unknown>) => void) | undefined;
+    const staleWaiter = new Promise<Record<string, unknown>>((resolve) => {
+      releaseStaleWaiter = resolve;
+    });
+    const waitSpy = vi.spyOn(service as any, 'waitForPlanApprovalResponse')
+      .mockImplementationOnce(() => staleWaiter)
+      .mockResolvedValueOnce({
+        approved: true,
+        respondedAt: Date.now(),
+        respondedBy: 'desktop',
+      });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      const staleSubmission = submitPlan('head-session', workspacePath, {
+        title: 'CAS stale plan',
+        planItems: ['Reach finalization only after replacement'],
+        workOrderCount: 1,
+        risks: 'The stale waiter must update zero rows',
+      });
+      const staleOutcome = staleSubmission.then(
+        (result) => ({ result }),
+        (error) => ({ error: error instanceof Error ? error.message : String(error) }),
+      );
+      const stalePrompt = await waitForPlanApprovalPrompt();
+      await vi.waitFor(() => expect(waitSpy).toHaveBeenCalledTimes(1));
+
+      const currentSubmission = submitPlan('head-session', workspacePath, {
+        title: 'CAS current plan',
+        planItems: ['Keep this replacement untouched'],
+        workOrderCount: 1,
+        risks: 'A stale finalization must be rejected atomically',
+      });
+      const currentPrompt = await waitForPlanApprovalPrompt([stalePrompt.requestId]);
+      const currentResult = JSON.parse(await currentSubmission);
+      expect(currentResult).toMatchObject({
+        approved: true,
+        planId: currentPrompt.input.planId,
+        status: 'ready-for-development',
+      });
+
+      if (!releaseStaleWaiter) {
+        throw new Error('Stale approval waiter was not initialized');
+      }
+      releaseStaleWaiter({
+        approved: false,
+        feedback: 'Old response',
+        respondedAt: Date.now(),
+        respondedBy: 'desktop',
+      });
+      await expect(staleOutcome).resolves.toEqual({
+        error: expect.stringContaining('superseded'),
+      });
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('stale plan approval response'));
+
+      const { rows } = await db.query<any>(
+        'SELECT data FROM tracker_items WHERE id = $1',
+        [currentPrompt.input.planId],
+      );
+      expect(parseStoredJson<any>(rows[0].data)).toMatchObject({
+        title: 'CAS current plan',
+        status: 'ready-for-development',
+        approvalPromptId: currentPrompt.requestId,
+      });
+    } finally {
+      waitSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
   });
 
   it('allows investigation dispatch without a plan and requires an explicit intent', async () => {
