@@ -1,9 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAtomValue, useSetAtom } from 'jotai';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ProviderConfig, Model } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
 import { useSetting, useSetSetting } from '../../../hooks/useSetting';
-import { getProviderConfigAtom, setProviderConfigAtom } from '../../../store/atoms/appSettings';
 
 interface OpenAICodexPanelProps {
   config: ProviderConfig;
@@ -37,17 +35,6 @@ export function OpenAICodexPanel({
 }: OpenAICodexPanelProps) {
   const usageIndicatorEnabled = useSetting('ai.showCodexUsageIndicator');
   const setUsageIndicatorEnabled = useSetSetting('ai.showCodexUsageIndicator');
-
-  const acpConfigAtom = useMemo(() => getProviderConfigAtom('openai-codex-acp'), []);
-  const acpConfig = useAtomValue(acpConfigAtom);
-  const setProviderConfig = useSetAtom(setProviderConfigAtom);
-  const acpEnabled = acpConfig?.enabled === true;
-  const handleAcpToggle = (enabled: boolean) => {
-    setProviderConfig({
-      providerId: 'openai-codex-acp',
-      config: { enabled },
-    });
-  };
 
   const [authStatus, setAuthStatus] = useState<CodexAuthStatus | null>(null);
   const [authBusy, setAuthBusy] = useState<'checking' | 'chatgpt' | 'apikey' | 'logout' | null>(null);
@@ -169,24 +156,14 @@ export function OpenAICodexPanel({
         </p>
       )}
 
-      {acpEnabled && (
-        <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">
-            ACP Transport <span className="text-xs font-normal text-[var(--nim-text-muted)]">(legacy)</span>
-          </h4>
-          <p className="text-[13px] text-[var(--nim-text-muted)] mb-3 leading-relaxed">
-            <strong>OpenAI Codex (ACP)</strong> is already enabled for this installation, but new Codex
-            sessions now use the app-server transport through the main <strong>OpenAI Codex</strong> provider.
-          </p>
-          <SettingsToggle
-            variant="enable"
-            name="Enable ACP transport"
-            description="Keeps the separate 'OpenAI Codex (ACP)' legacy provider available"
-            checked={acpEnabled}
-            onChange={handleAcpToggle}
-          />
-        </div>
-      )}
+      <div data-testid="codex-acp-deprecation-notice" className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
+        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">
+          ACP Transport <span className="text-xs font-normal text-[var(--nim-text-muted)]">(deprecated)</span>
+        </h4>
+        <p className="text-[13px] text-[var(--nim-text-muted)] leading-relaxed">
+          OpenAI Codex (ACP) is deprecated; existing sessions remain viewable, and we recommend using OpenAI Codex.
+        </p>
+      </div>
 
       {config.enabled && (
         <div data-testid="codex-auth-section" className="codex-auth-section provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">

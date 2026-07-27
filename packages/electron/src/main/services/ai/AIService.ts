@@ -3539,8 +3539,9 @@ export class AIService {
           enabled: providerSettings['openai-codex']?.enabled === true,
         },
         'openai-codex-acp': {
-          // Codex ACP uses the codex-acp binary directly; API key is optional
-          enabled: providerSettings['openai-codex-acp']?.enabled === true,
+          // Keep the stored setting and provider available for historical
+          // transcript replay, but never return ACP as a new-session model.
+          enabled: false,
         },
         'opencode': {
           // OpenCode uses its own config, API key is optional

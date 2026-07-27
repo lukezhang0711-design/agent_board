@@ -1426,11 +1426,12 @@ export function setDeveloperMode(enabled: boolean): void {
 
 // Default AI Model Settings
 export function getDefaultAIModel(): string | undefined {
-  return getAppStore().get('defaultAIModel');
+  const model = getAppStore().get('defaultAIModel');
+  return model?.replace(/^openai-codex-acp(?=:|$)/, 'openai-codex');
 }
 
 export function setDefaultAIModel(model: string): void {
-  getAppStore().set('defaultAIModel', model);
+  getAppStore().set('defaultAIModel', model.replace(/^openai-codex-acp(?=:|$)/, 'openai-codex'));
 }
 
 // Default Effort Level Settings (Opus 4.6 adaptive reasoning)

@@ -37,16 +37,21 @@ export function AgentModelPicker({
   isLoading = false,
   disabled = false,
 }: AgentModelPickerProps) {
+  const selectableModels = useMemo(
+    () => models.filter((model) => model.provider !== 'openai-codex-acp'),
+    [models],
+  );
+
   const groupedModels = useMemo(() => {
-    return models.reduce((acc, model) => {
+    return selectableModels.reduce((acc, model) => {
       const key = model.provider || 'unknown';
       if (!acc[key]) acc[key] = [];
       acc[key].push(model);
       return acc;
     }, {} as Record<string, AgentModelOption[]>);
-  }, [models]);
+  }, [selectableModels]);
 
-  const hasModels = models.length > 0;
+  const hasModels = selectableModels.length > 0;
   const selectValue = hasModels ? selectedModel : '';
   const isDisabled = disabled || (!hasModels && !isLoading);
 

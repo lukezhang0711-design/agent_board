@@ -98,7 +98,11 @@ export function ModelSelector({
     try {
       const response = await window.electronAPI.aiGetModels();
       if (response.success && response.grouped) {
-        setModels(response.grouped);
+        setModels(
+          Object.fromEntries(
+            Object.entries(response.grouped).filter(([provider]) => provider !== 'openai-codex-acp'),
+          ),
+        );
         const meta = response as {
           providerLabels?: Record<string, string>;
           providerIcons?: Record<string, string>;
