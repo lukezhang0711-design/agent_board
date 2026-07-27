@@ -86,6 +86,9 @@ const isDev = process.env.NODE_ENV !== 'production';
 const isOfficialBuild = process.env.OFFICIAL_BUILD === 'true';
 // IS_DEV_MODE is true only when running `npm run dev`, not for any packaged builds
 const isDevMode = isDev;
+// IME event tracing is a local diagnostic only. Keep the renderer literal false
+// for every packaged build, even when the host environment happens to set it.
+const isImeEventTraceEnabled = isDevMode && process.env.NIMBALYST_IME_EVENT_TRACE === 'true';
 
 // Read Claude Agent SDK version at build time for display in settings.
 //
@@ -228,6 +231,7 @@ export default defineConfig({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
       'process.env.OFFICIAL_BUILD': JSON.stringify(isOfficialBuild ? 'true' : 'false'),
       'process.env.IS_DEV_MODE': JSON.stringify(isDevMode ? 'true' : 'false'),
+      'process.env.NIMBALYST_IME_EVENT_TRACE': JSON.stringify(isImeEventTraceEnabled ? 'true' : 'false'),
       '__CLAUDE_AGENT_SDK_VERSION__': JSON.stringify(claudeAgentSdkVersion),
     },
     plugins: [

@@ -4,6 +4,13 @@ import { extractTriggerMatch, getSlashTypeaheadScope, insertAtTrigger, type Slas
 import { buildSlashCommandOptions, fetchSlashCommandEntries, type SlashCommandEntry } from '../Typeahead/slashCommandAutocomplete';
 import type { ChatAttachment } from '@nimbalyst/runtime';
 import { AttachmentPreviewList } from './AttachmentPreviewList';
+import {
+  IME_EVENT_TRACE_ENABLED,
+  traceImeBeforeInput,
+  traceImeCompositionEvent,
+  traceImeInput,
+  traceImeKeyDown,
+} from '../../utils/imeEventTrace';
 
 interface AgenticInputProps {
   value: string;
@@ -214,6 +221,13 @@ export function AgenticInput({
   }, [typeaheadMatch, value, onChange, onFileMentionSelect]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) {
+      if (IME_EVENT_TRACE_ENABLED) {
+        traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'ime-composition-guard');
+      }
+      return;
+    }
+
     // Determine which options to use based on trigger type
     const currentOptions = typeaheadMatch?.trigger === '@' ? fileMentionOptions : slashCommandOptions;
 
@@ -225,6 +239,9 @@ export function AgenticInput({
           if (prev === null) return 0;
           return Math.min(prev + 1, currentOptions.length - 1);
         });
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'typeahead-arrow-down');
+        }
         return;
       }
 
@@ -234,6 +251,9 @@ export function AgenticInput({
           if (prev === null || prev === 0) return 0;
           return prev - 1;
         });
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'typeahead-arrow-up');
+        }
         return;
       }
 
@@ -241,6 +261,9 @@ export function AgenticInput({
         e.preventDefault();
         if (selectedOption) {
           handleTypeaheadSelect(selectedOption);
+        }
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'typeahead-select');
         }
         return;
       }
@@ -250,6 +273,9 @@ export function AgenticInput({
         setTypeaheadMatch(null);
         setSelectedIndex(null);
         setSelectedOption(null);
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'typeahead-escape');
+        }
         return;
       }
     }
@@ -258,6 +284,9 @@ export function AgenticInput({
     if (e.key === 'Escape' && isLoading && onCancel) {
       e.preventDefault();
       onCancel();
+      if (IME_EVENT_TRACE_ENABLED) {
+        traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'cancel');
+      }
       return;
     }
 
@@ -268,6 +297,14 @@ export function AgenticInput({
       if (value.trim() && !disabled) {
         onSend();
       }
+      if (IME_EVENT_TRACE_ENABLED) {
+        traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'send');
+      }
+      return;
+    }
+
+    if (IME_EVENT_TRACE_ENABLED) {
+      traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'pass-through');
     }
   };
 
@@ -414,7 +451,22 @@ export function AgenticInput({
           className="ai-chat-input-field nim-scrollbar-hidden flex-1 min-h-9 max-h-[200px] py-2 px-3 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md text-[var(--nim-text)] text-[13px] font-[inherit] resize-none outline-none transition-colors duration-200 focus:border-[var(--nim-primary)] disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-[var(--nim-text-faint)]"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onCompositionStart={IME_EVENT_TRACE_ENABLED ? (e) => {
+            traceImeCompositionEvent('AgenticInput', e.nativeEvent, e.currentTarget.value);
+          } : undefined}
+          onCompositionUpdate={IME_EVENT_TRACE_ENABLED ? (e) => {
+            traceImeCompositionEvent('AgenticInput', e.nativeEvent, e.currentTarget.value);
+          } : undefined}
+          onCompositionEnd={IME_EVENT_TRACE_ENABLED ? (e) => {
+            traceImeCompositionEvent('AgenticInput', e.nativeEvent, e.currentTarget.value);
+          } : undefined}
           onKeyDown={handleKeyDown}
+          onBeforeInput={IME_EVENT_TRACE_ENABLED ? (e) => {
+            traceImeBeforeInput('AgenticInput', e.nativeEvent as InputEvent, e.currentTarget.value);
+          } : undefined}
+          onInput={IME_EVENT_TRACE_ENABLED ? (e) => {
+            traceImeInput('AgenticInput', e.nativeEvent as InputEvent, e.currentTarget.value);
+          } : undefined}
           onPaste={handlePaste}
           placeholder={placeholder}
           disabled={disabled}

@@ -9,6 +9,7 @@ import {
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
   KEY_ENTER_COMMAND, KEY_ESCAPE_COMMAND, KEY_TAB_COMMAND,
+  LexicalEditor,
   TextNode
 } from "lexical";
 import {getTextUpToAnchor, splitNodeContainingQuery, TriggerFunction, TypeaheadMenuContent, TypeaheadMenuOption, TypeaheadMenuResolution} from "./TypeaheadMenu";
@@ -19,6 +20,47 @@ import React from "react";
 
 // Re-export TypeaheadMenuOption for convenience
 export type { TypeaheadMenuOption };
+
+const IME_EVENT_TRACE_ENABLED =
+  typeof process !== 'undefined'
+  && process.env.IS_DEV_MODE === 'true'
+  && process.env.NIMBALYST_IME_EVENT_TRACE === 'true';
+const imeTraceBranches = IME_EVENT_TRACE_ENABLED ? new WeakMap<KeyboardEvent, string>() : null;
+
+function traceLexicalImeEvent(
+  event: Event,
+  rootElement: HTMLElement,
+  editor: LexicalEditor,
+): void {
+  if (!IME_EVENT_TRACE_ENABLED) return;
+
+  const record: Record<string, unknown> = {
+    timestamp: new Date().toISOString(),
+    surface: 'Lexical',
+    event: event.type,
+    defaultPrevented: event.defaultPrevented,
+    value: rootElement.textContent ?? '',
+    editorIsComposing: editor.isComposing(),
+    branch: event.type,
+  };
+
+  if (event.type === 'keydown') {
+    const keyEvent = event as KeyboardEvent;
+    record.key = keyEvent.key;
+    record.keyCode = keyEvent.keyCode;
+    record.isComposing = keyEvent.isComposing;
+    record.branch = imeTraceBranches?.get(keyEvent) ?? 'pass-through';
+  } else if (event.type === 'beforeinput' || event.type === 'input') {
+    const inputEvent = event as InputEvent;
+    record.inputType = inputEvent.inputType;
+    record.data = inputEvent.data;
+    record.isComposing = inputEvent.isComposing;
+  } else {
+    record.data = (event as CompositionEvent).data;
+  }
+
+  console.info(`[IME_TRACE] ${JSON.stringify(record)}`);
+}
 
 export interface TypeaheadMenuProps {
     // Core functionality
@@ -180,6 +222,13 @@ export interface TypeaheadMenuProps {
         editor.registerCommand(
           KEY_ARROW_DOWN_COMMAND,
           (event: KeyboardEvent) => {
+            if (editor.isComposing()) {
+              if (IME_EVENT_TRACE_ENABLED) {
+                imeTraceBranches?.set(event, 'ime-composition-guard');
+              }
+              return false;
+            }
+
             const newIndex = findNextVisualIndex('down');
             if (newIndex !== null) {
               setSelectedIndex(newIndex);
@@ -187,6 +236,9 @@ export interface TypeaheadMenuProps {
             // Always block the event to keep menu open
             event.preventDefault();
             event.stopImmediatePropagation();
+            if (IME_EVENT_TRACE_ENABLED) {
+              imeTraceBranches?.set(event, 'typeahead-arrow-down');
+            }
             return true;
           },
           commandPriority,
@@ -195,6 +247,13 @@ export interface TypeaheadMenuProps {
         editor.registerCommand(
           KEY_ARROW_UP_COMMAND,
           (event: KeyboardEvent) => {
+            if (editor.isComposing()) {
+              if (IME_EVENT_TRACE_ENABLED) {
+                imeTraceBranches?.set(event, 'ime-composition-guard');
+              }
+              return false;
+            }
+
             const newIndex = findNextVisualIndex('up');
             if (newIndex !== null) {
               setSelectedIndex(newIndex);
@@ -202,6 +261,9 @@ export interface TypeaheadMenuProps {
             // Always block the event to keep menu open
             event.preventDefault();
             event.stopImmediatePropagation();
+            if (IME_EVENT_TRACE_ENABLED) {
+              imeTraceBranches?.set(event, 'typeahead-arrow-up');
+            }
             return true;
           },
           commandPriority,
@@ -210,10 +272,20 @@ export interface TypeaheadMenuProps {
         editor.registerCommand(
           KEY_ENTER_COMMAND,
           (event: KeyboardEvent | null) => {
+            if (editor.isComposing()) {
+              if (IME_EVENT_TRACE_ENABLED && event) {
+                imeTraceBranches?.set(event, 'ime-composition-guard');
+              }
+              return false;
+            }
+
             if (selectedIndex !== null && options[selectedIndex] && options[selectedIndex].type !== 'header') {
               handleSelectOption(options[selectedIndex]);
               event?.preventDefault();
               event?.stopImmediatePropagation();
+              if (IME_EVENT_TRACE_ENABLED && event) {
+                imeTraceBranches?.set(event, 'typeahead-select');
+              }
               return true;
             }
             return false;
@@ -224,10 +296,20 @@ export interface TypeaheadMenuProps {
         editor.registerCommand(
           KEY_TAB_COMMAND,
           (event: KeyboardEvent) => {
+            if (editor.isComposing()) {
+              if (IME_EVENT_TRACE_ENABLED) {
+                imeTraceBranches?.set(event, 'ime-composition-guard');
+              }
+              return false;
+            }
+
             if (selectedIndex !== null && options[selectedIndex] && options[selectedIndex].type !== 'header') {
               handleSelectOption(options[selectedIndex]);
               event.preventDefault();
               event.stopImmediatePropagation();
+              if (IME_EVENT_TRACE_ENABLED) {
+                imeTraceBranches?.set(event, 'typeahead-select');
+              }
               return true;
             }
             return false;
@@ -238,9 +320,19 @@ export interface TypeaheadMenuProps {
         editor.registerCommand(
           KEY_ESCAPE_COMMAND,
           (event: KeyboardEvent) => {
+            if (editor.isComposing()) {
+              if (IME_EVENT_TRACE_ENABLED) {
+                imeTraceBranches?.set(event, 'ime-composition-guard');
+              }
+              return false;
+            }
+
             closeMenu();
             event.preventDefault();
             event.stopImmediatePropagation();
+            if (IME_EVENT_TRACE_ENABLED) {
+              imeTraceBranches?.set(event, 'typeahead-escape');
+            }
             return true;
           },
           commandPriority,
@@ -263,6 +355,10 @@ export interface TypeaheadMenuProps {
         editor.getEditorState().read(() => {
           if (!editor.isEditable()) {
             closeMenu();
+            return;
+          }
+
+          if (editor.isComposing()) {
             return;
           }
 
@@ -317,6 +413,26 @@ export interface TypeaheadMenuProps {
         }
       });
     }, [editor, closeMenu]);
+
+    // The custom Typeahead plugin is present on the document editor path, so
+    // use Lexical's root lifecycle to collect the native IME trajectory without
+    // touching Lexical core. This effect is compiled out of packaged builds.
+    useEffect(() => {
+      if (!IME_EVENT_TRACE_ENABLED) return;
+
+      const eventTypes = ['compositionstart', 'compositionupdate', 'compositionend', 'keydown', 'beforeinput', 'input'] as const;
+      const handleRootEvent = (event: Event) => {
+        traceLexicalImeEvent(event, event.currentTarget as HTMLElement, editor);
+      };
+      const unregisterRootListener = editor.registerRootListener((rootElement, previousRootElement) => {
+        for (const eventType of eventTypes) {
+          previousRootElement?.removeEventListener(eventType, handleRootEvent);
+          rootElement?.addEventListener(eventType, handleRootEvent);
+        }
+      });
+
+      return unregisterRootListener;
+    }, [editor]);
 
     // Enhanced scroll handling - only close on external scroll if configured
     useEffect(() => {

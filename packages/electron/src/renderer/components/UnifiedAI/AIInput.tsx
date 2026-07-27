@@ -37,6 +37,13 @@ import {
 import { useAIInputUndo } from '../../hooks/useAIInputUndo';
 import type { AIInputSnapshot } from '../../store/atoms/aiInputUndo';
 import { STOP_KEEP_QUEUE_ARIA_LABEL, STOP_KEEP_QUEUE_TITLE } from './stopCopy';
+import {
+  IME_EVENT_TRACE_ENABLED,
+  traceImeBeforeInput,
+  traceImeCompositionEvent,
+  traceImeInput,
+  traceImeKeyDown,
+} from '../../utils/imeEventTrace';
 
 export interface AIInputRef {
   focus: () => void;
@@ -708,6 +715,13 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
     }, [typeaheadMatch, value, onChange, pushSnapshot, captureSnapshot]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) {
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'ime-composition-guard');
+        }
+        return;
+      }
+
       const currentOptions = typeaheadMatch?.trigger === '@@' ? sessionMentionOptions
         : typeaheadMatch?.trigger === '@' ? fileMentionOptions
         : slashCommandOptions;
@@ -720,6 +734,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
             if (prev === null) return 0;
             return Math.min(prev + 1, currentOptions.length - 1);
           });
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'typeahead-arrow-down');
+          }
           return;
         }
 
@@ -729,6 +746,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
             if (prev === null || prev === 0) return 0;
             return prev - 1;
           });
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'typeahead-arrow-up');
+          }
           return;
         }
 
@@ -738,6 +758,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
           if (selectedOption) {
             handleTypeaheadSelect(selectedOption);
           }
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'typeahead-select');
+          }
           return;
         }
 
@@ -746,6 +769,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
           setTypeaheadMatch(null);
           setSelectedIndex(null);
           setSelectedOption(null);
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'typeahead-escape');
+          }
           return;
         }
       }
@@ -761,12 +787,18 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
         e.preventDefault();
         const restored = undo(captureSnapshot());
         if (restored) applySnapshot(restored);
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'undo');
+        }
         return;
       }
       if (isModRedo) {
         e.preventDefault();
         const restored = redo(captureSnapshot());
         if (restored) applySnapshot(restored);
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'redo');
+        }
         return;
       }
 
@@ -774,6 +806,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
       if (e.key === 'Tab' && e.shiftKey && provider === 'claude-code' && onModeChange && mode) {
         e.preventDefault();
         onModeChange(mode === 'planning' ? 'agent' : 'planning');
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'toggle-mode');
+        }
         return;
       }
 
@@ -783,6 +818,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault();
           toggleMemoryTarget();
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'memory-toggle-target');
+          }
           return;
         }
 
@@ -797,6 +835,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
               }
             });
           }
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'memory-save');
+          }
           return;
         }
 
@@ -804,6 +845,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
         if (e.key === 'Escape') {
           e.preventDefault();
           onChange(''); // Clear input to exit memory mode
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'memory-exit');
+          }
           return;
         }
       }
@@ -812,6 +856,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
       if (e.key === 'Escape' && isLoading && onCancel) {
         e.preventDefault();
         onCancel();
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'cancel');
+        }
         return;
       }
 
@@ -838,6 +885,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
             }
           }, 0);
         });
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'force-paste');
+        }
         return;
       }
 
@@ -848,6 +898,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
         setTimeout(() => {
           textarea.select();
         }, 0);
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'select-all');
+        }
         return;
       }
 
@@ -865,6 +918,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
           setTimeout(() => {
             textarea.setSelectionRange(0, 0);
           }, 0);
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'history-up');
+          }
           return;
         }
 
@@ -872,6 +928,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
           e.preventDefault();
           pushSnapshot(captureSnapshot(), { boundary: true });
           onNavigateHistory('down');
+          if (IME_EVENT_TRACE_ENABLED) {
+            traceImeKeyDown('AIInput', e.nativeEvent, value, 'history-down');
+          }
           return;
         }
       }
@@ -883,6 +942,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
         e.preventDefault();
         if (value.trim() && !disabled && isLoading && onQueue) {
           handleQueue();
+        }
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'queue');
         }
         return;
       }
@@ -896,6 +958,14 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
         if (value.trim() && !disabled && processingAttachments.length === 0) {
           onSend(value);
         }
+        if (IME_EVENT_TRACE_ENABLED) {
+          traceImeKeyDown('AIInput', e.nativeEvent, value, 'send');
+        }
+        return;
+      }
+
+      if (IME_EVENT_TRACE_ENABLED) {
+        traceImeKeyDown('AIInput', e.nativeEvent, value, 'pass-through');
       }
     };
 
@@ -1356,21 +1426,36 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
               }
               onChange(e.target.value);
             }}
-            onCompositionStart={() => {
+            onCompositionStart={(e) => {
+              if (IME_EVENT_TRACE_ENABLED) {
+                traceImeCompositionEvent('AIInput', e.nativeEvent, e.currentTarget.value);
+              }
               isComposingRef.current = true;
               // Capture pre-composition state once; any keystrokes during
               // composition are skipped, then a single boundary snapshot is
               // pushed on compositionend.
               preCompositionSnapshotRef.current = captureSnapshot();
             }}
-            onCompositionEnd={() => {
+            onCompositionUpdate={IME_EVENT_TRACE_ENABLED ? (e) => {
+              traceImeCompositionEvent('AIInput', e.nativeEvent, e.currentTarget.value);
+            } : undefined}
+            onCompositionEnd={(e) => {
               isComposingRef.current = false;
               if (preCompositionSnapshotRef.current) {
                 pushSnapshot(preCompositionSnapshotRef.current, { boundary: true });
                 preCompositionSnapshotRef.current = null;
               }
+              if (IME_EVENT_TRACE_ENABLED) {
+                traceImeCompositionEvent('AIInput', e.nativeEvent, e.currentTarget.value);
+              }
             }}
             onKeyDown={handleKeyDown}
+            onBeforeInput={IME_EVENT_TRACE_ENABLED ? (e) => {
+              traceImeBeforeInput('AIInput', e.nativeEvent as InputEvent, e.currentTarget.value);
+            } : undefined}
+            onInput={IME_EVENT_TRACE_ENABLED ? (e) => {
+              traceImeInput('AIInput', e.nativeEvent as InputEvent, e.currentTarget.value);
+            } : undefined}
             onPaste={handlePaste}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
