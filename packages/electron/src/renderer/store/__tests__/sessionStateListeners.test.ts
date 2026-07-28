@@ -22,8 +22,11 @@ import {
   sessionRegistryAtom,
   sessionChildrenAtom,
   sessionLastActivityAtom,
+  sessionStoreAtom,
   type SessionMeta,
 } from '../atoms/sessions';
+import type { SessionData, TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/types';
+import type { TranscriptEvent } from '@nimbalyst/runtime/ai/server/transcript/types';
 import {
   globalSessionTurnActivityAtom,
 } from '../atoms/sessionActivity';
@@ -63,6 +66,7 @@ function makeApi() {
       handlers.set(channel, handler);
       return () => handlers.delete(channel);
     }),
+    aiLoadSession: vi.fn().mockResolvedValue(null),
     invoke: vi.fn().mockResolvedValue({ success: true, sessions: [] }),
     send: vi.fn(),
     sessionState: {
@@ -82,6 +86,7 @@ function makeApi() {
 }
 
 let uniqueCounter = 0;
+let electronApi: ReturnType<typeof makeApi>;
 function uniqueSessionId(prefix: string): string {
   uniqueCounter += 1;
   return `${prefix}-${Date.now()}-${uniqueCounter}`;
@@ -89,9 +94,48 @@ function uniqueSessionId(prefix: string): string {
 
 const WS = '/ws/test-project';
 
+function makeLongSession(sessionId: string, count = 10_000): SessionData {
+  const now = Date.now();
+  const messages: TranscriptViewMessage[] = Array.from({ length: count }, (_, index) => ({
+    id: index + 1,
+    sequence: index + 1,
+    createdAt: new Date(now),
+    type: index % 2 === 0 ? 'user_message' : 'assistant_message',
+    text: `seed-${index + 1}`,
+    subagentId: null,
+  }));
+
+  return {
+    id: sessionId,
+    provider: 'claude-code',
+    model: 'claude-code:sonnet',
+    messages,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function makeAssistantEvent(sessionId: string, id: number, text: string): TranscriptEvent {
+  return {
+    id,
+    sessionId,
+    sequence: id,
+    createdAt: new Date(),
+    eventType: 'assistant_message',
+    searchableText: text,
+    payload: { mode: 'agent' },
+    parentEventId: null,
+    searchable: true,
+    subagentId: null,
+    provider: 'claude-code',
+    providerToolCallId: null,
+  };
+}
+
 beforeEach(async () => {
   handlers = new Map();
-  vi.stubGlobal('window', { electronAPI: makeApi() });
+  electronApi = makeApi();
+  vi.stubGlobal('window', { electronAPI: electronApi });
   // initSessionStateListeners is the entry point that wires up handlers.
   // Imported lazily so vi.stubGlobal('window', ...) is in effect when the
   // module reads `window.electronAPI` at call time.
@@ -103,6 +147,59 @@ afterEach(() => {
   cleanup?.();
   cleanup = null;
   vi.unstubAllGlobals();
+});
+
+describe('PERF-1 streamed transcript reload contract', () => {
+  it('does not reload a 10k-message transcript for 100 message-logged events and appends the canonical event', async () => {
+    vi.useFakeTimers();
+    const sessionId = uniqueSessionId('perf-stream');
+    try {
+      store.set(sessionStoreAtom(sessionId), makeLongSession(sessionId));
+
+      const messageLogged = handlers.get('ai:message-logged');
+      const transcriptEvent = handlers.get('transcript:event');
+      expect(messageLogged).toBeTypeOf('function');
+      expect(transcriptEvent).toBeTypeOf('function');
+
+      for (let index = 0; index < 100; index++) {
+        messageLogged!({ sessionId, direction: 'output', workspacePath: WS });
+        transcriptEvent!(makeAssistantEvent(sessionId, 10_001, `incremental output ${index + 1}`));
+      }
+
+      // Cross the old trailing-edge throttle boundary too: zero means no
+      // immediate *or delayed* full-history read survives the stream.
+      await vi.advanceTimersByTimeAsync(1_100);
+
+      // Streaming rows are rendered from their canonical transcript:event
+      // counterpart. They must not cause an aiLoadSession full-history read.
+      expect(electronApi.aiLoadSession).not.toHaveBeenCalled();
+
+      const messages = store.get(sessionStoreAtom(sessionId))?.messages ?? [];
+      expect(electronApi.aiLoadSession).not.toHaveBeenCalled();
+      expect(messages).toHaveLength(10_001);
+      expect(messages[messages.length - 1]?.text).toBe('incremental output 100');
+    } finally {
+      sessionStoreAtom.remove(sessionId);
+      vi.useRealTimers();
+    }
+  });
+
+  it('performs exactly one final calibration reload after a terminal event', async () => {
+    vi.useFakeTimers();
+    try {
+      const sessionId = uniqueSessionId('perf-terminal');
+      const stateChange = handlers.get('ai-session-state:event');
+      expect(stateChange).toBeTypeOf('function');
+
+      stateChange!({ type: 'session:completed', sessionId, workspacePath: WS });
+      await vi.advanceTimersByTimeAsync(2_100);
+
+      expect(electronApi.aiLoadSession).toHaveBeenCalledTimes(1);
+      expect(electronApi.aiLoadSession).toHaveBeenCalledWith(sessionId, WS);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('lifecycle: session:streaming', () => {

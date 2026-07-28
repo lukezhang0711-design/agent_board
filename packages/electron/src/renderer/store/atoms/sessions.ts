@@ -1696,7 +1696,7 @@ export const updateSessionDataAtom = atom(
 
 /**
  * Track pending reloads per session to prevent concurrent race conditions.
- * When multiple reload requests come in rapidly (e.g., multiple message-logged events),
+ * When multiple calibration/reparse reload requests come in rapidly,
  * only the latest fetch should update the state to avoid stale data overwrites.
  */
 const pendingReloads = new Map<string, { version: number; aborted: boolean }>();
@@ -1771,10 +1771,11 @@ export function preserveReloadIdentity(current: SessionData, next: SessionData):
 
 /**
  * Reload session data from database.
- * Called after message-logged events, etc.
+ * Called after a terminal calibration or transcript reparse, not on every
+ * raw-message persistence notification.
  *
  * Uses version tracking to prevent race conditions when multiple reloads
- * are triggered in rapid succession (e.g., from multiple message-logged events).
+ * are triggered in rapid succession (e.g., overlapping terminal/reparse signals).
  * Only the most recent reload will update the atom state.
  */
 export const reloadSessionDataAtom = atom(

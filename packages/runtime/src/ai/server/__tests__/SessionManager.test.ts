@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SessionManager } from '../SessionManager';
+import { SessionManager, transformAgentMessagesToUI } from '../SessionManager';
 import type {
   SessionStore,
   CreateSessionPayload,
@@ -186,6 +186,35 @@ describe('SessionManager (runtime server)', () => {
     expect(shouldBlockStartedSessionProviderSwitch('claude-code', 'claude', true)).toBe(true);
     expect(shouldBlockStartedSessionProviderSwitch('claude', 'openai', true)).toBe(false);
     expect(shouldBlockStartedSessionProviderSwitch('claude-code', 'openai-codex', false)).toBe(false);
+  });
+
+  it('keeps the iOS raw-message transcript transform independent of the renderer pipeline', () => {
+    const messages = transformAgentMessagesToUI([
+      {
+        direction: 'input',
+        content: JSON.stringify({ prompt: 'Summarize this session' }),
+        createdAt: 100,
+      },
+      {
+        direction: 'output',
+        content: JSON.stringify({ type: 'text', content: 'Here is the summary.' }),
+        createdAt: 200,
+      },
+    ]);
+
+    expect(messages).toHaveLength(2);
+    expect(messages[0]).toMatchObject({
+      role: 'user',
+      content: 'Summarize this session',
+      timestamp: 100,
+      isUserInput: true,
+    });
+    expect(messages[1]).toMatchObject({
+      role: 'assistant',
+      content: 'Here is the summary.',
+      timestamp: 200,
+      isComplete: true,
+    });
   });
 
 });
