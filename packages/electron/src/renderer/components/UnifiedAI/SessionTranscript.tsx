@@ -178,6 +178,73 @@ function makeOptimisticError(text: string, extra?: Partial<TranscriptViewMessage
   };
 }
 
+export const CLAUDE_CLI_FAST_MODE_CONFIRMATION_SETTING = 'claudeCliFastModeConfirmationAccepted';
+
+export function isClaudeCliFastModeConfirmationAccepted(value: unknown): boolean {
+  return value === true;
+}
+
+type AppSettingsInvoke = (channel: string, ...args: unknown[]) => Promise<unknown>;
+
+export async function loadClaudeCliFastModeConfirmation(invoke: AppSettingsInvoke): Promise<boolean> {
+  return isClaudeCliFastModeConfirmationAccepted(
+    await invoke('app-settings:get', CLAUDE_CLI_FAST_MODE_CONFIRMATION_SETTING),
+  );
+}
+
+export async function persistClaudeCliFastModeConfirmation(invoke: AppSettingsInvoke): Promise<void> {
+  await invoke('app-settings:set', CLAUDE_CLI_FAST_MODE_CONFIRMATION_SETTING, true);
+}
+
+/** Fast mode is currently an Opus-only Claude Code CLI session setting. */
+export function isClaudeCliFastModeSupportedModel(model: string | null | undefined): boolean {
+  return /(^|:|-)opus(?:-|$)/i.test(model?.trim() ?? '');
+}
+
+export function shouldShowClaudeCliFastModeToggle(
+  provider: string | null | undefined,
+  model: string | null | undefined,
+  isIdle: boolean,
+  cliSessionCommitted: boolean,
+): boolean {
+  return provider === 'claude-code-cli'
+    && cliSessionCommitted
+    && isIdle
+    && isClaudeCliFastModeSupportedModel(model);
+}
+
+export type ClaudeCliFastModeOutput =
+  | { kind: 'enabled'; enabled: boolean }
+  | { kind: 'rejected'; message: string }
+  | null;
+
+/**
+ * Read the small, stable portion of the CLI's `/fast` response. Terminal
+ * control sequences are removed only so the user-facing rejection remains
+ * readable; the CLI's wording itself is otherwise preserved.
+ */
+export function parseClaudeCliFastModeOutput(output: string): ClaudeCliFastModeOutput {
+  const text = output
+    .replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '')
+    .replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '')
+    .trim();
+  if (!text) return null;
+
+  if (/(?:\bfast mode\b|\busage credits?\b)[^\n]*(?:unavailable|not available|not supported|denied|unable|error|requires|only available|insufficient|not enough)/i.test(text)) {
+    const rejectionLine = text.split(/\r?\n/).find((line) =>
+      /(?:\bfast mode\b|\busage credits?\b).*(?:unavailable|not available|not supported|denied|unable|error|requires|only available|insufficient|not enough)/i.test(line),
+    );
+    return { kind: 'rejected', message: rejectionLine ?? text };
+  }
+  if (/\bfast mode\b[^\n]*(?:\bon\b|\benabled\b)/i.test(text)) {
+    return { kind: 'enabled', enabled: true };
+  }
+  if (/\bfast mode\b[^\n]*(?:\boff\b|\bdisabled\b)/i.test(text)) {
+    return { kind: 'enabled', enabled: false };
+  }
+  return null;
+}
+
 function summarizeTeammates(
   teammates: Array<{ agentId: string; status: 'running' | 'completed' | 'errored' | 'idle' }> | undefined
 ): string {
@@ -464,6 +531,11 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const cancelRequestInFlightRef = useRef(false);
   const pausedQueueActionInFlightRef = useRef(false);
   const [cancelFeedback, setCancelFeedback] = useState<CancelFeedback>({ phase: 'idle' });
+  const [fastModeEnabled, setFastModeEnabled] = useState(false);
+  const [fastModeRequesting, setFastModeRequesting] = useState(false);
+  const [fastModeRejection, setFastModeRejection] = useState<string | null>(null);
+  const [fastModeConfirmationAccepted, setFastModeConfirmationAccepted] = useState(false);
+  const [fastModeConfirmationLoaded, setFastModeConfirmationLoaded] = useState(false);
 
   // Get effective document context - prefer getter for fresh data (reads from disk at call time)
   const getEffectiveDocumentContext = useCallback(async () => {
@@ -999,6 +1071,65 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   // genuine `claude` process. Mirrors the backend's own "started session" gate
   // (shouldBlockStartedSessionProviderSwitch keys off messages.length > 0).
   const cliSessionCommitted = sessionHasMessages || startedCliSessionId === sessionId;
+
+  // A global, app-settings-backed acknowledgement follows the same persistence
+  // channel as the extension-marketplace risk confirmation. Do not render this
+  // as a localStorage preference: all renderer persistence must use app settings.
+  useEffect(() => {
+    let cancelled = false;
+    void loadClaudeCliFastModeConfirmation(window.electronAPI.invoke)
+      .then((accepted) => {
+        if (!cancelled) setFastModeConfirmationAccepted(accepted);
+      })
+      .catch((error) => {
+        console.error('[SessionTranscript] Failed to load Fast mode confirmation:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setFastModeConfirmationLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Fast mode never persists across CLI sessions. A non-Opus model makes the
+  // control unavailable and the upstream CLI disables Fast mode as part of its
+  // own model-switch semantics.
+  useEffect(() => {
+    setFastModeEnabled(false);
+    setFastModeRequesting(false);
+    setFastModeRejection(null);
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!isClaudeCliFastModeSupportedModel(currentModel)) {
+      setFastModeEnabled(false);
+      setFastModeRequesting(false);
+      setFastModeRejection(null);
+    }
+  }, [currentModel]);
+
+  // PTY output is the authority for a `/fast` request. In particular, do not
+  // flip this state merely because the command was accepted for writing: the
+  // CLI can reject Fast mode for credits, organization policy, or availability.
+  useEffect(() => {
+    if (provider !== 'claude-code-cli') return;
+    let outputBuffer = '';
+    return window.electronAPI.terminal.onOutput(({ sessionId: outputSessionId, data }) => {
+      if (outputSessionId !== sessionId) return;
+      outputBuffer = `${outputBuffer}${data}`.slice(-4096);
+      const parsed = parseClaudeCliFastModeOutput(outputBuffer);
+      if (!parsed) return;
+      if (parsed.kind === 'enabled') {
+        setFastModeEnabled(parsed.enabled);
+        setFastModeRejection(null);
+      } else {
+        setFastModeRejection(parsed.message);
+      }
+      setFastModeRequesting(false);
+      outputBuffer = '';
+    });
+  }, [provider, sessionId]);
 
   // NIM-852: for a claude-code-cli session, detect whether the genuine `claude`
   // CLI is installed. Re-check when the session commits (a fresh install between
@@ -1715,6 +1846,41 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       setAgentModeSettings({ defaultModel: previousModel });
     }
   }, [currentModel, sessionId, setCurrentModel, setAgentModeSettings, provider, cliSessionCommitted]);
+
+  const handleFastModeToggle = useCallback(async () => {
+    if (isLoading || fastModeRequesting || !fastModeConfirmationLoaded) return;
+    const requestedEnabled = !fastModeEnabled;
+
+    if (requestedEnabled && !fastModeConfirmationAccepted) {
+      const confirmed = await confirm({
+        title: 'Enable Fast mode?',
+        message: 'Fast mode uses usage credits at a higher rate. Enable?',
+        confirmLabel: 'Enable',
+        cancelLabel: 'Cancel',
+      });
+      if (!confirmed) return;
+      try {
+        await persistClaudeCliFastModeConfirmation(window.electronAPI.invoke);
+        setFastModeConfirmationAccepted(true);
+      } catch (error) {
+        setFastModeRejection(error instanceof Error ? error.message : String(error));
+        return;
+      }
+    }
+
+    setFastModeRejection(null);
+    setFastModeRequesting(true);
+    try {
+      // This only queues the slash command. `terminal.onOutput` above changes
+      // Fast mode state after the genuine CLI reports ON/OFF (or rejects it).
+      await (window.electronAPI.terminal as typeof window.electronAPI.terminal & {
+        setClaudeCliFastMode: (targetSessionId: string, enabled: boolean) => Promise<unknown>;
+      }).setClaudeCliFastMode(sessionId, requestedEnabled);
+    } catch (error) {
+      setFastModeRequesting(false);
+      setFastModeRejection(error instanceof Error ? error.message : String(error));
+    }
+  }, [confirm, fastModeConfirmationAccepted, fastModeConfirmationLoaded, fastModeEnabled, fastModeRequesting, isLoading, sessionId]);
 
   const handleEffortLevelChange = useCallback(async (level: EffortLevel) => {
     const previousLevel = effortLevel;
@@ -2858,6 +3024,40 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       )}
 
       {/* Note: All interactive prompts (ToolPermission, ExitPlanMode, AskUserQuestion) use inline widgets in transcript */}
+
+      {shouldShowClaudeCliFastModeToggle(provider, currentModel, !isLoading, cliSessionCommitted) && (
+        <div
+          className="claude-cli-fast-mode-toolbar"
+          data-testid="claude-cli-fast-mode-toolbar"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderTop: '1px solid var(--nim-border)' }}
+        >
+          <button
+            type="button"
+            role="switch"
+            aria-checked={fastModeEnabled}
+            data-testid="claude-cli-fast-mode-toggle"
+            onClick={() => void handleFastModeToggle()}
+            disabled={fastModeRequesting || !fastModeConfirmationLoaded}
+            title={fastModeRequesting ? 'Waiting for Claude Code to confirm Fast mode' : !fastModeConfirmationLoaded ? 'Loading Fast mode confirmation preference' : 'Toggle Claude Code Fast mode'}
+            style={{
+              border: '1px solid var(--nim-border)',
+              borderRadius: 5,
+              padding: '3px 8px',
+              background: fastModeEnabled ? 'var(--nim-bg-active)' : 'transparent',
+              color: 'var(--nim-text)',
+              cursor: fastModeRequesting || !fastModeConfirmationLoaded ? 'default' : 'pointer',
+              opacity: fastModeRequesting || !fastModeConfirmationLoaded ? 0.6 : 1,
+            }}
+          >
+            {fastModeRequesting ? 'Fast: waiting…' : `Fast: ${fastModeEnabled ? 'On' : 'Off'}`}
+          </button>
+          {fastModeRejection && (
+            <span data-testid="claude-cli-fast-mode-rejection" role="alert" style={{ color: 'var(--nim-error)', fontSize: 12 }}>
+              {fastModeRejection}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Input area — wrapped so the draftInput subscription doesn't
           re-render the entire SessionTranscript on every keystroke. */}

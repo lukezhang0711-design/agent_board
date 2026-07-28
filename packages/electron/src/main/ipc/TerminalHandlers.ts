@@ -9,6 +9,7 @@ import { getTerminalSessionManager } from '../services/TerminalSessionManager';
 import { ensureClaudeCliSession, isClaudeCliInstalled } from '../services/ai/claudeCliLauncherSingleton';
 import { submitClaudeCliPromptProduction } from '../services/ai/claudeCliSubmitSingleton';
 import { switchClaudeCliModel } from '../services/ai/claudeCliModelSwitch';
+import { switchClaudeCliFastMode } from '../services/ai/claudeCliFastSwitch';
 import type { ClaudeCliDocumentContext } from '../services/ai/claudeCliPromptComposer';
 import type { ChatAttachment } from '@nimbalyst/runtime/ai/server/types';
 import { ShellDetector } from '../services/ShellDetector';
@@ -382,6 +383,23 @@ export function registerTerminalHandlers(): void {
       }
       return { success: true, cliArg: result.cliArg };
     }
+  );
+
+  /** Request a CLI Fast mode change. CLI output, not this IPC result, is truth. */
+  safeHandle(
+    'claude-cli:set-fast-mode',
+    async (_event, payload: { sessionId: string; enabled: boolean }) => {
+      if (!payload?.sessionId || typeof payload.sessionId !== 'string') {
+        throw new Error('sessionId is required and must be a string');
+      }
+      if (typeof payload.enabled !== 'boolean') {
+        throw new Error('enabled is required and must be a boolean');
+      }
+      return switchClaudeCliFastMode(payload, {
+        writeToTerminal: (sessionId: string, data: string) => manager.writeToTerminal(sessionId, data),
+        delay: (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
+      });
+    },
   );
 
   /**
