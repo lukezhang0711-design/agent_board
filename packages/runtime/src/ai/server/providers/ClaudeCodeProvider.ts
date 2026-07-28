@@ -2566,10 +2566,16 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     // Create a promise that will be resolved when user responds via the widget
     const confirmationPromise = new Promise<{ approved: boolean; clearContext?: boolean; feedback?: string }>((resolve, reject) => {
       this.pendingExitPlanModeConfirmations.set(requestId, { resolve, reject });
+      console.info(
+        `[CLAUDE-CODE] ExitPlanMode waiter registered: requestId=${requestId}, sessionId=${sessionId ?? 'unknown'}, pendingCount=${this.pendingExitPlanModeConfirmations.size}`,
+      );
 
       if (options.signal) {
         options.signal.addEventListener('abort', () => {
-          this.pendingExitPlanModeConfirmations.delete(requestId);
+          const removed = this.pendingExitPlanModeConfirmations.delete(requestId);
+          console.info(
+            `[CLAUDE-CODE] ExitPlanMode waiter removed: requestId=${requestId}, reason=abort_signal, removed=${removed}, pendingCount=${this.pendingExitPlanModeConfirmations.size}`,
+          );
           // Persist cancellation to DB so orphaned requests don't appear as perpetually pending
           if (sessionId) {
             const cancelContent = {
@@ -2655,11 +2661,14 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     response: { approved: boolean; clearContext?: boolean; feedback?: string },
     sessionId?: string,
     respondedBy: 'desktop' | 'mobile' = 'desktop'
-  ): void {
+  ): boolean {
     const pending = this.pendingExitPlanModeConfirmations.get(requestId);
     if (pending) {
       pending.resolve(response);
       this.pendingExitPlanModeConfirmations.delete(requestId);
+      console.info(
+        `[CLAUDE-CODE] ExitPlanMode response matched in-memory waiter: requestId=${requestId}, approved=${response.approved}, pendingCount=${this.pendingExitPlanModeConfirmations.size}`,
+      );
 
       // Mirror AskUserQuestion / ToolPermission semantics: emit a resolved
       // event so MessageStreamingHandler can flip the SessionStateManager
@@ -2674,30 +2683,14 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
         timestamp: Date.now(),
       });
 
-      // Persist the response as a message for sync and audit trail
-      if (sessionId) {
-        const responseContent = {
-          type: 'exit_plan_mode_response' as const,
-          requestId,
-          approved: response.approved,
-          clearContext: response.clearContext,
-          feedback: response.feedback,
-          respondedAt: Date.now(),
-          respondedBy,
-        };
-        this.logAgentMessage(
-          sessionId,
-          'claude-code',
-          'output',
-          JSON.stringify(responseContent),
-          { messageType: 'exit_plan_mode_response' }
-        ).catch(err => {
-          console.error('[CLAUDE-CODE] Failed to persist ExitPlanMode response:', err);
-        });
-      }
-      // TODO: Debug logging - uncomment if needed
+      // AIService persisted the response before calling this method. The in-memory
+      // map only wakes a live SDK callback; it is not the durable source of truth.
+      return true;
     } else {
-      console.warn(`[CLAUDE-CODE] No pending ExitPlanMode confirmation found for requestId: ${requestId}`);
+      console.warn(
+        `[CLAUDE-CODE] ExitPlanMode response missed in-memory waiter: requestId=${requestId}, reason=not_registered, pendingCount=${this.pendingExitPlanModeConfirmations.size}`,
+      );
+      return false;
     }
   }
 
@@ -2707,6 +2700,9 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
   public rejectAllPendingConfirmations(): void {
     for (const [requestId, pending] of this.pendingExitPlanModeConfirmations) {
       pending.reject(new Error('Request aborted'));
+      console.info(
+        `[CLAUDE-CODE] ExitPlanMode waiter removed: requestId=${requestId}, reason=provider_abort, pendingCount=${this.pendingExitPlanModeConfirmations.size - 1}`,
+      );
     }
     this.pendingExitPlanModeConfirmations.clear();
   }

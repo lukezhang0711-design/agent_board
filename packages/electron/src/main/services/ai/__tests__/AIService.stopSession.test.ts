@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   interruptClaudeCliTurn: vi.fn(),
   writeToTerminal: vi.fn(),
   clearModelCache: vi.fn(),
+  databaseQuery: vi.fn(),
+  onPromptResolved: vi.fn(),
   ipcHandlers: new Map<string, (...args: any[]) => any>(),
 }));
 
@@ -42,6 +44,29 @@ vi.mock('@nimbalyst/runtime', () => ({
 
 vi.mock('@nimbalyst/runtime/storage/repositories/AISessionsRepository', () => ({
   AISessionsRepository: { get: mocks.getSession },
+}));
+
+vi.mock('../../../database/PGLiteDatabaseWorker', () => ({
+  database: { query: mocks.databaseQuery },
+}));
+
+vi.mock('../../../tray/TrayManager', () => ({
+  TrayManager: { getInstance: () => ({ onPromptResolved: mocks.onPromptResolved }) },
+}));
+
+vi.mock('../../SyncManager', () => ({ getSyncProvider: () => null }));
+
+vi.mock('electron', () => ({
+  app: {
+    getPath: vi.fn(() => '/mock/path'),
+    getName: vi.fn(() => 'test-app'),
+    getVersion: vi.fn(() => '1.0.0'),
+    on: vi.fn(), once: vi.fn(), off: vi.fn(), removeListener: vi.fn(),
+    whenReady: vi.fn(() => Promise.resolve()), quit: vi.fn(), isReady: vi.fn(() => true),
+  },
+  BrowserWindow: { getAllWindows: vi.fn(() => []), getFocusedWindow: vi.fn(() => null) },
+  ipcMain: { handle: vi.fn(), on: vi.fn(), listenerCount: vi.fn(() => 0) },
+  ipcRenderer: { send: vi.fn(), on: vi.fn(), invoke: vi.fn() },
 }));
 
 vi.mock('@nimbalyst/runtime/ai/server/SessionStateManager', () => ({
@@ -370,5 +395,60 @@ describe('AIService.stopSession', () => {
       success: false,
       error: 'Terminal interrupt was not confirmed',
     });
+  });
+
+  it('durably routes a rejected plan response when the provider memory waiter was lost', async () => {
+    mocks.getSession.mockResolvedValue({ id: 'head-session', provider: 'claude-code' });
+    const resolveExitPlanModeConfirmation = vi.fn(() => false);
+    mocks.getProvider.mockReturnValue({ resolveExitPlanModeConfirmation });
+    mocks.databaseQuery.mockImplementation(async (sql: string) => ({
+      // The MetaAgent submitPlan tool-use is the durable waiter surviving the
+      // provider restart / lost in-memory Map from FB-043.
+      rows: sql.includes('nimbalyst_tool_use') ? [{ id: 'durable-plan-card' }] : [],
+    }));
+
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, { streamingHandler: { handle: vi.fn() } });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:exitPlanModeConfirmResponse');
+
+    await expect(handler?.({} as any, 'approval-43', 'head-session', {
+      approved: false,
+      feedback: 'Please split the plan.',
+    })).resolves.toEqual({ success: true });
+
+    expect(resolveExitPlanModeConfirmation).toHaveBeenCalledWith(
+      'approval-43',
+      { approved: false, feedback: 'Please split the plan.' },
+      'head-session',
+      'desktop',
+    );
+    expect(mocks.databaseQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO ai_agent_messages'),
+      [
+        'head-session',
+        'nimbalyst',
+        'output',
+        expect.stringContaining('"requestId":"approval-43"'),
+        expect.any(Date),
+        false,
+      ],
+    );
+  });
+
+  it('rejects immediately when a lost memory waiter has no durable successor', async () => {
+    mocks.getSession.mockResolvedValue({ id: 'orphaned-session', provider: 'claude-code' });
+    mocks.getProvider.mockReturnValue({ resolveExitPlanModeConfirmation: vi.fn(() => false) });
+    mocks.databaseQuery.mockResolvedValue({ rows: [] });
+
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, { streamingHandler: { handle: vi.fn() } });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:exitPlanModeConfirmResponse');
+
+    await expect(handler?.({} as any, 'orphaned-approval', 'orphaned-session', {
+      approved: false,
+      feedback: 'Retry this response.',
+    })).rejects.toThrow('ExitPlanMode approval is no longer active; retry the response');
   });
 });

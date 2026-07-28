@@ -526,16 +526,32 @@ export class AIService {
     }
 
     const provider = ProviderFactory.getProvider(session.provider as AIProviderType, sessionId);
-    if (!provider) {
-      return { success: false, error: 'Provider not found' };
+    const resolvedInMemory = provider
+      && typeof (provider as any).resolveExitPlanModeConfirmation === 'function'
+      ? (provider as any).resolveExitPlanModeConfirmation(promptId, response, sessionId, respondedBy) === true
+      : false;
+    const { rows: durableWaiterRows } = await database.query<{ id: string }>(
+      `SELECT id
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND content LIKE '%"type":"nimbalyst_tool_use"%'
+         AND content LIKE $2
+       LIMIT 1`,
+      [sessionId, `%"id":"${promptId}"%`],
+    );
+    const hasDurableWaiter = durableWaiterRows.length > 0;
+    logger.main.info(
+      `[AIService] ExitPlanMode response durable delivery: requestId=${promptId}, persisted=true, inMemoryMatched=${resolvedInMemory}, durableWaiter=${hasDurableWaiter}`,
+    );
+
+    if (!resolvedInMemory && !hasDurableWaiter) {
+      logger.main.warn(
+        `[AIService] ExitPlanMode response has no active waiter: requestId=${promptId}, reason=provider_miss_and_no_durable_waiter`,
+      );
+      return { success: false, error: 'ExitPlanMode approval is no longer active; retry the response' };
     }
 
-    if (typeof (provider as any).resolveExitPlanModeConfirmation !== 'function') {
-      return { success: false, error: 'Provider does not support ExitPlanMode responses' };
-    }
-
-    (provider as any).resolveExitPlanModeConfirmation(promptId, response, sessionId, respondedBy);
-    if (response.approved) {
+    if (response.approved && resolvedInMemory) {
       await AISessionsRepository.updateMetadata(sessionId, { mode: 'agent' });
     }
     return { success: true };
@@ -2511,56 +2527,41 @@ export class AIService {
     safeHandle('ai:exitPlanModeConfirmResponse', async (event, requestId: string, sessionId: string, response: { approved: boolean; clearContext?: boolean; feedback?: string }) => {
       logger.main.info(`[AIService] ExitPlanMode confirmation response: requestId=${requestId}, approved=${response.approved}, clearContext=${response.clearContext}, hasFeedback=${!!response.feedback}`);
 
-      // Use repository directly - we just need session metadata (provider type),
-      // not the full session load with messages
-      const { AISessionsRepository } = await import('@nimbalyst/runtime/storage/repositories/AISessionsRepository');
-      const session = await AISessionsRepository.get(sessionId);
-      if (!session) {
-        logger.main.warn(`[AIService] Session not found for ExitPlanMode response: ${sessionId}`);
-        return { success: false, error: 'Session not found' };
+      const delivery = await this.respondToInteractivePrompt({
+        sessionId,
+        promptId: requestId,
+        promptType: 'exit_plan_mode_request',
+        response,
+        respondedBy: 'desktop',
+      });
+      if (!delivery.success) {
+        logger.main.warn(`[AIService] ExitPlanMode response was not delivered: requestId=${requestId}, error=${delivery.error}`);
+        // Renderer `invoke` must reject here. A `{ success: false }` payload is
+        // ignored by the legacy follow-up route, which would otherwise leave the
+        // approval widget in BB's 10-minute "Awaiting review" timeout state.
+        throw new Error(delivery.error ?? 'ExitPlanMode response was not delivered');
       }
 
-      const provider = ProviderFactory.getProvider(session.provider as AIProviderType, sessionId);
-      if (!provider) {
-        logger.main.warn(`[AIService] Provider not found for ExitPlanMode response: ${sessionId}`);
-        return { success: false, error: 'Provider not found' };
+      // Emit resolved event so the sidebar indicator updates and UI syncs mode change
+      const { BrowserWindow } = await import('electron');
+      const windows = BrowserWindow.getAllWindows().filter(w => !w.isDestroyed());
+      for (const win of windows) {
+        if (!win.webContents.isDestroyed()) {
+          win.webContents.send('ai:exitPlanModeResolved', { sessionId, approved: response.approved });
+        }
       }
 
-      // Check if this is a ClaudeCodeProvider with the resolve method
-      if (typeof (provider as any).resolveExitPlanModeConfirmation === 'function') {
-        (provider as any).resolveExitPlanModeConfirmation(requestId, response, sessionId, 'desktop');
-
-        // If approved, update the session mode to 'agent' in the database
-        // This ensures the mode persists across session switches and app restarts
-        if (response.approved) {
-          await AISessionsRepository.updateMetadata(sessionId, { mode: 'agent' });
-          logger.main.info(`[AIService] Session ${sessionId} mode updated to 'agent' after ExitPlanMode approval`);
-        }
-
-        // Emit resolved event so the sidebar indicator updates and UI syncs mode change
-        const { BrowserWindow } = await import('electron');
-        const windows = BrowserWindow.getAllWindows().filter(w => !w.isDestroyed());
-        for (const win of windows) {
-          if (!win.webContents.isDestroyed()) {
-            win.webContents.send('ai:exitPlanModeResolved', { sessionId, approved: response.approved });
-          }
-        }
-
-        // Clear pending prompt state for mobile sync and tray
-        TrayManager.getInstance().onPromptResolved(sessionId);
-        const syncProvider = getSyncProvider();
-        if (syncProvider) {
-          syncProvider.pushChange(sessionId, {
-            type: 'metadata_updated',
-            metadata: { hasPendingPrompt: false, updatedAt: Date.now() },
-          });
-        }
-
-        return { success: true };
-      } else {
-        logger.main.warn(`[AIService] Provider does not support ExitPlanMode confirmation: ${session.provider}`);
-        return { success: false, error: 'Provider does not support ExitPlanMode confirmation' };
+      // Clear pending prompt state for mobile sync and tray
+      TrayManager.getInstance().onPromptResolved(sessionId);
+      const syncProvider = getSyncProvider();
+      if (syncProvider) {
+        syncProvider.pushChange(sessionId, {
+          type: 'metadata_updated',
+          metadata: { hasPendingPrompt: false, updatedAt: Date.now() },
+        });
       }
+
+      return { success: true };
     });
 
     // Handle AskUserQuestion answer response from renderer
