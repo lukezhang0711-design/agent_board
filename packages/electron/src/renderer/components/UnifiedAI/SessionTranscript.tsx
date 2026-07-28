@@ -71,7 +71,6 @@ import {
   sessionPhaseAtom,
   sessionRegistryAtom,
   loadSessionDataAtom,
-  reloadSessionDataAtom,
   updateSessionStoreAtom,
   navigateSessionHistoryAtom,
   resetSessionHistoryAtom,
@@ -497,7 +496,6 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const sessionDocumentContext = useAtomValue(sessionDocumentContextAtom(sessionId));
   const rawEffortLevel = useAtomValue(sessionEffortLevelRawAtom(sessionId));
   const loadSessionData = useSetAtom(loadSessionDataAtom);
-  const reloadSessionData = useSetAtom(reloadSessionDataAtom);
   const updateSessionStore = useSetAtom(updateSessionStoreAtom);
 
   useEffect(() => {
@@ -859,16 +857,9 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   // Load session data on mount
   // ============================================================
   useEffect(() => {
-    if (!sessionId || !workspacePath) return;
-    if (!hasSessionData) {
-      loadSessionData({ sessionId, workspacePath });
-    } else if (!isProcessing) {
-      // Session data exists but session is idle/completed -- reload from DB
-      // to pick up any messages that arrived after the cached snapshot
-      // (e.g., the user navigated away during streaming and came back after completion)
-      reloadSessionData({ sessionId, workspacePath });
-    }
-  }, [sessionId, workspacePath, hasSessionData, isProcessing, loadSessionData, reloadSessionData]);
+    if (!sessionId || !workspacePath || hasSessionData) return;
+    void loadSessionData({ sessionId, workspacePath });
+  }, [sessionId, workspacePath, hasSessionData, loadSessionData]);
 
   // Ensure centralized file/pending atoms are initialized for this session in Files mode.
   useEffect(() => {
@@ -920,7 +911,8 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
   // ============================================================
   // IPC events handled by centralized listeners (sessionStateListeners.ts, sessionTranscriptListeners.ts)
-  // - ai:message-logged → sessionStateListeners reloads session data
+  // - transcript:event → sessionStateListeners incrementally appends canonical rows
+  // - ai:message-logged → sessionStateListeners updates activity/unread state only
   // - session:title-updated → sessionStateListeners updates sessionStoreAtom
   // - ai:tokenUsageUpdated → sessionTranscriptListeners updates sessionStoreAtom
   // - ai:error → sessionTranscriptListeners updates sessionErrorAtom

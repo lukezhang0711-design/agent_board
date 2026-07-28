@@ -19,7 +19,8 @@
  * ## Solution
  * This module provides centralized, global listeners for:
  * - Session processing state (session:started/completed/error)
- * - Message reloads (ai:message-logged) for sessions not currently mounted
+ * - Session activity/unread state (ai:message-logged)
+ * - Incremental canonical transcript events (transcript:event)
  */
 
 import { store } from '@nimbalyst/runtime/store';
@@ -96,26 +97,6 @@ const transcriptAccumulator = new TranscriptStreamAccumulator({
 // Track blitz IDs for which an analysis session creation has already been triggered.
 // Prevents duplicate IPC calls when multiple children complete near-simultaneously.
 const blitzAnalysisTriggered = new Set<string>();
-
-// Per-session throttle state for reloadSessionDataAtom.
-// During active streaming, message-logged fires on every chunk, which would
-// trigger a full DB reload of ALL messages each time. PGLite is
-// single-threaded, so these reads queue up and block writes, causing a
-// cascading slowdown. Throttling (leading + trailing edge) ensures at most
-// one reload per RELOAD_THROTTLE_MS while still responding promptly to
-// the first event (e.g., a tool result arriving mid-stream).
-const reloadThrottleTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const reloadLastFiredAt = new Map<string, number>();
-const RELOAD_THROTTLE_MS = 1000;
-
-// Per-session verification reload timers.
-// After session:completed fires the immediate reload, a second "verification" reload
-// runs after a short delay. This catches race conditions where:
-// - The immediate reload raced with DB writes and got stale data
-// - The reload was aborted by version tracking due to concurrent reloads
-// - The IPC call failed silently
-const verificationReloadTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const VERIFICATION_RELOAD_DELAY_MS = 2000;
 
 // Per-session debounce timers for syncing lastReadAt to other devices.
 // When the user is actively viewing a session that's streaming, we need to
@@ -389,40 +370,13 @@ export function initSessionStateListeners(): () => void {
         });
         bumpParentTurnActivity(sessionId, resolvedWorkspacePath, turnBoundaryTimestamp);
 
-        // Clear any pending throttle timer for this session - the final reload below
-        // will fetch the complete state, so a stale throttled reload is unnecessary
-        {
-          const pendingTimer = reloadThrottleTimers.get(sessionId);
-          if (pendingTimer) {
-            clearTimeout(pendingTimer);
-            reloadThrottleTimers.delete(sessionId);
-          }
-          reloadLastFiredAt.delete(sessionId);
-        }
-
-        // Trigger a final session data reload as a safety net.
-        // During streaming, ai:message-logged events trigger throttled reloads.
-        // But those events can be silently dropped if sessionListWorkspaceAtom
-        // is null (e.g., after HMR re-evaluates the sessions module, or during
-        // a race between listener init and session list init). This final reload
-        // on session:completed ensures all messages are loaded regardless.
-        //
-        // For sessions with live canonical events, DB reloads are safe because
-        // handleTranscriptEvent merges DB messages with live-projected messages.
+        // Perform one terminal calibration. During streaming, canonical
+        // transcript:event payloads already update sessionStoreAtom directly;
+        // ai:message-logged must not reload the entire transcript. The terminal
+        // read covers raw rows that have no canonical projection and any event
+        // that arrived while this renderer was unavailable.
         if (resolvedWorkspacePath) {
-          // Immediate reload
           store.set(reloadSessionDataAtom, { sessionId, workspacePath: resolvedWorkspacePath });
-
-          // Schedule a verification reload after a short delay.
-          const verificationWorkspacePath = resolvedWorkspacePath;
-          const existingVerification = verificationReloadTimers.get(sessionId);
-          if (existingVerification) {
-            clearTimeout(existingVerification);
-          }
-          verificationReloadTimers.set(sessionId, setTimeout(() => {
-            verificationReloadTimers.delete(sessionId);
-            store.set(reloadSessionDataAtom, { sessionId, workspacePath: verificationWorkspacePath });
-          }, VERIFICATION_RELOAD_DELAY_MS));
         }
 
         // If this session is in a worktree, trigger a git panel refresh
@@ -509,12 +463,12 @@ export function initSessionStateListeners(): () => void {
   };
 
   /**
-   * Handle message-logged events globally.
-   * This ensures that sessions get reloaded even when their SessionTranscript
-   * component is not currently mounted (e.g., inactive tabs, child sessions not selected).
+   * Handle raw-message persistence notifications globally.
    *
-   * SessionTranscript also subscribes to this event for the active session,
-   * but this handler provides a safety net for all other sessions.
+   * The companion transcript:event carries the canonical payload used to
+   * incrementally update a mounted transcript. This notification intentionally
+   * does not read the full session: inactive sessions load once when opened,
+   * and terminal lifecycle events perform the one safety-net calibration.
    *
    * Also marks sessions as unread when they receive output messages while not being
    * the currently viewed session.
@@ -543,40 +497,6 @@ export function initSessionStateListeners(): () => void {
     }
 
     const workspacePath = ownedWorkspacePath;
-
-    // Throttle session data reload per session (leading + trailing edge).
-    // During active streaming, message-logged fires on every chunk which would
-    // trigger a full DB reload of ALL messages (2000+) each time. PGLite is
-    // single-threaded, so these reads queue up and block writes, causing a
-    // cascading slowdown. Throttling limits to one reload per RELOAD_THROTTLE_MS
-    // while firing immediately on the first event after a quiet period (so tool
-    // results are picked up promptly, not delayed until streaming stops).
-    //
-    // For sessions with live canonical events, DB reloads are still safe because
-    // handleTranscriptEvent merges DB messages with live-projected messages.
-    {
-      const now = Date.now();
-      const lastFired = reloadLastFiredAt.get(sessionId) ?? 0;
-
-      // Cancel any pending trailing-edge reload
-      const existingTimer = reloadThrottleTimers.get(sessionId);
-      if (existingTimer) {
-        clearTimeout(existingTimer);
-      }
-
-      if (now - lastFired >= RELOAD_THROTTLE_MS) {
-        // Enough time since last reload — fire immediately (leading edge)
-        reloadLastFiredAt.set(sessionId, now);
-        store.set(reloadSessionDataAtom, { sessionId, workspacePath });
-      }
-
-      // Always schedule a trailing-edge reload to catch the final event
-      reloadThrottleTimers.set(sessionId, setTimeout(() => {
-        reloadThrottleTimers.delete(sessionId);
-        reloadLastFiredAt.set(sessionId, Date.now());
-        store.set(reloadSessionDataAtom, { sessionId, workspacePath });
-      }, RELOAD_THROTTLE_MS));
-    }
 
     // Bump the per-session activity atom. Individual list-item subscribers
     // re-render their own relative-time labels without churning
@@ -676,7 +596,7 @@ export function initSessionStateListeners(): () => void {
    * The queue emits one event per affected session per flush, replacing the
    * per-chunk `ai:message-logged` events that used to fire from
    * `logAgentMessageNonBlocking`. Adapt the batch payload to the existing
-   * per-row handler so the same throttled reload + unread-marking logic
+   * per-row handler so the same activity + unread-marking logic
    * applies. A 'mixed' direction (input + output rows in the same flush)
    * is treated as 'output' for unread purposes since it always contains at
    * least one output row.
@@ -1135,18 +1055,6 @@ export function initSessionStateListeners(): () => void {
 
   // Return cleanup function
   return () => {
-    // Clear all pending throttle timers
-    for (const timer of reloadThrottleTimers.values()) {
-      clearTimeout(timer);
-    }
-    reloadThrottleTimers.clear();
-    reloadLastFiredAt.clear();
-
-    for (const timer of verificationReloadTimers.values()) {
-      clearTimeout(timer);
-    }
-    verificationReloadTimers.clear();
-
     for (const timer of readStateSyncTimers.values()) {
       clearTimeout(timer);
     }
