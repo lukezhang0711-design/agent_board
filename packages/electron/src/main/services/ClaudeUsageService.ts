@@ -78,7 +78,7 @@ type ExecFileFn = (
 ) => unknown;
 
 interface ClaudeAuthStateReader {
-  getState(options?: { forceRefresh?: boolean }): Promise<ClaudeAuthState>;
+  getState(options?: { forceRefresh?: boolean; trigger?: 'usage-401-recovery' | 'usage-refresh' }): Promise<ClaudeAuthState>;
 }
 
 export interface ClaudeUsageServiceOptions {
@@ -267,6 +267,7 @@ export class ClaudeUsageServiceImpl {
       if (!manual) {
         const rateLimitCooldownMessage = this.getRateLimitCooldownMessage();
         if (rateLimitCooldownMessage) {
+          logger.main.info('[ClaudeUsageService] Usage auth event=rate-limit-cooldown result=skipped');
           return this.commitUsage(this.buildUnavailableUsage(rateLimitCooldownMessage), generation);
         }
       }
@@ -283,6 +284,10 @@ export class ClaudeUsageServiceImpl {
 
       const requestCandidates = this.filterCandidatesForRefresh(candidates, manual);
       if (requestCandidates.length === 0) {
+        const cooldownCandidate = candidates.find((candidate) => this.hasAuthorizationCooldown(candidate));
+        if (cooldownCandidate) {
+          this.logCredentialEvent('authorization-cooldown', cooldownCandidate, 'skipped');
+        }
         return this.commitUsage(
           this.buildUnavailableUsage(
             this.getAuthorizationCooldownMessage(candidates) ?? AUTHORIZATION_COOLDOWN_MESSAGE,
@@ -419,6 +424,7 @@ export class ClaudeUsageServiceImpl {
    */
   private async refreshCliCredentials(failedCredential: CredentialCandidate): Promise<boolean> {
     if (this.cliRefreshDisabledFingerprints.has(failedCredential.fingerprint)) {
+      this.logCredentialEvent('cli-refresh', failedCredential, 'skipped-disabled');
       return false;
     }
 
@@ -441,6 +447,7 @@ export class ClaudeUsageServiceImpl {
     });
     if (!command) {
       this.cliRefreshDisabledFingerprints.add(failedCredential.fingerprint);
+      this.logCredentialEvent('cli-refresh', failedCredential, 'unavailable');
       logger.main.info(
         '[ClaudeUsageService] No system Claude CLI is available for credential refresh; '
         + 'the bundled SDK fallback is disabled for this credential.',
@@ -479,9 +486,11 @@ export class ClaudeUsageServiceImpl {
           },
         );
       });
+      this.logCredentialEvent('cli-refresh', failedCredential, 'succeeded');
       return true;
     } catch {
       this.cliRefreshDisabledFingerprints.add(failedCredential.fingerprint);
+      this.logCredentialEvent('cli-refresh', failedCredential, 'failed');
       logger.main.warn(
         '[ClaudeUsageService] System Claude CLI credential refresh failed; '
         + 'the fallback is disabled until credentials change.',
@@ -700,6 +709,12 @@ export class ClaudeUsageServiceImpl {
     return true;
   }
 
+  private logCredentialEvent(event: string, candidate: CredentialCandidate, result: string): void {
+    logger.main.info(
+      `[ClaudeUsageService] Usage auth event=${event} fingerprint=${candidate.fingerprint.slice(0, 8)} result=${result}`,
+    );
+  }
+
   private getAuthorizationCooldownMessage(candidates: CredentialCandidate[]): string | null {
     return candidates.some((candidate) => this.hasAuthorizationCooldown(candidate))
       ? AUTHORIZATION_COOLDOWN_MESSAGE
@@ -720,6 +735,7 @@ export class ClaudeUsageServiceImpl {
   private startRateLimitCooldown(error: UsageHttpError): string {
     const cooldownMs = error.retryAfterMs ?? RATE_LIMIT_DEFAULT_COOLDOWN_MS;
     this.rateLimitCooldownUntil = this.now() + cooldownMs;
+    logger.main.info('[ClaudeUsageService] Usage auth event=rate-limit-cooldown result=started');
     return this.getRateLimitCooldownMessage() ?? '接口限流,0 分钟后自动恢复';
   }
 
@@ -731,6 +747,7 @@ export class ClaudeUsageServiceImpl {
       return usage;
     } catch (error) {
       if (error instanceof UsageHttpError && error.status === 401) {
+        this.logCredentialEvent('401', candidate, 'detected');
         const failures = (this.unauthorizedFailureCounts.get(candidate.fingerprint) ?? 0) + 1;
         this.unauthorizedFailureCounts.set(candidate.fingerprint, failures);
         if (failures >= 2) {
@@ -857,7 +874,10 @@ export class ClaudeUsageServiceImpl {
 
   private async safeGetAuthState(forceRefresh = false): Promise<ClaudeAuthState> {
     try {
-      return await this.authStateService.getState({ forceRefresh });
+      return await this.authStateService.getState({
+        forceRefresh,
+        trigger: forceRefresh ? 'usage-401-recovery' : 'usage-refresh',
+      });
     } catch (error) {
       return {
         status: 'check-failed',

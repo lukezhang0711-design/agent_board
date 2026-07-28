@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const logMocks = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
+
 vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] },
 }));
@@ -21,10 +28,10 @@ vi.mock('../ClaudeAuthStateService', async (importOriginal) => {
 vi.mock('../../utils/logger', () => ({
   logger: {
     main: {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
+      info: logMocks.info,
+      warn: logMocks.warn,
+      error: logMocks.error,
+      debug: logMocks.debug,
     },
   },
 }));
@@ -37,6 +44,14 @@ const loggedInState: ClaudeAuthState = {
   source: 'claude-cli-auth-status',
   checkedAt: 100,
   authMethod: 'claude.ai',
+  apiProvider: 'firstParty',
+};
+
+const loggedOutState: ClaudeAuthState = {
+  status: 'logged-out',
+  source: 'claude-cli-auth-status',
+  checkedAt: 100,
+  authMethod: 'none',
   apiProvider: 'firstParty',
 };
 
@@ -116,6 +131,10 @@ function bearerTokens(fetchMock: ReturnType<typeof vi.fn>): string[] {
 describe('ClaudeUsageService authentication recovery', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    logMocks.info.mockReset();
+    logMocks.warn.mockReset();
+    logMocks.error.mockReset();
+    logMocks.debug.mockReset();
   });
 
   it('crosses CLI JSON state and Usage 401 end-to-end without changing logged-in state', async () => {
@@ -156,7 +175,10 @@ describe('ClaudeUsageService authentication recovery', () => {
     const usage = await service.refresh();
 
     expect(usage.error).toBe('额度授权失败,已暂停自动重试;修复登录后点 Refresh 立即重试');
-    expect(getState).toHaveBeenCalledWith({ forceRefresh: true });
+    expect(getState).toHaveBeenCalledWith({
+      forceRefresh: true,
+      trigger: 'usage-401-recovery',
+    });
     expect(authStateService.getCachedState()).toMatchObject({ status: 'logged-in' });
     expect(runAuthStatus).toHaveBeenCalledOnce();
     expect(bearerTokens(fetchMock)).toEqual(['same-token', 'same-token']);
@@ -265,6 +287,25 @@ describe('ClaudeUsageService authentication recovery', () => {
     expect(bearerTokens(fetchMock)).toEqual(['old-token', 'rotated-token']);
   });
 
+  it('logs a 401 with only the credential fingerprint prefix and recovery result', async () => {
+    const service = new ClaudeUsageServiceImpl({
+      platform: 'linux',
+      readFile: async () => JSON.stringify({ claudeAiOauth: { accessToken: 'fake-token-for-log-test' } }),
+      fetchFn: vi.fn().mockResolvedValue(unauthorizedResponse()),
+      authStateService: authReader(loggedOutState),
+      networkMaxRetries: 1,
+      sleep: async () => undefined,
+    });
+
+    await service.refresh();
+
+    const logOutput = [...logMocks.info.mock.calls, ...logMocks.warn.mock.calls]
+      .flat()
+      .join(' ');
+    expect(logOutput).toMatch(/event=401 fingerprint=[a-f0-9]{8} result=detected/);
+    expect(logOutput).not.toContain('fake-token-for-log-test');
+  });
+
   it('does not retry the same rotated credential twice when its one recovery attempt is rejected', async () => {
     const fetchMock = vi.fn().mockResolvedValue(unauthorizedResponse());
     const service = new ClaudeUsageServiceImpl({
@@ -331,6 +372,10 @@ describe('ClaudeUsageService authentication recovery', () => {
       '/c',
       expect.stringContaining('claude.cmd'),
     ]);
+    expect(logMocks.info.mock.calls.flat().join(' ')).toMatch(
+      /event=cli-refresh fingerprint=[a-f0-9]{8} result=succeeded/,
+    );
+    expect(logMocks.info.mock.calls.flat().join(' ')).not.toContain('fresh-token');
   });
 
   it('distinguishes an authoritative logged-out state from Usage authorization refusal', async () => {
@@ -408,6 +453,10 @@ describe('ClaudeUsageService authentication recovery', () => {
     expect(paused.error).toBe('额度授权失败,已暂停自动重试;修复登录后点 Refresh 立即重试');
     expect(skipped.error).toBe('额度授权失败,已暂停自动重试;修复登录后点 Refresh 立即重试');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(logMocks.info.mock.calls.flat().join(' ')).toMatch(
+      /event=authorization-cooldown fingerprint=[a-f0-9]{8} result=skipped/,
+    );
+    expect(logMocks.info.mock.calls.flat().join(' ')).not.toContain('cooldown-token');
 
     now += 60_000;
     const manual = await service.refresh();
@@ -437,6 +486,12 @@ describe('ClaudeUsageService authentication recovery', () => {
     expect(rateLimited.error).toBe('接口限流,2 分钟后自动恢复');
     expect(skipped.error).toBe('接口限流,2 分钟后自动恢复');
     expect(fetchMock).toHaveBeenCalledOnce();
+    expect(logMocks.info.mock.calls.flat().join(' ')).toContain(
+      'event=rate-limit-cooldown result=started',
+    );
+    expect(logMocks.info.mock.calls.flat().join(' ')).toContain(
+      'event=rate-limit-cooldown result=skipped',
+    );
 
     now += 60_000;
     const manual = await service.refresh();

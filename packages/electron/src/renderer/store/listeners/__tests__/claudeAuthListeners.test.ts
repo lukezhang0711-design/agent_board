@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testState = vi.hoisted(() => ({
   set: vi.fn(),
+  showWarning: vi.fn(),
 }));
 
 vi.mock('../../index', () => ({
   store: {
     set: testState.set,
   },
+}));
+
+vi.mock('../../../services/ErrorNotificationService', () => ({
+  errorNotificationService: { showWarning: testState.showWarning },
 }));
 
 import { claudeAuthStateAtom } from '../../atoms/claudeAuthAtoms';
@@ -44,6 +49,7 @@ describe('initClaudeAuthListeners', () => {
     unsubscribe.mockReset();
     on.mockClear();
     testState.set.mockReset();
+    testState.showWarning.mockReset();
     authUpdate = undefined;
     Object.defineProperty(globalThis, 'window', {
       configurable: true,
@@ -84,5 +90,27 @@ describe('initClaudeAuthListeners', () => {
 
     expect(invoke).toHaveBeenCalledWith('claude-code:check-login', { forceRefresh: true });
     expect(testState.set).toHaveBeenCalledWith(claudeAuthStateAtom, loggedInState);
+  });
+
+  it('warns when an external auth update changes a prior logged-in state to logged-out', async () => {
+    initClaudeAuthListeners();
+    authUpdate?.(loggedInState);
+    authUpdate?.({
+      status: 'unknown',
+      source: 'claude-cli-auth-status',
+      checkedAt: null,
+    });
+    authUpdate?.({
+      status: 'logged-out',
+      source: 'claude-cli-auth-status',
+      checkedAt: 200,
+      authMethod: 'none',
+      apiProvider: 'firstParty',
+    });
+
+    expect(testState.showWarning).toHaveBeenCalledWith(
+      'Claude sign-in changed',
+      'Claude sign-in was changed outside Nimbalyst; run /login to restore your subscription session.',
+    );
   });
 });

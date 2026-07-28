@@ -8,6 +8,7 @@ import { getEnhancedPath } from './CLIManager';
 import { resolveClaudeCodeExecutablePath } from '@nimbalyst/runtime/electron/claudeCodeEnvironment';
 
 export type ClaudeAuthStateKind = 'logged-in' | 'logged-out' | 'check-failed' | 'unknown';
+export type ClaudeAuthStateTrigger = 'automatic' | 'focus' | 'manual' | 'usage-401-recovery' | 'usage-refresh';
 
 export interface ClaudeAuthState {
   status: ClaudeAuthStateKind;
@@ -253,9 +254,10 @@ export class ClaudeAuthStateService {
     return this.cachedState;
   }
 
-  async getState(options: { forceRefresh?: boolean } = {}): Promise<ClaudeAuthState> {
+  async getState(options: { forceRefresh?: boolean; trigger?: ClaudeAuthStateTrigger } = {}): Promise<ClaudeAuthState> {
+    const trigger = options.trigger ?? 'automatic';
     if (options.forceRefresh) {
-      this.invalidate();
+      this.invalidate(trigger);
     }
 
     const checkedAt = this.cachedState.checkedAt;
@@ -274,9 +276,9 @@ export class ClaudeAuthStateService {
     const generation = this.generation;
     const check = this.checkState().then((state) => {
       if (generation !== this.generation) {
-        return this.getState();
+        return this.getState({ trigger });
       }
-      return this.commitState(state);
+      return this.commitState(state, trigger);
     });
     this.inflightCheck = check;
 
@@ -289,9 +291,9 @@ export class ClaudeAuthStateService {
     }
   }
 
-  invalidate(): void {
+  invalidate(trigger: ClaudeAuthStateTrigger = 'automatic'): void {
     this.generation += 1;
-    this.commitState(unknownState());
+    this.commitState(unknownState(), trigger);
     this.inflightCheck = null;
   }
 
@@ -304,7 +306,7 @@ export class ClaudeAuthStateService {
     if (this.cachedState.status !== 'unknown') {
       return null;
     }
-    return this.getState();
+    return this.getState({ trigger: 'focus' });
   }
 
   private async checkState(): Promise<ClaudeAuthState> {
@@ -410,8 +412,14 @@ export class ClaudeAuthStateService {
     return this.checkFailed(checkedAt, detail);
   }
 
-  private commitState(state: ClaudeAuthState): ClaudeAuthState {
+  private commitState(state: ClaudeAuthState, trigger: ClaudeAuthStateTrigger): ClaudeAuthState {
+    const previousStatus = this.cachedState.status;
     this.cachedState = state;
+    if (previousStatus !== state.status) {
+      logger.main.info(
+        `[ClaudeAuthStateService] Auth state transition ${previousStatus} -> ${state.status} trigger=${trigger} at=${state.checkedAt ?? 'none'}`,
+      );
+    }
     this.publishState(state);
     return state;
   }

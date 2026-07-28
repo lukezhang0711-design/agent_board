@@ -11,6 +11,7 @@ import {
   type ClaudeAuthState,
   type ClaudeAuthStateKind,
 } from '../atoms/claudeAuthAtoms';
+import { errorNotificationService } from '../../services/ErrorNotificationService';
 
 export const CLAUDE_AUTH_STATE_UPDATED_EVENT = 'claude-auth:state-updated';
 const RUNTIME_AUTH_STATE_KEY = '__nimbalystClaudeAuthState';
@@ -113,10 +114,20 @@ async function requestClaudeAuthState(forceRefresh: boolean): Promise<ClaudeAuth
  */
 export function initClaudeAuthListeners(): () => void {
   const runtimeWindow = window as RuntimeAuthWindow;
+  let lastStableStatus: ClaudeAuthStateKind | null = null;
   runtimeWindow[RUNTIME_AUTH_REFRESH_KEY] = refreshClaudeAuthState;
   const unsubscribe = window.electronAPI.on('claude-auth:update', (payload: unknown) => {
     const state = normalizeAuthState(payload);
     if (state) {
+      if (lastStableStatus === 'logged-in' && state.status === 'logged-out') {
+        errorNotificationService.showWarning(
+          'Claude sign-in changed',
+          'Claude sign-in was changed outside Nimbalyst; run /login to restore your subscription session.',
+        );
+      }
+      if (state.status === 'logged-in' || state.status === 'logged-out') {
+        lastStableStatus = state.status;
+      }
       publishToRendererState(state);
     }
   });
