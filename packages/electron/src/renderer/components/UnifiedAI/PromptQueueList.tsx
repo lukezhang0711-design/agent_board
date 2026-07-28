@@ -18,6 +18,8 @@ interface PromptQueueListProps {
   onCancel: (id: string) => void;
   onEdit?: (id: string, prompt: string) => void;
   onSendNow?: (id: string, prompt: string) => void;
+  /** Explains why this session cannot interrupt its active turn right now. */
+  sendNowDisabledMessage?: string;
 }
 
 function AttachmentIndicator({ attachments }: { attachments: QueuedPromptAttachment[] }) {
@@ -54,7 +56,13 @@ function AttachmentIndicator({ attachments }: { attachments: QueuedPromptAttachm
 /**
 - PromptQueueList - Displays queued prompts waiting to be processed
  */
-export function PromptQueueList({ queue, onCancel, onEdit, onSendNow }: PromptQueueListProps) {
+export function PromptQueueList({
+  queue,
+  onCancel,
+  onEdit,
+  onSendNow,
+  sendNowDisabledMessage,
+}: PromptQueueListProps) {
   if (queue.length === 0) {
     return null;
   }
@@ -79,9 +87,11 @@ export function PromptQueueList({ queue, onCancel, onEdit, onSendNow }: PromptQu
             )}
             {onSendNow && (
               <button
-                className="prompt-queue-send-now shrink-0 w-5 h-5 flex items-center justify-center bg-transparent border-none rounded text-nim-muted cursor-pointer text-sm leading-none p-0 transition-all duration-150 hover:bg-nim-hover hover:text-nim-accent"
-                onClick={() => onSendNow(item.id, item.prompt)}
-                title="Interrupt and send now"
+                className="prompt-queue-send-now shrink-0 w-5 h-5 flex items-center justify-center bg-transparent border-none rounded text-nim-muted cursor-pointer text-sm leading-none p-0 transition-all duration-150 hover:bg-nim-hover hover:text-nim-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-nim-muted"
+                onClick={sendNowDisabledMessage ? undefined : () => onSendNow(item.id, item.prompt)}
+                disabled={!!sendNowDisabledMessage}
+                aria-label={sendNowDisabledMessage ?? 'Interrupt and send now'}
+                title={sendNowDisabledMessage ?? 'Interrupt and send now'}
                 type="button"
               >
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

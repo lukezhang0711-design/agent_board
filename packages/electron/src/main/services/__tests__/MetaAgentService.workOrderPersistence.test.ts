@@ -1674,6 +1674,8 @@ describe('MetaAgentService work-order persistence', () => {
     await service.interruptSession('head-session', workspacePath, {
       sessionId: child.sessionId,
     });
+    expect((service as any).aiService.stopSession).toHaveBeenCalledWith(child.sessionId, 'pause');
+    expect((service as any).aiService.stopSession).not.toHaveBeenCalledWith('head-session', expect.anything());
 
     const { rows } = await db.query<any>(
       `SELECT data FROM tracker_items WHERE source_ref = $1`,

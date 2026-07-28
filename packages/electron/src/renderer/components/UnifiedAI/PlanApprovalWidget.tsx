@@ -9,6 +9,7 @@ import {
   clearTranscriptToolWidgets,
   setTranscriptToolWidgets,
 } from '@nimbalyst/runtime/ui/AgentTranscript/contributions';
+import type { TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/transcript/TranscriptProjector';
 
 interface SubmittedPlanArgs {
   planId: string;
@@ -28,6 +29,20 @@ function getSubmittedPlanArgs(value: unknown): SubmittedPlanArgs | null {
   const args = value as Record<string, unknown>;
   if (typeof args.planId !== 'string' || args.planId.trim() === '') return null;
   return args as unknown as SubmittedPlanArgs;
+}
+
+/**
+ * The immediate-send control must only defer to the submitted-plan approval
+ * card. Ordinary planning-mode ExitPlanMode prompts retain their own behavior.
+ */
+export function hasPendingSubmittedPlanApproval(messages: readonly TranscriptViewMessage[]): boolean {
+  return messages.some((message) => {
+    const toolCall = message.toolCall;
+    return toolCall?.toolName === 'ExitPlanMode'
+      && toolCall.status === 'running'
+      && !toolCall.result
+      && getSubmittedPlanArgs(toolCall.arguments) !== null;
+  });
 }
 
 const SubmittedPlanApprovalCard: React.FC<{
@@ -119,6 +134,13 @@ const SubmittedPlanApprovalCard: React.FC<{
     await submitResponse({ approved: false, feedback: trimmedFeedback });
   }, [feedback, responseSubmitted, submitResponse]);
 
+  const handleDismiss = useCallback(async () => {
+    if (responseSubmitted) return;
+    // A plan dismissal is a durable denial with explicit feedback. The existing
+    // response path closes the waiter and returns this reason to the Head turn.
+    await submitResponse({ approved: false, feedback: 'User dismissed the plan.' });
+  }, [responseSubmitted, submitResponse]);
+
   const handleRetry = useCallback(async () => {
     if (!submittedResponse) return;
     await submitResponse(submittedResponse);
@@ -175,15 +197,26 @@ const SubmittedPlanApprovalCard: React.FC<{
             </button>
 
             {!showFeedbackInput ? (
-              <button
-                type="button"
-                data-testid="plan-approval-request-changes"
-                onClick={() => setShowFeedbackInput(true)}
-                disabled={isSubmitting}
-                className="w-full px-4 py-2 rounded-md border border-nim bg-nim-tertiary text-nim text-[13px] font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Request changes
-              </button>
+              <>
+                <button
+                  type="button"
+                  data-testid="plan-approval-request-changes"
+                  onClick={() => setShowFeedbackInput(true)}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2 rounded-md border border-nim bg-nim-tertiary text-nim text-[13px] font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Request changes
+                </button>
+                <button
+                  type="button"
+                  data-testid="plan-approval-dismiss"
+                  onClick={() => void handleDismiss()}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2 rounded-md border border-nim bg-transparent text-nim-muted text-[13px] font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Dismiss plan
+                </button>
+              </>
             ) : (
               <div className="flex flex-col gap-2">
                 <label htmlFor={`plan-change-feedback-${message.id}`} className="text-xs font-medium text-nim">
