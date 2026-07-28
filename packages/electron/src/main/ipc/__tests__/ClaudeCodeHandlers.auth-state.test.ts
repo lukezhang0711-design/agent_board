@@ -124,7 +124,7 @@ describe('ClaudeCodeHandlers shared authentication state', () => {
     await handler('claude-code:check-login')({}, { forceRefresh: true });
 
     expect(mocks.clearDetectorCache).toHaveBeenCalledOnce();
-    expect(mocks.getAuthState).toHaveBeenCalledOnce();
+    expect(mocks.getAuthState).toHaveBeenCalledWith({ trigger: 'manual' });
     expect(mocks.invalidateUsageCache).toHaveBeenCalledOnce();
     expect(mocks.refreshUsage).toHaveBeenCalledOnce();
   });

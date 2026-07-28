@@ -46,7 +46,9 @@ export function registerClaudeCodeHandlers() {
       if (options?.forceRefresh) {
         claudeCodeDetector.clearCache();
       }
-      const authState = await claudeAuthStateService.getState();
+      const authState = await claudeAuthStateService.getState({
+        trigger: options?.forceRefresh ? 'manual' : 'automatic',
+      });
       const isLoggedIn = authState.status === 'logged-in';
       if (options?.forceRefresh && isLoggedIn) {
         claudeUsageService.invalidateCache();

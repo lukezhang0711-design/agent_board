@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { execFileMock, resolveSharedExecutableMock, getAllWindowsMock } = vi.hoisted(() => ({
+const { execFileMock, resolveSharedExecutableMock, getAllWindowsMock, infoMock } = vi.hoisted(() => ({
   execFileMock: vi.fn(),
   resolveSharedExecutableMock: vi.fn(),
   getAllWindowsMock: vi.fn(),
+  infoMock: vi.fn(),
 }));
 
 vi.mock('child_process', () => ({
@@ -25,7 +26,7 @@ vi.mock('@nimbalyst/runtime/electron/claudeCodeEnvironment', () => ({
 vi.mock('../../utils/logger', () => ({
   logger: {
     main: {
-      info: vi.fn(),
+      info: infoMock,
       warn: vi.fn(),
       error: vi.fn(),
       debug: vi.fn(),
@@ -67,6 +68,7 @@ describe('ClaudeAuthStateService', () => {
     execFileMock.mockReset();
     resolveSharedExecutableMock.mockReset().mockReturnValue('/bundled/claude');
     getAllWindowsMock.mockReset().mockReturnValue([]);
+    infoMock.mockReset();
   });
 
   it('accepts logged-in only when auth method and API provider are present', async () => {
@@ -247,6 +249,29 @@ describe('ClaudeAuthStateService', () => {
     expect(publishState).toHaveBeenNthCalledWith(1, expect.objectContaining({ status: 'logged-in' }));
     expect(publishState).toHaveBeenNthCalledWith(2, expect.objectContaining({ status: 'unknown' }));
     expect(publishState).toHaveBeenNthCalledWith(3, expect.objectContaining({ status: 'logged-out' }));
+  });
+
+  it('logs each state transition with a trigger and timestamp without auth details', async () => {
+    const service = new ClaudeAuthStateService({
+      now: () => 123,
+      runAuthStatus: vi.fn()
+        .mockResolvedValueOnce(result(loggedInJson))
+        .mockResolvedValueOnce(result(loggedOutJson)),
+    });
+
+    await service.getState({ trigger: 'manual' });
+    await service.getState({ forceRefresh: true, trigger: 'manual' });
+
+    expect(infoMock).toHaveBeenCalledWith(
+      '[ClaudeAuthStateService] Auth state transition unknown -> logged-in trigger=manual at=123',
+    );
+    expect(infoMock).toHaveBeenCalledWith(
+      '[ClaudeAuthStateService] Auth state transition logged-in -> unknown trigger=manual at=none',
+    );
+    expect(infoMock).toHaveBeenCalledWith(
+      '[ClaudeAuthStateService] Auth state transition unknown -> logged-out trigger=manual at=123',
+    );
+    expect(infoMock.mock.calls.flat().join(' ')).not.toContain('person@example.com');
   });
 
   it('broadcasts state changes to every live renderer window', async () => {
