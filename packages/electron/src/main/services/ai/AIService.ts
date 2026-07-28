@@ -70,6 +70,7 @@ import {
   clearAIProviderOverrides,
   getWorkspaceState,
   getDefaultAIModel,
+  setDefaultAIModel,
   incrementCompletedSessionsWithTools,
   markCommunityPopupShown,
   normalizeAIProviderOverrides,
@@ -128,6 +129,10 @@ import {
 } from '../PGLiteQueuedPromptsStore';
 import { getQueuedPromptsStore } from '../RepositoryManager';
 import { CodexModelRefreshService } from '../CodexModelRefreshService';
+import {
+  CLAUDE_CODE_BUILTIN_MODEL_IDS,
+  refreshClaudeCodeModelCatalog,
+} from './claudeCodeModelCatalogRefresh';
 
 const execFileAsync = promisify(execFile);
 
@@ -557,48 +562,20 @@ export class AIService {
     return { success: true };
   }
 
-  /**
-   * Append any claude-code variants that were added after this user's
-   * `providerSettings['claude-code'].models` list was first persisted. Without
-   * this, `ai:getModels` filters out newly-introduced variants (e.g. the
-   * `opus-4-6` pinned variant) because they aren't in the saved list and
-   * there's no UI in ClaudeCodePanel to re-enable them.
-   *
-   * Each variant gets its own migration key so we can introduce new pinned
-   * variants incrementally without re-running prior insertions.
-   */
-  private migrateClaudeCodeModelList(): void {
-    this.migrateClaudeCodeVariantInsertion(
-      'migrations.claudeCodeOpus46Added',
-      'claude-code:opus-4-6',
-      'claude-code:opus',
-    );
-    this.migrateClaudeCodeVariantInsertion(
-      'migrations.claudeCodeOpus47Added',
-      'claude-code:opus-4-7',
-      'claude-code:opus',
-    );
-  }
-
-  private migrateClaudeCodeVariantInsertion(
-    migrationKey: string,
-    variantId: string,
-    insertAfterId: string,
-  ): void {
-    if (this.settingsStore!.get(migrationKey)) return;
-    const providerSettings = this.settingsStore!.get('providerSettings', {}) as any;
-    const claudeCode = providerSettings?.['claude-code'];
-    if (claudeCode && Array.isArray(claudeCode.models) && !claudeCode.models.includes(variantId)) {
-      const anchorIndex = claudeCode.models.indexOf(insertAfterId);
-      const insertAt = anchorIndex >= 0 ? anchorIndex + 1 : claudeCode.models.length;
-      claudeCode.models = [
-        ...claudeCode.models.slice(0, insertAt),
-        variantId,
-        ...claudeCode.models.slice(insertAt),
-      ];
-      this.settingsStore!.set('providerSettings', providerSettings);
-    }
-    this.settingsStore!.set(migrationKey, true);
+  private refreshClaudeCodeModelCatalog(): void {
+    refreshClaudeCodeModelCatalog({
+      getProviderSettings: () => this.settingsStore!.get('providerSettings', {}) as Record<string, unknown>,
+      setProviderSettings: (providerSettings) => this.settingsStore!.set('providerSettings', providerSettings),
+      getMigrations: () => this.settingsStore!.get('migrations', {}) as Record<string, unknown>,
+      setMigrations: (migrations) => this.settingsStore!.set('migrations', migrations),
+      getDefaultModel: getDefaultAIModel,
+      setDefaultModel: setDefaultAIModel,
+      logRefresh: ({ previousCount, nextCount, previousFingerprint, nextFingerprint }) => {
+        logger.main.info(
+          `[AIService] Refreshed Claude Agent model catalog (${previousCount}/${previousFingerprint} -> ${nextCount}/${nextFingerprint})`,
+        );
+      },
+    });
   }
 
   private getSettingsStore(): Store<Record<string, unknown>> {
@@ -625,7 +602,7 @@ export class AIService {
                 enabled: true,
                 testStatus: "idle",
                 installStatus: "not-installed",
-                models: ["claude-code:opus", "claude-code:opus-4-7", "claude-code:opus-4-6", "claude-code:sonnet", "claude-code:haiku"]
+                models: [...CLAUDE_CODE_BUILTIN_MODEL_IDS]
               },
               openai: {
                 enabled: false,
@@ -657,7 +634,7 @@ export class AIService {
           }
         }
       });
-      this.migrateClaudeCodeModelList();
+      this.refreshClaudeCodeModelCatalog();
     }
     return this.settingsStore;
   }
