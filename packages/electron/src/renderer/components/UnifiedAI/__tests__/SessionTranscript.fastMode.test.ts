@@ -14,12 +14,17 @@ vi.mock('@nimbalyst/runtime/store', () => ({
 vi.mock('@nimbalyst/runtime/ui/AgentTranscript/utils/messageTypeHelpers', () => ({
   isToolLikeMessage: () => false,
 }));
+vi.mock('../../CustomEditors/registry', () => ({
+  customEditorRegistry: { get: () => null },
+}));
 import {
-  CLAUDE_CLI_FAST_MODE_CONFIRMATION_KEY,
-  hasConfirmedClaudeCliFastMode,
+  CLAUDE_CLI_FAST_MODE_CONFIRMATION_SETTING,
+  isClaudeCliFastModeConfirmationAccepted,
   isClaudeCliFastModeSupportedModel,
+  loadClaudeCliFastModeConfirmation,
   parseClaudeCliFastModeOutput,
-  rememberClaudeCliFastModeConfirmation,
+  persistClaudeCliFastModeConfirmation,
+  shouldShowClaudeCliFastModeToggle,
 } from '../SessionTranscript';
 
 describe('Claude Code CLI Fast mode toolbar policy', () => {
@@ -29,6 +34,14 @@ describe('Claude Code CLI Fast mode toolbar policy', () => {
     expect(isClaudeCliFastModeSupportedModel('claude-code-cli:sonnet')).toBe(false);
     expect(isClaudeCliFastModeSupportedModel('claude-code:opus')).toBe(true);
     expect(isClaudeCliFastModeSupportedModel(undefined)).toBe(false);
+  });
+
+  it('renders only for an idle, committed claude-code-cli Opus session', () => {
+    expect(shouldShowClaudeCliFastModeToggle('claude-code-cli', 'claude-code-cli:opus', true, true)).toBe(true);
+    expect(shouldShowClaudeCliFastModeToggle('claude-code', 'claude-code:opus', true, true)).toBe(false);
+    expect(shouldShowClaudeCliFastModeToggle('claude-code-cli', 'claude-code-cli:sonnet', true, true)).toBe(false);
+    expect(shouldShowClaudeCliFastModeToggle('claude-code-cli', 'claude-code-cli:opus', false, true)).toBe(false);
+    expect(shouldShowClaudeCliFastModeToggle('claude-code-cli', 'claude-code-cli:opus', true, false)).toBe(false);
   });
 });
 
@@ -47,16 +60,14 @@ describe('Claude Code CLI Fast mode output', () => {
 });
 
 describe('Claude Code CLI Fast mode confirmation', () => {
-  it('records approval once so later enables do not need another confirmation', () => {
-    const storage = new Map<string, string>();
-    const fakeStorage = {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => storage.set(key, value),
-    };
-
-    expect(hasConfirmedClaudeCliFastMode(fakeStorage)).toBe(false);
-    rememberClaudeCliFastModeConfirmation(fakeStorage);
-    expect(storage.get(CLAUDE_CLI_FAST_MODE_CONFIRMATION_KEY)).toBe('true');
-    expect(hasConfirmedClaudeCliFastMode(fakeStorage)).toBe(true);
+  it('loads and persists a single app-settings acknowledgement', async () => {
+    const invoke = vi.fn(async (channel: string) => channel === 'app-settings:get' ? true : undefined);
+    expect(CLAUDE_CLI_FAST_MODE_CONFIRMATION_SETTING).toBe('claudeCliFastModeConfirmationAccepted');
+    expect(await loadClaudeCliFastModeConfirmation(invoke)).toBe(true);
+    await persistClaudeCliFastModeConfirmation(invoke);
+    expect(invoke).toHaveBeenNthCalledWith(1, 'app-settings:get', CLAUDE_CLI_FAST_MODE_CONFIRMATION_SETTING);
+    expect(invoke).toHaveBeenNthCalledWith(2, 'app-settings:set', CLAUDE_CLI_FAST_MODE_CONFIRMATION_SETTING, true);
+    expect(isClaudeCliFastModeConfirmationAccepted(undefined)).toBe(false);
+    expect(isClaudeCliFastModeConfirmationAccepted('true')).toBe(false);
   });
 });
