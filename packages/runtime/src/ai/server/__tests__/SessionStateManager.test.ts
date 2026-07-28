@@ -5,9 +5,27 @@ import type { SessionStateEvent } from '../types/SessionState';
 class FakeDatabaseWorker {
   public queries: Array<{ sql: string; params?: any[] }> = [];
   private workspaceIds = new Map<string, string>();
+  private sessions = new Map<string, {
+    status: string;
+    metadata: Record<string, unknown>;
+  }>();
 
   setWorkspace(sessionId: string, workspaceId: string): void {
     this.workspaceIds.set(sessionId, workspaceId);
+  }
+
+  setSession(sessionId: string, session: {
+    status: string;
+    metadata?: Record<string, unknown>;
+  }): void {
+    this.sessions.set(sessionId, {
+      status: session.status,
+      metadata: session.metadata ?? {},
+    });
+  }
+
+  getSession(sessionId: string): { status: string; metadata: Record<string, unknown> } | undefined {
+    return this.sessions.get(sessionId);
   }
 
   async query<T = any>(sql: string, params?: any[]): Promise<{ rows: T[] }> {
@@ -17,6 +35,30 @@ class FakeDatabaseWorker {
       const sessionId = params?.[0];
       const workspaceId = typeof sessionId === 'string' ? this.workspaceIds.get(sessionId) ?? null : null;
       return { rows: workspaceId ? [{ workspace_id: workspaceId } as T] : [] };
+    }
+
+    if (sql.includes("FROM ai_sessions WHERE status = 'running'")) {
+      return {
+        rows: Array.from(this.sessions.entries())
+          .filter(([, session]) => session.status === 'running')
+          .map(([id, session]) => ({ id, last_activity: new Date(), metadata: session.metadata } as T)),
+      };
+    }
+
+    if (sql.includes('UPDATE ai_sessions SET status = $1') && params) {
+      const status = params[0];
+      const sessionId = params[params.length - 1];
+      const existing = typeof sessionId === 'string' ? this.sessions.get(sessionId) : undefined;
+      if (existing && typeof status === 'string') {
+        const metadataParam = params.length === 3 ? params[1] : undefined;
+        this.sessions.set(sessionId, {
+          status,
+          metadata: typeof metadataParam === 'string'
+            ? JSON.parse(metadataParam)
+            : existing.metadata,
+        });
+      }
+      return { rows: [] };
     }
 
     return { rows: [] };
@@ -105,5 +147,32 @@ describe('SessionStateManager', () => {
     expect(database.queries.some(({ sql, params }) =>
       sql.includes('UPDATE ai_sessions SET status = $1') && params?.[0] === 'idle' && params?.[1] === 'session-missing'
     )).toBe(true);
+  });
+
+  it('marks an untracked running session interrupted during startup recovery', async () => {
+    const recoveryManager = new SessionStateManager();
+    const recoveryDatabase = new FakeDatabaseWorker();
+    recoveryDatabase.setSession('stale-session', {
+      status: 'running',
+      metadata: { phase: 'implementing' },
+    });
+    const listener = vi.fn<(event: SessionStateEvent) => void>();
+    recoveryManager.subscribe(listener);
+
+    recoveryManager.setDatabase(recoveryDatabase);
+    await recoveryManager.initialize();
+
+    expect(recoveryDatabase.getSession('stale-session')).toEqual({
+      status: 'idle',
+      metadata: {
+        phase: 'implementing',
+        interruptedByHead: true,
+      },
+    });
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'session:interrupted',
+      sessionId: 'stale-session',
+    }));
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 });
