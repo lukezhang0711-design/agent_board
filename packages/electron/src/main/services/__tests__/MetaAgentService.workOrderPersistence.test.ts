@@ -107,6 +107,7 @@ vi.mock('../TrackerSchemaService', () => ({
 
 import { AgentMessagesRepository, AISessionsRepository } from '@nimbalyst/runtime';
 import { resolveEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
 import { SessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { SQLiteDatabase } from '../../database/sqlite/SQLiteDatabase';
 import { createPGLiteAgentMessagesStore } from '../PGLiteAgentMessagesStore';
@@ -123,6 +124,51 @@ describe('MetaAgentService work-order persistence', () => {
 
   const parseStoredJson = <T = Record<string, unknown>>(value: unknown): T =>
     (typeof value === 'string' ? JSON.parse(value) : value) as T;
+
+  async function readTestPlanApprovalState(sessionId: string, promptId: string): Promise<any | null> {
+    const aliases = getCodexToolLookupAliases(promptId);
+    const requestId = aliases[aliases.length - 1] ?? promptId;
+    const matches = (candidate: unknown) => {
+      if (typeof candidate !== 'string') return false;
+      const candidateAliases = getCodexToolLookupAliases(candidate);
+      return (candidateAliases[candidateAliases.length - 1] ?? candidate) === requestId;
+    };
+    const { rows } = await db.query<{ content: unknown }>(
+      `SELECT content FROM ai_agent_messages WHERE session_id = $1 ORDER BY created_at, id`,
+      [sessionId],
+    );
+    let submitted = false;
+    let response: any = null;
+    let delivery: any = null;
+    let closed = false;
+    for (const row of rows) {
+      const content = parseStoredJson<any>(row.content);
+      if (content.type === 'nimbalyst_tool_use' && content.name === 'ExitPlanMode' && matches(content.id)) {
+        submitted = true;
+      } else if (content.type === 'exit_plan_mode_response' && matches(content.requestId)) {
+        response = content;
+      } else if (content.type === 'plan_approval_delivery' && matches(content.requestId)) {
+        delivery = content;
+      } else if (content.type === 'nimbalyst_tool_result' && matches(content.tool_use_id)) {
+        closed = true;
+      }
+    }
+    if (!submitted && !response && !delivery && !closed) return null;
+    const decision = response?.approved
+      ? 'approved'
+      : response
+        ? response.feedback === 'User dismissed the plan.' ? 'dismissed' : 'rejected'
+        : undefined;
+    return {
+      requestId,
+      status: closed ? 'closed' : delivery ? 'delivered' : response ? 'responded' : 'submitted',
+      decision,
+      feedback: response?.feedback,
+      respondedAt: response?.respondedAt,
+      respondedBy: response?.respondedBy,
+      deliveryMethod: delivery?.method,
+    };
+  }
 
   async function waitForPlanApprovalPrompt(excludedRequestIds: string[] = []): Promise<{
     requestId: string;
@@ -180,6 +226,7 @@ describe('MetaAgentService work-order persistence', () => {
     metaSessionId: string,
     workspaceId: string,
     args: Record<string, unknown>,
+    signal?: AbortSignal,
   ) => Promise<string>> {
     await service.start((service as any).aiService);
     expect(testState.metaAgentToolFns?.submitPlan).toBeTypeOf('function');
@@ -234,9 +281,38 @@ describe('MetaAgentService work-order persistence', () => {
       title: 'Head session',
       agentRole: 'meta-agent',
     } as any);
+    const getPlanApprovalState = vi.fn(readTestPlanApprovalState);
     (service as any).aiService = {
-      queuePromptForSession: vi.fn(),
-      triggerQueuedPromptProcessingForSession: vi.fn(),
+      queuePromptForSession: vi.fn(async (_sessionId: string, prompt: string) => ({
+        id: 'revived-plan-approval',
+        prompt,
+        createdAt: Date.now(),
+      })),
+      triggerQueuedPromptProcessingForSession: vi.fn().mockResolvedValue(true),
+      getPlanApprovalState,
+      markPlanApprovalDelivered: vi.fn(async (
+        sessionId: string,
+        requestId: string,
+        method: 'direct' | 'revive',
+      ) => {
+        const current = await readTestPlanApprovalState(sessionId, requestId);
+        if (current?.status === 'responded') {
+          await AgentMessagesRepository.create({
+            sessionId,
+            source: 'nimbalyst',
+            direction: 'output',
+            content: JSON.stringify({
+              type: 'plan_approval_delivery',
+              requestId,
+              method,
+              deliveredAt: Date.now(),
+            }),
+            createdAt: new Date(),
+            hidden: true,
+          });
+        }
+        return readTestPlanApprovalState(sessionId, requestId);
+      }),
     };
   });
 
@@ -1283,6 +1359,118 @@ describe('MetaAgentService work-order persistence', () => {
     ]));
   });
 
+  it('revives a dead Head turn after a durable rejection is recorded', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const deadTurn = new AbortController();
+    const submission = submitPlan('head-session', workspacePath, {
+      title: 'Revive the rejected plan',
+      planItems: ['Record the response', 'Resume Head with revision feedback'],
+      workOrderCount: 2,
+      risks: 'The original MCP tool turn may be gone before the response arrives',
+    }, deadTurn.signal);
+    const prompt = await waitForPlanApprovalPrompt();
+
+    deadTurn.abort();
+    await persistPlanApprovalResponse(
+      prompt.requestId,
+      false,
+      'Split persistence from delivery.',
+    );
+    await submission;
+
+    expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
+      'head-session',
+      expect.stringContaining('Split persistence from delivery.'),
+      undefined,
+      undefined,
+      'child_session_event',
+      expect.stringContaining(prompt.requestId),
+    );
+    expect((service as any).aiService.triggerQueuedPromptProcessingForSession)
+      .toHaveBeenCalledWith('head-session', workspacePath, true);
+    const { rows } = await db.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND content LIKE '%"type":"plan_approval_delivery"%'`,
+      ['head-session'],
+    );
+    expect(rows.map((row) => parseStoredJson<any>(row.content))).toContainEqual(
+      expect.objectContaining({
+        requestId: prompt.requestId,
+        method: 'revive',
+      }),
+    );
+  });
+
+  it.each([
+    ['Claude', 'claude-code', (requestId: string) => requestId],
+    ['Codex', 'openai-codex', toCodexTranscriptRequestId],
+  ])(
+    '%s closes rejection → revive → revision → approval exactly once',
+    async (_channel, provider, responseIdFor) => {
+      await db.query(`UPDATE ai_sessions SET provider = $1 WHERE id = $2`, [
+        provider,
+        'head-session',
+      ]);
+      const submitPlan = await getSubmitPlanTool();
+      const deadTurn = new AbortController();
+      const rejectedSubmission = submitPlan('head-session', workspacePath, {
+        title: `${provider} initial plan`,
+        planItems: ['Submit a plan that needs revision'],
+        workOrderCount: 1,
+        risks: 'The approval turn will end before the rejection arrives',
+      }, deadTurn.signal);
+      const rejectedPrompt = await waitForPlanApprovalPrompt();
+      deadTurn.abort();
+      await persistPlanApprovalResponse(
+        responseIdFor(rejectedPrompt.requestId),
+        false,
+        'Add an explicit recovery step.',
+      );
+      const rejected = JSON.parse(await rejectedSubmission);
+      expect(rejected).toMatchObject({
+        approved: false,
+        deliveryMethod: 'revive',
+      });
+      await expect(readTestPlanApprovalState(
+        'head-session',
+        rejectedPrompt.requestId,
+      )).resolves.toMatchObject({
+        status: 'closed',
+        decision: 'rejected',
+        deliveryMethod: 'revive',
+      });
+
+      const approvedSubmission = submitPlan('head-session', workspacePath, {
+        title: `${provider} revised plan`,
+        planItems: ['Persist response', 'Recover delivery', 'Close the card'],
+        workOrderCount: 2,
+        risks: 'A duplicate path must not deliver twice',
+      });
+      const approvedPrompt = await waitForPlanApprovalPrompt([rejectedPrompt.requestId]);
+      await persistPlanApprovalResponse(responseIdFor(approvedPrompt.requestId), true);
+      const approved = JSON.parse(await approvedSubmission);
+      expect(approved).toMatchObject({
+        planId: rejected.planId,
+        approved: true,
+        status: 'ready-for-development',
+        deliveryMethod: 'direct',
+      });
+      await expect(readTestPlanApprovalState(
+        'head-session',
+        approvedPrompt.requestId,
+      )).resolves.toMatchObject({
+        status: 'closed',
+        decision: 'approved',
+        deliveryMethod: 'direct',
+      });
+      expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledTimes(1);
+      expect((service as any).aiService.triggerQueuedPromptProcessingForSession)
+        .toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('returns change feedback, accepts a revision, and closes the original approval card', async () => {
     const submitPlan = await getSubmitPlanTool();
     const firstSubmission = submitPlan('head-session', workspacePath, {
@@ -1468,10 +1656,15 @@ describe('MetaAgentService work-order persistence', () => {
     });
     const waitSpy = vi.spyOn(service as any, 'waitForPlanApprovalResponse')
       .mockImplementationOnce(() => staleWaiter)
-      .mockResolvedValueOnce({
-        approved: true,
-        respondedAt: Date.now(),
-        respondedBy: 'desktop',
+      .mockImplementationOnce(async (...callArgs: unknown[]) => {
+        const requestId = String(callArgs[1]);
+        await persistPlanApprovalResponse(requestId, true);
+        return {
+          approved: true,
+          decision: 'approved',
+          respondedAt: Date.now(),
+          respondedBy: 'desktop',
+        };
       });
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 

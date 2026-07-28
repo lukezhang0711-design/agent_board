@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import {
   ExitPlanModeWidget,
   type CustomToolWidgetProps,
@@ -10,6 +10,10 @@ import {
   setTranscriptToolWidgets,
 } from '@nimbalyst/runtime/ui/AgentTranscript/contributions';
 import type { TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/transcript/TranscriptProjector';
+import {
+  planApprovalStateAtom,
+  refreshPlanApprovalStateAtom,
+} from '../../store/atoms/sessions';
 
 interface SubmittedPlanArgs {
   planId: string;
@@ -23,6 +27,7 @@ const PLAN_APPROVAL_WIDGET_SOURCE = 'nimbalyst:electron-plan-approval';
 // Match the durable interactive-prompt polling backstop. A successful IPC write
 // is not a confirmation that the waiting Head turn consumed it.
 const DURABLE_CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
+const DURABLE_STATE_POLL_INTERVAL_MS = 500;
 
 function getSubmittedPlanArgs(value: unknown): SubmittedPlanArgs | null {
   if (!value || typeof value !== 'object') return null;
@@ -68,6 +73,12 @@ const SubmittedPlanApprovalCard: React.FC<{
     : 'No risks provided.';
   const toolResult = toolCall.result ?? '';
   const isPending = toolResult === '';
+  const approvalStateKey = useMemo(() => ({
+    sessionId,
+    promptId: requestId ?? '',
+  }), [requestId, sessionId]);
+  const durableState = useAtomValue(planApprovalStateAtom(approvalStateKey));
+  const refreshPlanApprovalState = useSetAtom(refreshPlanApprovalStateAtom);
 
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -79,12 +90,51 @@ const SubmittedPlanApprovalCard: React.FC<{
     feedback?: string;
   } | null>(null);
   const feedbackInputRef = useRef<HTMLTextAreaElement>(null);
+  const stateReadErrorLoggedRef = useRef(false);
 
   useEffect(() => {
     if (showFeedbackInput) feedbackInputRef.current?.focus();
   }, [showFeedbackInput]);
 
+  const refreshDurableState = useCallback(async () => {
+    if (!requestId || !host?.workspacePath || !window.electronAPI?.invoke) return;
+    try {
+      await refreshPlanApprovalState({
+        sessionId,
+        promptId: requestId,
+        workspacePath: host.workspacePath,
+      });
+      stateReadErrorLoggedRef.current = false;
+    } catch (error) {
+      if (!stateReadErrorLoggedRef.current) {
+        console.error('[PlanApprovalWidget] Failed to read durable approval state:', error);
+        stateReadErrorLoggedRef.current = true;
+      }
+    }
+  }, [host?.workspacePath, refreshPlanApprovalState, requestId, sessionId]);
+
+  useEffect(() => {
+    if (
+      !requestId
+      || !host?.workspacePath
+      || !isPending
+      || (durableState !== null && durableState.status !== 'submitted')
+    ) {
+      return;
+    }
+    void refreshDurableState();
+    const interval = window.setInterval(
+      () => void refreshDurableState(),
+      DURABLE_STATE_POLL_INTERVAL_MS,
+    );
+    return () => window.clearInterval(interval);
+  }, [durableState, host?.workspacePath, isPending, refreshDurableState, requestId]);
+
   const completedResult = useMemo<'approved' | 'changes-requested' | null>(() => {
+    if (durableState?.decision === 'approved') return 'approved';
+    if (durableState?.decision === 'rejected' || durableState?.decision === 'dismissed') {
+      return 'changes-requested';
+    }
     if (!toolResult) return null;
     const normalized = toolResult.toLowerCase();
     if (normalized.includes('continue planning') || normalized.includes('denied')) {
@@ -92,20 +142,22 @@ const SubmittedPlanApprovalCard: React.FC<{
     }
     if (normalized.includes('approved')) return 'approved';
     return null;
-  }, [toolResult]);
+  }, [durableState?.decision, toolResult]);
   const displayResult = completedResult;
+  const hasRecordedResponse = durableState !== null && durableState.status !== 'submitted';
+  const awaitingResponse = isPending && !hasRecordedResponse;
 
   useEffect(() => {
-    if (!responseSubmitted || !isPending || displayResult) return;
+    if (!responseSubmitted || !awaitingResponse || displayResult) return;
     const timeout = window.setTimeout(
       () => setConfirmationTimedOut(true),
       DURABLE_CONFIRMATION_TIMEOUT_MS,
     );
     return () => window.clearTimeout(timeout);
-  }, [displayResult, isPending, responseSubmitted]);
+  }, [awaitingResponse, displayResult, responseSubmitted]);
 
   const submitResponse = useCallback(async (response: { approved: boolean; feedback?: string }) => {
-    if (!host || !requestId || !isPending || isSubmitting) return;
+    if (!host || !requestId || !awaitingResponse || isSubmitting) return;
     setIsSubmitting(true);
     try {
       if (response.approved) {
@@ -113,6 +165,7 @@ const SubmittedPlanApprovalCard: React.FC<{
       } else {
         await host.exitPlanModeDeny(requestId, response.feedback);
       }
+      await refreshDurableState();
       setSubmittedResponse(response);
       setResponseSubmitted(true);
       setConfirmationTimedOut(false);
@@ -121,7 +174,7 @@ const SubmittedPlanApprovalCard: React.FC<{
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, isPending, isSubmitting, requestId]);
+  }, [awaitingResponse, host, isSubmitting, refreshDurableState, requestId]);
 
   const handleApprove = useCallback(async () => {
     if (responseSubmitted) return;
@@ -184,7 +237,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         </div>
 
-        {!displayResult && isPending && host && requestId && !responseSubmitted && (
+        {!displayResult && awaitingResponse && host && requestId && !responseSubmitted && (
           <div className="mt-4 flex flex-col gap-2">
             <button
               type="button"
@@ -269,13 +322,21 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         )}
 
-        {!displayResult && isPending && responseSubmitted && !confirmationTimedOut && (
+        {displayResult && isPending && hasRecordedResponse && (
+          <div className="mt-4 text-xs text-nim-muted">
+            {displayResult === 'approved'
+              ? 'Response recorded. Head is preparing to start work…'
+              : 'Response recorded. Head is preparing the revision…'}
+          </div>
+        )}
+
+        {!displayResult && awaitingResponse && responseSubmitted && !confirmationTimedOut && (
           <div className="mt-4 text-xs text-nim-muted">
             Response submitted. Waiting for durable confirmation…
           </div>
         )}
 
-        {!displayResult && isPending && responseSubmitted && confirmationTimedOut && (
+        {!displayResult && awaitingResponse && responseSubmitted && confirmationTimedOut && (
           <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs text-nim">
             <span>Response was saved, but confirmation did not arrive. Retry the response.</span>
             <button
@@ -290,11 +351,11 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         )}
 
-        {!displayResult && isPending && !requestId && !responseSubmitted && (
+        {!displayResult && awaitingResponse && !requestId && !responseSubmitted && (
           <div className="mt-4 text-xs text-nim-muted">Waiting for a durable approval ID…</div>
         )}
 
-        {!displayResult && isPending && requestId && !host && !responseSubmitted && (
+        {!displayResult && awaitingResponse && requestId && !host && !responseSubmitted && (
           <div className="mt-4 text-xs text-nim-muted">Waiting for an active approval surface…</div>
         )}
       </div>
