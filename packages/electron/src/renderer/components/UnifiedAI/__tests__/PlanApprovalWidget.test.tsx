@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createStore, Provider as JotaiProvider } from 'jotai';
 import {
   noopInteractiveWidgetHost,
@@ -165,6 +165,41 @@ describe('PlanApprovalWidget', () => {
         'Split the persistence and dispatch work orders.',
       );
     });
+  });
+
+  it('shows a retryable failure when a submitted rejection is not durably confirmed', async () => {
+    vi.useFakeTimers();
+    const exitPlanModeDeny = vi.fn().mockResolvedValue(undefined);
+    renderWidget(planArguments, { exitPlanModeDeny });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Requested changes'), {
+        target: { value: 'Split the persistence and dispatch work orders.' },
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(exitPlanModeDeny).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+    });
+    expect(screen.getByText('Response was saved, but confirmation did not arrive. Retry the response.')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('plan-approval-retry-response'));
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(exitPlanModeDeny).toHaveBeenCalledTimes(2));
+    expect(exitPlanModeDeny).toHaveBeenLastCalledWith(
+      compositeRequestId,
+      'Split the persistence and dispatch work orders.',
+    );
   });
 
   it('leaves ordinary ExitPlanMode prompts unchanged when planId is absent', () => {

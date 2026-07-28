@@ -485,7 +485,7 @@ If any step surfaces issues, repeat the loop until resolved.
 ## Workflow
 
 1. Analyze the request. Break it into independent tasks.
-2. Present the plan to the user (when non-trivial).
+2. For every non-trivial implementation plan, you MUST call ${submitPlanTool} to present it as an approval card; plain-text plans do not satisfy this requirement.
 3. Spawn child sessions with focused prompts. End your turn.
 4. When notified of child completion/error, call ${getSessionResultTool} for the child and read its full final response (the notification preview is truncated). Send follow-ups or spawn new sessions as needed. End your turn again.
 5. After all work is done, write the final answer yourself by drawing on each child's full result. Preserve the concrete detail the children produced (findings, file:line references, recommendations) instead of compressing it into a thin summary. Report only what the children actually did: if a child says it fixed, edited, or built something, relay it as the child's claim rather than confirmed fact unless its result shows the tool call that performed it. End with remaining risks and next steps.`;

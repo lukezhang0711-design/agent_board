@@ -1279,7 +1279,7 @@ describe('MetaAgentService work-order persistence', () => {
     ]));
   });
 
-  it('returns change feedback, keeps review status, and updates the same plan card', async () => {
+  it('returns change feedback, accepts a revision, and closes the original approval card', async () => {
     const submitPlan = await getSubmitPlanTool();
     const firstSubmission = submitPlan('head-session', workspacePath, {
       title: 'Initial dispatch plan',
@@ -1340,13 +1340,12 @@ describe('MetaAgentService work-order persistence', () => {
     });
     const secondPrompt = await waitForPlanApprovalPrompt([firstPrompt.requestId]);
     expect(secondPrompt.input.planId).toBe(firstResult.planId);
-    await persistPlanApprovalResponse(secondPrompt.requestId, false, 'Add the timeout behavior.');
+    await persistPlanApprovalResponse(secondPrompt.requestId, true);
     const secondResult = JSON.parse(await secondSubmission);
     expect(secondResult).toMatchObject({
-      approved: false,
+      approved: true,
       planId: firstResult.planId,
-      status: 'in-review',
-      feedback: 'Add the timeout behavior.',
+      status: 'ready-for-development',
     });
 
     const { rows: planRows } = await db.query<any>(
@@ -1359,7 +1358,7 @@ describe('MetaAgentService work-order persistence', () => {
     expect(planRows[0].id).toBe(firstResult.planId);
     expect(parseStoredJson<any>(planRows[0].data)).toMatchObject({
       title: 'Revised dispatch plan',
-      status: 'in-review',
+      status: 'ready-for-development',
       planItems: ['Persist approval', 'Authorize dispatch'],
       workOrderCount: 2,
       risks: 'Concurrent responses could cross submissions',

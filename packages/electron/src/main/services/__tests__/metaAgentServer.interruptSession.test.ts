@@ -131,6 +131,9 @@ describe('interrupt_session meta-agent tool registration', () => {
     expect(prompt).toContain(
       'Investigation sessions may be dispatched freely; implementation sessions require an approved plan',
     );
+    expect(prompt).toContain(
+      'MUST call `mcp__nimbalyst-meta-agent__submit_plan` to present it as an approval card; plain-text plans do not satisfy this requirement.',
+    );
     expect(prompt).toContain('Keep thinking effort high by default');
   });
 
