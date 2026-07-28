@@ -22,7 +22,7 @@ import { AgentTranscriptPanel } from '@nimbalyst/runtime/ui/AgentTranscript/comp
 import { ClaudeCliTerminalStrip } from './ClaudeCliTerminalStrip';
 import { ClaudeCliNotInstalledNotice } from './ClaudeCliNotInstalledNotice';
 import { STOP_CLEAR_QUEUE_STATUS, getStopRequestStatusMessage } from './stopCopy';
-import { registerPlanApprovalWidget } from './PlanApprovalWidget';
+import { hasPendingSubmittedPlanApproval, registerPlanApprovalWidget } from './PlanApprovalWidget';
 import type { InteractiveWidgetHost, PermissionScope } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets/InteractiveWidgetHost';
 import type { TodoItem } from '@nimbalyst/runtime/ui/AgentTranscript/types';
 import { isToolLikeMessage } from '@nimbalyst/runtime/ui/AgentTranscript/utils/messageTypeHelpers';
@@ -554,6 +554,10 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   // Use derived atoms to avoid re-rendering on unrelated changes
   // ============================================================
   const messages = useAtomValue(sessionMessagesAtom(sessionId));
+  const isAwaitingSubmittedPlanApproval = useMemo(
+    () => hasPendingSubmittedPlanApproval(messages),
+    [messages],
+  );
   const provider = useAtomValue(sessionProviderAtom(sessionId));
   const tokenUsage = useAtomValue(sessionTokenUsageAtom(sessionId));
   const isDataLoading = useAtomValue(sessionLoadingAtom(sessionId));
@@ -2931,6 +2935,9 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         onCancel={handleCancelQueuedPrompt}
         onEdit={handleEditQueuedPrompt}
         onSendNow={isLoading && !isClaudeCliTerminalSession(provider) ? handleSendNowQueuedPrompt : undefined}
+        sendNowDisabledMessage={isAwaitingSubmittedPlanApproval
+          ? 'Please approve or reject the plan first.'
+          : undefined}
       />
 
       {(isLoading || showStopAndClearQueue || cancelFeedback.phase !== 'idle') && (

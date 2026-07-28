@@ -12,6 +12,7 @@ import type { TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/transcr
 import { getTranscriptToolWidget } from '@nimbalyst/runtime/ui/AgentTranscript/contributions';
 import {
   PlanApprovalWidget,
+  hasPendingSubmittedPlanApproval,
   registerPlanApprovalWidget,
   unregisterPlanApprovalWidget,
 } from '../PlanApprovalWidget';
@@ -99,6 +100,7 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getByText('A stale response could approve the wrong plan.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Request changes' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Dismiss plan' })).toBeTruthy();
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
   });
 
@@ -165,6 +167,31 @@ describe('PlanApprovalWidget', () => {
         'Split the persistence and dispatch work orders.',
       );
     });
+  });
+
+  it('dismisses a submitted plan through the durable denial route', async () => {
+    const exitPlanModeDeny = vi.fn().mockResolvedValue(undefined);
+    renderWidget(planArguments, { exitPlanModeDeny });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss plan' }));
+
+    await waitFor(() => {
+      expect(exitPlanModeDeny).toHaveBeenCalledWith(
+        compositeRequestId,
+        'User dismissed the plan.',
+      );
+    });
+  });
+
+  it('recognizes only an unresolved submitted plan as an interrupt guard', () => {
+    const pendingPlan = makeMessage(planArguments);
+    const completedPlan = makeMessage(planArguments);
+    completedPlan.toolCall!.result = JSON.stringify({ approved: false });
+    const ordinaryExitPlanMode = makeMessage({ planFilePath: 'docs/plan.md' });
+
+    expect(hasPendingSubmittedPlanApproval([pendingPlan])).toBe(true);
+    expect(hasPendingSubmittedPlanApproval([completedPlan])).toBe(false);
+    expect(hasPendingSubmittedPlanApproval([ordinaryExitPlanMode])).toBe(false);
   });
 
   it('shows a retryable failure when a submitted rejection is not durably confirmed', async () => {
