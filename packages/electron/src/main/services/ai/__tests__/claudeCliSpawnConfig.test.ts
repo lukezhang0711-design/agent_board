@@ -465,6 +465,13 @@ describe('resolveClaudeCliModelArg', () => {
     expect(resolveClaudeCliModelArg('claude-code-cli:opus-4-6')).toBe('opus');
   });
 
+  it('maps explicit 5-series variants to complete CLI model IDs without changing legacy Opus collapse rules', () => {
+    expect(resolveClaudeCliModelArg('claude-code-cli:opus-5')).toBe('claude-opus-5');
+    expect(resolveClaudeCliModelArg('claude-code-cli:opus-5-1m')).toBe('claude-opus-5[1m]');
+    expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5')).toBe('claude-sonnet-5');
+    expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5-1m')).toBe('claude-sonnet-5[1m]');
+  });
+
   it('passes the fable variant through as the CLI `fable` alias', () => {
     expect(resolveClaudeCliModelArg('claude-code-cli:fable')).toBe('fable');
     expect(resolveClaudeCliModelArg('claude-code-cli:fable-5')).toBe('fable');

@@ -60,6 +60,33 @@ import { getSyncProvider, isDesktopTrulyAway } from '../SyncManager';
 import { AISessionsRepository } from '@nimbalyst/runtime';
 import type { AssembledAssistantMessage } from './claudeCliObservation/claudeApiMessageAssembler';
 
+/** Read the actual model already attached to an assembled upstream SSE turn. */
+export function extractResolvedClaudeCliModel(message: unknown): string | null {
+  if (!message || typeof message !== 'object') return null;
+  const model = (message as { model?: unknown }).model;
+  const normalized = typeof model === 'string' ? model.trim() : '';
+  return normalized || null;
+}
+
+/** Build the shallow metadata update the session store merges durably. */
+export function mergeResolvedModelMetadata(
+  currentMetadata: Record<string, unknown> | undefined,
+  resolvedModel: string,
+): Record<string, unknown> {
+  return { ...(currentMetadata ?? {}), resolvedModel };
+}
+
+async function persistResolvedClaudeCliModel(sessionId: string, resolvedModel: string): Promise<void> {
+  try {
+    await AISessionsRepository.updateMetadata(sessionId, {
+      metadata: mergeResolvedModelMetadata(undefined, resolvedModel),
+    });
+  } catch (err) {
+    // Informative receipt only: transcript observation must keep running.
+    console.warn('[ClaudeCliObservation] Failed to persist resolved model receipt:', err);
+  }
+}
+
 /**
  * Fire the completion sound + "Response Ready" OS notification (+ mobile push when
  * the desktop is truly away) on a CLI turn end, mirroring the SDK path in
@@ -127,8 +154,14 @@ async function persistAssistantTurn(
   workspacePath: string,
   msg: AssembledAssistantMessage,
   hidden: boolean,
+  resolvedModel?: string | null,
 ): Promise<void> {
   try {
+    // Persist before broadcasting the existing message notification so the
+    // renderer's normal session reload sees the receipt without another action.
+    if (resolvedModel) {
+      await persistResolvedClaudeCliModel(sessionId, resolvedModel);
+    }
     await AgentMessagesRepository.create({
       sessionId,
       source: 'claude-code',
@@ -198,6 +231,9 @@ export async function startClaudeCliProxyObservation(opts: {
   // (cold-connection 429/529 plus a small budget of api_error/generic) until
   // the first visible assistant output. See claudeCliErrorSurfacePolicy.ts.
   const errorSurfacePolicy = createClaudeCliErrorSurfacePolicy();
+  // The proxy sees the upstream model on every assistant response. Store it
+  // once per value, then update if the user later changes the CLI model.
+  let lastResolvedModel: string | null = null;
 
   const observation = new ClaudeCliProxyObservation({
     sessionId,
@@ -206,11 +242,16 @@ export async function startClaudeCliProxyObservation(opts: {
       // message.) The parent message that CARRIES the Task call is itself still
       // a visible parent turn — we note its Task calls only after this check.
       const isSubAgentTurn = isSubAgentTurnInFlight(sessionId);
+      const resolvedModel = isSubAgentTurn ? null : extractResolvedClaudeCliModel(msg);
+      const resolvedModelToPersist = resolvedModel && resolvedModel !== lastResolvedModel
+        ? resolvedModel
+        : null;
+      if (resolvedModelToPersist) lastResolvedModel = resolvedModelToPersist;
       // A produced turn means the session is unblocked: allow the next failure
       // episode to surface, and (for visible turns) mark that startup is past so
       // a mid-session rate-limit/overload can surface.
       errorSurfacePolicy.noteAssistantMessage(!isSubAgentTurn);
-      void persistAssistantTurn(sessionId, workspacePath, msg, isSubAgentTurn);
+      void persistAssistantTurn(sessionId, workspacePath, msg, isSubAgentTurn, resolvedModelToPersist);
       noteAssistantTaskCalls(sessionId, msg);
       // Refresh the context-window fill indicator from this turn's usage (Slice E).
       void logClaudeCliContextUsage({ sessionId, usage: msg.usage });

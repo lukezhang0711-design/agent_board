@@ -23,6 +23,7 @@ export interface McpServerStatusInfo {
   serverInfo?: { name: string; version: string };
   tools?: { name: string; description?: string }[];
 }
+
 import { parse as parseShellCommand } from 'shell-quote';
 
 import { BaseAgentProvider } from './BaseAgentProvider';
@@ -103,6 +104,25 @@ import {
   readLatestSdkDebugLogTail,
 } from './claudeCode/spawnCrashDiagnostics';
 import { applyTaskListMutation, sortTaskList, type TaskListItem } from './claudeCode/taskListReconstruct';
+
+/** Extract the engine-resolved model from the Agent SDK's system/init event. */
+export function extractResolvedClaudeModelFromInit(chunk: unknown): string | null {
+  if (!chunk || typeof chunk !== 'object') return null;
+  const model = (chunk as { model?: unknown }).model;
+  const normalized = typeof model === 'string' ? model.trim() : '';
+  return normalized || null;
+}
+
+/**
+ * Produce the shallow metadata update used for a resolved-model receipt.
+ * The session store performs the durable merge with existing metadata.
+ */
+export function mergeResolvedModelMetadata(
+  currentMetadata: Record<string, unknown> | undefined,
+  resolvedModel: string,
+): Record<string, unknown> {
+  return { ...(currentMetadata ?? {}), resolvedModel };
+}
 
 
 /**
@@ -2118,6 +2138,8 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     hideMessages: boolean,
     firstUserMessageDescription: string,
   ): Generator<StreamChunk> {
+    const resolvedModel = extractResolvedClaudeModelFromInit(chunk);
+
     // Clean up stale "running" tasks from previous sessions/restarts
     if (sessionId && this.activeTasks.size === 0) {
       (async () => {
@@ -2178,7 +2200,15 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       skillCount: Array.isArray(chunk.skills) ? chunk.skills.length : 0,
       pluginCount: Array.isArray(chunk.plugins) ? chunk.plugins.length : 0,
       toolCount: chunk.tools?.length || 0,
+      ...(resolvedModel ? { resolvedModel } : {}),
     };
+
+    // The SDK reports the final engine selection in the existing init event.
+    // Persist it without any follow-up model request; session completion already
+    // performs the renderer's normal metadata reload.
+    if (sessionId && resolvedModel) {
+      void this.persistResolvedModel(sessionId, resolvedModel);
+    }
 
     if (mcpServerCount > 0) {
       this.currentSessionId = sessionId;
@@ -2195,6 +2225,18 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     if (sessionId && this.leadQuery) {
       const queryRef = this.leadQuery;
       this.maybeFireSessionNamingSideQuestion(queryRef, sessionId, firstUserMessageDescription).catch(() => {});
+    }
+  }
+
+  private async persistResolvedModel(sessionId: string, resolvedModel: string): Promise<void> {
+    try {
+      const { AISessionsRepository } = await import('../../../storage/repositories/AISessionsRepository');
+      const metadata = mergeResolvedModelMetadata(undefined, resolvedModel);
+      await AISessionsRepository.updateMetadata(sessionId, { metadata });
+      this.emit('session:metadata-updated', { sessionId, metadata });
+    } catch (error) {
+      // Receipt persistence is informative; never interrupt the model stream.
+      console.warn('[CLAUDE-CODE] Failed to persist resolved model receipt:', error);
     }
   }
 

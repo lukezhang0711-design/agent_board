@@ -64,6 +64,7 @@ import {
   sessionLoadingAtom,
   sessionModeAtom,
   sessionModelAtom,
+  sessionResolvedModelAtom,
   sessionArchivedAtom,
   sessionProcessingAtom,
   sessionHasPendingInteractivePromptAtom,
@@ -470,6 +471,7 @@ const SessionAIInput = forwardRef<AIInputRef, SessionAIInputProps>(function Sess
 ) {
   const [draftInput, setDraftInputRaw] = useAtom(sessionDraftInputAtom(sessionId));
   const draftAttachments = useAtomValue(sessionDraftAttachmentsAtom(sessionId));
+  const resolvedModel = useAtomValue(sessionResolvedModelAtom(sessionId));
   const setDraftLocalModifiedAt = useSetAtom(sessionDraftLocalModifiedAtAtom(sessionId));
 
   const handleChange = useCallback((value: string) => {
@@ -497,6 +499,7 @@ const SessionAIInput = forwardRef<AIInputRef, SessionAIInputProps>(function Sess
       attachments={enableAttachments ? draftAttachments : undefined}
       onAttachmentAdd={enableAttachments ? onAttachmentAdd : undefined}
       onAttachmentRemove={enableAttachments ? onAttachmentRemove : undefined}
+      resolvedModel={resolvedModel}
       {...rest}
     />
   );

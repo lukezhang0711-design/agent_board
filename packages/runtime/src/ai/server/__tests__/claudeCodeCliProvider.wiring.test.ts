@@ -47,6 +47,15 @@ describe('claude-code-cli provider wiring (Phase 0)', () => {
       expect(id.isExtendedContext).toBe(true);
     });
 
+    it('parses explicit Opus 5 and Sonnet 5 variants, including 1M rows', () => {
+      const opus = ModelIdentifier.parse('claude-code-cli:opus-5');
+      const sonnet1m = ModelIdentifier.parse('claude-code-cli:sonnet-5-1m');
+      expect(opus.baseVariant).toBe('opus-5');
+      expect(opus.isExtendedContext).toBe(false);
+      expect(sonnet1m.baseVariant).toBe('sonnet-5');
+      expect(sonnet1m.isExtendedContext).toBe(true);
+    });
+
     it('supports fable-1m — the only way to get the 1M window on Fable through the CLI', () => {
       const id = ModelIdentifier.parse('claude-code-cli:fable-1m');
       expect(id.baseVariant).toBe('fable');
@@ -71,6 +80,11 @@ describe('claude-code-cli provider wiring (Phase 0)', () => {
 
     it('appends the [1m] beta marker for extended context', () => {
       expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-1m', 'opus')).toBe('sonnet[1m]');
+    });
+
+    it('resolves explicit 5-series variants to full model IDs', () => {
+      expect(resolveClaudeCodeModelVariant('claude-code-cli:opus-5', 'opus')).toBe('claude-opus-5');
+      expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-5-1m', 'opus')).toBe('claude-sonnet-5[1m]');
     });
   });
 

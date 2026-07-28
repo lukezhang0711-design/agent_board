@@ -711,6 +711,23 @@ export const sessionModelAtom = atomFamily((sessionId: string) =>
 );
 
 /**
+ * Engine-reported model for the current session, when the provider supplies
+ * one during initialization. This deliberately remains read-only: it is a
+ * receipt of what ran, not another model-selection control.
+ */
+export const sessionResolvedModelAtom = atomFamily((sessionId: string) =>
+  atom((get) => {
+    const metadata = get(sessionStoreAtom(sessionId))?.metadata;
+    const resolvedModel = metadata && typeof metadata === 'object'
+      ? metadata.resolvedModel
+      : null;
+    return typeof resolvedModel === 'string' && resolvedModel.trim()
+      ? resolvedModel.trim()
+      : null;
+  })
+);
+
+/**
  * Per-session archived state.
  * This is a read-write derived atom that reads from sessionStoreAtom and writes through it.
  * This ensures the archived state stays in sync with session data during reloads.
@@ -1892,6 +1909,7 @@ export const cleanupSessionAtom = atom(null, (get, set, sessionId: string) => {
   sessionLoadingAtom.remove(sessionId);
   sessionModeAtom.remove(sessionId);
   sessionModelAtom.remove(sessionId);
+  sessionResolvedModelAtom.remove(sessionId);
   sessionArchivedAtom.remove(sessionId);
   sessionProcessingAtom.remove(sessionId);
   sessionUnreadAtom.remove(sessionId);

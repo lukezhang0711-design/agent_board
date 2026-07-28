@@ -125,6 +125,7 @@ export {
   sessionLoadingAtom,
   sessionModeAtom,
   sessionModelAtom,
+  sessionResolvedModelAtom,
   sessionArchivedAtom,
   sessionActiveAtom,
   sessionTitleAtom,

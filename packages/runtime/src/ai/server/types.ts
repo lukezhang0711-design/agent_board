@@ -209,8 +209,11 @@ export function shouldBlockStartedSessionProviderSwitch(
 }
 
 /**
- * Claude Code uses simplified variant names (opus, sonnet, haiku) instead of full model IDs.
- * These are ONLY valid for the claude-code provider.
+ * Claude Code uses simplified family aliases (opus, sonnet, haiku) as well as
+ * explicit picker variants. Family aliases are resolved by the engine to its
+ * current latest model; explicit variants map to full model IDs below.
+ * These are valid for both Claude Code family providers (`claude-code` and
+ * `claude-code-cli`).
  *
  * `opus-4-7` and `opus-4-6` are pinned-version variants retained after bumping
  * the canonical `opus` alias to 4.8, so users can still choose previous
@@ -224,14 +227,23 @@ export function shouldBlockStartedSessionProviderSwitch(
  * requires usage credits on subscription plans (the CLI surfaces that itself
  * when unavailable).
  */
-export const CLAUDE_CODE_VARIANTS = ['fable', 'opus', 'opus-4-7', 'opus-4-6', 'sonnet', 'haiku'] as const;
+export const CLAUDE_CODE_VARIANTS = [
+  'fable',
+  'opus',
+  'opus-5',
+  'opus-4-7',
+  'opus-4-6',
+  'sonnet',
+  'sonnet-5',
+  'haiku',
+] as const;
 
 /**
  * Resolves a configured model string to the SDK model value.
  *
  * Key behaviors:
- * - Canonical variants (opus, sonnet, haiku) are passed straight through — the
- *   SDK maps these to the current-generation model.
+ * - Canonical family aliases (opus, sonnet, haiku) are passed straight through
+ *   — the SDK maps these to the current-generation model.
  * - Pinned variants (opus-4-6, ...) are substituted for their full Anthropic
  *   model ID from CLAUDE_CODE_PINNED_SDK_MODELS, so they always resolve to a
  *   specific version regardless of what "latest" becomes.
