@@ -1058,11 +1058,13 @@ describe('MetaAgentService work-order persistence', () => {
       .mockReturnValueOnce(startedAt)
       .mockReturnValueOnce(startedAt)
       .mockReturnValue(startedAt + (8 * 24 * 60 * 60 * 1000));
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     try {
       await expect(
         (service as any).waitForPlanApprovalResponse('head-session', requestId),
       ).resolves.toMatchObject({ approved: true, respondedBy: 'desktop' });
     } finally {
+      infoSpy.mockRestore();
       nowSpy.mockRestore();
     }
   });
@@ -1080,6 +1082,7 @@ describe('MetaAgentService work-order persistence', () => {
       .mockReturnValueOnce(startedAt)
       .mockReturnValueOnce(startedAt)
       .mockReturnValue(startedAt + (8 * 24 * 60 * 60 * 1000));
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     try {
       await expect(
         (service as any).waitForPlanApprovalResponse('head-session', requestId),
@@ -1089,6 +1092,7 @@ describe('MetaAgentService work-order persistence', () => {
         respondedBy: 'desktop',
       });
     } finally {
+      infoSpy.mockRestore();
       nowSpy.mockRestore();
     }
   });

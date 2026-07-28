@@ -1355,6 +1355,9 @@ export class MetaAgentService {
     planId?: string,
   ): Promise<PlanApprovalResponse> {
     const pollStartedAt = Date.now();
+    console.info(
+      `[MetaAgentService] Durable plan approval waiter registered: requestId=${requestId}, sessionId=${sessionId}, planId=${planId ?? 'none'}`,
+    );
 
     while (Date.now() - pollStartedAt <= PLAN_APPROVAL_MAX_POLL_TIME_MS) {
       if (planId) {
@@ -1390,6 +1393,9 @@ export class MetaAgentService {
           if (planId) {
             await this.assertCurrentPlanApprovalRequest(planId, requestId);
           }
+          console.info(
+            `[MetaAgentService] Durable plan approval response matched: requestId=${requestId}, approved=${content.approved}, planId=${planId ?? 'none'}`,
+          );
           return {
             approved: content.approved,
             feedback: typeof content.feedback === 'string' ? content.feedback : undefined,
@@ -1405,6 +1411,9 @@ export class MetaAgentService {
       await new Promise<void>((resolve) => setTimeout(resolve, pollIntervalMs));
     }
 
+    console.warn(
+      `[MetaAgentService] Durable plan approval waiter removed: requestId=${requestId}, reason=timeout, planId=${planId ?? 'none'}`,
+    );
     throw new Error('Timed out waiting for plan approval response');
   }
 
@@ -1428,6 +1437,9 @@ export class MetaAgentService {
     }
 
     if (approvalPromptId !== requestId) {
+      console.warn(
+        `[MetaAgentService] Durable plan approval waiter removed: requestId=${requestId}, reason=superseded, planId=${planId}`,
+      );
       throw new PlanApprovalSupersededError(planId, requestId);
     }
   }
