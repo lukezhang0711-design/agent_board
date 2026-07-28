@@ -26,6 +26,7 @@ export class SessionStateManager extends EventEmitter {
   private activeSessions: Map<string, SessionState> = new Map();
   private database: DatabaseWorker | null = null;
   private activityUpdateTimers: Map<string, NodeJS.Timeout> = new Map();
+  private staleRecoveryPromise: Promise<void> | null = null;
 
   constructor() {
     super();
@@ -376,13 +377,34 @@ export class SessionStateManager extends EventEmitter {
    * Private: Recover stale sessions from database
    */
   private async recoverStaleSessions(): Promise<void> {
+    if (this.staleRecoveryPromise) {
+      return this.staleRecoveryPromise;
+    }
+
+    const recovery = this.recoverStaleSessionsInternal();
+    this.staleRecoveryPromise = recovery;
+    try {
+      await recovery;
+    } finally {
+      if (this.staleRecoveryPromise === recovery) {
+        this.staleRecoveryPromise = null;
+      }
+    }
+  }
+
+  private async recoverStaleSessionsInternal(): Promise<void> {
     if (!this.database) return;
 
     try {
-      // Recover sessions that were 'running' -- the SDK subprocess is dead after restart,
-      // so these are just idle now.
-      const runningResult = await this.database.query(
-        `SELECT id, last_activity FROM ai_sessions WHERE status = 'running'`,
+      // Recover sessions that were 'running' -- the SDK subprocess is dead after restart.
+      // Persist the existing interruption marker and publish the terminal event so all
+      // surfaces converge on the same interrupted state.
+      const runningResult = await this.database.query<{
+        id: string;
+        metadata?: unknown;
+        workspace_id?: string | null;
+      }>(
+        `SELECT id, metadata, workspace_id FROM ai_sessions WHERE status = 'running'`,
         []
       );
 
@@ -394,8 +416,14 @@ export class SessionStateManager extends EventEmitter {
           continue;
         }
 
-        await this.updateDatabase(sessionId, 'idle');
-        console.log(`[SessionStateManager] Marked running session as idle after restart: ${sessionId}`);
+        await this.markSessionInterruptedAfterRecovery(sessionId, row.metadata);
+        this.emitEvent({
+          type: 'session:interrupted',
+          sessionId,
+          workspacePath: row.workspace_id ?? undefined,
+          timestamp: new Date(),
+        });
+        console.log(`[SessionStateManager] Marked running session as interrupted after restart: ${sessionId}`);
       }
 
       // Sessions with status 'waiting_for_input' are intentionally LEFT ALONE.
@@ -432,6 +460,33 @@ export class SessionStateManager extends EventEmitter {
     } catch (error) {
       console.error(`[SessionStateManager] Failed to update database for session ${sessionId}:`, error);
     }
+  }
+
+  /**
+   * Persist the existing interrupted-session badge while retaining the idle
+   * storage status used for terminal turns.
+   */
+  private async markSessionInterruptedAfterRecovery(sessionId: string, metadata: unknown): Promise<void> {
+    if (!this.database) return;
+
+    let existingMetadata: Record<string, unknown> = {};
+    if (typeof metadata === 'string') {
+      try {
+        const parsed = JSON.parse(metadata);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          existingMetadata = parsed as Record<string, unknown>;
+        }
+      } catch {
+        // Invalid legacy metadata is treated as empty rather than blocking recovery.
+      }
+    } else if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+      existingMetadata = metadata as Record<string, unknown>;
+    }
+
+    await this.database.query(
+      `UPDATE ai_sessions SET status = $1, last_activity = CURRENT_TIMESTAMP, metadata = $2 WHERE id = $3`,
+      ['idle', JSON.stringify({ ...existingMetadata, interruptedByHead: true }), sessionId]
+    );
   }
 
   /**

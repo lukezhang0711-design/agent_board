@@ -331,6 +331,7 @@ export class AIService {
 
     let providerType: string;
     let cancelCurrent: () => Promise<void>;
+    let hadActiveTransport = false;
     if (session.provider === 'claude-code-cli') {
       const terminalManager = getTerminalSessionManager();
       if (!terminalManager.isTerminalActive(sessionId)) {
@@ -344,6 +345,7 @@ export class AIService {
           throw new Error('Terminal interrupt was not confirmed');
         }
       };
+      hadActiveTransport = true;
     } else {
       let provider;
       try {
@@ -352,20 +354,25 @@ export class AIService {
         return { success: false, queue: 'unchanged', error: cancelErrorMessage(error) };
       }
       if (!provider) {
-        console.warn(`[AIService] Cancel failed - no active provider for session: ${sessionId}`);
-        return { success: false, queue: 'unchanged', error: 'No active provider for session' };
-      }
-      providerType = (provider as any).providerType || 'unknown';
-      cancelCurrent = async () => {
-        if (session.provider === 'opencode') {
-          const interruptResult = await provider.interruptCurrentTurn();
-          if (!isOpenCodeAbortConfirmed(interruptResult)) {
-            throw new Error('OpenCode server did not confirm session abort');
+        // A persisted running session can outlive the process that owned its
+        // provider. There is nothing left to abort, so settle its queue and
+        // publish the usual interrupted state instead of surfacing an error.
+        providerType = session.provider;
+        cancelCurrent = async () => {};
+      } else {
+        providerType = (provider as any).providerType || 'unknown';
+        cancelCurrent = async () => {
+          if (session.provider === 'opencode') {
+            const interruptResult = await provider.interruptCurrentTurn();
+            if (!isOpenCodeAbortConfirmed(interruptResult)) {
+              throw new Error('OpenCode server did not confirm session abort');
+            }
+          } else {
+            provider.abort();
           }
-        } else {
-          provider.abort();
-        }
-      };
+        };
+        hadActiveTransport = true;
+      }
     }
 
     let queueStore: QueuedPromptsStore;
@@ -391,12 +398,14 @@ export class AIService {
       } catch (error) {
         logger.main.error(`[AIService] Failed to publish interrupted state for session ${sessionId}:`, error);
       }
-      this.analytics.sendEvent('ai_stream_interrupted', {
-        provider: providerType,
-        chunksReceived,
-        reason: 'user_cancel'
-      });
-      this.analytics.sendEvent('cancel_ai_request', { provider: providerType });
+      if (hadActiveTransport) {
+        this.analytics.sendEvent('ai_stream_interrupted', {
+          provider: providerType,
+          chunksReceived,
+          reason: 'user_cancel'
+        });
+        this.analytics.sendEvent('cancel_ai_request', { provider: providerType });
+      }
     } else {
       logger.main.error(
         `[AIService] Cancel failed for session ${sessionId}; queue=${result.queue}: ${result.error}`
