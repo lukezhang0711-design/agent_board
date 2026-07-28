@@ -72,4 +72,14 @@ describe('extension agent self-identification (gemini)', () => {
     // The raw ids remain in the spawn instruction so children inherit the same model.
     expect(prompt).toContain('gemini-3-flash-agent');
   });
+
+  it('requires the Head to resume an interrupted child in place before re-dispatching', () => {
+    const prompt = buildMetaAgentSystemPrompt('claude', 'default', {
+      provider: 'claude-code',
+      model: 'opus',
+    });
+
+    expect(prompt).toContain('Resume interrupted children in place');
+    expect(prompt).toContain('Only create a replacement session when the original cannot be resumed');
+  });
 });

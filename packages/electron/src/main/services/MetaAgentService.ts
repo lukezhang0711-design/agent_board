@@ -424,6 +424,51 @@ export class MetaAgentService {
     }, null, 2);
   }
 
+  /** Stop a Head's active children and cancel slots before any release can refill them. */
+  public async stopAndClearHeadSession(
+    metaSessionId: string,
+    workspaceId: string,
+  ): Promise<{ success: boolean; stoppedChildren: number; clearedDispatches: number }> {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
+
+    const { rows } = await databaseWorker.query<TaskTreeSessionRow>(
+      `SELECT id, created_by_session_id, status
+       FROM ai_sessions
+       WHERE workspace_id = $1
+         AND (is_archived = FALSE OR is_archived IS NULL)`,
+      [workspaceId],
+    );
+    const childIds = collectDescendantSessionIds(rows, metaSessionId);
+    const { rows: cancelledDispatches } = await databaseWorker.query<{ reserved_session_id: string }>(
+      `UPDATE dispatch_queue
+       SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+       WHERE head_session_id = $1 AND status IN ('queued', 'dispatching')
+       RETURNING reserved_session_id`,
+      [metaSessionId],
+    );
+    await Promise.all(cancelledDispatches.map(async ({ reserved_session_id }) => {
+      await AISessionsRepository.updateMetadata(reserved_session_id, {
+        metadata: { dispatchQueued: false },
+      });
+      this.broadcastSessionListRefresh(workspaceId, reserved_session_id);
+    }));
+
+    const childResults = await Promise.all(childIds.map(async (sessionId) =>
+      JSON.parse(await this.interruptSession(metaSessionId, workspaceId, {
+        sessionId,
+        queueAction: 'clear',
+      })) as { success: boolean },
+    ));
+    const headResult = await this.aiService.stopSession(metaSessionId, 'clear');
+    return {
+      success: headResult.success && childResults.every((result) => result.success),
+      stoppedChildren: childIds.length,
+      clearedDispatches: cancelledDispatches.length,
+    };
+  }
+
   private shouldBypassChildAgentExecutionForTests(): boolean {
     return (
       process.env.PLAYWRIGHT === '1' ||
@@ -667,6 +712,14 @@ export class MetaAgentService {
         return { success: true, sessions };
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : String(error), sessions: [] };
+      }
+    });
+
+    safeHandle('meta-agent:stop-and-clear', async (_event, metaSessionId: string, workspaceId: string) => {
+      try {
+        return await this.stopAndClearHeadSession(metaSessionId, workspaceId);
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
       }
     });
 

@@ -270,6 +270,16 @@ export function MetaAgentMode({
     }
   }, [workspacePath]);
 
+  const handleEmergencyStop = useCallback(async () => {
+    if (!metaSessionId) return;
+    try {
+      await window.electronAPI.invoke('meta-agent:stop-and-clear', metaSessionId, workspacePath);
+      await refreshSpawnedSessions(metaSessionId);
+    } catch (error) {
+      console.error('[MetaAgentMode] Failed to stop Head Agent work:', error);
+    }
+  }, [metaSessionId, refreshSpawnedSessions, workspacePath]);
+
   // When an external sessionId is provided, sync it; otherwise find/create one
   useEffect(() => {
     if (externalSessionId) {
@@ -448,6 +458,8 @@ export function MetaAgentMode({
           hideSidebar={true}
           additionalTeammates={activeChildSessionTeammates}
           waitingForNoun="session"
+          showStopAndClearQueue={summary.runningCount > 0 || summary.queuedCount > 0}
+          onStopAndClearQueue={handleEmergencyStop}
         />
       </div>
 

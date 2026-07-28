@@ -12,7 +12,12 @@ vi.mock('@nimbalyst/runtime', () => ({
 }));
 
 vi.mock('../../UnifiedAI/SessionTranscript', () => ({
-  SessionTranscript: () => <div data-testid="session-transcript" />,
+  SessionTranscript: (props: Record<string, unknown>) => (
+    <div
+      data-testid="session-transcript"
+      data-emergency-stop={String(props.showStopAndClearQueue)}
+    />
+  ),
 }));
 
 vi.mock('../../../utils/metaAgentUtils', () => ({
@@ -108,5 +113,28 @@ describe('MetaAgentMode queued summary', () => {
     const badge = await screen.findByText('interrupted');
     expect(badge.className).toContain('text-[var(--nim-warning)]');
     expect(badge.className).toContain('bg-[rgba(245,158,11,0.16)]');
+  });
+
+  it('keeps emergency stop available while child sessions make the Head wait', async () => {
+    render(
+      <Provider store={createStore()}>
+        <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
+      </Provider>,
+    );
+
+    expect(await screen.findByText('1 running')).toBeTruthy();
+    expect(screen.getByTestId('session-transcript').dataset.emergencyStop).toBe('true');
+  });
+
+  it('derives the count pills from the same snapshot rendered as cards', async () => {
+    render(
+      <Provider store={createStore()}>
+        <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
+      </Provider>,
+    );
+
+    expect(await screen.findAllByTestId('meta-agent-child-card')).toHaveLength(2);
+    expect(screen.getByText('1 running')).toBeTruthy();
+    expect(screen.getByText('1 queued')).toBeTruthy();
   });
 });

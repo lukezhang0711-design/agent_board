@@ -377,7 +377,7 @@ const META_AGENT_TOOL_DEFS: Array<{
   {
     name: "send_prompt",
     description:
-      "Queue a follow-up prompt for a child session. If the session is idle, prompt processing starts immediately.",
+      "Queue a follow-up prompt for a child session. Use this first to resume an interrupted child in the same session and preserve its context; processing starts immediately for idle, interrupted, or errored sessions. Create a replacement only when this original session cannot resume, and state the reason to the user.",
     inputSchema: {
       type: "object",
       properties: {

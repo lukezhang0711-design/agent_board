@@ -219,6 +219,34 @@ describe('MetaAgentService.interruptSession', () => {
     expect((await queueStore.get('grandchild-queued'))?.status).toBe('pending');
   });
 
+  it('emergency-stops children, cancels queued dispatches, then clears the Head queue', async () => {
+    databaseQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('UPDATE dispatch_queue')) {
+        return { rows: [{ reserved_session_id: 'queued-child' }] };
+      }
+      return {
+        rows: [
+          { id: 'head', created_by_session_id: null, status: 'running' },
+          { id: 'child', created_by_session_id: 'head', status: 'running' },
+        ],
+      };
+    });
+    const stopSession = vi.fn().mockResolvedValue({ success: true, queue: 'cleared' });
+    (service as any).aiService = { stopSession };
+
+    await expect(service.stopAndClearHeadSession('head', '/workspace')).resolves.toEqual({
+      success: true,
+      stoppedChildren: 1,
+      clearedDispatches: 1,
+    });
+
+    expect(stopSession).toHaveBeenNthCalledWith(1, 'child', 'clear');
+    expect(stopSession).toHaveBeenNthCalledWith(2, 'head', 'clear');
+    expect(AISessionsRepository.updateMetadata).toHaveBeenCalledWith('queued-child', {
+      metadata: { dispatchQueued: false },
+    });
+  });
+
   it('cascades through multiple levels without following cycles back to the Head Agent', async () => {
     databaseQuery.mockResolvedValue({
       rows: [
