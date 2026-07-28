@@ -1683,6 +1683,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Switch a running claude-code-cli session's model via `/model` (NIM-806).
     setClaudeCliModel: (sessionId: string, model: string) =>
       ipcRenderer.invoke('claude-cli:set-model', { sessionId, model }),
+    // Request session-level Fast mode; the terminal echo remains the source of truth.
+    setClaudeCliFastMode: (sessionId: string, enabled: boolean) =>
+      ipcRenderer.invoke('claude-cli:set-fast-mode', { sessionId, enabled }),
     // Stop a claude-code-cli turn with escalation (NIM-814): Ctrl-C → Ctrl-C →
     // SIGINT, re-checking the PID turn state between steps.
     interruptClaudeCli: (sessionId: string) =>
