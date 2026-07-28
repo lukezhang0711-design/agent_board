@@ -19,6 +19,9 @@ interface SubmittedPlanArgs {
 }
 
 const PLAN_APPROVAL_WIDGET_SOURCE = 'nimbalyst:electron-plan-approval';
+// Match the durable interactive-prompt polling backstop. A successful IPC write
+// is not a confirmation that the waiting Head turn consumed it.
+const DURABLE_CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
 
 function getSubmittedPlanArgs(value: unknown): SubmittedPlanArgs | null {
   if (!value || typeof value !== 'object') return null;
@@ -55,6 +58,11 @@ const SubmittedPlanApprovalCard: React.FC<{
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [responseSubmitted, setResponseSubmitted] = useState(false);
+  const [confirmationTimedOut, setConfirmationTimedOut] = useState(false);
+  const [submittedResponse, setSubmittedResponse] = useState<{
+    approved: boolean;
+    feedback?: string;
+  } | null>(null);
   const feedbackInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -72,32 +80,49 @@ const SubmittedPlanApprovalCard: React.FC<{
   }, [toolResult]);
   const displayResult = completedResult;
 
-  const handleApprove = useCallback(async () => {
-    if (!host || !requestId || !isPending || isSubmitting || responseSubmitted) return;
+  useEffect(() => {
+    if (!responseSubmitted || !isPending || displayResult) return;
+    const timeout = window.setTimeout(
+      () => setConfirmationTimedOut(true),
+      DURABLE_CONFIRMATION_TIMEOUT_MS,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [displayResult, isPending, responseSubmitted]);
+
+  const submitResponse = useCallback(async (response: { approved: boolean; feedback?: string }) => {
+    if (!host || !requestId || !isPending || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await host.exitPlanModeApprove(requestId);
+      if (response.approved) {
+        await host.exitPlanModeApprove(requestId);
+      } else {
+        await host.exitPlanModeDeny(requestId, response.feedback);
+      }
+      setSubmittedResponse(response);
       setResponseSubmitted(true);
+      setConfirmationTimedOut(false);
     } catch (error) {
-      console.error('[PlanApprovalWidget] Failed to approve plan:', error);
+      console.error('[PlanApprovalWidget] Failed to submit plan response:', error);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, isPending, isSubmitting, requestId, responseSubmitted]);
+  }, [host, isPending, isSubmitting, requestId]);
+
+  const handleApprove = useCallback(async () => {
+    if (responseSubmitted) return;
+    await submitResponse({ approved: true });
+  }, [responseSubmitted, submitResponse]);
 
   const handleRequestChanges = useCallback(async () => {
     const trimmedFeedback = feedback.trim();
-    if (!host || !requestId || !isPending || isSubmitting || responseSubmitted || !trimmedFeedback) return;
-    setIsSubmitting(true);
-    try {
-      await host.exitPlanModeDeny(requestId, trimmedFeedback);
-      setResponseSubmitted(true);
-    } catch (error) {
-      console.error('[PlanApprovalWidget] Failed to request plan changes:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [feedback, host, isPending, isSubmitting, requestId, responseSubmitted]);
+    if (responseSubmitted || !trimmedFeedback) return;
+    await submitResponse({ approved: false, feedback: trimmedFeedback });
+  }, [feedback, responseSubmitted, submitResponse]);
+
+  const handleRetry = useCallback(async () => {
+    if (!submittedResponse) return;
+    await submitResponse(submittedResponse);
+  }, [submittedResponse, submitResponse]);
 
   return (
     <div
@@ -211,9 +236,24 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         )}
 
-        {!displayResult && isPending && responseSubmitted && (
+        {!displayResult && isPending && responseSubmitted && !confirmationTimedOut && (
           <div className="mt-4 text-xs text-nim-muted">
             Response submitted. Waiting for durable confirmation…
+          </div>
+        )}
+
+        {!displayResult && isPending && responseSubmitted && confirmationTimedOut && (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs text-nim">
+            <span>Response was saved, but confirmation did not arrive. Retry the response.</span>
+            <button
+              type="button"
+              data-testid="plan-approval-retry-response"
+              onClick={() => void handleRetry()}
+              disabled={isSubmitting || !submittedResponse}
+              className="shrink-0 px-3 py-1.5 rounded-md border border-nim bg-nim-tertiary text-nim text-xs cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Retry response
+            </button>
           </div>
         )}
 
