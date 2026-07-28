@@ -287,6 +287,10 @@ export interface SessionTranscriptProps {
 
   // Optional: noun used in waiting text when other workers are still running.
   waitingForNoun?: string;
+
+  // Keep the emergency clear control available while a Head waits on children.
+  showStopAndClearQueue?: boolean;
+  onStopAndClearQueue?: () => void | Promise<void>;
 }
 
 /**
@@ -451,6 +455,8 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   getDocumentContext,
   additionalTeammates,
   waitingForNoun,
+  showStopAndClearQueue = false,
+  onStopAndClearQueue,
 }, ref) => {
   const posthog = usePostHog();
   const inputRef = useRef<AIInputRef>(null);
@@ -2758,7 +2764,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         onSendNow={isLoading && !isClaudeCliTerminalSession(provider) ? handleSendNowQueuedPrompt : undefined}
       />
 
-      {(isLoading || cancelFeedback.phase !== 'idle') && (
+      {(isLoading || showStopAndClearQueue || cancelFeedback.phase !== 'idle') && (
         <div
           className="session-stop-status"
           data-testid="session-stop-status"
@@ -2780,10 +2786,16 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
           }}
         >
           <span>{cancelStatusMessage}</span>
-          {isLoading && (
+          {(isLoading || showStopAndClearQueue) && (
             <button
               type="button"
-              onClick={() => void handleCancel('clear')}
+              onClick={() => {
+                if (onStopAndClearQueue) {
+                  void onStopAndClearQueue();
+                  return;
+                }
+                void handleCancel('clear');
+              }}
               disabled={cancelRequestInFlightRef.current}
               style={{
                 flexShrink: 0,
