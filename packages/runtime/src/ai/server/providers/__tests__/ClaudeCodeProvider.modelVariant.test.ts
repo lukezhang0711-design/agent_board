@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveClaudeCodeModelVariant } from '../../types';
+import { ModelIdentifier } from '../../ModelIdentifier';
 
 const DEFAULT_MODEL = 'claude-code:opus-1m';
 
@@ -13,13 +14,24 @@ describe('resolveClaudeCodeModelVariant', () => {
       expect(resolveClaudeCodeModelVariant('claude-code:opus', DEFAULT_MODEL)).toBe('opus');
     });
 
+    it('resolves explicit Opus 5 and Sonnet 5 variants to their full SDK model IDs', () => {
+      expect(resolveClaudeCodeModelVariant('claude-code:opus-5', DEFAULT_MODEL)).toBe('claude-opus-5');
+      expect(resolveClaudeCodeModelVariant('claude-code:sonnet-5', DEFAULT_MODEL)).toBe('claude-sonnet-5');
+    });
+
+    it('allows only the explicit 5-series variants in Claude Agent model identifiers', () => {
+      expect(ModelIdentifier.parse('claude-code:opus-5').baseVariant).toBe('opus-5');
+      expect(ModelIdentifier.parse('claude-code:sonnet-5').baseVariant).toBe('sonnet-5');
+      expect(() => ModelIdentifier.parse('claude-code:not-a-variant')).toThrow('Invalid Claude Code variant');
+    });
+
     it('resolves haiku variant', () => {
       expect(resolveClaudeCodeModelVariant('claude-code:haiku', DEFAULT_MODEL)).toBe('haiku');
     });
 
-    it('resolves fable to the pinned full model id — the SDK-bundled CLI rejects the bare `fable` alias', () => {
-      // Observed 2026-06-12: passing `fable` through produced "There's an issue
-      // with the selected model (fable). It may not exist..." from the Agent SDK.
+    it('resolves fable to the known-good pinned full model id', () => {
+      // BA observed an older SDK rejecting bare `fable`; the newer SDK is not
+      // request-probed by this work order, so retain the full-ID mapping.
       expect(resolveClaudeCodeModelVariant('claude-code:fable', DEFAULT_MODEL)).toBe('claude-fable-5');
       expect(resolveClaudeCodeModelVariant('claude-code:fable-5', DEFAULT_MODEL)).toBe('claude-fable-5');
     });
@@ -38,6 +50,11 @@ describe('resolveClaudeCodeModelVariant', () => {
   });
 
   describe('extended context (1M) variants', () => {
+    it('explicit Opus 5 and Sonnet 5 1M variants retain their exact model IDs', () => {
+      expect(resolveClaudeCodeModelVariant('claude-code:opus-5-1m', DEFAULT_MODEL)).toBe('claude-opus-5[1m]');
+      expect(resolveClaudeCodeModelVariant('claude-code:sonnet-5-1m', DEFAULT_MODEL)).toBe('claude-sonnet-5[1m]');
+    });
+
     it('sonnet-1m resolves to sonnet[1m] (Sonnet 4.6)', () => {
       const result = resolveClaudeCodeModelVariant('claude-code:sonnet-1m', DEFAULT_MODEL);
       expect(result).toBe('sonnet[1m]');

@@ -98,6 +98,19 @@ function Harness({ onSend }: { onSend: ReturnType<typeof vi.fn> }) {
   );
 }
 
+function ResolvedModelHarness() {
+  const [value, setValue] = useState('');
+  const props = {
+    value,
+    onChange: setValue,
+    onSend: vi.fn(),
+    workspacePath: '/workspace',
+    testId: 'resolved-model-input',
+    resolvedModel: 'claude-opus-5',
+  } as any;
+  return <AIInput {...props} />;
+}
+
 function dispatchCompositionEnter(
   textarea: HTMLTextAreaElement,
   overrides: { isComposing: boolean; keyCode: number },
@@ -149,5 +162,24 @@ describe('AIInput IME composition guard', () => {
     // Before the guard, Typeahead's Enter handler called preventDefault here.
     expect(event.defaultPrevented).toBe(false);
     expect(onSend).not.toHaveBeenCalled();
+  });
+});
+
+describe('AIInput resolved model receipt', () => {
+  beforeEach(() => {
+    (window as any).electronAPI = { invoke: vi.fn(() => new Promise(() => {})) };
+    vi.stubGlobal('requestAnimationFrame', () => 1);
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    delete (window as any).electronAPI;
+  });
+
+  it('shows the actual model resolved by the provider without requiring another user action', () => {
+    render(<ResolvedModelHarness />);
+    expect(screen.getByTestId('resolved-model-receipt').textContent).toBe('Model: claude-opus-5');
   });
 });

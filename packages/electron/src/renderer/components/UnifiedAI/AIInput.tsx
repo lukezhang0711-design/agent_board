@@ -88,6 +88,8 @@ interface AIInputProps {
    */
   readOnlyModel?: boolean;
   readOnlyModelTitle?: string;
+  /** Engine-reported model ID, displayed as a read-only execution receipt. */
+  resolvedModel?: string | null;
 
   // Effort level support (Opus 4.6 adaptive reasoning)
   effortLevel?: EffortLevel;
@@ -169,6 +171,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
     currentProvider,
     readOnlyModel = false,
     readOnlyModelTitle,
+    resolvedModel,
     effortLevel,
     onEffortLevelChange,
     showEffortLevel,
@@ -1342,7 +1345,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
         />
 
         {/* Inline controls row - hidden in memory mode */}
-        {!isMemoryMode && (onModeChange || onModelChange || readOnlyModel || workspacePath || (tokenUsage && provider === 'claude-code')) && (
+        {!isMemoryMode && (onModeChange || onModelChange || readOnlyModel || resolvedModel || workspacePath || (tokenUsage && provider === 'claude-code')) && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -1369,6 +1372,15 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
                 level={effortLevel}
                 onLevelChange={onEffortLevelChange}
               />
+            )}
+            {resolvedModel && (
+              <span
+                data-testid="resolved-model-receipt"
+                className="text-xs text-[var(--nim-text-muted)] whitespace-nowrap"
+                title="Engine-reported model"
+              >
+                Model: {resolvedModel}
+              </span>
             )}
             {workspacePath && (
               <HelpTooltip testId="action-prompts-dropdown">

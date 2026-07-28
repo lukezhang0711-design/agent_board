@@ -18,7 +18,17 @@
  */
 
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
-import { normalizeClaudeCodeVariant } from '@nimbalyst/runtime/ai/modelConstants';
+import { normalizeClaudeCodeVariant, type ClaudeCodeVariant } from '@nimbalyst/runtime/ai/modelConstants';
+
+/**
+ * Explicit picker variants must reach the genuine CLI as full model IDs.
+ * Canonical family aliases and the older pinned Opus rows intentionally keep
+ * their existing CLI behavior below.
+ */
+const CLI_EXPLICIT_CLAUDE_MODEL_IDS: Partial<Record<ClaudeCodeVariant, string>> = {
+  'opus-5': 'claude-opus-5',
+  'sonnet-5': 'claude-sonnet-5',
+};
 
 /**
  * Resolve a Nimbalyst model id to the alias the genuine `claude` CLI accepts for
@@ -48,8 +58,9 @@ export function resolveClaudeCliModelArg(model: string | undefined): string | un
 
   const variant = normalizeClaudeCodeVariant(variantInput);
   if (variant) {
-    // Collapse pinned opus variants (opus-4-7 / opus-4-6) to the CLI's `opus` alias.
-    const alias = variant.startsWith('opus') ? 'opus' : variant;
+    // Keep legacy pinned Opus rows collapsed to `opus`, but preserve the new
+    // explicit 5-series rows as complete model IDs.
+    const alias = CLI_EXPLICIT_CLAUDE_MODEL_IDS[variant] ?? (variant.startsWith('opus') ? 'opus' : variant);
     return isExtended ? `${alias}[1m]` : alias;
   }
 

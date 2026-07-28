@@ -200,14 +200,23 @@ export const OPENAI_MODELS: ModelDefinition[] = [
  * display a stale "Opus 4.6" after the runtime was bumped to 4.7.
  *
  * Two kinds of variants:
- * - Canonical variants (`opus`, `sonnet`, `haiku`) — the SDK resolves these
- *   to the latest underlying model. The version field is for display only.
+ * - Canonical variants (`fable`, `opus`, `sonnet`, `haiku`) — the SDK resolves
+ *   these to the latest underlying model. The display text must say "latest",
+ *   not imply a pinned version that can silently become stale.
  * - Pinned variants (`opus-4-6`, ...) — always resolve to a specific
  *   Anthropic model ID via `CLAUDE_CODE_PINNED_SDK_MODELS`. Used to keep
  *   the previous-generation Opus selectable after bumping the canonical
  *   `opus` to the next version.
  */
-export type ClaudeCodeVariant = 'fable' | 'opus' | 'sonnet' | 'haiku' | 'opus-4-7' | 'opus-4-6';
+export type ClaudeCodeVariant =
+  | 'fable'
+  | 'opus'
+  | 'opus-5'
+  | 'sonnet'
+  | 'sonnet-5'
+  | 'haiku'
+  | 'opus-4-7'
+  | 'opus-4-6';
 export type ClaudeCodeVariantInput = ClaudeCodeVariant | 'opus-4-8' | 'fable-5';
 
 /**
@@ -223,10 +232,12 @@ export const CLAUDE_CODE_ACCEPTED_VARIANT_INPUTS: readonly ClaudeCodeVariantInpu
   'fable',
   'fable-5',
   'opus',
+  'opus-5',
   'opus-4-8',
   'opus-4-7',
   'opus-4-6',
   'sonnet',
+  'sonnet-5',
   'haiku',
 ] as const;
 
@@ -234,10 +245,12 @@ const CLAUDE_CODE_VARIANT_INPUT_MAP: Readonly<Record<ClaudeCodeVariantInput, Cla
   fable: 'fable',
   'fable-5': 'fable',
   opus: 'opus',
+  'opus-5': 'opus-5',
   'opus-4-8': 'opus',
   'opus-4-7': 'opus-4-7',
   'opus-4-6': 'opus-4-6',
   sonnet: 'sonnet',
+  'sonnet-5': 'sonnet-5',
   haiku: 'haiku',
 };
 
@@ -246,10 +259,12 @@ export function normalizeClaudeCodeVariant(variant: string): ClaudeCodeVariant |
 }
 
 export const CLAUDE_CODE_VARIANT_VERSIONS: Record<ClaudeCodeVariant, string> = {
-  fable: '5',
-  opus: '4.8',
-  sonnet: '4.6',
-  haiku: '4.5',
+  fable: '(latest)',
+  opus: '(latest)',
+  'opus-5': '5',
+  sonnet: '(latest)',
+  'sonnet-5': '5',
+  haiku: '(latest)',
   'opus-4-7': '4.7',
   'opus-4-6': '4.6',
 };
@@ -257,7 +272,9 @@ export const CLAUDE_CODE_VARIANT_VERSIONS: Record<ClaudeCodeVariant, string> = {
 export const CLAUDE_CODE_MODEL_LABELS: Record<ClaudeCodeVariant, string> = {
   fable: 'Fable',
   opus: 'Opus',
+  'opus-5': 'Opus',
   sonnet: 'Sonnet',
+  'sonnet-5': 'Sonnet',
   haiku: 'Haiku',
   'opus-4-7': 'Opus',
   'opus-4-6': 'Opus',
@@ -269,12 +286,17 @@ export const CLAUDE_CODE_MODEL_LABELS: Record<ClaudeCodeVariant, string> = {
  * string (or missing entry) means "pass the variant name straight through".
  */
 export const CLAUDE_CODE_PINNED_SDK_MODELS: Partial<Record<ClaudeCodeVariant, string>> = {
-  // The Agent SDK's bundled CLI rejects the bare `fable` alias ("There's an
-  // issue with the selected model (fable)…", 2026-06-12) — version skew with
-  // the user's interactive CLI, which does accept it. Pin the full model id;
-  // the interactive-CLI path (`resolveClaudeCliModelArg`) does not read this
-  // map and keeps sending the working `fable` alias to the PTY.
+  // BA observed 0.3.161 rejecting bare `fable`; 0.3.220 exposes the alias in
+  // its declarations, but this work order forbids a live model request. Keep
+  // the known-good full ID until that request-level behavior is verified. The
+  // interactive-CLI path (`resolveClaudeCliModelArg`) does not read this map
+  // and keeps sending the `fable` alias to the PTY.
   fable: 'claude-fable-5',
+  // These are explicit picker rows, so never route them through a mutable
+  // family alias. The resolved model receipt makes the final engine choice
+  // visible to the user after initialization.
+  'opus-5': 'claude-opus-5',
+  'sonnet-5': 'claude-sonnet-5',
   'opus-4-7': 'claude-opus-4-7',
   'opus-4-6': 'claude-opus-4-6',
 };
@@ -292,7 +314,9 @@ export const CLAUDE_CODE_PINNED_SDK_MODELS: Partial<Record<ClaudeCodeVariant, st
 export const CLAUDE_CODE_VARIANTS_WITH_1M: readonly ClaudeCodeVariant[] = [
   'fable',
   'opus',
+  'opus-5',
   'sonnet',
+  'sonnet-5',
   'opus-4-7',
   'opus-4-6',
 ];
