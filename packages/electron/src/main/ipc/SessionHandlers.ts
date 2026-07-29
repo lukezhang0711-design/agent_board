@@ -29,6 +29,8 @@ import { setSessionPendingPrompt } from '../services/ai/pendingPromptPersistence
 // Initialize session manager
 const sessionManager = new SessionManager();
 const analyticsService = AnalyticsService.getInstance();
+const SESSION_LIST_PAGE_SIZE = 75;
+const SESSION_SEARCH_RESULT_LIMIT = 200;
 
 // Track if handlers are registered to prevent double registration
 let handlersRegistered = false;
@@ -536,10 +538,25 @@ export async function registerSessionHandlers() {
     });
 
     // List sessions for workspace
-    safeHandle('sessions:list', async (event, workspacePath: string, options?: { includeArchived?: boolean }) => {
+    safeHandle('sessions:list', async (event, workspacePath: string, options?: {
+        includeArchived?: boolean;
+        /** Opt-in only: legacy callers retain the full-list response contract. */
+        pagination?: boolean;
+        cursor?: string | null;
+        limit?: number;
+        sortBy?: 'updated' | 'created';
+    }) => {
         try {
             const startTime = performance.now();
-            const entries = await AISessionsRepository.list(workspacePath, options);
+            const page = options?.pagination
+                ? await AISessionsRepository.listPage(workspacePath, {
+                    includeArchived: options.includeArchived,
+                    cursor: options.cursor,
+                    limit: options.limit ?? SESSION_LIST_PAGE_SIZE,
+                    sortBy: options.sortBy ?? 'updated',
+                })
+                : null;
+            const entries = page?.sessions ?? await AISessionsRepository.list(workspacePath, options);
             const listTime = performance.now() - startTime;
             // console.log(`[SessionHandlers] sessions:list query took ${listTime.toFixed(1)}ms for ${entries.length} sessions`);
 
@@ -548,13 +565,16 @@ export async function registerSessionHandlers() {
             // Uses cached git status and a query bounded to currently-uncommitted paths
             const uncommittedMap = new Map<string, number>();
             try {
+                const loadedSessionIds = new Set(entries.map(entry => entry.id));
                 const uncommittedFiles = await getCachedUncommittedFiles(workspacePath);
 
                 if (uncommittedFiles.size > 0) {
                     const fileToSession = await getSessionsForUncommittedFiles(workspacePath, uncommittedFiles);
                     // Every entry is, by construction, a currently-uncommitted file
                     fileToSession.forEach((sessionId) => {
-                        uncommittedMap.set(sessionId, (uncommittedMap.get(sessionId) || 0) + 1);
+                        if (loadedSessionIds.has(sessionId)) {
+                            uncommittedMap.set(sessionId, (uncommittedMap.get(sessionId) || 0) + 1);
+                        }
                     });
                 }
             } catch (error) {
@@ -599,7 +619,15 @@ export async function registerSessionHandlers() {
                 };
             });
 
-            return { success: true, sessions };
+            return {
+                success: true,
+                sessions,
+                ...(page && {
+                    nextCursor: page.nextCursor,
+                    hasMore: page.hasMore,
+                    scannedCount: page.scannedCount,
+                }),
+            };
         } catch (error) {
             console.error('[SessionHandlers] Failed to list sessions:', error);
             return { success: false, error: String(error), sessions: [] };
@@ -806,16 +834,24 @@ export async function registerSessionHandlers() {
         direction?: 'all' | 'input' | 'output';
     }) => {
         try {
-            const entries = await AISessionsRepository.search(workspacePath, query, options);
+            // Ask storage for one extra hit so the renderer can distinguish
+            // “no more results” from “refine this broad search”. Each title /
+            // content source receives this cap before hydration.
+            const entries = await AISessionsRepository.search(workspacePath, query, {
+                ...options,
+                limit: SESSION_SEARCH_RESULT_LIMIT + 1,
+            });
+            const truncated = entries.length > SESSION_SEARCH_RESULT_LIMIT;
+            const limitedEntries = entries.slice(0, SESSION_SEARCH_RESULT_LIMIT);
 
             // Use batch query instead of N individual get() calls
-            const sessionIds = entries.map(e => e.id);
+            const sessionIds = limitedEntries.map(e => e.id);
             const sessionsData = await AISessionsRepository.getMany(sessionIds);
 
             // Create a map for O(1) lookups to merge with entry data
             const sessionMap = new Map(sessionsData.map(s => [s.id, s]));
 
-            const sessions = entries
+            const sessions = limitedEntries
                 .map(entry => {
                     const session = sessionMap.get(entry.id);
                     if (!session) return null;
@@ -836,7 +872,7 @@ export async function registerSessionHandlers() {
                 })
                 .filter((s): s is NonNullable<typeof s> => s !== null);
 
-            return { success: true, sessions };
+            return { success: true, sessions, truncated, resultLimit: SESSION_SEARCH_RESULT_LIMIT };
         } catch (error) {
             console.error('[SessionHandlers] Failed to search sessions:', error);
             return { success: false, error: String(error), sessions: [] };

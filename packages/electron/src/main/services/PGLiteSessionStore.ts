@@ -9,6 +9,8 @@ import type {
   SessionStore,
   SessionMeta,
   SessionListOptions,
+  SessionListPage,
+  SessionListPageOptions,
   SessionSearchOptions,
   CreateSessionPayload,
   UpdateSessionMetadataPayload,
@@ -23,6 +25,7 @@ type PGliteLike = {
     opts?: {
       limit?: number;
       sessionIds?: string[];
+      workspaceId?: string;
       eventType?: 'user_message' | 'assistant_message' | null;
       cutoffDate?: Date | null;
     },
@@ -30,7 +33,7 @@ type PGliteLike = {
   searchSessionTitles?(
     workspaceId: string,
     query: string,
-    opts?: { includeArchived?: boolean },
+    opts?: { includeArchived?: boolean; limit?: number },
   ): Promise<Array<{ session_id: string; rank: number }>>;
 };
 
@@ -43,6 +46,93 @@ function buildSessionArchiveFilter(includeArchived: boolean, sessionAlias = 's',
 
   return `AND (${sessionAlias}.is_archived = FALSE OR ${sessionAlias}.is_archived IS NULL)
           AND (${sessionAlias}.worktree_id IS NULL OR ${worktreeAlias}.is_archived = FALSE OR ${worktreeAlias}.is_archived IS NULL)`;
+}
+
+function buildSessionArchivePredicate(includeArchived: boolean, sessionAlias = 's', worktreeAlias = 'w'): string {
+  if (includeArchived) return 'TRUE';
+  return `(${sessionAlias}.is_archived = FALSE OR ${sessionAlias}.is_archived IS NULL)
+          AND (${sessionAlias}.worktree_id IS NULL OR ${worktreeAlias}.is_archived = FALSE OR ${worktreeAlias}.is_archived IS NULL)`;
+}
+
+const DEFAULT_SESSION_LIST_PAGE_SIZE = 75;
+const MAX_SESSION_LIST_PAGE_SIZE = 100;
+// A child row can introduce its parent into the visible list. Reading at most
+// two source windows keeps the first-screen query bounded while avoiding a
+// sparse page for normal workstream distributions.
+const SESSION_LIST_SCAN_MULTIPLIER = 2;
+
+interface SessionListCursor {
+  pinned: boolean;
+  sortTimestamp: number;
+  tieTimestamp: number;
+  groupId: string;
+  sourceId: string;
+  sortBy: 'updated' | 'created';
+}
+
+function encodeSessionListCursor(cursor: SessionListCursor): string {
+  return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
+}
+
+function decodeSessionListCursor(cursor: string | null | undefined, sortBy: 'updated' | 'created'): SessionListCursor | null {
+  if (!cursor) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<SessionListCursor>;
+    if (
+      parsed.sortBy !== sortBy
+      || typeof parsed.pinned !== 'boolean'
+      || !Number.isFinite(parsed.sortTimestamp)
+      || !Number.isFinite(parsed.tieTimestamp)
+      || typeof parsed.groupId !== 'string'
+      || typeof parsed.sourceId !== 'string'
+    ) {
+      throw new Error('invalid session-list cursor shape');
+    }
+    return parsed as SessionListCursor;
+  } catch {
+    throw new Error('Invalid session list cursor');
+  }
+}
+
+function toBoolean(value: unknown): boolean {
+  return value === true || value === 1 || value === '1';
+}
+
+function mapSessionMetaRow(
+  row: any,
+  overrides: { updatedAt?: number; childCount?: number } = {},
+): SessionMeta & { hasPendingInteractivePrompt?: boolean; phase?: string; tags?: string[]; linkedTrackerItemIds?: string[] } {
+  const metadata = normalizeJsonObject(row.metadata);
+  return {
+    id: row.id,
+    provider: row.provider,
+    model: row.model ?? undefined,
+    sessionType: row.session_type || 'session',
+    mode: row.mode ?? undefined,
+    agentRole: row.agent_role ?? 'standard',
+    title: row.title || 'Untitled Session',
+    workspaceId: row.workspace_id,
+    worktreeId: row.worktree_id ?? null,
+    parentSessionId: row.parent_session_id ?? null,
+    createdBySessionId: row.created_by_session_id ?? null,
+    childCount: overrides.childCount ?? (Number(row.child_count ?? 0) || 0),
+    uncommittedCount: 0,
+    createdAt: toMillis(row.created_at)!,
+    updatedAt: overrides.updatedAt ?? toMillis(row.effective_updated_at ?? row.updated_at)!,
+    messageCount: 0,
+    isArchived: toBoolean(row.is_archived),
+    isPinned: toBoolean(row.is_pinned),
+    branchedFromSessionId: row.branched_from_session_id ?? undefined,
+    branchPointMessageId: row.branch_point_message_id ? parseInt(row.branch_point_message_id, 10) : undefined,
+    branchedAt: toMillis(row.branched_at) ?? undefined,
+    hasUnread: metadata.metadata?.hasUnread ?? metadata.hasUnread ?? false,
+    hasPendingInteractivePrompt: !!metadata.hasPendingPrompt,
+    phase: metadata.phase ?? undefined,
+    tags: Array.isArray(metadata.tags) ? metadata.tags : undefined,
+    dispatchQueued: metadata.dispatchQueued === true ? true : undefined,
+    interruptedByHead: metadata.interruptedByHead === true ? true : undefined,
+    linkedTrackerItemIds: Array.isArray(metadata.linkedTrackerItemIds) ? metadata.linkedTrackerItemIds : undefined,
+  };
 }
 
 // Shared with other JSON-typed column readers; see ../utils/jsonColumn.ts
@@ -618,6 +708,204 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
       });
     },
 
+    async listPage(workspaceId: string, options?: SessionListPageOptions): Promise<SessionListPage> {
+      await ensureReady();
+
+      const includeArchived = options?.includeArchived ?? false;
+      const sortBy = options?.sortBy ?? 'updated';
+      const cursor = decodeSessionListCursor(options?.cursor, sortBy);
+      const pageSize = Math.max(1, Math.min(options?.limit ?? DEFAULT_SESSION_LIST_PAGE_SIZE, MAX_SESSION_LIST_PAGE_SIZE));
+      const scanLimit = pageSize * SESSION_LIST_SCAN_MULTIPLIER;
+      const archivePredicate = buildSessionArchivePredicate(includeArchived);
+      const sourceEligibility = sortBy === 'updated'
+        // Child activity determines the sort position of a workstream parent.
+        // Keep children in the source stream even if the child itself is
+        // archived; the legacy list used the same effective parent timestamp.
+        ? `(s.parent_session_id IS NOT NULL OR (${archivePredicate}))`
+        : `(${archivePredicate}) AND (s.parent_session_id IS NULL OR p.session_type = 'blitz')`;
+      const sortTimestamp = sortBy === 'created'
+        ? `CASE
+             WHEN s.worktree_id IS NOT NULL THEN COALESCE(w.created_at, s.created_at)
+             WHEN p.session_type = 'blitz' THEN p.created_at
+             ELSE s.created_at
+           END`
+        : 's.updated_at';
+      const tieTimestamp = sortBy === 'updated'
+        ? `CASE
+             WHEN s.parent_session_id IS NOT NULL AND COALESCE(p.session_type, '') <> 'blitz' THEN p.created_at
+             ELSE s.created_at
+           END`
+        : 's.created_at';
+      const pinned = `CASE
+        WHEN s.parent_session_id IS NOT NULL THEN COALESCE(p.is_pinned, FALSE)
+        WHEN s.worktree_id IS NOT NULL THEN COALESCE(w.is_pinned, FALSE)
+        ELSE COALESCE(s.is_pinned, FALSE)
+      END`;
+
+      const values: unknown[] = [workspaceId];
+      let cursorClause = '';
+      if (cursor) {
+        values.push(
+          cursor.pinned,
+          new Date(cursor.sortTimestamp).toISOString(),
+          new Date(cursor.tieTimestamp).toISOString(),
+          cursor.groupId,
+          cursor.sourceId,
+        );
+        cursorClause = `
+          WHERE raw.list_pinned < $2
+             OR (raw.list_pinned = $2 AND raw.list_sort_timestamp < $3)
+             OR (raw.list_pinned = $2 AND raw.list_sort_timestamp = $3 AND raw.list_tie_timestamp < $4)
+             OR (raw.list_pinned = $2 AND raw.list_sort_timestamp = $3 AND raw.list_tie_timestamp = $4 AND raw.list_group_id > $5)
+             OR (raw.list_pinned = $2 AND raw.list_sort_timestamp = $3 AND raw.list_tie_timestamp = $4 AND raw.list_group_id = $5 AND raw.list_source_id > $6)`;
+      }
+      values.push(scanLimit + 1);
+
+      const { rows: scannedRows } = await db.query<any>(
+        `/* session-list-page-source */
+         WITH raw AS (
+           SELECT s.id, s.provider, s.model, s.session_type, s.mode, s.agent_role, s.created_by_session_id, s.title, s.workspace_id,
+                  s.worktree_id, s.parent_session_id, s.created_at, s.updated_at, s.is_archived, s.is_pinned,
+                  s.branched_from_session_id, s.branch_point_message_id, s.branched_at, s.metadata,
+                  (${archivePredicate}) AS list_visible,
+                  ${pinned} AS list_pinned,
+                  ${sortTimestamp} AS list_sort_timestamp,
+                  ${tieTimestamp} AS list_tie_timestamp,
+                  COALESCE(p.id, s.id) AS list_group_id,
+                  s.id AS list_source_id
+           FROM ai_sessions s
+           LEFT JOIN ai_sessions p ON p.id = s.parent_session_id
+           LEFT JOIN worktrees w ON w.id = s.worktree_id
+           WHERE s.workspace_id = $1
+             AND ${sourceEligibility}
+         )
+         SELECT *
+         FROM raw
+         ${cursorClause}
+         ORDER BY list_pinned DESC, list_sort_timestamp DESC, list_tie_timestamp DESC, list_group_id ASC, list_source_id ASC
+         LIMIT $${values.length}`,
+        values,
+      );
+
+      // A logical page is 75 visible workstream/root groups, rather than 75
+      // raw rows. We inspect at most two source windows because children can
+      // collapse into their parent; cursor advancement stops at the first
+      // source row after the requested group count, never using OFFSET.
+      const sourceWindow = scannedRows.slice(0, scanLimit);
+      const pageGroups = new Set<string>();
+      const sourceRows: any[] = [];
+      for (const row of sourceWindow) {
+        const groupId = String(row.list_group_id);
+        if (!pageGroups.has(groupId) && pageGroups.size >= pageSize) break;
+        pageGroups.add(groupId);
+        sourceRows.push(row);
+      }
+      const hasMore = scannedRows.length > sourceRows.length;
+      if (sourceRows.length === 0) {
+        return { sessions: [], nextCursor: null, hasMore: false, scannedCount: 0 };
+      }
+      // Updated-order source rows also include archived children so their
+      // timestamp can position a visible parent exactly as legacy list() did.
+      // Never expose those filtered child rows as list entries themselves.
+      const visibleSourceRows = sourceRows.filter((row: any) => toBoolean(row.list_visible));
+
+      const parentIds = Array.from(new Set(
+        sourceRows
+          .map((row: any) => row.parent_session_id)
+          .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0),
+      ));
+      const parentRows: any[] = [];
+      if (parentIds.length > 0) {
+        const { rows } = await db.query<any>(
+          `/* session-list-page-parents */
+           SELECT p.id, p.provider, p.model, p.session_type, p.mode, p.agent_role, p.created_by_session_id, p.title, p.workspace_id,
+                  p.worktree_id, p.parent_session_id, p.created_at, p.updated_at, p.is_archived, p.is_pinned,
+                  p.branched_from_session_id, p.branch_point_message_id, p.branched_at, p.metadata
+           FROM ai_sessions p
+           LEFT JOIN worktrees w ON w.id = p.worktree_id
+           WHERE p.id = ANY($1::text[])
+             AND p.workspace_id = $2
+             AND ${buildSessionArchivePredicate(includeArchived, 'p', 'w')}`,
+          [parentIds, workspaceId],
+        );
+        parentRows.push(...rows);
+      }
+
+      const candidateIds = Array.from(new Set([
+        ...visibleSourceRows.map((row: any) => row.id),
+        ...parentRows.map(row => row.id),
+      ]));
+      const childCounts = new Map<string, number>();
+      if (candidateIds.length > 0) {
+        const { rows } = await db.query<{ parent_session_id: string; child_count: number | string }>(
+          `/* session-list-page-child-stats */
+           SELECT parent_session_id, COUNT(*) AS child_count
+           FROM ai_sessions
+           WHERE workspace_id = $1
+             AND parent_session_id = ANY($2::text[])
+           GROUP BY parent_session_id`,
+          [workspaceId, candidateIds],
+        );
+        for (const row of rows) {
+          childCounts.set(row.parent_session_id, Number(row.child_count) || 0);
+        }
+      }
+
+      const latestChildTimestamp = new Map<string, number>();
+      for (const row of sourceRows) {
+        if (!row.parent_session_id) continue;
+        const timestamp = toMillis(row.updated_at)!;
+        const current = latestChildTimestamp.get(row.parent_session_id);
+        if (current === undefined || timestamp > current) {
+          latestChildTimestamp.set(row.parent_session_id, timestamp);
+        }
+      }
+
+      const sessions = new Map<string, SessionMeta>();
+      const merge = (next: SessionMeta) => {
+        const existing = sessions.get(next.id);
+        if (!existing) {
+          sessions.set(next.id, next);
+          return;
+        }
+        sessions.set(next.id, {
+          ...next,
+          updatedAt: Math.max(existing.updatedAt, next.updatedAt),
+          childCount: Math.max(existing.childCount, next.childCount),
+        });
+      };
+
+      for (const row of visibleSourceRows) {
+        merge(mapSessionMetaRow(row, { childCount: childCounts.get(row.id) ?? 0 }));
+      }
+      for (const row of parentRows) {
+        const parentUpdatedAt = toMillis(row.updated_at)!;
+        merge(mapSessionMetaRow(row, {
+          childCount: childCounts.get(row.id) ?? 0,
+          updatedAt: Math.max(parentUpdatedAt, latestChildTimestamp.get(row.id) ?? parentUpdatedAt),
+        }));
+      }
+
+      const lastRow = sourceRows[sourceRows.length - 1];
+      const nextCursor = hasMore
+        ? encodeSessionListCursor({
+          pinned: toBoolean(lastRow.list_pinned),
+          sortTimestamp: toMillis(lastRow.list_sort_timestamp)!,
+          tieTimestamp: toMillis(lastRow.list_tie_timestamp)!,
+          groupId: lastRow.list_group_id,
+          sourceId: lastRow.list_source_id,
+          sortBy,
+        })
+        : null;
+
+      return {
+        sessions: Array.from(sessions.values()),
+        nextCursor,
+        hasMore,
+        scannedCount: sourceRows.length,
+      };
+    },
+
     async list(workspaceId: string, options?: SessionListOptions): Promise<SessionMeta[]> {
       const startTime = performance.now();
       await ensureReady();
@@ -658,62 +946,7 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
       const queryTime = performance.now() - queryStart;
       const totalTime = performance.now() - startTime;
       // console.log(`[PGLiteSessionStore] list() - ensureReady: ${ensureTime.toFixed(1)}ms, query: ${queryTime.toFixed(1)}ms, total: ${totalTime.toFixed(1)}ms, rows: ${rows.length}`);
-      return rows.map(row => {
-        const createdAt = toMillis(row.created_at)!;
-        // For workstream parents, use the effective timestamp that includes child activity
-        const updatedAt = toMillis(row.effective_updated_at ?? row.updated_at)!;
-        const branchedAt = toMillis(row.branched_at) ?? undefined;
-        const childCount = parseInt(row.child_count) || 0;
-        // Parse JSON columns at the boundary -- see `parseJsonColumn`.
-        // Without this, `metadata.tags`, `metadata.phase`, `metadata.hasUnread`
-        // etc. all read as undefined under the SQLite backend (because
-        // `metadata` is a raw JSON string), so kanban tags/phase disappear
-        // from the session list view.
-        const metadata = normalizeJsonObject(row.metadata);
-        return {
-          id: row.id,
-          provider: row.provider,
-          model: row.model ?? undefined,
-          sessionType: row.session_type || 'session',
-          mode: row.mode ?? undefined,
-          agentRole: row.agent_role ?? 'standard',
-          title: row.title || 'Untitled Session',
-          workspaceId: row.workspace_id,
-          worktreeId: row.worktree_id ?? null,
-          parentSessionId: row.parent_session_id ?? null,
-          createdBySessionId: row.created_by_session_id ?? null,
-          childCount,
-          uncommittedCount: 0,
-          createdAt,
-          updatedAt,
-          messageCount: 0,  // Not computed in list query for performance - loaded lazily if needed
-          isArchived: row.is_archived ?? false,
-          isPinned: row.is_pinned ?? false,
-          // Branch tracking - SEPARATE from hierarchical parentSessionId
-          branchedFromSessionId: row.branched_from_session_id ?? undefined,
-          branchPointMessageId: row.branch_point_message_id ? parseInt(row.branch_point_message_id) : undefined,
-          branchedAt,
-          hasUnread: metadata.metadata?.hasUnread ?? metadata.hasUnread ?? false,
-          // Authoritative pending-interactive-prompt bit. Written by
-          // setSessionPendingPrompt() on every prompt open/resolve so the
-          // sidebar indicator survives renderer reloads and reaches mobile.
-          // Replaces the legacy `metadata.pendingAskUserQuestion` flag,
-          // which nothing was writing.
-          hasPendingInteractivePrompt: !!metadata.hasPendingPrompt,
-          // Kanban board phase and tags from metadata JSONB
-          phase: metadata.phase ?? undefined,
-          tags: Array.isArray(metadata.tags) ? metadata.tags : undefined,
-          // A dispatch that is still waiting for a Head Agent slot. Its row exists
-          // only so the operator can see it queued; it is not running and has no
-          // messages yet, so surfaces must not present it as an idle child.
-          dispatchQueued: metadata.dispatchQueued === true ? true : undefined,
-          // A Head Agent interruption must survive renderer and app reloads so
-          // session surfaces can distinguish it from an ordinary idle child.
-          interruptedByHead: metadata.interruptedByHead === true ? true : undefined,
-          // Linked tracker item IDs from metadata JSONB
-          linkedTrackerItemIds: Array.isArray(metadata.linkedTrackerItemIds) ? metadata.linkedTrackerItemIds : undefined,
-        } satisfies SessionMeta & { hasPendingInteractivePrompt?: boolean; phase?: string; tags?: string[]; linkedTrackerItemIds?: string[] };
-      });
+      return rows.map(row => mapSessionMetaRow(row));
     },
 
     async search(workspaceId: string, query: string, options?: SessionSearchOptions): Promise<SessionMeta[]> {
@@ -721,7 +954,8 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
 
       // If query is empty, return all sessions (same as list)
       if (!query || query.trim().length === 0) {
-        return this.list(workspaceId, options);
+        const sessions = await this.list(workspaceId, options);
+        return options?.limit === undefined ? sessions : sessions.slice(0, options.limit);
       }
 
       const includeArchived = options?.includeArchived ?? false;
@@ -730,6 +964,10 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
       // Default to 30 days to reduce database load
       const timeRange = options?.timeRange ?? '30d';
       const direction = options?.direction ?? 'all';
+      // IPC passes a small over-fetch (limit + 1) so it can report whether
+      // the visible search result set was truncated. Keep the cap in every
+      // backend query; slicing only at the end would still read all matches.
+      const searchLimit = options?.limit;
 
       const searchTerms = query.trim();
 
@@ -771,13 +1009,17 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
           LEFT JOIN (
             SELECT parent_session_id, COUNT(*) AS child_count
             FROM ai_sessions
-            WHERE parent_session_id IS NOT NULL AND workspace_id = $2
+            WHERE parent_session_id = ANY($3::text[])
+              AND workspace_id = $2
             GROUP BY parent_session_id
           ) child_stats ON child_stats.parent_session_id = s.id
           WHERE s.id = ANY($1)
             AND s.workspace_id = $2
             ${archiveFilter}`,
-          [sessionIds, workspaceId]
+          // SQLite's PG-dialect adapter expands each ANY bind independently;
+          // keep the child-stat array at a distinct positional index instead
+          // of relying on one array placeholder twice.
+          [sessionIds, workspaceId, sessionIds]
         );
         return rows;
       };
@@ -793,8 +1035,10 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
         const bm25ToRank = (bm25: number) => (bm25 === 0 ? 1 : 1 / (1 + bm25));
 
         const [titleHits, contentHits] = await Promise.all([
-          db.searchSessionTitles!(workspaceId, searchTerms, { includeArchived }),
+          db.searchSessionTitles!(workspaceId, searchTerms, { includeArchived, limit: searchLimit }),
           db.searchTranscriptEventSessions(searchTerms, {
+            limit: searchLimit,
+            workspaceId,
             cutoffDate,
             eventType: direction === 'input' ? 'user_message' : direction === 'output' ? 'assistant_message' : null,
           }),
@@ -822,50 +1066,29 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
       } else {
         // PGLite path: inline to_tsvector / plainto_tsquery + ts_rank_cd.
         const titleQuery = db.query<any>(
-        `SELECT
-          s.id,
-          s.provider,
-          s.model,
-          s.session_type,
-          s.mode,
-          s.agent_role,
-          s.created_by_session_id,
-          s.title,
-          s.workspace_id,
-          s.worktree_id,
-          s.parent_session_id,
-          s.created_at,
-          s.updated_at,
-          s.is_archived,
-          s.is_pinned,
-          s.branched_from_session_id,
-          s.branch_point_message_id,
-          s.branched_at,
-          ts_rank_cd(to_tsvector('english', COALESCE(s.title, '')), plainto_tsquery('english', $2)) * 2 as rank,
-          COALESCE(child_stats.child_count, 0) as child_count
+        `SELECT s.id,
+          ts_rank_cd(to_tsvector('english', COALESCE(s.title, '')), plainto_tsquery('english', $2)) * 2 AS rank
         FROM ai_sessions s
         LEFT JOIN worktrees w ON s.worktree_id = w.id
-        LEFT JOIN (
-          SELECT parent_session_id, COUNT(*) AS child_count
-          FROM ai_sessions
-          WHERE parent_session_id IS NOT NULL AND workspace_id = $1
-          GROUP BY parent_session_id
-        ) child_stats ON child_stats.parent_session_id = s.id
         WHERE s.workspace_id = $1
           AND to_tsvector('english', COALESCE(s.title, '')) @@ plainto_tsquery('english', $2)
-          ${archiveFilter}`,
-        [workspaceId, searchTerms]
+          ${archiveFilter}
+        ORDER BY rank DESC, s.updated_at DESC
+        ${searchLimit === undefined ? '' : 'LIMIT $3'}`,
+        [workspaceId, searchTerms, ...(searchLimit === undefined ? [] : [searchLimit])]
       );
 
       const contentQuery = (() => {
-        const contentQueryParams: any[] = [searchTerms];
+        const contentQueryParams: any[] = [searchTerms, workspaceId];
         // Phase 2 of canonical-transcript-deprecation: search the raw
         // ai_agent_messages.searchable_text column directly. The legacy
         // ai_transcript_events index is being retired in Phase 4.
         let contentQuerySql = `SELECT DISTINCT t.session_id,
             MAX(ts_rank_cd(to_tsvector('english', COALESCE(t.searchable_text, '')), plainto_tsquery('english', $1))) as rank
           FROM ai_agent_messages t
+          JOIN ai_sessions s ON s.id = t.session_id
           WHERE t.searchable_text IS NOT NULL
+            AND s.workspace_id = $2
             AND t.message_kind IN ('user', 'assistant', 'system')
             AND to_tsvector('english', COALESCE(t.searchable_text, '')) @@ plainto_tsquery('english', $1)`;
 
@@ -880,47 +1103,29 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
           contentQuerySql += ` AND t.message_kind = 'assistant'`;
         }
 
-        contentQuerySql += ' GROUP BY t.session_id';
+        contentQuerySql += ' GROUP BY t.session_id ORDER BY rank DESC';
+        if (searchLimit !== undefined) {
+          contentQueryParams.push(searchLimit);
+          contentQuerySql += ` LIMIT $${contentQueryParams.length}`;
+        }
         return db.query<any>(contentQuerySql, contentQueryParams);
       })();
 
       const [titleResult, contentResult] = await Promise.all([titleQuery, contentQuery]);
 
-      // Add title matches
+      // Both hit sources are capped, then their union is hydrated once. This
+      // keeps child counts/grouping correct without reintroducing a global
+      // child aggregation for every title-search candidate.
       for (const row of titleResult.rows) {
-        sessionRanks.set(row.id, row.rank);
-        sessionRows.set(row.id, row);
+        sessionRanks.set(row.id, Number(row.rank ?? 0));
       }
-
-      // Get content match session IDs that aren't already in title results
-      const contentSessionIds = contentResult.rows
-        .map((r: any) => r.session_id)
-        .filter((id: string) => !sessionRows.has(id));
-
-      // If we have content matches not in title results, fetch their session data
-      if (contentSessionIds.length > 0) {
-        const contentSessions = await hydrateSessions(contentSessionIds);
-
-        // Add content matches with their ranks
-        const contentRankMap = new Map<string, number>(
-          contentResult.rows.map((r: any) => [r.session_id, Number(r.rank ?? 0)]),
-        );
-        for (const row of contentSessions) {
-          const contentRank = contentRankMap.get(row.id) || 0;
-          const existingRank = sessionRanks.get(row.id) || 0;
-          sessionRanks.set(row.id, Math.max(existingRank, contentRank));
-          if (!sessionRows.has(row.id)) {
-            sessionRows.set(row.id, { ...row, rank: contentRank });
-          }
-        }
-      }
-
-      // Also update ranks for sessions found in both title and content
       for (const contentRow of contentResult.rows) {
-        if (sessionRows.has(contentRow.session_id)) {
-          const existingRank = sessionRanks.get(contentRow.session_id) || 0;
-          sessionRanks.set(contentRow.session_id, Math.max(existingRank, contentRow.rank));
-        }
+        const existingRank = sessionRanks.get(contentRow.session_id) || 0;
+        sessionRanks.set(contentRow.session_id, Math.max(existingRank, Number(contentRow.rank ?? 0)));
+      }
+      const hydrated = await hydrateSessions(Array.from(sessionRanks.keys()));
+      for (const row of hydrated) {
+        sessionRows.set(row.id, { ...row, rank: sessionRanks.get(row.id) ?? 0 });
       }
       } // end PGLite branch
 
@@ -932,7 +1137,7 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
         });
 
-      return rows.map(row => {
+      return rows.slice(0, searchLimit).map(row => {
         const createdAt = toMillis(row.created_at)!;
         const updatedAt = toMillis(row.updated_at)!;
         const branchedAt = toMillis(row.branched_at) ?? undefined;

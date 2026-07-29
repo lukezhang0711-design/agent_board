@@ -3,7 +3,10 @@ import {
   type CreateSessionPayload,
   type SessionMeta,
   type SessionListOptions,
+  type SessionListPage,
+  type SessionListPageOptions,
   type SessionStore,
+  type SessionSearchOptions,
   type UpdateSessionMetadataPayload,
   getSessionStore,
   hasSessionStore,
@@ -66,7 +69,19 @@ export const AISessionsRepository = {
     return await requireStore().list(workspaceId, options);
   },
 
-  async search(workspaceId: string, query: string, options?: SessionListOptions): Promise<SessionMeta[]> {
+  async listPage(workspaceId: string, options?: SessionListPageOptions): Promise<SessionListPage> {
+    const store = requireStore();
+    if (store.listPage) {
+      return await store.listPage(workspaceId, options);
+    }
+
+    // Fail closed rather than silently falling back to list(): an adapter
+    // without keyset support must not turn a sidebar page request back into
+    // an unbounded database read.
+    throw new Error('Session store does not support bounded listPage reads');
+  },
+
+  async search(workspaceId: string, query: string, options?: SessionSearchOptions): Promise<SessionMeta[]> {
     return await requireStore().search(workspaceId, query, options);
   },
 
