@@ -103,6 +103,23 @@ npx playwright test e2e/ai/diff.spec.ts:55
 npx playwright test --reporter=line
 ```
 
+### Collaboration-chain gate
+
+Run the durable Head-to-child collaboration gate by itself from `packages/electron/`:
+
+```bash
+npm run test:e2e:collab
+```
+
+When running from a worktree or CI, run that command through the required
+`/e2e-devcontainer` flow. The spec starts a scripted OpenAI-compatible provider
+only on `127.0.0.1:8234`; it drives the real LM Studio provider, IPC handlers,
+approval state machine, dispatch queue, database, and renderer events without a
+network model call or credentials. It covers approval rejection/revision,
+approval/dispatch, the two-slot queue, interrupt/resume/stop-and-clear, final
+transcript delivery, revive delivery after an aborted tool call, and the Codex
+`nimtc|...` composite-ID response route.
+
 ### What to Run and When
 
 | Scenario | Command | Time |
