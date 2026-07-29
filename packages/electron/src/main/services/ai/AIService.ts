@@ -559,17 +559,21 @@ export class AIService {
     if (session.provider === 'claude-code-cli') {
       const terminalManager = getTerminalSessionManager();
       if (!terminalManager.isTerminalActive(sessionId)) {
-        console.warn(`[AIService] Cancel failed - no active claude-code-cli terminal for session: ${sessionId}`);
-        return { success: false, queue: 'unchanged', error: 'No active terminal for session' };
+        // A persisted CLI session can outlive the terminal that owned it. There
+        // is nothing left to interrupt, so settle its queue and publish the
+        // usual interrupted state just like a session with no provider.
+        providerType = 'claude-code-cli';
+        cancelCurrent = async () => {};
+      } else {
+        providerType = 'claude-code-cli';
+        cancelCurrent = async () => {
+          const interrupted = await terminalManager.interruptClaudeCliTurn(sessionId);
+          if (!interrupted.success) {
+            throw new Error('Terminal interrupt was not confirmed');
+          }
+        };
+        hadActiveTransport = true;
       }
-      providerType = 'claude-code-cli';
-      cancelCurrent = async () => {
-        const interrupted = await terminalManager.interruptClaudeCliTurn(sessionId);
-        if (!interrupted.success) {
-          throw new Error('Terminal interrupt was not confirmed');
-        }
-      };
-      hadActiveTransport = true;
     } else {
       let provider;
       try {

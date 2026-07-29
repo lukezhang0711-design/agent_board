@@ -247,6 +247,56 @@ describe('MetaAgentService.interruptSession', () => {
     });
   });
 
+  it('converges a running child whose CLI terminal already ended during emergency stop', async () => {
+    databaseQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('UPDATE dispatch_queue')) {
+        return { rows: [] };
+      }
+      return {
+        rows: [
+          { id: 'head', created_by_session_id: null, status: 'waiting_for_input' },
+          { id: 'cli-child', created_by_session_id: 'head', status: 'running' },
+        ],
+      };
+    });
+    const stopSession = vi.fn(async (sessionId: string) => (
+      sessionId === 'cli-child'
+        ? {
+            success: false,
+            queue: 'unchanged',
+            error: 'No active terminal for session',
+          }
+        : { success: true, queue: 'cleared' }
+    ));
+    (service as any).aiService = { stopSession };
+
+    const childResult = JSON.parse(await service.interruptSession('head', '/workspace', {
+      sessionId: 'cli-child',
+      queueAction: 'clear',
+    }));
+    expect(childResult).toEqual({
+      success: true,
+      cascade: false,
+      queueAction: 'clear',
+      results: [{
+        sessionId: 'cli-child',
+        outcome: 'already-ended',
+        queue: 'unchanged',
+        reason: 'No active terminal for session',
+      }],
+    });
+
+    await expect(service.stopAndClearHeadSession('head', '/workspace')).resolves.toEqual({
+      success: true,
+      stoppedChildren: 1,
+      clearedDispatches: 0,
+    });
+
+    expect(stopSession).toHaveBeenNthCalledWith(1, 'cli-child', 'clear');
+    expect(stopSession).toHaveBeenNthCalledWith(2, 'cli-child', 'clear');
+    expect(stopSession).toHaveBeenNthCalledWith(3, 'head', 'clear');
+  });
+
   it('cascades through multiple levels without following cycles back to the Head Agent', async () => {
     databaseQuery.mockResolvedValue({
       rows: [

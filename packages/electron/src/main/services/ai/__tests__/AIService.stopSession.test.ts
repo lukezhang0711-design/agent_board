@@ -358,6 +358,30 @@ describe('AIService.stopSession', () => {
     expect(mocks.interruptSession).toHaveBeenCalledTimes(2);
   }, 30_000);
 
+  it('converges a stale claude-code-cli session with no terminal during an emergency clear', async () => {
+    const store = createPGLiteQueuedPromptsStore(db);
+    await store.create({ id: 'stale-cli-queued-1', sessionId: 'stale-cli-1', prompt: 'do not resume' });
+    mocks.getQueuedPromptsStore.mockReturnValue(store);
+    mocks.getSession.mockResolvedValue({ id: 'stale-cli-1', provider: 'claude-code-cli' });
+    mocks.isTerminalActive.mockReturnValue(false);
+
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, {
+      analytics: { sendEvent: vi.fn() },
+      sessionsProcessingQueue: new Set(['stale-cli-1']),
+    });
+
+    await expect(service.stopSession('stale-cli-1', 'clear')).resolves.toEqual({
+      success: true,
+      queue: 'cleared',
+    });
+
+    expect((service as any).sessionsProcessingQueue.has('stale-cli-1')).toBe(false);
+    expect(await store.get('stale-cli-queued-1')).toBeNull();
+    expect(mocks.interruptClaudeCliTurn).not.toHaveBeenCalled();
+    expect(mocks.interruptSession).toHaveBeenCalledWith('stale-cli-1');
+  }, 30_000);
+
   it('uses Copilot provider.abort() so the signal-tier stop path can send cancellation', async () => {
     const store = createPGLiteQueuedPromptsStore(db);
     await store.create({ id: 'copilot-queued', sessionId: 'copilot-1', prompt: 'next task' });
