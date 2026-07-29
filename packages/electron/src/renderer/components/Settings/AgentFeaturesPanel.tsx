@@ -33,15 +33,17 @@ interface WorkflowExportSettings {
 
 const DEFAULT_META_AGENT_MAX_PARALLEL = 4;
 
-export function normalizeMetaAgentMaxParallel(value: unknown): number {
+function parseMetaAgentMaxParallel(value: unknown): number | undefined {
   const parsed = typeof value === 'number'
     ? value
     : typeof value === 'string' && value.trim() !== ''
       ? Number(value)
       : Number.NaN;
-  return Number.isSafeInteger(parsed) && parsed >= 1
-    ? parsed
-    : DEFAULT_META_AGENT_MAX_PARALLEL;
+  return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : undefined;
+}
+
+export function normalizeMetaAgentMaxParallel(value: unknown): number {
+  return parseMetaAgentMaxParallel(value) ?? DEFAULT_META_AGENT_MAX_PARALLEL;
 }
 
 export function AgentFeaturesPanel() {
@@ -167,7 +169,7 @@ export function AgentFeaturesPanel() {
       );
       if (metaAgentMaxParallelRevision.current === requestRevision) {
         setMetaAgentMaxParallelInput(
-          String(normalizeMetaAgentMaxParallel(confirmedValue ?? value)),
+          String(parseMetaAgentMaxParallel(confirmedValue) ?? value),
         );
       }
     } catch (err) {
