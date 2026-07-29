@@ -132,6 +132,58 @@ function makeAssistantEvent(sessionId: string, id: number, text: string): Transc
   };
 }
 
+function makeToolEvent(sessionId: string, id: number): TranscriptEvent {
+  return {
+    id,
+    sessionId,
+    sequence: id,
+    createdAt: new Date(),
+    eventType: 'tool_call',
+    searchableText: 'Read package.json',
+    payload: {
+      toolName: 'Read',
+      toolDisplayName: 'Read',
+      status: 'running',
+      description: 'Read package.json',
+      arguments: { file_path: 'package.json' },
+      targetFilePath: 'package.json',
+      mcpServer: null,
+      mcpTool: null,
+    },
+    parentEventId: null,
+    searchable: true,
+    subagentId: null,
+    provider: 'claude-code',
+    providerToolCallId: `tool-${id}`,
+  };
+}
+
+function makeInteractivePromptEvent(sessionId: string, id: number): TranscriptEvent {
+  return {
+    id,
+    sessionId,
+    sequence: id,
+    createdAt: new Date(),
+    eventType: 'interactive_prompt',
+    searchableText: 'Choose a rollout mode',
+    payload: {
+      promptType: 'ask_user_question',
+      requestId: `prompt-${id}`,
+      status: 'pending',
+      questions: [{
+        question: 'Choose a rollout mode',
+        header: 'Rollout',
+        options: [{ label: 'Canary' }, { label: 'All users' }],
+      }],
+    },
+    parentEventId: null,
+    searchable: true,
+    subagentId: null,
+    provider: 'claude-code',
+    providerToolCallId: `prompt-tool-${id}`,
+  };
+}
+
 beforeEach(async () => {
   handlers = new Map();
   electronApi = makeApi();
@@ -197,6 +249,46 @@ describe('PERF-1 streamed transcript reload contract', () => {
       expect(electronApi.aiLoadSession).toHaveBeenCalledTimes(1);
       expect(electronApi.aiLoadSession).toHaveBeenCalledWith(sessionId, WS);
     } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('FB-051 transcript mount race', () => {
+  it('replays text, tool, and interactive prompt events when a new session mounts after streaming starts', async () => {
+    vi.useFakeTimers();
+    const sessionId = uniqueSessionId('new-session-immediate-stream');
+    try {
+      const transcriptEvent = handlers.get('transcript:event');
+      expect(transcriptEvent).toBeTypeOf('function');
+      expect(store.get(sessionStoreAtom(sessionId))).toBeNull();
+
+      transcriptEvent!(makeAssistantEvent(sessionId, 1, 'Working on it'));
+      transcriptEvent!(makeToolEvent(sessionId, 2));
+      transcriptEvent!(makeInteractivePromptEvent(sessionId, 3));
+
+      // The canonical events arrived before the new session's atom mounted.
+      // The first frame cannot publish them yet.
+      await vi.advanceTimersByTimeAsync(20);
+      expect(store.get(sessionStoreAtom(sessionId))).toBeNull();
+
+      // Hydration/mount must trigger an incremental replay from the in-memory
+      // accumulator. No full-history reload is allowed by the AS contract.
+      store.set(sessionStoreAtom(sessionId), makeLongSession(sessionId, 0));
+      await vi.advanceTimersByTimeAsync(20);
+
+      const messages = store.get(sessionStoreAtom(sessionId))?.messages ?? [];
+      expect(messages.map((message) => message.type)).toEqual([
+        'assistant_message',
+        'tool_call',
+        'interactive_prompt',
+      ]);
+      expect(messages[0]?.text).toBe('Working on it');
+      expect(messages[1]?.toolCall?.toolName).toBe('Read');
+      expect(messages[2]?.interactivePrompt?.promptType).toBe('ask_user_question');
+      expect(electronApi.aiLoadSession).not.toHaveBeenCalled();
+    } finally {
+      sessionStoreAtom.remove(sessionId);
       vi.useRealTimers();
     }
   });

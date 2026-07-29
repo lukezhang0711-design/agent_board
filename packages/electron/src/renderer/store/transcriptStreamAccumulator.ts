@@ -109,6 +109,21 @@ export class TranscriptStreamAccumulator {
     this.scheduleFlush(event.sessionId, state);
   }
 
+  /**
+   * Re-publish retained live events after the owning session atom becomes
+   * available. This is an in-memory projection only: it does not reload the
+   * transcript or read the database.
+   */
+  replay(sessionId: string): boolean {
+    const state = this.sessions.get(sessionId);
+    if (!state || state.eventsById.size === 0) return false;
+
+    state.needsRebuild = true;
+    state.dirty = true;
+    this.scheduleFlush(sessionId, state);
+    return true;
+  }
+
   /** Release per-session memory when a session is unloaded. */
   unload(sessionId: string): void {
     this.sessions.delete(sessionId);

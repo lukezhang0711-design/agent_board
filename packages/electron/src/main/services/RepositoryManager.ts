@@ -11,7 +11,9 @@ import type {
 import type { WorkspaceRepository } from '../types/workspace';
 import type { AgentMessagesStore } from '@nimbalyst/runtime/storage/repositories/AgentMessagesRepository';
 import { AISessionsRepository, SessionFilesRepository, AgentMessagesRepository, TranscriptMigrationRepository } from '@nimbalyst/runtime';
+import { isAgentProvider, onAgentMessageBatch } from '@nimbalyst/runtime/ai/server';
 import { TranscriptMigrationService } from '@nimbalyst/runtime/ai/server/transcript/TranscriptMigrationService';
+import type { TranscriptEvent } from '@nimbalyst/runtime/ai/server/transcript/types';
 import { createRawMessageStoreAdapter } from './TranscriptMigrationAdapters';
 import { createPGLiteSessionStore } from './PGLiteSessionStore';
 import { createPGLiteSessionFileStore } from './PGLiteSessionFileStore';
@@ -28,7 +30,11 @@ import { logger } from '../utils/logger';
 import { initializeSync, shutdownSync, isSyncEnabled, reinitializeSync } from './SyncManager';
 import { shutdownTrackerSync, initializeTrackerSync } from './TrackerSyncManager';
 import { onAuthStateChange } from './StytchAuthService';
-import { windows, windowStates } from '../window/WindowManager';
+import { findWindowByWorkspace, windowStates } from '../window/WindowManager';
+
+function redactSessionId(sessionId: string): string {
+  return sessionId.length > 8 ? `${sessionId.slice(0, 8)}…` : sessionId;
+}
 
 class RepositoryManager {
   private sessionStore: SessionStore | null = null;
@@ -42,6 +48,8 @@ class RepositoryManager {
   private sessionWakeupsStore: SessionWakeupsStore | null = null;
   private initialized = false;
   private authListenerUnsubscribe: (() => void) | null = null;
+  private transcriptBatchUnsubscribe: (() => void) | null = null;
+  private transcriptWorkspaceLookups = new Map<string, Promise<string | null>>();
   private wasAuthenticated = false; // Track auth state to detect transitions
 
   /**
@@ -150,13 +158,20 @@ class RepositoryManager {
       // The TranscriptTransformer fires this callback after writing each canonical event
       // (both during batch migration and incremental processNewMessages).
       migrationService.setOnEventWritten((event) => {
-        for (const win of windows.values()) {
-          try {
-            win.webContents.send('transcript:event', event);
-          } catch {
-            // Window may be destroyed
-          }
-        }
+        void this.broadcastTranscriptEvent(event);
+      });
+
+      // Claude Code persists streaming SDK chunks through a 200ms coalescing
+      // queue. Its per-chunk transformer kick can therefore run before the raw
+      // row exists; when the next SDK action blocks on user input there is no
+      // later chunk to retry. The batch notification is emitted only after the
+      // queue commits, making it the deterministic, lightweight catch-up seam.
+      this.transcriptBatchUnsubscribe = onAgentMessageBatch((batch) => {
+        void this.catchUpTranscriptAfterPersistedBatch(
+          migrationService,
+          batch.sessionId,
+          batch.count,
+        );
       });
 
       this.initialized = true;
@@ -189,6 +204,106 @@ class RepositoryManager {
     } catch (error) {
       logger.main.error('[RepositoryManager] Failed to initialize repositories:', error);
       throw error;
+    }
+  }
+
+  private async resolveTranscriptWorkspacePath(sessionId: string): Promise<string | null> {
+    const existingLookup = this.transcriptWorkspaceLookups.get(sessionId);
+    if (existingLookup) return existingLookup;
+
+    const lookup = AISessionsRepository.get(sessionId)
+      .then((session) => session?.workspacePath ?? null)
+      .catch((error) => {
+        logger.main.warn('[TranscriptIncremental] workspace lookup failed', {
+          sessionId: redactSessionId(sessionId),
+        }, error);
+        return null;
+      });
+    this.transcriptWorkspaceLookups.set(sessionId, lookup);
+
+    const workspacePath = await lookup;
+    if (!workspacePath) {
+      this.transcriptWorkspaceLookups.delete(sessionId);
+    }
+    return workspacePath;
+  }
+
+  private async broadcastTranscriptEvent(event: TranscriptEvent): Promise<void> {
+    const sessionId = event.sessionId;
+    const redactedSessionId = redactSessionId(sessionId);
+    const workspacePath = await this.resolveTranscriptWorkspacePath(sessionId);
+    if (!workspacePath) {
+      logger.main.warn('[TranscriptIncremental] canonical event not broadcast', {
+        sessionId: redactedSessionId,
+        eventId: event.id,
+        eventType: event.eventType,
+        reason: 'session-workspace-not-found',
+      });
+      return;
+    }
+
+    const targetWindow = findWindowByWorkspace(workspacePath);
+    if (!targetWindow || targetWindow.isDestroyed()) {
+      logger.main.debug('[TranscriptIncremental] canonical event has no desktop target', {
+        sessionId: redactedSessionId,
+        eventId: event.id,
+        eventType: event.eventType,
+      });
+      return;
+    }
+
+    try {
+      targetWindow.webContents.send('transcript:event', event);
+    } catch (error) {
+      logger.main.warn('[TranscriptIncremental] canonical event broadcast failed', {
+        sessionId: redactedSessionId,
+        eventId: event.id,
+        eventType: event.eventType,
+      }, error);
+    }
+  }
+
+  private async catchUpTranscriptAfterPersistedBatch(
+    migrationService: TranscriptMigrationService,
+    sessionId: string,
+    rawMessageCount: number,
+  ): Promise<void> {
+    const redactedSessionId = redactSessionId(sessionId);
+    try {
+      const session = await AISessionsRepository.get(sessionId);
+      if (!session) {
+        logger.main.warn('[TranscriptIncremental] persisted batch skipped', {
+          sessionId: redactedSessionId,
+          reason: 'session-not-found',
+          rawMessageCount,
+        });
+        return;
+      }
+      if (!isAgentProvider(session.provider)) {
+        logger.main.debug('[TranscriptIncremental] persisted batch skipped', {
+          sessionId: redactedSessionId,
+          provider: session.provider,
+          reason: 'non-agent-provider',
+          rawMessageCount,
+        });
+        return;
+      }
+      if (session.workspacePath) {
+        this.transcriptWorkspaceLookups.set(sessionId, Promise.resolve(session.workspacePath));
+      }
+
+      const events = await migrationService.processNewMessages(sessionId, session.provider);
+      logger.main.debug('[TranscriptIncremental] persisted batch caught up', {
+        sessionId: redactedSessionId,
+        provider: session.provider,
+        rawMessageCount,
+        canonicalEventCount: events.length,
+      });
+    } catch (error) {
+      logger.main.warn('[TranscriptIncremental] persisted batch catch-up failed', {
+        sessionId: redactedSessionId,
+        rawMessageCount,
+      }, error);
     }
   }
 
@@ -338,6 +453,12 @@ class RepositoryManager {
    * Clean up resources
    */
   async cleanup(): Promise<void> {
+    if (this.transcriptBatchUnsubscribe) {
+      this.transcriptBatchUnsubscribe();
+      this.transcriptBatchUnsubscribe = null;
+    }
+    this.transcriptWorkspaceLookups.clear();
+
     // Unsubscribe from auth state changes
     if (this.authListenerUnsubscribe) {
       this.authListenerUnsubscribe();
