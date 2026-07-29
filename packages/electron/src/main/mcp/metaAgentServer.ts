@@ -81,7 +81,8 @@ interface MetaAgentToolFns {
   submitPlan: (
     metaSessionId: string,
     workspaceId: string,
-    args: SubmitPlanArgs
+    args: SubmitPlanArgs,
+    signal?: AbortSignal,
   ) => Promise<string>;
   createSession: (
     metaSessionId: string,
@@ -521,7 +522,8 @@ export async function dispatchMetaAgentTool(
   name: string,
   aiSessionId: string,
   workspaceId: string,
-  args: Record<string, unknown> | undefined
+  args: Record<string, unknown> | undefined,
+  context?: { signal?: AbortSignal },
 ): Promise<string> {
   if (!toolFns) {
     throw new Error("Meta-agent service not initialized");
@@ -535,7 +537,19 @@ export async function dispatchMetaAgentTool(
     case "list_worktrees":
       return toolFns.listWorktrees(aiSessionId, effectiveWorkspaceId);
     case "submit_plan":
-      return toolFns.submitPlan(aiSessionId, effectiveWorkspaceId, (args ?? {}) as SubmitPlanArgs);
+      if (context?.signal) {
+        return toolFns.submitPlan(
+          aiSessionId,
+          effectiveWorkspaceId,
+          (args ?? {}) as SubmitPlanArgs,
+          context.signal,
+        );
+      }
+      return toolFns.submitPlan(
+        aiSessionId,
+        effectiveWorkspaceId,
+        (args ?? {}) as SubmitPlanArgs,
+      );
     case "create_session":
       return toolFns.createSession(aiSessionId, effectiveWorkspaceId, (args ?? {}) as CreateSessionArgs);
     case "spawn_session":
@@ -716,7 +730,7 @@ function createMetaAgentMcpServer(
     };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request: any, extra) => {
     const { name, arguments: args } = request.params;
 
     if (!toolFns) {
@@ -733,7 +747,13 @@ function createMetaAgentMcpServer(
       // launched with workspaceId = worktree directory, but sessions compare
       // workspace ids by exact string match against the renderer's active
       // workspace (the parent repo path).
-      const text = await dispatchMetaAgentTool(name, aiSessionId, workspaceId, args);
+      const text = await dispatchMetaAgentTool(
+        name,
+        aiSessionId,
+        workspaceId,
+        args,
+        { signal: extra.signal },
+      );
       return {
         content: [{ type: "text", text }],
         isError: false,

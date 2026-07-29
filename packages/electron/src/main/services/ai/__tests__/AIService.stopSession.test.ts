@@ -102,7 +102,7 @@ vi.mock('../../../utils/logger', () => {
 });
 
 import { createPGLiteQueuedPromptsStore } from '../../PGLiteQueuedPromptsStore';
-import { AIService } from '../AIService';
+import { AIService, deriveDurablePlanApprovalState } from '../AIService';
 
 describe('AIService.stopSession', () => {
   let db: PGlite;
@@ -134,6 +134,105 @@ describe('AIService.stopSession', () => {
         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+  });
+
+  it('derives submitted → responded → delivered → closed from durable rows', () => {
+    const requestId = 'approval-state-1';
+    const submitted = {
+      type: 'nimbalyst_tool_use',
+      name: 'ExitPlanMode',
+      id: requestId,
+      input: { planId: 'plan-state-1' },
+    };
+    const responded = {
+      type: 'exit_plan_mode_response',
+      requestId,
+      approved: false,
+      feedback: 'Add recovery.',
+      respondedAt: 100,
+      respondedBy: 'desktop',
+    };
+    const delivered = {
+      type: 'plan_approval_delivery',
+      requestId,
+      method: 'revive',
+    };
+    const closed = {
+      type: 'nimbalyst_tool_result',
+      tool_use_id: requestId,
+      result: '{"approved":false}',
+    };
+    const conflictingRetry = {
+      type: 'exit_plan_mode_response',
+      requestId,
+      approved: true,
+    };
+    const ordinaryExitPlanMode = {
+      type: 'nimbalyst_tool_use',
+      name: 'ExitPlanMode',
+      id: 'ordinary-exit-plan-mode',
+      input: { planFilePath: 'docs/plan.md' },
+    };
+
+    expect(deriveDurablePlanApprovalState(
+      [ordinaryExitPlanMode],
+      'ordinary-exit-plan-mode',
+    )).toBeNull();
+    expect(deriveDurablePlanApprovalState([submitted], requestId)?.status).toBe('submitted');
+    expect(deriveDurablePlanApprovalState([submitted, responded], requestId)).toMatchObject({
+      status: 'responded',
+      decision: 'rejected',
+    });
+    expect(deriveDurablePlanApprovalState([submitted, responded, delivered], requestId)).toMatchObject({
+      status: 'delivered',
+      deliveryMethod: 'revive',
+    });
+    expect(deriveDurablePlanApprovalState(
+      [submitted, responded, delivered, closed, conflictingRetry],
+      requestId,
+    )).toMatchObject({
+      status: 'closed',
+      decision: 'rejected',
+    });
+  });
+
+  it('validates workspace scope before exposing durable approval state', async () => {
+    mocks.getSession.mockResolvedValue({
+      id: 'head-session',
+      workspacePath: '/workspace',
+    });
+    const service = Object.create(AIService.prototype) as AIService;
+    const getPlanApprovalState = vi.fn().mockResolvedValue({
+      requestId: 'approval-state-1',
+      status: 'responded',
+      decision: 'approved',
+    });
+    Object.assign(service, {
+      getPlanApprovalState,
+      streamingHandler: { handle: vi.fn() },
+    });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:getPlanApprovalState');
+
+    await expect(handler?.(
+      {} as any,
+      '/workspace',
+      'head-session',
+      'approval-state-1',
+    )).resolves.toMatchObject({
+      success: true,
+      state: { status: 'responded', decision: 'approved' },
+    });
+    await expect(handler?.(
+      {} as any,
+      '/other-workspace',
+      'head-session',
+      'approval-state-1',
+    )).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('not found in workspace'),
+    });
+    expect(getPlanApprovalState).toHaveBeenCalledTimes(1);
   });
 
   it('clears the generic model cache without forcing a Codex model retry', async () => {
@@ -200,6 +299,35 @@ describe('AIService.stopSession', () => {
     expect(state).toEqual({ running: false, visibleStatus: 'interrupted' });
     expect((await store.get('queued-1'))?.status).toBe('paused');
   }, 30_000);
+
+  it('queues a revived approval message exactly once for the same durable key', async () => {
+    const store = createPGLiteQueuedPromptsStore(db);
+    mocks.getQueuedPromptsStore.mockReturnValue(store);
+    const service = Object.create(AIService.prototype) as AIService;
+
+    const [first, second] = await Promise.all([
+      service.queuePromptForSession(
+        'head-session',
+        'Continue after approval.',
+        undefined,
+        undefined,
+        'child_session_event',
+        'plan-approval-revive-49',
+      ),
+      service.queuePromptForSession(
+        'head-session',
+        'Continue after approval.',
+        undefined,
+        undefined,
+        'child_session_event',
+        'plan-approval-revive-49',
+      ),
+    ]);
+
+    expect(first.id).toBe('meta-plan-approval-revive-49');
+    expect(second.id).toBe(first.id);
+    await expect(store.listForSession('head-session')).resolves.toHaveLength(1);
+  });
 
   it('treats a stale session with no provider as already stopped and remains idempotent', async () => {
     const store = createPGLiteQueuedPromptsStore(db);
@@ -417,12 +545,7 @@ describe('AIService.stopSession', () => {
       feedback: 'Please split the plan.',
     })).resolves.toEqual({ success: true });
 
-    expect(resolveExitPlanModeConfirmation).toHaveBeenCalledWith(
-      'approval-43',
-      { approved: false, feedback: 'Please split the plan.' },
-      'head-session',
-      'desktop',
-    );
+    expect(resolveExitPlanModeConfirmation).not.toHaveBeenCalled();
     expect(mocks.databaseQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO ai_agent_messages'),
       [
@@ -434,6 +557,78 @@ describe('AIService.stopSession', () => {
         false,
       ],
     );
+  });
+
+  it('normalizes a Codex composite approval ID before persistence and durable matching', async () => {
+    const bareRequestId = 'approval-49';
+    const compositeRequestId = `nimtc|${bareRequestId}|1784297999209|21431`;
+    mocks.getSession.mockResolvedValue({ id: 'head-session', provider: 'openai-codex' });
+    const resolveExitPlanModeConfirmation = vi.fn(() => false);
+    mocks.getProvider.mockReturnValue({ resolveExitPlanModeConfirmation });
+    mocks.databaseQuery.mockImplementation(async (sql: string, params?: unknown[]) => ({
+      rows: sql.includes('nimbalyst_tool_use')
+        && params?.some((param) => String(param).includes(`"id":"${bareRequestId}"`))
+        ? [{ id: 'durable-plan-card' }]
+        : [],
+    }));
+
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, { streamingHandler: { handle: vi.fn() } });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:exitPlanModeConfirmResponse');
+
+    await expect(handler?.({} as any, compositeRequestId, 'head-session', {
+      approved: false,
+      feedback: 'Revise the Codex plan.',
+    })).resolves.toEqual({ success: true });
+
+    expect(resolveExitPlanModeConfirmation).not.toHaveBeenCalled();
+    expect(mocks.databaseQuery).toHaveBeenCalledWith(
+      expect.stringContaining('nimbalyst_tool_use'),
+      ['head-session', `%"id":"${bareRequestId}"%`],
+    );
+    expect(mocks.databaseQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO ai_agent_messages'),
+      [
+        'head-session',
+        'nimbalyst',
+        'output',
+        expect.stringContaining(`"requestId":"${bareRequestId}"`),
+        expect.any(Date),
+        false,
+      ],
+    );
+  });
+
+  it('keeps the first durable response when a retry arrives after delivery', async () => {
+    mocks.getSession.mockResolvedValue({ id: 'head-session', provider: 'claude-code' });
+    mocks.databaseQuery.mockImplementation(async (sql: string) => ({
+      rows: sql.includes('nimbalyst_tool_use') ? [{ id: 'durable-plan-card' }] : [],
+    }));
+    const service = Object.create(AIService.prototype) as AIService;
+    const getPlanApprovalState = vi.fn().mockResolvedValue({
+      requestId: 'approval-49',
+      status: 'delivered',
+      decision: 'rejected',
+      feedback: 'Keep the first response.',
+      deliveryMethod: 'revive',
+    });
+    Object.assign(service, {
+      getPlanApprovalState,
+      streamingHandler: { handle: vi.fn() },
+    });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:exitPlanModeConfirmResponse');
+
+    await expect(handler?.({} as any, 'approval-49', 'head-session', {
+      approved: true,
+    })).resolves.toEqual({ success: true });
+
+    expect(mocks.databaseQuery).not.toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO ai_agent_messages'),
+      expect.anything(),
+    );
+    expect(getPlanApprovalState).toHaveBeenCalledTimes(1);
   });
 
   it('rejects immediately when a lost memory waiter has no durable successor', async () => {

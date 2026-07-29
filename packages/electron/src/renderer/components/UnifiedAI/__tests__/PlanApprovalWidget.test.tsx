@@ -78,6 +78,7 @@ const planArguments = {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  delete (window as unknown as { electronAPI?: unknown }).electronAPI;
 });
 
 describe('PlanApprovalWidget', () => {
@@ -135,6 +136,45 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getByTestId('plan-approval-widget').getAttribute('data-state')).toBe('pending');
     expect(screen.getByText('Awaiting review')).toBeTruthy();
     expect(screen.queryByText('Plan approved')).toBeNull();
+  });
+
+  it('flips to changes requested as soon as the durable state reaches responded', async () => {
+    const invoke = vi.fn()
+      .mockResolvedValueOnce({
+        success: true,
+        state: { status: 'submitted', requestId: compositeRequestId },
+      })
+      .mockResolvedValue({
+        success: true,
+        state: {
+          status: 'responded',
+          requestId: compositeRequestId,
+          decision: 'rejected',
+        },
+      });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        invoke,
+      },
+    });
+    renderWidget(planArguments, { workspacePath: '/workspace' });
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith(
+        'ai:getPlanApprovalState',
+        '/workspace',
+        sessionId,
+        compositeRequestId,
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('plan-approval-widget').getAttribute('data-state'))
+        .toBe('changes-requested');
+      expect(screen.getByText('Changes requested')).toBeTruthy();
+      expect(screen.getByText('Response recorded. Head is preparing the revision…')).toBeTruthy();
+    }, { timeout: 2_000 });
   });
 
   it('keeps the approval action available when the existing response route fails', async () => {

@@ -6,7 +6,6 @@ import { ClaudeCodeProvider, OpenAICodexProvider, OpenAICodexACPProvider, Sessio
 import type { AIProviderType } from '@nimbalyst/runtime/ai/server/types';
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
 import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
-import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
 import { AISessionsRepository, AgentMessagesRepository, SessionFilesRepository } from '@nimbalyst/runtime';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { getDefaultAIModel, store } from '../utils/store';
@@ -16,7 +15,11 @@ import { GitWorktreeService } from './GitWorktreeService';
 import { database as databaseWorker } from '../database/PGLiteDatabaseWorker';
 import { getDatabase } from '../database/initialize';
 import { gitRefWatcher } from '../file/GitRefWatcher';
-import { AIService } from './ai/AIService';
+import {
+  AIService,
+  type DurablePlanApprovalState,
+  type PlanApprovalDeliveryMethod,
+} from './ai/AIService';
 import { createBidirectionalLink } from '../mcp/tools/trackerToolHandlers';
 import {
   startMetaAgentServer,
@@ -31,7 +34,11 @@ import { broadcastMessageLogged } from './ai/claudeCliUserPromptLog';
 import { computeNotificationSignature } from './metaAgentNotificationSignature';
 import { extractMessageText, extractUserPrompts } from './metaAgentMessageText';
 import { ClaudeCliLauncherConfig } from './ai/claudeCliLauncherSingleton';
-import type { QueueCancelAction, QueueCancelResult } from './PGLiteQueuedPromptsStore';
+import type {
+  QueueCancelAction,
+  QueueCancelResult,
+  QueuedPromptOrigin,
+} from './PGLiteQueuedPromptsStore';
 import {
   createPGLiteDispatchQueueStore,
   type DispatchQueueItem,
@@ -77,11 +84,6 @@ class PlanApprovalSupersededError extends Error {
 
 function isValidMaxParallel(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
-}
-
-function isMatchingPlanApprovalRequestId(candidate: unknown, requestId: string): boolean {
-  if (typeof candidate !== 'string') return false;
-  return getCodexToolLookupAliases(candidate).includes(requestId);
 }
 
 function getEffectiveMaxParallel(override: number | undefined): number {
@@ -156,6 +158,7 @@ interface SubmitPlanArgs {
 
 interface PlanApprovalResponse {
   approved: boolean;
+  decision?: 'approved' | 'rejected' | 'dismissed';
   feedback?: string;
   respondedAt?: number;
   respondedBy?: string;
@@ -531,8 +534,8 @@ export class MetaAgentService {
       setMetaAgentToolFns({
         listWorktrees: (_metaSessionId, workspaceId) =>
           this.listWorktreesJson(workspaceId),
-        submitPlan: (metaSessionId, workspaceId, args) =>
-          this.submitPlan(metaSessionId, workspaceId, args),
+        submitPlan: (metaSessionId, workspaceId, args, signal) =>
+          this.submitPlan(metaSessionId, workspaceId, args, signal),
         createSession: (metaSessionId, workspaceId, args) =>
           this.createChildSession(metaSessionId, workspaceId, args),
         spawnSession: (callerSessionId, workspaceId, args) =>
@@ -1354,6 +1357,9 @@ export class MetaAgentService {
     requestId: string,
     planId?: string,
   ): Promise<PlanApprovalResponse> {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
     const pollStartedAt = Date.now();
     console.info(
       `[MetaAgentService] Durable plan approval waiter registered: requestId=${requestId}, sessionId=${sessionId}, planId=${planId ?? 'none'}`,
@@ -1363,46 +1369,21 @@ export class MetaAgentService {
       if (planId) {
         await this.assertCurrentPlanApprovalRequest(planId, requestId);
       }
-      const { rows } = await databaseWorker.query<{ content: unknown }>(
-        `SELECT content
-         FROM ai_agent_messages
-         WHERE session_id = $1
-           AND content LIKE '%"type":"exit_plan_mode_response"%'
-           AND (content LIKE $2 OR content LIKE $3)
-         ORDER BY id DESC
-         LIMIT 20`,
-        [
-          sessionId,
-          `%"requestId":"${requestId}"%`,
-          `%"requestId":"nimtc|${requestId}|%`,
-        ],
-      );
-      for (const row of rows) {
-        let content: any;
-        try {
-          content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
-        } catch {
-          // Non-JSON transcript rows cannot be durable prompt responses.
-          continue;
+      const state = await this.aiService.getPlanApprovalState(sessionId, requestId);
+      if (state && state.status !== 'submitted' && state.decision) {
+        if (planId) {
+          await this.assertCurrentPlanApprovalRequest(planId, requestId);
         }
-        if (
-          content?.type === 'exit_plan_mode_response'
-          && isMatchingPlanApprovalRequestId(content.requestId, requestId)
-          && typeof content.approved === 'boolean'
-        ) {
-          if (planId) {
-            await this.assertCurrentPlanApprovalRequest(planId, requestId);
-          }
-          console.info(
-            `[MetaAgentService] Durable plan approval response matched: requestId=${requestId}, approved=${content.approved}, planId=${planId ?? 'none'}`,
-          );
-          return {
-            approved: content.approved,
-            feedback: typeof content.feedback === 'string' ? content.feedback : undefined,
-            respondedAt: typeof content.respondedAt === 'number' ? content.respondedAt : undefined,
-            respondedBy: typeof content.respondedBy === 'string' ? content.respondedBy : undefined,
-          };
-        }
+        console.info(
+          `[MetaAgentService] Durable plan approval response matched: requestId=${requestId}, approved=${state.decision === 'approved'}, planId=${planId ?? 'none'}`,
+        );
+        return {
+          approved: state.decision === 'approved',
+          decision: state.decision,
+          feedback: state.feedback,
+          respondedAt: state.respondedAt,
+          respondedBy: state.respondedBy,
+        };
       }
       const elapsedMs = Date.now() - pollStartedAt;
       const pollIntervalMs = elapsedMs < PLAN_APPROVAL_FAST_POLL_WINDOW_MS
@@ -1457,10 +1438,96 @@ export class MetaAgentService {
     }
   }
 
+  private buildPlanApprovalContinuation(
+    planId: string,
+    response: PlanApprovalResponse,
+  ): string {
+    if (response.approved) {
+      return [
+        '[Plan approval response]',
+        `The user approved plan ${planId}.`,
+        'The original approval tool turn ended. Continue with the approved implementation now; do not submit the same plan again.',
+      ].join('\n');
+    }
+    return [
+      '[Plan approval response]',
+      response.decision === 'dismissed'
+        ? `The user dismissed plan ${planId}.`
+        : `The user requested changes to plan ${planId}.`,
+      ...(response.feedback ? [`Feedback: ${response.feedback}`] : []),
+      'The original approval tool turn ended. Prepare a revised plan and submit a new approval card; do not dispatch implementation yet.',
+    ].join('\n');
+  }
+
+  private async deliverPlanApprovalResponse(
+    metaSessionId: string,
+    workspaceId: string,
+    planId: string,
+    requestId: string,
+    response: PlanApprovalResponse,
+    requestedMethod: PlanApprovalDeliveryMethod,
+  ): Promise<PlanApprovalDeliveryMethod> {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
+    let deliveryState = await this.aiService.getPlanApprovalState(metaSessionId, requestId);
+    if (!deliveryState || deliveryState.status === 'submitted') {
+      throw new Error(`Plan approval ${requestId} has not been responded to`);
+    }
+    if (deliveryState.status === 'responded' && requestedMethod === 'revive') {
+      await this.sendPromptToSession(
+        metaSessionId,
+        workspaceId,
+        this.buildPlanApprovalContinuation(planId, response),
+        {
+          forceProcessing: true,
+          origin: 'child_session_event',
+          idempotencyKey: `plan-approval-revive-${requestId}`,
+          bypassExecutionForTests: false,
+        },
+      );
+    }
+    if (deliveryState.status === 'responded') {
+      deliveryState = await this.aiService.markPlanApprovalDelivered(
+        metaSessionId,
+        requestId,
+        requestedMethod,
+      );
+      console.info(
+        `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=responded, to=delivered, method=${deliveryState.deliveryMethod ?? requestedMethod}`,
+      );
+    }
+    const method = deliveryState.deliveryMethod ?? requestedMethod;
+    if (deliveryState.status !== 'closed') {
+      await persistInteractivePromptToolResult({
+        sessionId: metaSessionId,
+        toolUseId: requestId,
+        result: response.approved
+          ? { approved: true, planId, status: 'approved' }
+          : {
+              approved: false,
+              planId,
+              status: 'continue planning',
+              feedback: response.feedback,
+            },
+      });
+      const closedState = await this.aiService.getPlanApprovalState(metaSessionId, requestId);
+      if (closedState?.status !== 'closed') {
+        throw new Error(`Failed to close plan approval ${requestId}`);
+      }
+      console.info(
+        `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=delivered, to=closed, method=${method}`,
+      );
+      broadcastMessageLogged(metaSessionId, workspaceId);
+    }
+    return method;
+  }
+
   private async submitPlan(
     metaSessionId: string,
     workspaceId: string,
     args: SubmitPlanArgs,
+    signal?: AbortSignal,
   ): Promise<string> {
     const title = args?.title?.trim();
     const risks = args?.risks?.trim();
@@ -1589,6 +1656,9 @@ export class MetaAgentService {
     if (!promptWasPersisted) {
       throw new Error('Failed to persist plan approval prompt');
     }
+    console.info(
+      `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=none, to=submitted`,
+    );
 
     const response = await this.waitForPlanApprovalResponse(metaSessionId, requestId, planId);
     const finalStatus = response.approved ? 'ready-for-development' : 'in-review';
@@ -1618,29 +1688,20 @@ export class MetaAgentService {
     }
     this.notifyTrackerItemsChanged();
 
-    await persistInteractivePromptToolResult({
-      sessionId: metaSessionId,
-      toolUseId: requestId,
-      result: response.approved
-        ? { approved: true, planId, status: 'approved' }
-        : {
-            approved: false,
-            planId,
-            status: 'continue planning',
-            feedback: response.feedback,
-          },
-    });
-    // Persisting the row notifies nobody on its own (AgentMessagesRepository is a
-    // plain store). Without this the plan card in an already-open session sits at
-    // "Awaiting review" forever, because nothing tells the renderer to re-read the
-    // session. Same reload signal the other durable prompts use after they settle
-    // -- see interactiveToolHandlers.ts persistToolResult.
-    broadcastMessageLogged(metaSessionId, workspaceId);
+    const deliveryMethod = await this.deliverPlanApprovalResponse(
+      metaSessionId,
+      workspaceId,
+      planId,
+      requestId,
+      response,
+      signal?.aborted ? 'revive' : 'direct',
+    );
 
     return JSON.stringify({
       planId,
       approved: response.approved,
       status: finalStatus,
+      deliveryMethod,
       ...(response.feedback ? { feedback: response.feedback } : {}),
     }, null, 2);
   }
@@ -2048,7 +2109,17 @@ export class MetaAgentService {
     return JSON.stringify(data, null, 2);
   }
 
-  private async sendPromptToSession(sessionId: string, workspaceId: string, prompt: string): Promise<string> {
+  private async sendPromptToSession(
+    sessionId: string,
+    workspaceId: string,
+    prompt: string,
+    options: {
+      forceProcessing?: boolean;
+      origin?: QueuedPromptOrigin;
+      idempotencyKey?: string;
+      bypassExecutionForTests?: boolean;
+    } = {},
+  ): Promise<string> {
     if (!this.aiService) {
       throw new Error('AI service not initialized');
     }
@@ -2062,7 +2133,8 @@ export class MetaAgentService {
     }
 
     const normalizedPrompt = prompt.trim();
-    const shouldBypassExecution = this.shouldBypassChildAgentExecutionForTests();
+    const shouldBypassExecution = options.bypassExecutionForTests
+      ?? this.shouldBypassChildAgentExecutionForTests();
     const statusRow = await this.getSessionStatusRow(sessionId, workspaceId);
     const statusBeforeQueue = (statusRow?.status || 'idle') as SessionStatusValue;
 
@@ -2078,14 +2150,25 @@ export class MetaAgentService {
       }, null, 2);
     }
 
-    const queued = await this.aiService.queuePromptForSession(sessionId, normalizedPrompt);
+    const queued = await this.aiService.queuePromptForSession(
+      sessionId,
+      normalizedPrompt,
+      undefined,
+      undefined,
+      options.origin ?? 'user',
+      options.idempotencyKey,
+    );
     const status = (statusRow?.status || 'idle') as SessionStatusValue;
-    const processingTriggered = status === 'idle' || status === 'interrupted' || status === 'error';
+    const processingTriggered = options.forceProcessing === true
+      || status === 'idle'
+      || status === 'interrupted'
+      || status === 'error';
 
     if (processingTriggered) {
       await this.aiService.triggerQueuedPromptProcessingForSession(
         sessionId,
-        session.worktreePath || session.workspacePath || workspaceId
+        session.worktreePath || session.workspacePath || workspaceId,
+        options.forceProcessing === true,
       );
     }
 

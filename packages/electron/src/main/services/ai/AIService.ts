@@ -28,6 +28,7 @@ import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStat
 import { parseContextUsageMessage } from '@nimbalyst/runtime/ai/server/utils/contextUsage';
 import { isBedrockToolSearchError } from '@nimbalyst/runtime/ai/server/utils/errorDetection';
 import { resolveEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
 import type { SessionStore } from '@nimbalyst/runtime';
 import {
   ModelIdentifier,
@@ -129,6 +130,7 @@ import {
 } from '../PGLiteQueuedPromptsStore';
 import { getQueuedPromptsStore } from '../RepositoryManager';
 import { CodexModelRefreshService } from '../CodexModelRefreshService';
+import { database as databaseWorker } from '../../database/PGLiteDatabaseWorker';
 import {
   CLAUDE_CODE_BUILTIN_MODEL_IDS,
   refreshClaudeCodeModelCatalog,
@@ -147,6 +149,133 @@ function isOpenCodeAbortConfirmed(interruptResult: unknown): boolean {
   return !!result
     && typeof result === 'object'
     && (result as { data?: unknown }).data === true;
+}
+
+export type PlanApprovalStatus = 'submitted' | 'responded' | 'delivered' | 'closed';
+export type PlanApprovalDecision = 'approved' | 'rejected' | 'dismissed';
+export type PlanApprovalDeliveryMethod = 'direct' | 'revive';
+
+export interface DurablePlanApprovalState {
+  requestId: string;
+  status: PlanApprovalStatus;
+  decision?: PlanApprovalDecision;
+  feedback?: string;
+  respondedAt?: number;
+  respondedBy?: string;
+  deliveryMethod?: PlanApprovalDeliveryMethod;
+  planId?: string;
+}
+
+export function normalizePlanApprovalRequestId(requestId: string): string {
+  const trimmed = requestId.trim();
+  const aliases = getCodexToolLookupAliases(trimmed);
+  return aliases[aliases.length - 1] ?? trimmed;
+}
+
+function parsePlanApprovalContent(content: unknown): Record<string, any> | null {
+  if (content && typeof content === 'object') {
+    return content as Record<string, any>;
+  }
+  if (typeof content !== 'string') return null;
+  try {
+    const parsed = JSON.parse(content);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function matchesPlanApprovalRequestId(candidate: unknown, requestId: string): boolean {
+  return typeof candidate === 'string'
+    && normalizePlanApprovalRequestId(candidate) === requestId;
+}
+
+/**
+ * Derive the approval state from durable transcript events.
+ *
+ * nimbalyst_tool_use -> submitted
+ * exit_plan_mode_response -> responded
+ * plan_approval_delivery -> delivered
+ * nimbalyst_tool_result -> closed
+ */
+export function deriveDurablePlanApprovalState(
+  contents: readonly unknown[],
+  promptId: string,
+): DurablePlanApprovalState | null {
+  const requestId = normalizePlanApprovalRequestId(promptId);
+  let submitted = false;
+  let response: Record<string, any> | null = null;
+  let delivery: Record<string, any> | null = null;
+  let closed = false;
+  let planId: string | undefined;
+
+  for (const rawContent of contents) {
+    const content = parsePlanApprovalContent(rawContent);
+    if (!content) continue;
+    if (
+      content.type === 'nimbalyst_tool_use'
+      && content.name === 'ExitPlanMode'
+      && matchesPlanApprovalRequestId(content.id, requestId)
+      && typeof content.input?.planId === 'string'
+      && content.input.planId.trim() !== ''
+    ) {
+      submitted = true;
+      if (typeof content.input?.planId === 'string') planId = content.input.planId;
+      continue;
+    }
+    if (
+      content.type === 'exit_plan_mode_response'
+      && matchesPlanApprovalRequestId(content.requestId, requestId)
+      && typeof content.approved === 'boolean'
+      && response === null
+    ) {
+      response = content;
+      continue;
+    }
+    if (
+      content.type === 'plan_approval_delivery'
+      && matchesPlanApprovalRequestId(content.requestId, requestId)
+      && (content.method === 'direct' || content.method === 'revive')
+      && delivery === null
+    ) {
+      delivery = content;
+      continue;
+    }
+    if (
+      content.type === 'nimbalyst_tool_result'
+      && matchesPlanApprovalRequestId(content.tool_use_id, requestId)
+    ) {
+      closed = true;
+    }
+  }
+
+  if (!submitted && !response && !delivery && !closed) return null;
+  const feedback = typeof response?.feedback === 'string' ? response.feedback : undefined;
+  const decision: PlanApprovalDecision | undefined = response
+    ? response.approved
+      ? 'approved'
+      : response.dismissed === true || feedback === 'User dismissed the plan.'
+        ? 'dismissed'
+        : 'rejected'
+    : undefined;
+  const status: PlanApprovalStatus = closed
+    ? 'closed'
+    : delivery
+      ? 'delivered'
+      : response
+        ? 'responded'
+        : 'submitted';
+
+  return {
+    requestId,
+    status,
+    decision,
+    ...(feedback ? { feedback } : {}),
+    ...(typeof response?.respondedAt === 'number' ? { respondedAt: response.respondedAt } : {}),
+    ...(typeof response?.respondedBy === 'string' ? { respondedBy: response.respondedBy } : {}),
+    ...(delivery?.method ? { deliveryMethod: delivery.method as PlanApprovalDeliveryMethod } : {}),
+    ...(planId ? { planId } : {}),
+  };
 }
 
 export class AIService {
@@ -282,27 +411,112 @@ export class AIService {
     attachments?: any[],
     documentContext?: any,
     origin: QueuedPromptOrigin = 'user',
+    idempotencyKey?: string,
   ): Promise<{ id: string; prompt: string; createdAt: number }> {
-    const { getQueuedPromptsStore } = await import('../RepositoryManager');
     const queueStore = getQueuedPromptsStore();
-    const promptId = `meta-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    const created = await queueStore.create({
-      id: promptId,
-      sessionId,
-      prompt,
-      origin,
-      attachments,
-      documentContext,
-    });
+    const promptId = idempotencyKey
+      ? `meta-${idempotencyKey}`
+      : `meta-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const existing = idempotencyKey ? await queueStore.get(promptId) : null;
+    let created = existing;
+    if (!created) {
+      try {
+        created = await queueStore.create({
+          id: promptId,
+          sessionId,
+          prompt,
+          origin,
+          attachments,
+          documentContext,
+        });
+      } catch (error) {
+        // Concurrent recovery runners can observe "missing" together. The
+        // deterministic primary key makes one INSERT win; the loser reuses it.
+        const concurrentlyCreated = idempotencyKey ? await queueStore.get(promptId) : null;
+        if (!concurrentlyCreated) throw error;
+        created = concurrentlyCreated;
+      }
+    }
     return { id: created.id, prompt: created.prompt, createdAt: created.createdAt };
   }
 
-  public async triggerQueuedPromptProcessingForSession(sessionId: string, workspacePath: string): Promise<boolean> {
+  public async triggerQueuedPromptProcessingForSession(
+    sessionId: string,
+    workspacePath: string,
+    reviveDeadTurn: boolean = false,
+  ): Promise<boolean> {
+    if (reviveDeadTurn) {
+      this.sessionsProcessingQueue.delete(sessionId);
+    }
     const targetWindow = findWindowByWorkspace(workspacePath);
     if (!targetWindow || targetWindow.isDestroyed()) {
       return false;
     }
     return this.processQueuedPrompt(sessionId, workspacePath, targetWindow);
+  }
+
+  public async getPlanApprovalState(
+    sessionId: string,
+    promptId: string,
+  ): Promise<DurablePlanApprovalState | null> {
+    const requestId = normalizePlanApprovalRequestId(promptId);
+    const { rows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND content LIKE $2
+       ORDER BY created_at ASC, id ASC
+       LIMIT 200`,
+      [sessionId, `%${requestId}%`],
+    );
+    return deriveDurablePlanApprovalState(rows.map((row) => row.content), requestId);
+  }
+
+  public async markPlanApprovalDelivered(
+    sessionId: string,
+    promptId: string,
+    method: PlanApprovalDeliveryMethod,
+  ): Promise<DurablePlanApprovalState> {
+    const requestId = normalizePlanApprovalRequestId(promptId);
+    const current = await this.getPlanApprovalState(sessionId, requestId);
+    if (!current || current.status === 'submitted') {
+      throw new Error(`Plan approval ${requestId} has not been responded to`);
+    }
+    if (current.status === 'closed' || current.status === 'delivered') {
+      return current;
+    }
+
+    const content = JSON.stringify({
+      type: 'plan_approval_delivery',
+      requestId,
+      method,
+      deliveredAt: Date.now(),
+    });
+    await databaseWorker.query(
+      `INSERT INTO ai_agent_messages (session_id, source, direction, content, created_at, hidden)
+       SELECT $1, $2, $3, $4, $5, $6
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM ai_agent_messages
+         WHERE session_id = $1
+           AND content LIKE '%"type":"plan_approval_delivery"%'
+           AND content LIKE $7
+       )`,
+      [
+        sessionId,
+        'nimbalyst',
+        'output',
+        content,
+        new Date(),
+        true,
+        `%"requestId":"${requestId}"%`,
+      ],
+    );
+    const delivered = await this.getPlanApprovalState(sessionId, requestId);
+    if (!delivered || (delivered.status !== 'delivered' && delivered.status !== 'closed')) {
+      throw new Error(`Failed to persist delivery for plan approval ${requestId}`);
+    }
+    return delivered;
   }
 
   /**
@@ -426,13 +640,50 @@ export class AIService {
     promptType: 'permission_request' | 'ask_user_question_request' | 'exit_plan_mode_request';
     response: any;
     respondedBy?: 'desktop' | 'mobile';
-  }): Promise<{ success: boolean; error?: string }> {
-    const { sessionId, promptId, promptType, response, respondedBy = 'desktop' } = params;
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    planApprovalState?: DurablePlanApprovalState | null;
+  }> {
+    const {
+      sessionId,
+      promptId: rawPromptId,
+      promptType,
+      response,
+      respondedBy = 'desktop',
+    } = params;
+    const promptId = promptType === 'exit_plan_mode_request'
+      ? normalizePlanApprovalRequestId(rawPromptId)
+      : rawPromptId;
     const { AISessionsRepository } = await import('@nimbalyst/runtime/storage/repositories/AISessionsRepository');
     const { database } = await import('../../database/PGLiteDatabaseWorker');
     const session = await AISessionsRepository.get(sessionId);
     if (!session) {
       return { success: false, error: 'Session not found' };
+    }
+
+    let hasDurablePlanApproval = false;
+    if (promptType === 'exit_plan_mode_request') {
+      const { rows: durableWaiterRows } = await database.query<{ id: string }>(
+        `SELECT id
+         FROM ai_agent_messages
+         WHERE session_id = $1
+           AND content LIKE '%"type":"nimbalyst_tool_use"%'
+           AND content LIKE '%"planId":%'
+           AND content LIKE $2
+         LIMIT 1`,
+        [sessionId, `%"id":"${promptId}"%`],
+      );
+      hasDurablePlanApproval = durableWaiterRows.length > 0;
+      if (hasDurablePlanApproval) {
+        const existingState = await this.getPlanApprovalState(sessionId, promptId);
+        if (existingState && existingState.status !== 'submitted') {
+          logger.main.info(
+            `[AIService] Plan approval response already recorded: requestId=${promptId}, status=${existingState.status}, decision=${existingState.decision ?? 'unknown'}`,
+          );
+          return { success: true, planApprovalState: existingState };
+        }
+      }
     }
 
     let responseContent: Record<string, unknown>;
@@ -531,25 +782,22 @@ export class AIService {
     }
 
     const provider = ProviderFactory.getProvider(session.provider as AIProviderType, sessionId);
-    const resolvedInMemory = provider
+    // A submitted Head plan is owned by the durable state machine. The provider
+    // Map remains only for native ExitPlanMode prompts that have no durable
+    // MetaAgent card, avoiding two readers racing on the same approval.
+    const resolvedInMemory = !hasDurablePlanApproval
+      && provider
       && typeof (provider as any).resolveExitPlanModeConfirmation === 'function'
       ? (provider as any).resolveExitPlanModeConfirmation(promptId, response, sessionId, respondedBy) === true
       : false;
-    const { rows: durableWaiterRows } = await database.query<{ id: string }>(
-      `SELECT id
-       FROM ai_agent_messages
-       WHERE session_id = $1
-         AND content LIKE '%"type":"nimbalyst_tool_use"%'
-         AND content LIKE $2
-       LIMIT 1`,
-      [sessionId, `%"id":"${promptId}"%`],
-    );
-    const hasDurableWaiter = durableWaiterRows.length > 0;
+    const planApprovalState = hasDurablePlanApproval
+      ? await this.getPlanApprovalState(sessionId, promptId)
+      : null;
     logger.main.info(
-      `[AIService] ExitPlanMode response durable delivery: requestId=${promptId}, persisted=true, inMemoryMatched=${resolvedInMemory}, durableWaiter=${hasDurableWaiter}`,
+      `[AIService] ExitPlanMode response durable delivery: requestId=${promptId}, persisted=true, inMemoryMatched=${resolvedInMemory}, durableWaiter=${hasDurablePlanApproval}`,
     );
 
-    if (!resolvedInMemory && !hasDurableWaiter) {
+    if (!resolvedInMemory && !hasDurablePlanApproval) {
       logger.main.warn(
         `[AIService] ExitPlanMode response has no active waiter: requestId=${promptId}, reason=provider_miss_and_no_durable_waiter`,
       );
@@ -559,7 +807,12 @@ export class AIService {
     if (response.approved && resolvedInMemory) {
       await AISessionsRepository.updateMetadata(sessionId, { mode: 'agent' });
     }
-    return { success: true };
+    if (planApprovalState?.status === 'responded') {
+      logger.main.info(
+        `[AIService] Plan approval transition: requestId=${promptId}, from=submitted, to=responded, decision=${planApprovalState.decision ?? 'unknown'}`,
+      );
+    }
+    return { success: true, planApprovalState };
   }
 
   private refreshClaudeCodeModelCatalog(): void {
@@ -2500,19 +2753,53 @@ export class AIService {
       return { success };
     });
 
+    safeHandle('ai:getPlanApprovalState', async (
+      _event,
+      workspacePath: string,
+      sessionId: string,
+      requestId: string,
+    ) => {
+      try {
+        if (!workspacePath?.trim()) {
+          throw new Error('ai:getPlanApprovalState requires workspacePath');
+        }
+        if (!sessionId?.trim()) {
+          throw new Error('ai:getPlanApprovalState requires sessionId');
+        }
+        if (!requestId?.trim()) {
+          throw new Error('ai:getPlanApprovalState requires requestId');
+        }
+        const session = await AISessionsRepository.get(sessionId);
+        if (!session || session.workspacePath !== workspacePath) {
+          throw new Error(`Session ${sessionId} not found in workspace ${workspacePath}`);
+        }
+        return {
+          success: true,
+          state: await this.getPlanApprovalState(sessionId, requestId),
+        };
+      } catch (error) {
+        return {
+          success: false,
+          state: null,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    });
+
     // Handle ExitPlanMode confirmation response from renderer
     safeHandle('ai:exitPlanModeConfirmResponse', async (event, requestId: string, sessionId: string, response: { approved: boolean; clearContext?: boolean; feedback?: string }) => {
-      logger.main.info(`[AIService] ExitPlanMode confirmation response: requestId=${requestId}, approved=${response.approved}, clearContext=${response.clearContext}, hasFeedback=${!!response.feedback}`);
+      const canonicalRequestId = normalizePlanApprovalRequestId(requestId);
+      logger.main.info(`[AIService] ExitPlanMode confirmation response: requestId=${canonicalRequestId}, approved=${response.approved}, clearContext=${response.clearContext}, hasFeedback=${!!response.feedback}`);
 
       const delivery = await this.respondToInteractivePrompt({
         sessionId,
-        promptId: requestId,
+        promptId: canonicalRequestId,
         promptType: 'exit_plan_mode_request',
         response,
         respondedBy: 'desktop',
       });
       if (!delivery.success) {
-        logger.main.warn(`[AIService] ExitPlanMode response was not delivered: requestId=${requestId}, error=${delivery.error}`);
+        logger.main.warn(`[AIService] ExitPlanMode response was not delivered: requestId=${canonicalRequestId}, error=${delivery.error}`);
         // Renderer `invoke` must reject here. A `{ success: false }` payload is
         // ignored by the legacy follow-up route, which would otherwise leave the
         // approval widget in BB's 10-minute "Awaiting review" timeout state.
@@ -2524,7 +2811,12 @@ export class AIService {
       const windows = BrowserWindow.getAllWindows().filter(w => !w.isDestroyed());
       for (const win of windows) {
         if (!win.webContents.isDestroyed()) {
-          win.webContents.send('ai:exitPlanModeResolved', { sessionId, approved: response.approved });
+          win.webContents.send('ai:exitPlanModeResolved', {
+            sessionId,
+            requestId: canonicalRequestId,
+            approved: response.approved,
+            state: delivery.planApprovalState,
+          });
         }
       }
 

@@ -243,6 +243,53 @@ export const sessionPendingPromptsRefreshAtom = atomFamily((_sessionId: string) 
   atom<number>(0)
 );
 
+export interface DurablePlanApprovalViewState {
+  requestId: string;
+  status: 'submitted' | 'responded' | 'delivered' | 'closed';
+  decision?: 'approved' | 'rejected' | 'dismissed';
+}
+
+export interface PlanApprovalStateKey {
+  sessionId: string;
+  promptId: string;
+}
+
+/**
+ * Renderer cache of the database-backed approval state. The durable transcript
+ * remains authoritative; this atom only gives approval cards one shared view.
+ */
+export const planApprovalStateAtom = atomFamily(
+  (_key: PlanApprovalStateKey) => atom<DurablePlanApprovalViewState | null>(null),
+  (left, right) =>
+    left.sessionId === right.sessionId
+    && left.promptId === right.promptId,
+);
+
+export const refreshPlanApprovalStateAtom = atom(
+  null,
+  async (_get, set, args: PlanApprovalStateKey & { workspacePath: string }) => {
+    if (!args.workspacePath?.trim()) {
+      throw new Error('refreshPlanApprovalStateAtom requires workspacePath');
+    }
+    const result = await window.electronAPI.invoke(
+      'ai:getPlanApprovalState',
+      args.workspacePath,
+      args.sessionId,
+      args.promptId,
+    ) as {
+      success?: boolean;
+      state?: DurablePlanApprovalViewState | null;
+      error?: string;
+    };
+    if (!result?.success) {
+      throw new Error(result?.error || 'Failed to read durable plan approval state');
+    }
+    const state = result.state ?? null;
+    set(planApprovalStateAtom(args), state);
+    return state;
+  },
+);
+
 /**
  * Action atom to refresh pending prompts for a session.
  * Pending prompts are now derived from canonical transcript events, not ai_agent_messages.
@@ -314,6 +361,21 @@ export const respondToPromptAtom = atom(
     const { sessionId, promptId, promptType, response } = params;
 
     try {
+      // ExitPlanMode has one canonical entry point. It normalizes Codex
+      // composite IDs before the durable write and then emits the state-machine
+      // response event. Calling messages:respond-to-prompt first used to create
+      // a second, composite-keyed response row.
+      if (promptType === 'exit_plan_mode_request') {
+        await window.electronAPI.invoke(
+          'ai:exitPlanModeConfirmResponse',
+          promptId,
+          sessionId,
+          response,
+        );
+        await set(refreshPendingPromptsAtom, sessionId);
+        return true;
+      }
+
       // 1. Persist response to database
       const result = await window.electronAPI.invoke('messages:respond-to-prompt', {
         sessionId,
@@ -341,8 +403,6 @@ export const respondToPromptAtom = atom(
           sessionId,
           response,
         });
-      } else if (promptType === 'exit_plan_mode_request') {
-        await window.electronAPI.invoke('ai:exitPlanModeConfirmResponse', promptId, sessionId, response);
       }
 
       // 3. Refresh pending prompts to remove the answered one

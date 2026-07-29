@@ -94,6 +94,22 @@ describe('interrupt_session meta-agent tool registration', () => {
     )).resolves.toBe('{"approved":true}');
     expect(submitPlan).toHaveBeenCalledWith('head-session', '/workspace', planArgs);
 
+    const deadTurn = new AbortController();
+    deadTurn.abort();
+    await expect(dispatchMetaAgentTool(
+      'mcp__nimbalyst-meta-agent__submit_plan',
+      'head-session',
+      '/workspace',
+      planArgs,
+      { signal: deadTurn.signal },
+    )).resolves.toBe('{"approved":true}');
+    expect(submitPlan).toHaveBeenLastCalledWith(
+      'head-session',
+      '/workspace',
+      planArgs,
+      deadTurn.signal,
+    );
+
     const createArgs = {
       prompt: 'Investigate one bounded question',
       intent: 'investigation',
