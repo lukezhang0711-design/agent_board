@@ -261,12 +261,11 @@ export class ClaudeAuthStateService {
     }
 
     const checkedAt = this.cachedState.checkedAt;
-    if (
-      this.cachedState.status !== 'unknown'
-      && checkedAt !== null
-      && this.now() - checkedAt < this.cacheTtlMs
-    ) {
-      return this.cachedState;
+    if (this.cachedState.status !== 'unknown' && checkedAt !== null) {
+      const age = this.now() - checkedAt;
+      if (age >= 0 && age < this.cacheTtlMs) {
+        return this.cachedState;
+      }
     }
 
     if (this.inflightCheck) {

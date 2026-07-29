@@ -420,7 +420,7 @@ export class ClaudeUsageServiceImpl {
   /**
    * Ask a user-installed, full Claude CLI to run its local, zero-cost `/usage`
    * command. The bundled Agent SDK binary does not support this command, so it
-   * is explicitly excluded and each failed attempt is disabled per credential.
+   * is explicitly excluded and failed automatic attempts are paused per credential.
    */
   private async refreshCliCredentials(failedCredential: CredentialCandidate): Promise<boolean> {
     if (this.cliRefreshDisabledFingerprints.has(failedCredential.fingerprint)) {
@@ -493,7 +493,7 @@ export class ClaudeUsageServiceImpl {
       this.logCredentialEvent('cli-refresh', failedCredential, 'failed');
       logger.main.warn(
         '[ClaudeUsageService] System Claude CLI credential refresh failed; '
-        + 'the fallback is disabled until credentials change.',
+        + 'the fallback is paused until credentials change or the next manual refresh.',
       );
       return false;
     }
@@ -661,6 +661,7 @@ export class ClaudeUsageServiceImpl {
   private resetCooldownsForManualRefresh(): void {
     this.unauthorizedFailureCounts.clear();
     this.authorizationCooldowns.clear();
+    this.cliRefreshDisabledFingerprints.clear();
     this.rateLimitCooldownUntil = null;
   }
 

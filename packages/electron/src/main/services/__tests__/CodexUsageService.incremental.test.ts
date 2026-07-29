@@ -248,6 +248,41 @@ describe('CodexUsageService incremental index', () => {
     expect((await expectEquivalent()).pools['openai-codex:truncated_pool'].utilization).toBe(80);
   });
 
+  it('uses later rollout records after their explicit timestamps move backwards', async () => {
+    const root = await createRoot('codex-usage-clock-rollback-');
+    const dayDir = join(root, '2026', '07', '22');
+    const rolloutPath = join(dayDir, 'rollout-clock-rollback.jsonl');
+    await mkdir(dayDir, { recursive: true });
+    await writeFile(
+      rolloutPath,
+      [
+        tokenCountEvent({
+          timestamp: '2030-01-01T00:10:00.000Z',
+          limitId: 'clock_rollback_pool',
+          utilization: 90,
+          resetsAt: 4_102_444_800,
+          totalTokens: 100,
+        }),
+        tokenCountEvent({
+          timestamp: '2030-01-01T00:00:00.000Z',
+          limitId: 'clock_rollback_pool',
+          utilization: 20,
+          resetsAt: 4_102_448_400,
+          totalTokens: 200,
+        }),
+      ].join('\n') + '\n',
+      'utf8',
+    );
+
+    const usage = await createService(root).refresh();
+
+    expect(usage.pools['openai-codex:clock_rollback_pool']).toMatchObject({
+      utilization: 20,
+      resetsAt: new Date(4_102_448_400 * 1_000).toISOString(),
+      stale: false,
+    });
+  });
+
   it('persists the index across service instances and rebuilds a corrupt cache', async () => {
     const root = await createRoot('codex-usage-persistence-');
     const dayDir = join(root, '2026', '07', '22');
@@ -345,7 +380,55 @@ describe('CodexUsageService incremental index', () => {
     expect(usage.pools['openai-codex:old_pool'].stale).toBe(true);
   });
 
-  it('does not reread 100 unchanged files and parses only an appended suffix from a 50 MiB rollout', async () => {
+  it('rebuilds a grown same-inode rollout when only its middle changed', async () => {
+    const root = await createRoot('codex-usage-middle-rewrite-');
+    const dayDir = join(root, '2026', '07', '22');
+    const rolloutPath = join(dayDir, 'rollout-middle-rewritten.jsonl');
+    await mkdir(dayDir, { recursive: true });
+    const oldRecord = tokenCountEvent({
+      timestamp: '2026-07-22T04:00:00.000Z',
+      limitId: 'old_pool',
+      utilization: 10,
+      resetsAt: 4_102_444_800,
+    });
+    const rewrittenRecord = tokenCountEvent({
+      timestamp: '2026-07-22T04:01:00.000Z',
+      limitId: 'new_pool',
+      utilization: 70,
+      resetsAt: 4_102_444_800,
+    });
+    expect(Buffer.byteLength(rewrittenRecord)).toBe(Buffer.byteLength(oldRecord));
+    const head = ' '.repeat(4_096);
+    const unchangedTail = ' '.repeat(8_192);
+    await writeFile(rolloutPath, `${head}${oldRecord}\n${unchangedTail}`, 'utf8');
+
+    const service = createService(root);
+    await service.refresh();
+    const previousStat = await stat(rolloutPath);
+    const growthRecord = tokenCountEvent({
+      timestamp: '2026-07-22T04:02:00.000Z',
+      limitId: 'growth_pool',
+      utilization: 25,
+      resetsAt: 4_102_444_800,
+    });
+    await writeFile(rolloutPath, `${head}${rewrittenRecord}\n${unchangedTail}\n${growthRecord}\n`, 'utf8');
+    const rewrittenStat = await stat(rolloutPath);
+    expect(rewrittenStat.ino).toBe(previousStat.ino);
+    expect(rewrittenStat.size).toBeGreaterThan(previousStat.size);
+    ioTrace.fullReads.length = 0;
+    ioTrace.rangeReads.length = 0;
+
+    const usage = await service.refresh();
+
+    expect(rolloutReads()).toEqual([rolloutPath]);
+    expect(usage.pools['openai-codex:new_pool']).toMatchObject({
+      utilization: 70,
+      stale: false,
+    });
+    expect(usage.pools['openai-codex:old_pool'].stale).toBe(true);
+  });
+
+  it('does not reread 100 unchanged files and revalidates a grown rollout before parsing its suffix', async () => {
     const root = await createRoot('codex-usage-scale-');
     const dayDir = join(root, '2026', '07', '22');
     const cachePath = join(root, '.cache', 'usage-index.json');
@@ -410,10 +493,14 @@ describe('CodexUsageService incremental index', () => {
     expect(new Set(rolloutRangeReads.map((read) => read.path))).toEqual(new Set([largePath]));
     const appendedReads = rolloutRangeReads.filter((read) => read.path === largePath);
     expect(appendedReads.some((read) => (
+      read.position === 0
+      && read.bytesRead === oldSize
+    ))).toBe(true);
+    expect(appendedReads.some((read) => (
       read.position === oldSize
       && read.bytesRead === Buffer.byteLength(appendedLine)
     ))).toBe(true);
     expect(appendedReads.reduce((total, read) => total + read.bytesRead, 0))
-      .toBeLessThanOrEqual(Buffer.byteLength(appendedLine) + 16 * 1024);
+      .toBeLessThanOrEqual(oldSize + Buffer.byteLength(appendedLine) + 16 * 1024);
   });
 });

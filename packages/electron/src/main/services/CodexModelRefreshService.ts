@@ -729,11 +729,17 @@ export class CodexModelRefreshService {
     reason: 'source' | 'version',
     runtime: Pick<RuntimeFingerprint, 'binaryPath'> & Partial<Pick<RuntimeFingerprint, 'version'>>,
   ): void {
-    const key = `${reason}:${runtime.binaryPath}:${runtime.version ?? ''}`;
+    const previousRuntime = this.cachedRuntimeFingerprint;
+    const key = [
+      reason,
+      previousRuntime?.binaryPath ?? '',
+      previousRuntime?.version ?? '',
+      runtime.binaryPath,
+      runtime.version ?? '',
+    ].join('\0');
     if (this.invalidatedRuntimeKeys.has(key)) return;
     this.invalidatedRuntimeKeys.add(key);
 
-    const previousRuntime = this.cachedRuntimeFingerprint;
     this.writeCatalogAtomically(SENTINEL_CATALOG);
     this.catalogReady = true;
     this.models = [];
@@ -760,6 +766,7 @@ export class CodexModelRefreshService {
     try {
       this.writeJsonAtomically(this.getRuntimeFingerprintPath(), fingerprint);
       this.cachedRuntimeFingerprint = fingerprint;
+      this.invalidatedRuntimeKeys.clear();
     } catch (error) {
       this.log.warn('[CodexModelRefresh] unable to persist runtime fingerprint; cache will refresh next launch', {
         error: errorMessage(error),
