@@ -153,8 +153,10 @@ function createHarness(options: {
   retryDelaysMs?: number[];
   requestTimeoutMs?: number;
   terminationGraceMs?: number;
+  manualRetryDedupeMs?: number;
   buildEnv?: () => NodeJS.ProcessEnv;
   loadApiKey?: () => string | undefined;
+  resolveBinaryPath?: () => string;
 } = {}) {
   const tempDir = options.catalogPath
     ? path.dirname(options.catalogPath)
@@ -175,7 +177,8 @@ function createHarness(options: {
     retryDelaysMs: options.retryDelaysMs ?? [],
     requestTimeoutMs: options.requestTimeoutMs ?? 25,
     terminationGraceMs: options.terminationGraceMs ?? 10,
-    resolveBinaryPath: () => options.binaryPath ?? '/fake/codex',
+    manualRetryDedupeMs: options.manualRetryDedupeMs,
+    resolveBinaryPath: options.resolveBinaryPath ?? (() => options.binaryPath ?? '/fake/codex'),
     buildEnv: options.buildEnv ?? (() => ({ PATH: '/fake/bin' })),
     loadApiKey: options.loadApiKey,
     spawnProcess: (_command, _args, spawnOptions) => {
@@ -622,6 +625,42 @@ describe('CodexModelRefreshService', () => {
     next.service.shutdown();
     fs.rmSync(prior.tempDir, { recursive: true, force: true });
     fs.rmSync(tempCodexHome, { recursive: true, force: true });
+  });
+
+  it('invalidates a repeated A-to-B runtime switch before the final B refresh fails', async () => {
+    let binaryPath = '/fake/runtime-a/codex';
+    const harness = createHarness({
+      manualRetryDedupeMs: 0,
+      resolveBinaryPath: () => binaryPath,
+      children: [
+        new FakeCodexChild({ modelResult: { data: [modelPreset('runtime-a', 'Runtime A')], nextCursor: null } }),
+        new FakeCodexChild({ modelResult: { data: [modelPreset('runtime-b', 'Runtime B')], nextCursor: null } }),
+        new FakeCodexChild({ modelResult: { data: [modelPreset('runtime-a', 'Runtime A')], nextCursor: null } }),
+        new FakeCodexChild({ modelError: { code: 503, message: 'runtime B unavailable' } }),
+      ],
+    });
+
+    try {
+      await harness.service.start();
+      binaryPath = '/fake/runtime-b/codex';
+      await harness.service.manualRetry();
+      binaryPath = '/fake/runtime-a/codex';
+      await harness.service.manualRetry();
+      binaryPath = '/fake/runtime-b/codex';
+      await harness.service.manualRetry();
+
+      const catalog = JSON.parse(fs.readFileSync(harness.catalogPath, 'utf8')) as {
+        models: Array<{ slug?: string }>;
+      };
+      expect(catalog.models).toEqual([
+        expect.objectContaining({ slug: '__nimbalyst_offline_catalog__' }),
+      ]);
+      expect(harness.service.getModels()).toEqual([]);
+      expect(harness.service.getStatus()).toMatchObject({ modelSource: 'fallback' });
+    } finally {
+      harness.service.shutdown();
+      fs.rmSync(harness.tempDir, { recursive: true, force: true });
+    }
   });
 
   it('registers query and manual-retry IPC entries at the main-process seam', async () => {

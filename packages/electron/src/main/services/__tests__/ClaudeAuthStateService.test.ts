@@ -215,6 +215,29 @@ describe('ClaudeAuthStateService', () => {
     expect(runAuthStatus).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    ['logged-in', result(loggedInJson), result(loggedOutJson), 'logged-out'],
+    ['logged-out', result(loggedOutJson), result(loggedInJson), 'logged-in'],
+    ['check-failed', result('{not-json'), result(loggedInJson), 'logged-in'],
+  ])('rechecks a %s cached state when the clock moves backwards', async (
+    _initialLabel,
+    initialResult,
+    refreshedResult,
+    refreshedStatus,
+  ) => {
+    let now = 100;
+    const runAuthStatus = vi.fn()
+      .mockResolvedValueOnce(initialResult)
+      .mockResolvedValueOnce(refreshedResult);
+    const service = new ClaudeAuthStateService({ now: () => now, runAuthStatus });
+
+    await service.getState();
+    now = 99;
+
+    await expect(service.getState()).resolves.toMatchObject({ status: refreshedStatus });
+    expect(runAuthStatus).toHaveBeenCalledTimes(2);
+  });
+
   it('invalidates cached state and forces the next call to re-check', async () => {
     const runAuthStatus = vi.fn().mockResolvedValue(result(loggedInJson));
     const service = new ClaudeAuthStateService({ runAuthStatus });

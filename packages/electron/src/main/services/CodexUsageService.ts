@@ -119,9 +119,8 @@ const POLL_INTERVAL_MS = 30 * 60 * 1000;
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
 const TURN_REFRESH_DELAY_MS = 1_000;
 const INDEX_SCHEMA_VERSION = 1;
-const INDEX_PARSER_VERSION = 1;
+const INDEX_PARSER_VERSION = 2;
 const INDEX_FILENAME = 'codex-usage-index-v1.json';
-const CONTENT_FINGERPRINT_SAMPLE_BYTES = 4 * 1024;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -575,25 +574,16 @@ export class CodexUsageService {
     cached: IndexedSessionFile,
     file: SessionFileInfo,
   ): Promise<IndexedSessionFile> {
-    const previousSamples = await this.readFingerprintSamples(file.path, cached.size);
-    if (this.fingerprintSamples(previousSamples.head, previousSamples.boundary, cached.size)
-      !== cached.contentFingerprint) {
+    // Stat metadata cannot distinguish a true append from an in-place rewrite
+    // that kept the same inode, so cached records require a full-prefix check.
+    const previousContent = await this.readFileRange(file.path, 0, cached.size);
+    if (this.fingerprintContent(previousContent) !== cached.contentFingerprint) {
       return this.readIndexedSessionFile(file);
     }
 
     const suffix = await this.readFileRange(file.path, cached.size, file.size - cached.size);
     const previousTail = Buffer.from(cached.tailBase64, 'base64');
     const parsed = this.parseJsonlChunk(Buffer.concat([previousTail, suffix]));
-    const newHead = cached.size >= CONTENT_FINGERPRINT_SAMPLE_BYTES
-      ? previousSamples.head
-      : Buffer.concat([previousSamples.head, suffix]).subarray(
-        0,
-        CONTENT_FINGERPRINT_SAMPLE_BYTES,
-      );
-    const newBoundarySource = Buffer.concat([previousSamples.boundary, suffix]);
-    const newBoundary = newBoundarySource.subarray(
-      Math.max(0, newBoundarySource.length - CONTENT_FINGERPRINT_SAMPLE_BYTES),
-    );
     return {
       mtime: file.mtime,
       ctime: file.ctime,
@@ -602,7 +592,7 @@ export class CodexUsageService {
       ino: file.ino,
       completeThrough: cached.completeThrough + parsed.completeThrough,
       tailBase64: parsed.tail.toString('base64'),
-      contentFingerprint: this.fingerprintSamples(newHead, newBoundary, file.size),
+      contentFingerprint: this.fingerprintContent(previousContent, suffix),
       records: [...cached.records, ...parsed.records],
       tailRecord: parsed.tailRecord,
     };
@@ -632,36 +622,12 @@ export class CodexUsageService {
     return buffer;
   }
 
-  private async readFingerprintSamples(
-    filePath: string,
-    size: number,
-  ): Promise<{ head: Buffer; boundary: Buffer }> {
-    if (size === 0) return { head: Buffer.alloc(0), boundary: Buffer.alloc(0) };
-    const sampleLength = Math.min(size, CONTENT_FINGERPRINT_SAMPLE_BYTES);
-    const head = await this.readFileRange(filePath, 0, sampleLength);
-    const boundaryPosition = Math.max(0, size - CONTENT_FINGERPRINT_SAMPLE_BYTES);
-    const boundary = boundaryPosition === 0
-      ? head
-      : await this.readFileRange(filePath, boundaryPosition, size - boundaryPosition);
-    return { head, boundary };
-  }
-
-  private fingerprintContent(content: Buffer): string {
-    const head = content.subarray(0, CONTENT_FINGERPRINT_SAMPLE_BYTES);
-    const boundary = content.subarray(
-      Math.max(0, content.length - CONTENT_FINGERPRINT_SAMPLE_BYTES),
-    );
-    return this.fingerprintSamples(head, boundary, content.length);
-  }
-
-  private fingerprintSamples(head: Buffer, boundary: Buffer, size: number): string {
-    return createHash('sha256')
-      .update(String(size))
-      .update('\0')
-      .update(head)
-      .update('\0')
-      .update(boundary)
-      .digest('hex');
+  private fingerprintContent(...contents: Buffer[]): string {
+    const hash = createHash('sha256');
+    for (const content of contents) {
+      hash.update(content);
+    }
+    return hash.digest('hex');
   }
 
   private parseJsonlChunk(content: Buffer): {
@@ -752,8 +718,15 @@ export class CodexUsageService {
     const records = indexedFile.tailRecord
       ? [...indexedFile.records, indexedFile.tailRecord]
       : indexedFile.records;
+    let latestRecordUpdatedAt: number | null = null;
     for (const record of records) {
-      const updatedAt = record.explicitTimestamp ?? indexedFile.mtime;
+      const recordedUpdatedAt: number = record.explicitTimestamp ?? indexedFile.mtime;
+      // Rollout records are ordered by append position. A wall-clock rollback
+      // must not let a later record lose to an earlier, future-dated record.
+      const updatedAt: number = latestRecordUpdatedAt === null
+        ? recordedUpdatedAt
+        : Math.max(latestRecordUpdatedAt, recordedUpdatedAt);
+      latestRecordUpdatedAt = updatedAt;
       if (
         record.tokenUsage
         && (!snapshot.tokenUsage || updatedAt >= snapshot.tokenUsage.updatedAt)

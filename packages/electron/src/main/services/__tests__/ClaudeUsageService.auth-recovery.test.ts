@@ -542,7 +542,7 @@ describe('ClaudeUsageService authentication recovery', () => {
     expect(execFileFn.mock.calls.filter(([file]) => file === bundledExecutable)).toHaveLength(0);
   });
 
-  it('disables a failed system CLI credential refresh until the credential fingerprint changes', async () => {
+  it('pauses a failed system CLI credential refresh automatically but retries it manually', async () => {
     const systemExecutable = '/test/bin/claude';
     const execFileFn = vi.fn((file, args: readonly string[], _options, callback) => {
       if (file === 'security') {
@@ -563,10 +563,14 @@ describe('ClaudeUsageService authentication recovery', () => {
       sleep: async () => undefined,
     });
 
-    await service.refresh();
-    await service.refresh();
+    await service.refresh({ manual: false });
+    await service.refresh({ manual: false });
 
     expect(execFileFn.mock.calls.filter(([file]) => file === systemExecutable)).toHaveLength(1);
+
+    await service.refresh({ manual: true });
+
+    expect(execFileFn.mock.calls.filter(([file]) => file === systemExecutable)).toHaveLength(2);
   });
 
   it('keeps a failed CLI refresh disabled when the credential source is temporarily unavailable', async () => {
@@ -596,9 +600,9 @@ describe('ClaudeUsageService authentication recovery', () => {
       sleep: async () => undefined,
     });
 
-    await service.refresh();
-    await service.refresh();
-    await service.refresh();
+    await service.refresh({ manual: false });
+    await service.refresh({ manual: false });
+    await service.refresh({ manual: false });
 
     expect(execFileFn).toHaveBeenCalledOnce();
   });
@@ -634,8 +638,8 @@ describe('ClaudeUsageService authentication recovery', () => {
       sleep: async () => undefined,
     });
 
-    await service.refresh();
-    await service.refresh();
+    await service.refresh({ manual: false });
+    await service.refresh({ manual: false });
 
     expect(execFileFn.mock.calls.filter(([file]) => file === systemExecutable)).toHaveLength(2);
   });
