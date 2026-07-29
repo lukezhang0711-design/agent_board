@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { usePostHog } from 'posthog-js/react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
@@ -71,6 +71,7 @@ export function AgentFeaturesPanel() {
   const [metaAgentMaxParallelInput, setMetaAgentMaxParallelInput] = useState(
     String(DEFAULT_META_AGENT_MAX_PARALLEL),
   );
+  const metaAgentMaxParallelRevision = useRef(0);
 
   const isDevelopment = import.meta.env.DEV;
 
@@ -122,15 +123,23 @@ export function AgentFeaturesPanel() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const requestRevision = metaAgentMaxParallelRevision.current;
+
     const loadMetaAgentMaxParallel = async () => {
       try {
         const value = await window.electronAPI.invoke('app-settings:get', 'metaAgentMaxParallel');
+        if (cancelled || metaAgentMaxParallelRevision.current !== requestRevision) return;
         setMetaAgentMaxParallelInput(String(normalizeMetaAgentMaxParallel(value)));
       } catch (err) {
         console.error('Failed to load Meta Agent concurrency limit:', err);
       }
     };
     loadMetaAgentMaxParallel();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handlePreferredAgentLanguageChange = useCallback(async (value: string) => {
@@ -142,15 +151,29 @@ export function AgentFeaturesPanel() {
     }
   }, []);
 
-  const persistMetaAgentMaxParallel = useCallback(async () => {
-    const value = normalizeMetaAgentMaxParallel(metaAgentMaxParallelInput);
-    setMetaAgentMaxParallelInput(String(value));
+  const handleMetaAgentMaxParallelChange = useCallback((input: string) => {
+    metaAgentMaxParallelRevision.current += 1;
+    setMetaAgentMaxParallelInput(input);
+  }, []);
+
+  const persistMetaAgentMaxParallel = useCallback(async (input: string) => {
+    const value = normalizeMetaAgentMaxParallel(input);
+    const requestRevision = metaAgentMaxParallelRevision.current;
     try {
-      await window.electronAPI.invoke('app-settings:set', 'metaAgentMaxParallel', value);
+      const confirmedValue = await window.electronAPI.invoke(
+        'app-settings:set',
+        'metaAgentMaxParallel',
+        value,
+      );
+      if (metaAgentMaxParallelRevision.current === requestRevision) {
+        setMetaAgentMaxParallelInput(
+          String(normalizeMetaAgentMaxParallel(confirmedValue ?? value)),
+        );
+      }
     } catch (err) {
       console.error('Failed to save Meta Agent concurrency limit:', err);
     }
-  }, [metaAgentMaxParallelInput]);
+  }, []);
 
   const handleWorkflowSourceToggle = useCallback(async (
     key: keyof WorkflowSourceSettings,
@@ -325,8 +348,8 @@ export function AgentFeaturesPanel() {
                   min={1}
                   step={1}
                   value={metaAgentMaxParallelInput}
-                  onChange={(event) => setMetaAgentMaxParallelInput(event.target.value)}
-                  onBlur={() => void persistMetaAgentMaxParallel()}
+                  onChange={(event) => handleMetaAgentMaxParallelChange(event.target.value)}
+                  onBlur={(event) => void persistMetaAgentMaxParallel(event.currentTarget.value)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') event.currentTarget.blur();
                   }}
