@@ -78,6 +78,44 @@ afterEach(() => {
 });
 
 describe('AgentFeaturesPanel Meta Agent concurrency setting', () => {
+  it('keeps the rendered value when save acknowledgement has no numeric confirmation', async () => {
+    const saveConfirmation = deferred<string>();
+    let persistedValue = 4;
+    invoke.mockImplementation(async (channel: string, key?: string, value?: unknown) => {
+      if (channel === 'app-settings:get' && key === 'metaAgentMaxParallel') return persistedValue;
+      if (channel === 'app-settings:set' && key === 'metaAgentMaxParallel') {
+        persistedValue = value as number;
+        return saveConfirmation.promise;
+      }
+      if (channel === 'preferred-agent-language:get') return '';
+      return undefined;
+    });
+
+    render(<AgentFeaturesPanel />);
+
+    const input = await screen.findByLabelText('Max parallel child sessions') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '2' } });
+    expect(input.value).toBe('2');
+
+    fireEvent.blur(input);
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('app-settings:set', 'metaAgentMaxParallel', 2);
+    });
+    await act(async () => {
+      saveConfirmation.resolve('');
+      await saveConfirmation.promise;
+    });
+    expect(input.value).toBe('2');
+    expect(persistedValue).toBe(2);
+
+    cleanup();
+    render(<AgentFeaturesPanel />);
+    const reopenedInput = await screen.findByLabelText('Max parallel child sessions') as HTMLInputElement;
+    await waitFor(() => {
+      expect(reopenedInput.value).toBe('2');
+    });
+  });
+
   it('keeps a saved value when the opening read returns a stale value', async () => {
     const openingRead = deferred<number>();
     let persistedValue = 4;
