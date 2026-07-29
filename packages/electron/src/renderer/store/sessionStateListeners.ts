@@ -59,6 +59,24 @@ import type { TranscriptEvent } from '@nimbalyst/runtime/ai/server/transcript/ty
 import { TranscriptStreamAccumulator } from './transcriptStreamAccumulator';
 import { resolveOwnedWorkspacePath } from '../../shared/sessionWorkspaceRouting';
 
+function redactTranscriptSessionId(sessionId: string): string {
+  return sessionId.length > 8 ? `${sessionId.slice(0, 8)}…` : sessionId;
+}
+
+let requestTranscriptReplayAfterMount: (sessionId: string) => void = () => {};
+const lastTranscriptAppendLogAt = new Map<string, number>();
+
+function logTranscriptAppend(sessionId: string, messageCount: number): void {
+  const now = Date.now();
+  const lastLoggedAt = lastTranscriptAppendLogAt.get(sessionId);
+  if (lastLoggedAt !== undefined && now - lastLoggedAt < 1000) return;
+  lastTranscriptAppendLogAt.set(sessionId, now);
+  console.debug('[TranscriptIncremental] append succeeded', {
+    sessionId: redactTranscriptSessionId(sessionId),
+    messageCount,
+  });
+}
+
 /**
  * Per-session accumulator of canonical events received via IPC.
  *
@@ -71,11 +89,19 @@ import { resolveOwnedWorkspacePath } from '../../shared/sessionWorkspaceRouting'
 const transcriptAccumulator = new TranscriptStreamAccumulator({
   emit: ({ sessionId, messages }) => {
     const currentSession = store.get(sessionStoreAtom(sessionId));
-    if (!currentSession) return;
+    if (!currentSession) {
+      console.warn('[TranscriptIncremental] append deferred', {
+        sessionId: redactTranscriptSessionId(sessionId),
+        reason: 'session-store-not-mounted-at-flush',
+      });
+      requestTranscriptReplayAfterMount(sessionId);
+      return;
+    }
     store.set(sessionStoreAtom(sessionId), {
       ...currentSession,
       messages,
     });
+    logTranscriptAppend(sessionId, messages.length);
   },
   readDbMessages: (sessionId) => {
     const currentSession = store.get(sessionStoreAtom(sessionId));
@@ -176,6 +202,31 @@ export function initSessionStateListeners(): () => void {
     console.warn('[sessionStateListeners] sessionState API not available');
     return () => {};
   }
+
+  const transcriptMountSubscriptions = new Map<string, () => void>();
+  const replayTranscriptWhenMounted = (sessionId: string): void => {
+    if (transcriptMountSubscriptions.has(sessionId)) return;
+
+    const sessionAtom = sessionStoreAtom(sessionId);
+    const replayIfReady = () => {
+      if (!store.get(sessionAtom)) return;
+
+      transcriptMountSubscriptions.get(sessionId)?.();
+      transcriptMountSubscriptions.delete(sessionId);
+      const replayScheduled = transcriptAccumulator.replay(sessionId);
+      console.debug('[TranscriptIncremental] deferred events resumed', {
+        sessionId: redactTranscriptSessionId(sessionId),
+        replayScheduled,
+      });
+    };
+
+    transcriptMountSubscriptions.set(sessionId, store.sub(sessionAtom, replayIfReady));
+    // Close the subscribe-after-check race: hydration may have completed
+    // between the original event handler's null check and this subscription.
+    replayIfReady();
+  };
+  requestTranscriptReplayAfterMount = replayTranscriptWhenMounted;
+  const loggedTranscriptEventKeys = new Set<string>();
 
   // Debounced trigger for the processing-state reconcile (assigned once the
   // reconcile function is defined below). Fired on terminal session events so a
@@ -1008,6 +1059,28 @@ export function initSessionStateListeners(): () => void {
   // ---------------------------------------------------------------------------
   const handleTranscriptEvent = (transcriptEvent: TranscriptEvent) => {
     if (!transcriptEvent.sessionId) return;
+    const sessionId = transcriptEvent.sessionId;
+    const eventLogKey = `${sessionId}:${transcriptEvent.id}:${transcriptEvent.eventType}`;
+    const isFirstArrivalForEvent = !loggedTranscriptEventKeys.has(eventLogKey);
+    if (isFirstArrivalForEvent) {
+      loggedTranscriptEventKeys.add(eventLogKey);
+      console.debug('[TranscriptIncremental] event arrived', {
+        sessionId: redactTranscriptSessionId(sessionId),
+        eventId: transcriptEvent.id,
+        eventType: transcriptEvent.eventType,
+      });
+    }
+    if (!store.get(sessionStoreAtom(sessionId))) {
+      if (isFirstArrivalForEvent) {
+        console.warn('[TranscriptIncremental] event deferred', {
+          sessionId: redactTranscriptSessionId(sessionId),
+          eventId: transcriptEvent.id,
+          eventType: transcriptEvent.eventType,
+          reason: 'session-store-not-mounted',
+        });
+      }
+      replayTranscriptWhenMounted(sessionId);
+    }
     // The accumulator decides whether the change is a cheap in-place patch
     // or requires a full re-projection, then flushes once per animation
     // frame. See `transcriptStreamAccumulator.ts` for the rationale.
@@ -1094,6 +1167,15 @@ export function initSessionStateListeners(): () => void {
     cleanupSyncDraftInput?.();
     cleanupTranscriptEvent?.();
     cleanupTranscriptSessionReparsed?.();
+    for (const unsubscribe of transcriptMountSubscriptions.values()) {
+      unsubscribe();
+    }
+    transcriptMountSubscriptions.clear();
+    loggedTranscriptEventKeys.clear();
+    lastTranscriptAppendLogAt.clear();
+    if (requestTranscriptReplayAfterMount === replayTranscriptWhenMounted) {
+      requestTranscriptReplayAfterMount = () => {};
+    }
     transcriptAccumulator.clear();
   };
 }

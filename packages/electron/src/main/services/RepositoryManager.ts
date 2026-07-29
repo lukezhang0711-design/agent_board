@@ -11,6 +11,7 @@ import type {
 import type { WorkspaceRepository } from '../types/workspace';
 import type { AgentMessagesStore } from '@nimbalyst/runtime/storage/repositories/AgentMessagesRepository';
 import { AISessionsRepository, SessionFilesRepository, AgentMessagesRepository, TranscriptMigrationRepository } from '@nimbalyst/runtime';
+import { isAgentProvider, onAgentMessageBatch } from '@nimbalyst/runtime/ai/server';
 import { TranscriptMigrationService } from '@nimbalyst/runtime/ai/server/transcript/TranscriptMigrationService';
 import { createRawMessageStoreAdapter } from './TranscriptMigrationAdapters';
 import { createPGLiteSessionStore } from './PGLiteSessionStore';
@@ -30,6 +31,10 @@ import { shutdownTrackerSync, initializeTrackerSync } from './TrackerSyncManager
 import { onAuthStateChange } from './StytchAuthService';
 import { windows, windowStates } from '../window/WindowManager';
 
+function redactSessionId(sessionId: string): string {
+  return sessionId.length > 8 ? `${sessionId.slice(0, 8)}…` : sessionId;
+}
+
 class RepositoryManager {
   private sessionStore: SessionStore | null = null;
   private baseSessionStore: SessionStore | null = null; // Unwrapped store for sync reinitialization
@@ -42,6 +47,7 @@ class RepositoryManager {
   private sessionWakeupsStore: SessionWakeupsStore | null = null;
   private initialized = false;
   private authListenerUnsubscribe: (() => void) | null = null;
+  private transcriptBatchUnsubscribe: (() => void) | null = null;
   private wasAuthenticated = false; // Track auth state to detect transitions
 
   /**
@@ -159,6 +165,19 @@ class RepositoryManager {
         }
       });
 
+      // Claude Code persists streaming SDK chunks through a 200ms coalescing
+      // queue. Its per-chunk transformer kick can therefore run before the raw
+      // row exists; when the next SDK action blocks on user input there is no
+      // later chunk to retry. The batch notification is emitted only after the
+      // queue commits, making it the deterministic, lightweight catch-up seam.
+      this.transcriptBatchUnsubscribe = onAgentMessageBatch((batch) => {
+        void this.catchUpTranscriptAfterPersistedBatch(
+          migrationService,
+          batch.sessionId,
+          batch.count,
+        );
+      });
+
       this.initialized = true;
       logger.main.info('[RepositoryManager] All repositories initialized successfully');
 
@@ -189,6 +208,48 @@ class RepositoryManager {
     } catch (error) {
       logger.main.error('[RepositoryManager] Failed to initialize repositories:', error);
       throw error;
+    }
+  }
+
+  private async catchUpTranscriptAfterPersistedBatch(
+    migrationService: TranscriptMigrationService,
+    sessionId: string,
+    rawMessageCount: number,
+  ): Promise<void> {
+    const redactedSessionId = redactSessionId(sessionId);
+    try {
+      const session = await AISessionsRepository.get(sessionId);
+      if (!session) {
+        logger.main.warn('[TranscriptIncremental] persisted batch skipped', {
+          sessionId: redactedSessionId,
+          reason: 'session-not-found',
+          rawMessageCount,
+        });
+        return;
+      }
+      if (!isAgentProvider(session.provider)) {
+        logger.main.debug('[TranscriptIncremental] persisted batch skipped', {
+          sessionId: redactedSessionId,
+          provider: session.provider,
+          reason: 'non-agent-provider',
+          rawMessageCount,
+        });
+        return;
+      }
+
+      const events = await migrationService.processNewMessages(sessionId, session.provider);
+      logger.main.debug('[TranscriptIncremental] persisted batch caught up', {
+        sessionId: redactedSessionId,
+        provider: session.provider,
+        rawMessageCount,
+        canonicalEventCount: events.length,
+      });
+    } catch (error) {
+      logger.main.warn('[TranscriptIncremental] persisted batch catch-up failed', {
+        sessionId: redactedSessionId,
+        rawMessageCount,
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
     }
   }
 
@@ -338,6 +399,11 @@ class RepositoryManager {
    * Clean up resources
    */
   async cleanup(): Promise<void> {
+    if (this.transcriptBatchUnsubscribe) {
+      this.transcriptBatchUnsubscribe();
+      this.transcriptBatchUnsubscribe = null;
+    }
+
     // Unsubscribe from auth state changes
     if (this.authListenerUnsubscribe) {
       this.authListenerUnsubscribe();
