@@ -20,8 +20,12 @@ import { MaterialSymbol } from '@nimbalyst/runtime';
 import {
   sessionListRootAtom,
   sessionListLoadingAtom,
+  sessionListHasMoreAtom,
+  sessionListLoadingMoreAtom,
   showArchivedSessionsAtom,
   refreshSessionListAtom,
+  loadMoreSessionListAtom,
+  loadAllSessionListPagesAtom,
   updateSessionStoreAtom,
   removeSessionFullAtom,
   sessionRegistryAtom,
@@ -299,9 +303,13 @@ const SessionHistoryComponent: React.FC = () => {
   // Use sessionListRootAtom to only show root sessions (not children of workstreams)
   const allSessionsFromAtom = useAtomValue(sessionListRootAtom);
   const atomLoading = useAtomValue(sessionListLoadingAtom);
+  const hasMoreSessions = useAtomValue(sessionListHasMoreAtom);
+  const isLoadingMoreSessions = useAtomValue(sessionListLoadingMoreAtom);
   const showArchivedAtom = useAtomValue(showArchivedSessionsAtom);
   const setShowArchivedAtom = useSetAtom(showArchivedSessionsAtom);
   const refreshSessions = useSetAtom(refreshSessionListAtom);
+  const loadMoreSessions = useSetAtom(loadMoreSessionListAtom);
+  const loadAllSessionListPages = useSetAtom(loadAllSessionListPagesAtom);
   const updateSessionStore = useSetAtom(updateSessionStoreAtom);
   const removeSessionFromAtom = useSetAtom(removeSessionFullAtom);
 
@@ -395,6 +403,8 @@ const SessionHistoryComponent: React.FC = () => {
   const [worktreeBaseBranchPickerOpen, setWorktreeBaseBranchPickerOpen] = useState(false);
   const [contentSearchTriggered, setContentSearchTriggered] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchTruncated, setSearchTruncated] = useState(false);
+  const [searchResultLimit, setSearchResultLimit] = useState(200);
   // Use atom for showArchived state
   const showArchived = showArchivedAtom;
   const setShowArchived = setShowArchivedAtom;
@@ -644,7 +654,7 @@ const SessionHistoryComponent: React.FC = () => {
   const loadAllSessions = useCallback(async () => {
     setError(null);
     try {
-      await refreshSessions();
+      await refreshSessions({ sortBy });
       // Restore scroll position after update
       requestAnimationFrame(() => {
         if (scrollContainerRef.current && scrollPositionRef.current > 0) {
@@ -655,7 +665,12 @@ const SessionHistoryComponent: React.FC = () => {
       console.error('[SessionHistory] Failed to load sessions:', err);
       setError('Failed to load sessions');
     }
-  }, [refreshSessions]);
+  }, [refreshSessions, sortBy]);
+
+  const handleSessionListEndReached = useCallback(() => {
+    if (contentSearchTriggered || !hasMoreSessions || isLoadingMoreSessions) return;
+    void loadMoreSessions();
+  }, [contentSearchTriggered, hasMoreSessions, isLoadingMoreSessions, loadMoreSessions]);
 
   // Execute the actual search query
   const executeSearch = useCallback(async (query: string, filters: SearchFilters = searchFilters) => {
@@ -670,6 +685,8 @@ const SessionHistoryComponent: React.FC = () => {
       });
 
       if (result.success && Array.isArray(result.sessions)) {
+        setSearchTruncated(result.truncated === true);
+        setSearchResultLimit(typeof result.resultLimit === 'number' ? result.resultLimit : 200);
         let searchResults: SessionItem[] = result.sessions.map((s: any) => ({
           id: s.id,
           title: s.title || 'Untitled Session',
@@ -694,6 +711,8 @@ const SessionHistoryComponent: React.FC = () => {
         }
 
         setSessions(searchResults);
+      } else {
+        setSearchTruncated(false);
       }
     } catch (err) {
       console.error('[SessionHistory] Failed to search sessions:', err);
@@ -786,6 +805,7 @@ const SessionHistoryComponent: React.FC = () => {
   useEffect(() => {
     // Reset content search trigger when query changes
     setContentSearchTriggered(false);
+    setSearchTruncated(false);
 
     // Filter out sessions that belong to worktrees (they're shown in WorktreeGroup instead)
     // But keep standalone worktree sessions that should appear as WorktreeSingle
@@ -3068,8 +3088,14 @@ const SessionHistoryComponent: React.FC = () => {
             <button
               className={`flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold rounded border cursor-pointer transition-all duration-150 shrink-0 ${viewMode === 'kanban' ? 'bg-[var(--nim-primary)] border-[var(--nim-primary)] text-white hover:opacity-90' : 'bg-[var(--nim-bg-secondary)] border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)]'}`}
               data-testid="session-kanban-button"
-              onClick={() => {
+              onClick={async () => {
                 const newMode = viewMode === 'kanban' ? 'list' : 'kanban';
+                // The list is lazy by default, but Kanban's card counts and
+                // column totals are defined over every session. Drain pages
+                // before exposing the board so those numbers remain exact.
+                if (newMode === 'kanban') {
+                  await loadAllSessionListPages();
+                }
                 posthog?.capture('session_view_mode_switched', {
                   fromMode: viewMode,
                   toMode: newMode,
@@ -3270,6 +3296,14 @@ const SessionHistoryComponent: React.FC = () => {
             ⇥ Search contents
           </button>
         )}
+        {searchTruncated && (
+          <div
+            className="session-history-search-truncated mt-1 text-[11px] text-[var(--nim-text-faint)]"
+            data-testid="session-search-truncated"
+          >
+            Showing the first {searchResultLimit} results. Refine your search to narrow it down.
+          </div>
+        )}
         {/* Search filters dropdown - only visible when content search is active */}
         {contentSearchTriggered && searchQuery && (
           <div className="absolute right-12 top-1/2 -translate-y-1/2" ref={searchFiltersRef}>
@@ -3372,7 +3406,9 @@ const SessionHistoryComponent: React.FC = () => {
         {(() => {
           const hasFilter = searchQuery.trim().length > 0 || tagFilter.tags.length > 0;
           const visibleCount = sessions.length;
-          const totalLabel = `${iosMatchCount} non-archived session${iosMatchCount === 1 ? '' : 's'} in this workspace (matches the iOS project list count)`;
+          const totalLabel = hasMoreSessions
+            ? `${iosMatchCount} loaded non-archived session${iosMatchCount === 1 ? '' : 's'} in this workspace (load more for the exact project count)`
+            : `${iosMatchCount} non-archived session${iosMatchCount === 1 ? '' : 's'} in this workspace (matches the iOS project list count)`;
           const title = hasFilter
             ? `${visibleCount} of ${iosMatchCount} visible after current filters -- ${totalLabel}`
             : totalLabel;
@@ -3489,6 +3525,14 @@ const SessionHistoryComponent: React.FC = () => {
               customScrollParent={scrollContainerEl}
               totalCount={flatVirtuosoItems.length}
               overscan={400}
+              endReached={handleSessionListEndReached}
+              components={{
+                Footer: () => hasMoreSessions ? (
+                  <div className="session-history-load-more py-3 text-center text-[11px] text-[var(--nim-text-faint)]" data-testid="session-list-load-more">
+                    {isLoadingMoreSessions ? 'Loading more sessions…' : 'Scroll to load more sessions'}
+                  </div>
+                ) : null,
+              }}
               itemContent={(index) => {
                 const entry = flatVirtuosoItems[index];
                 if (entry.kind === 'group-header') {

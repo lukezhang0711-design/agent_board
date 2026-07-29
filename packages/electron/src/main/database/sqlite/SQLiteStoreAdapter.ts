@@ -67,6 +67,7 @@ export interface StoreDbAdapter {
     opts?: {
       limit?: number;
       sessionIds?: string[];
+      workspaceId?: string;
       eventType?: 'user_message' | 'assistant_message' | null;
       cutoffDate?: Date | null;
     },
@@ -86,7 +87,7 @@ export interface StoreDbAdapter {
   searchSessionTitles?(
     workspaceId: string,
     query: string,
-    opts?: { includeArchived?: boolean },
+    opts?: { includeArchived?: boolean; limit?: number },
   ): Promise<Array<{ session_id: string; rank: number }>>;
 }
 
@@ -137,6 +138,10 @@ export function createSQLiteStoreAdapter(
           binds[`sid${i}`] = id;
         });
       }
+      if (opts?.workspaceId) {
+        binds.workspaceId = opts.workspaceId;
+        extra.push('s.workspace_id = $workspaceId');
+      }
       if (opts?.eventType === 'user_message') {
         extra.push(`t.message_kind = 'user'`);
       } else if (opts?.eventType === 'assistant_message') {
@@ -157,6 +162,7 @@ export function createSQLiteStoreAdapter(
                      WHERE ai_agent_messages_fts MATCH $q
                    ) AS fts
                    JOIN ai_agent_messages AS t ON t.id = fts.rowid
+                   JOIN ai_sessions AS s ON s.id = t.session_id
                    WHERE ${extra.length > 0 ? extra.join(' AND ') : '1=1'}
                    GROUP BY t.session_id
                    ORDER BY rank
@@ -205,18 +211,23 @@ export function createSQLiteStoreAdapter(
       // overlap, so this is a behavioral diff: SQLite gives substring
       // matches without ranking. Acceptable for short titles.
       const includeArchived = opts?.includeArchived ?? false;
+      const limit = opts?.limit;
       const archiveClause = includeArchived
         ? ''
         : `AND (s.is_archived = 0 OR s.is_archived IS NULL)
            AND (s.worktree_id IS NULL OR w.is_archived = 0 OR w.is_archived IS NULL)`;
+      const limitClause = typeof limit === 'number'
+        ? 'ORDER BY s.updated_at DESC LIMIT $limit'
+        : '';
       const sql = `SELECT s.id AS session_id, 1.0 AS rank
                    FROM ai_sessions AS s
                    LEFT JOIN worktrees AS w ON s.worktree_id = w.id
                    WHERE s.workspace_id = $wid
                      AND LOWER(COALESCE(s.title, '')) LIKE $needle
-                     ${archiveClause}`;
+                     ${archiveClause}
+                   ${limitClause}`;
       const { rows } = await db.query<{ session_id: string; rank: number }>(sql, [
-        { wid: workspaceId, needle: `%${query.toLowerCase()}%` },
+        { wid: workspaceId, needle: `%${query.toLowerCase()}%`, ...(limit !== undefined && { limit }) },
       ]);
       return rows;
     },

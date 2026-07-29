@@ -79,6 +79,9 @@ describe('sessionDispatchQueuedAtom (FB-019)', () => {
 
     expect(invoke).toHaveBeenCalledWith('sessions:list', '/workspace', {
       includeArchived: false,
+      pagination: true,
+      limit: 75,
+      sortBy: 'updated',
     });
     expect(store.get(sessionRegistryAtom).get('queued-from-list')?.dispatchQueued).toBe(true);
     expect(store.get(sessionDispatchQueuedAtom('queued-from-list'))).toBe(true);

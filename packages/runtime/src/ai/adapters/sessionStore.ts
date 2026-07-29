@@ -117,9 +117,34 @@ export interface SessionListOptions {
   includeArchived?: boolean;
 }
 
+/** Sort modes supported by the desktop session-list keyset cursor. */
+export type SessionListSort = 'updated' | 'created';
+
+/**
+ * Opaque cursor options for a bounded desktop session-list read. The cursor
+ * is intentionally a string so callers cannot couple themselves to database
+ * timestamp or tie-breaker representation.
+ */
+export interface SessionListPageOptions extends SessionListOptions {
+  limit?: number;
+  cursor?: string | null;
+  sortBy?: SessionListSort;
+}
+
+/** A single bounded page of session metadata. */
+export interface SessionListPage {
+  sessions: SessionMeta[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  /** Number of source rows read before parent/session-stat hydration. */
+  scannedCount: number;
+}
+
 export interface SessionSearchOptions extends SessionListOptions {
   timeRange?: '7d' | '30d' | '90d' | 'all';
   direction?: 'all' | 'input' | 'output';
+  /** Caller-enforced cap for expensive title/content fallback searches. */
+  limit?: number;
 }
 
 export interface SessionStore {
@@ -134,6 +159,11 @@ export interface SessionStore {
    */
   getMany?(sessionIds: string[]): Promise<SessionData[]>;
   list(workspaceId: string, options?: SessionListOptions): Promise<SessionMeta[]>;
+  /**
+   * Bounded keyset list used by the desktop sidebar. Optional so legacy test
+   * stores and non-desktop adapters retain their existing full-list contract.
+   */
+  listPage?(workspaceId: string, options?: SessionListPageOptions): Promise<SessionListPage>;
   search(workspaceId: string, query: string, options?: SessionSearchOptions): Promise<SessionMeta[]>;
   delete(sessionId: string): Promise<void>;
   /**

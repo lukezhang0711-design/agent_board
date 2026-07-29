@@ -18,6 +18,9 @@ import type {
   UpdateSessionMetadataPayload,
   SessionMeta,
   SessionListOptions,
+  SessionListPage,
+  SessionListPageOptions,
+  SessionSearchOptions,
   ChatSession,
 } from '../ai/adapters/sessionStore';
 import type { AgentMessage } from '../ai/server/types';
@@ -209,10 +212,22 @@ export function createSyncedSessionStore(
       return baseStore.list(workspaceId, options);
     },
 
+    async listPage(
+      workspaceId: string,
+      options?: SessionListPageOptions,
+    ): Promise<SessionListPage> {
+      if (baseStore.listPage) {
+        return baseStore.listPage(workspaceId, options);
+      }
+      // listPage is desktop-only. Never substitute list() here: that would
+      // hide a full-store scan behind the pagination IPC contract.
+      throw new Error('Synced session store does not support bounded listPage reads');
+    },
+
     async search(
       workspaceId: string,
       query: string,
-      options?: SessionListOptions
+      options?: SessionSearchOptions
     ): Promise<SessionMeta[]> {
       // Search is read-only, just delegate
       return baseStore.search(workspaceId, query, options);

@@ -18,7 +18,7 @@ import { atom } from 'jotai';
 import { atomFamily } from '../debug/atomFamilyRegistry';
 import { store } from '@nimbalyst/runtime/store';
 import { ModelIdentifier, type ChatAttachment, type SessionData, type TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/types';
-import type { SessionMeta } from '@nimbalyst/runtime';
+import type { SessionListSort, SessionMeta } from '@nimbalyst/runtime';
 import deepEqual from 'fast-deep-equal';
 import { workstreamStateAtom, setWorkstreamActiveChildAtom } from './workstreamState';
 import { aiInputHistoryAtom } from './aiInputUndo';
@@ -2119,6 +2119,22 @@ export const sessionListChatAtom = atom<SessionMeta[]>((get) => {
  */
 export const sessionListLoadingAtom = atom<boolean>(false);
 
+/** Pagination state for the sidebar only; legacy list callers remain full-list. */
+export const sessionListPageStateAtom = atom<{
+  nextCursor: string | null;
+  hasMore: boolean;
+  loadingMore: boolean;
+  sortBy: SessionListSort;
+}>({
+  nextCursor: null,
+  hasMore: false,
+  loadingMore: false,
+  sortBy: 'updated',
+});
+
+export const sessionListHasMoreAtom = atom((get) => get(sessionListPageStateAtom).hasMore);
+export const sessionListLoadingMoreAtom = atom((get) => get(sessionListPageStateAtom).loadingMore);
+
 /**
  * Current workspace path for session list.
  * Used to know when to refresh.
@@ -2130,6 +2146,61 @@ export const sessionListWorkspaceAtom = atom<string | null>(null);
  */
 export const showArchivedSessionsAtom = atom<boolean>(false);
 
+type RefreshSessionListOptions = boolean | {
+  includeArchived?: boolean;
+  sortBy?: SessionListSort;
+};
+
+function sessionMetaFromListResult(s: any, workspacePath: string): SessionMeta {
+  return {
+    id: s.id,
+    title: s.title || 'Untitled Session',
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+    provider: s.provider || 'claude',
+    model: s.model,
+    sessionType: s.sessionType || 'session',
+    agentRole: s.agentRole || 'standard',
+    createdBySessionId: s.createdBySessionId || null,
+    messageCount: s.messageCount || 0,
+    workspaceId: workspacePath,
+    isArchived: s.isArchived || false,
+    isPinned: s.isPinned || false,
+    parentSessionId: s.parentSessionId || null,
+    worktreeId: s.worktreeId || null,
+    childCount: s.childCount || 0,
+    uncommittedCount: s.uncommittedCount || 0,
+    hasUnread: !!s.hasUnread,
+    hasPendingInteractivePrompt: !!s.hasPendingInteractivePrompt,
+    ...(s.phase && { phase: s.phase }),
+    ...(s.tags && { tags: s.tags }),
+    ...(s.dispatchQueued && { dispatchQueued: s.dispatchQueued }),
+    ...(s.interruptedByHead && { interruptedByHead: s.interruptedByHead }),
+    ...(s.linkedTrackerItemIds && { linkedTrackerItemIds: s.linkedTrackerItemIds }),
+  };
+}
+
+function mergeSessionPageEntry(registry: Map<string, SessionMeta>, next: SessionMeta): void {
+  const existing = registry.get(next.id);
+  registry.set(next.id, existing
+    ? {
+      ...existing,
+      ...next,
+      // A parent can be hydrated on two adjacent raw-source pages. Preserve
+      // its newest child activity while the Map keeps the UI duplicate-free.
+      updatedAt: Math.max(existing.updatedAt, next.updatedAt),
+      childCount: Math.max(existing.childCount, next.childCount),
+    }
+    : next);
+}
+
+function rehydrateSessionListIndicators(set: any, entry: any): void {
+  // Both directions matter: a refresh must clear a stale in-memory unread /
+  // prompt indicator after a renderer reload or cross-device sync update.
+  set(sessionUnreadAtom(entry.id), !!entry.hasUnread);
+  set(sessionHasPendingInteractivePromptAtom(entry.id), !!entry.hasPendingInteractivePrompt);
+}
+
 /**
  * Refresh the session list from the database.
  * This is an action atom that fetches from IPC and updates the list.
@@ -2139,66 +2210,40 @@ export const showArchivedSessionsAtom = atom<boolean>(false);
  */
 export const refreshSessionListAtom = atom(
   null,
-  async (get, set, includeArchivedOverride?: boolean) => {
+  async (get, set, refreshOptions?: RefreshSessionListOptions) => {
     const workspacePath = get(sessionListWorkspaceAtom);
     if (!workspacePath || !window.electronAPI) {
       return;
     }
 
-    const showArchived = includeArchivedOverride ?? get(showArchivedSessionsAtom);
+    const override = typeof refreshOptions === 'boolean' ? { includeArchived: refreshOptions } : refreshOptions;
+    const showArchived = override?.includeArchived ?? get(showArchivedSessionsAtom);
+    const sortBy = override?.sortBy ?? get(sessionListPageStateAtom).sortBy;
 
     try {
       set(sessionListLoadingAtom, true);
       const result = await window.electronAPI.invoke('sessions:list', workspacePath, {
         includeArchived: showArchived,
+        pagination: true,
+        limit: 75,
+        sortBy,
       });
 
       if (result.success && Array.isArray(result.sessions)) {
         // Map IPC results directly into registry (single pass, no intermediate type)
         const registry = new Map<string, SessionMeta>();
         for (const s of result.sessions) {
-          registry.set(s.id, {
-            id: s.id,
-            title: s.title || 'Untitled Session',
-            createdAt: s.createdAt,
-            updatedAt: s.updatedAt,
-            provider: s.provider || 'claude',
-            model: s.model,
-            sessionType: s.sessionType || 'session',
-            agentRole: s.agentRole || 'standard',
-            createdBySessionId: s.createdBySessionId || null,
-            messageCount: s.messageCount || 0,
-            workspaceId: workspacePath,
-            isArchived: s.isArchived || false,
-            isPinned: s.isPinned || false,
-            parentSessionId: s.parentSessionId || null,
-            worktreeId: s.worktreeId || null,
-            childCount: s.childCount || 0,
-            uncommittedCount: s.uncommittedCount || 0,
-            // Kanban board phase and tags from metadata JSONB
-            ...(s.phase && { phase: s.phase }),
-            ...(s.tags && { tags: s.tags }),
-            ...(s.dispatchQueued && { dispatchQueued: s.dispatchQueued }),
-            ...(s.interruptedByHead && { interruptedByHead: s.interruptedByHead }),
-            // Linked tracker item IDs from metadata JSONB
-            ...(s.linkedTrackerItemIds && { linkedTrackerItemIds: s.linkedTrackerItemIds }),
-            ...(s.agentRole && { agentRole: s.agentRole }),
-            ...(s.createdBySessionId !== undefined && { createdBySessionId: s.createdBySessionId }),
-          });
-
-          // Initialize unread state from database metadata (for cross-device sync)
-          if (s.hasUnread) {
-            set(sessionUnreadAtom(s.id), true);
-          }
-          // Rehydrate the pending-interactive-prompt indicator from the
-          // authoritative DB field. Write BOTH directions so a stuck-true
-          // atom (e.g. from a missed resolve event after a renderer reload)
-          // gets corrected on the next session-list refresh. Persisted by
-          // main-process setSessionPendingPrompt on every prompt open/resolve.
-          set(sessionHasPendingInteractivePromptAtom(s.id), !!s.hasPendingInteractivePrompt);
+          mergeSessionPageEntry(registry, sessionMetaFromListResult(s, workspacePath));
+          rehydrateSessionListIndicators(set, s);
         }
 
         set(sessionRegistryAtom, registry);
+        set(sessionListPageStateAtom, {
+          nextCursor: result.nextCursor ?? null,
+          hasMore: result.hasMore === true,
+          loadingMore: false,
+          sortBy,
+        });
       }
     } catch (error) {
       console.error('[sessions] Failed to refresh session list:', error);
@@ -2206,6 +2251,64 @@ export const refreshSessionListAtom = atom(
       set(sessionListLoadingAtom, false);
     }
   }
+);
+
+/** Fetch the next keyset page and merge it into the session registry. */
+export const loadMoreSessionListAtom = atom(
+  null,
+  async (get, set) => {
+    const workspacePath = get(sessionListWorkspaceAtom);
+    const pageState = get(sessionListPageStateAtom);
+    if (!workspacePath || !window.electronAPI || !pageState.hasMore || pageState.loadingMore || !pageState.nextCursor) {
+      return;
+    }
+
+    set(sessionListPageStateAtom, { ...pageState, loadingMore: true });
+    try {
+      const result = await window.electronAPI.invoke('sessions:list', workspacePath, {
+        includeArchived: get(showArchivedSessionsAtom),
+        pagination: true,
+        cursor: pageState.nextCursor,
+        limit: 75,
+        sortBy: pageState.sortBy,
+      });
+      if (!result.success || !Array.isArray(result.sessions)) return;
+
+      const registry = new Map(get(sessionRegistryAtom));
+      for (const entry of result.sessions) {
+        mergeSessionPageEntry(registry, sessionMetaFromListResult(entry, workspacePath));
+        rehydrateSessionListIndicators(set, entry);
+      }
+      set(sessionRegistryAtom, registry);
+      set(sessionListPageStateAtom, {
+        nextCursor: result.nextCursor ?? null,
+        hasMore: result.hasMore === true,
+        loadingMore: false,
+        sortBy: pageState.sortBy,
+      });
+    } catch (error) {
+      console.error('[sessions] Failed to load another session-list page:', error);
+    } finally {
+      const current = get(sessionListPageStateAtom);
+      if (current.loadingMore) {
+        set(sessionListPageStateAtom, { ...current, loadingMore: false });
+      }
+    }
+  },
+);
+
+/** Kanban needs complete cards/counts, so it explicitly drains the lazy list. */
+export const loadAllSessionListPagesAtom = atom(
+  null,
+  async (get, set) => {
+    let safety = 0;
+    while (get(sessionListPageStateAtom).hasMore && safety++ < 10_000) {
+      const before = get(sessionListPageStateAtom);
+      await set(loadMoreSessionListAtom);
+      const after = get(sessionListPageStateAtom);
+      if (after.loadingMore || (after.hasMore === before.hasMore && after.nextCursor === before.nextCursor)) break;
+    }
+  },
 );
 
 /**
