@@ -138,6 +138,7 @@ export function registerSettingsHandlers() {
 
     safeHandle('app-settings:set', (_event, key: string, value: unknown) => {
         setAppSetting(key, value);
+        return getAppSetting(key);
     });
 
     // Spellcheck toggle - controls Chromium's built-in spellchecker for all windows
