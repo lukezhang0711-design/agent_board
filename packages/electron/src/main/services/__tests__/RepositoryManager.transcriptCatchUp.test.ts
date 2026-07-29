@@ -10,6 +10,7 @@ const testState = vi.hoisted(() => ({
   unsubscribeBatch: vi.fn(),
   processNewMessages: vi.fn(),
   getSession: vi.fn(),
+  findWindowByWorkspace: vi.fn(),
   send: vi.fn(),
 }));
 
@@ -124,9 +125,7 @@ vi.mock('../StytchAuthService', () => ({
   onAuthStateChange: vi.fn(() => vi.fn()),
 }));
 vi.mock('../../window/WindowManager', () => ({
-  windows: new Map([
-    [1, { webContents: { send: testState.send } }],
-  ]),
+  findWindowByWorkspace: testState.findWindowByWorkspace,
   windowStates: new Map(),
 }));
 
@@ -156,6 +155,11 @@ describe('FB-051 persisted-batch transcript catch-up', () => {
     testState.getSession.mockResolvedValue({
       id: sessionId,
       provider: 'claude-code',
+      workspacePath: '/workspace/project',
+    });
+    testState.findWindowByWorkspace.mockReturnValue({
+      isDestroyed: () => false,
+      webContents: { send: testState.send },
     });
     testState.processNewMessages.mockImplementation(async () => {
       testState.canonicalListener?.(promptEvent);
@@ -176,6 +180,7 @@ describe('FB-051 persisted-batch transcript catch-up', () => {
 
     await vi.waitFor(() => {
       expect(testState.processNewMessages).toHaveBeenCalledWith(sessionId, 'claude-code');
+      expect(testState.findWindowByWorkspace).toHaveBeenCalledWith('/workspace/project');
       expect(testState.send).toHaveBeenCalledWith('transcript:event', promptEvent);
     });
   });

@@ -65,6 +65,7 @@ function redactTranscriptSessionId(sessionId: string): string {
 
 let requestTranscriptReplayAfterMount: (sessionId: string) => void = () => {};
 const lastTranscriptAppendLogAt = new Map<string, number>();
+const lastTranscriptDeferredLogAt = new Map<string, number>();
 
 function logTranscriptAppend(sessionId: string, messageCount: number): void {
   const now = Date.now();
@@ -74,6 +75,17 @@ function logTranscriptAppend(sessionId: string, messageCount: number): void {
   console.debug('[TranscriptIncremental] append succeeded', {
     sessionId: redactTranscriptSessionId(sessionId),
     messageCount,
+  });
+}
+
+function logTranscriptAppendDeferred(sessionId: string): void {
+  const now = Date.now();
+  const lastLoggedAt = lastTranscriptDeferredLogAt.get(sessionId);
+  if (lastLoggedAt !== undefined && now - lastLoggedAt < 1000) return;
+  lastTranscriptDeferredLogAt.set(sessionId, now);
+  console.warn('[TranscriptIncremental] append deferred', {
+    sessionId: redactTranscriptSessionId(sessionId),
+    reason: 'session-store-not-mounted-at-flush',
   });
 }
 
@@ -90,10 +102,7 @@ const transcriptAccumulator = new TranscriptStreamAccumulator({
   emit: ({ sessionId, messages }) => {
     const currentSession = store.get(sessionStoreAtom(sessionId));
     if (!currentSession) {
-      console.warn('[TranscriptIncremental] append deferred', {
-        sessionId: redactTranscriptSessionId(sessionId),
-        reason: 'session-store-not-mounted-at-flush',
-      });
+      logTranscriptAppendDeferred(sessionId);
       requestTranscriptReplayAfterMount(sessionId);
       return;
     }
@@ -1173,6 +1182,7 @@ export function initSessionStateListeners(): () => void {
     transcriptMountSubscriptions.clear();
     loggedTranscriptEventKeys.clear();
     lastTranscriptAppendLogAt.clear();
+    lastTranscriptDeferredLogAt.clear();
     if (requestTranscriptReplayAfterMount === replayTranscriptWhenMounted) {
       requestTranscriptReplayAfterMount = () => {};
     }
