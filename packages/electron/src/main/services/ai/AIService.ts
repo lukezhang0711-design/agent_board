@@ -135,6 +135,11 @@ import {
   CLAUDE_CODE_BUILTIN_MODEL_IDS,
   refreshClaudeCodeModelCatalog,
 } from './claudeCodeModelCatalogRefresh';
+import {
+  createTolerantAISettingsWriter,
+  formatAISettingsKeysForLog,
+  quarantineUnrecognizedAIProviderSettings,
+} from './aiSettingsCompatibility';
 
 const execFileAsync = promisify(execFile);
 
@@ -887,6 +892,12 @@ export class AIService {
           }
         }
       });
+      const quarantinedProviderIds = quarantineUnrecognizedAIProviderSettings(this.settingsStore);
+      if (quarantinedProviderIds.length > 0) {
+        logger.main.warn(
+          `[AIService] Quarantined unrecognized ai-settings provider entries: ${formatAISettingsKeysForLog(quarantinedProviderIds)}`,
+        );
+      }
       this.refreshClaudeCodeModelCatalog();
     }
     return this.settingsStore;
@@ -3324,14 +3335,11 @@ export class AIService {
       // migrated yet (and as the implementation behind the convenience helpers
       // like `scheduleAIDebugPersist` until those are removed too).
       const svc = getSettingsService();
-
-      const safeSet = (key: string, value: unknown): void => {
-        try {
-          svc.set(key as any, value as any);
-        } catch (err) {
-          logger.main.error(`[ai:saveSettings] svc.set(${key}) rejected:`, err);
-        }
-      };
+      const writer = createTolerantAISettingsWriter(
+        (key, value) => svc.set(key, value as never),
+        (message) => logger.main.warn(message),
+      );
+      const safeSet = writer.set;
 
       if (settings.defaultProvider !== undefined) {
         safeSet('ai.defaultProvider', settings.defaultProvider);
@@ -3423,7 +3431,11 @@ export class AIService {
         }
       }
 
-      return { success: true };
+      return {
+        success: writer.result.skipped.length === 0,
+        savedKeys: writer.result.savedKeys,
+        skipped: writer.result.skipped,
+      };
     });
 
     // Test connection
