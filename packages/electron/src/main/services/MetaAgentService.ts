@@ -385,7 +385,7 @@ export class MetaAgentService {
         || stopResult.error === 'No active terminal for session';
       const outcome: InterruptSessionNodeResult['outcome'] = stopResult.success
         ? (wasActive ? 'interrupted' : 'already-ended')
-        : (!wasActive && inactiveTransport ? 'already-ended' : 'failed');
+        : (inactiveTransport ? 'already-ended' : 'failed');
       const nodeResult: InterruptSessionNodeResult = {
         sessionId,
         outcome,
