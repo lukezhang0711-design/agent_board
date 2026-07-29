@@ -224,7 +224,7 @@ function seedFieldDraft(field: RequestUserInputField): RequestUserInputFieldDraf
     case 'confirm':
       return {
         type: 'confirm',
-        state: { value: field.defaultValue ?? false },
+        state: { value: field.defaultValue ?? false, touched: false },
       };
   }
 }
@@ -278,6 +278,32 @@ function fieldDraftValid(
   }
 }
 
+function normalizeActionLabel(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[\s_\-–—:：,，.。!?！？()[\]{}]+/g, '');
+}
+
+function submitLabelConfirmsField(
+  args: RequestUserInputArgs,
+  field: RequestUserInputConfirmField,
+  state: { value: boolean; touched?: boolean },
+): boolean {
+  // Only infer a positive answer when the button literally names this field.
+  // We deliberately do not guess from verbs such as "Save" or "Continue":
+  // an untouched false default must remain false unless the button unambiguously
+  // states the same action (for example, "Approve revised plan").
+  if (state.touched === true || state.value) return false;
+
+  const submitAction = normalizeActionLabel(args.submitLabel ?? 'Confirm');
+  if (!submitAction) return false;
+
+  return [field.label, field.id]
+    .map(normalizeActionLabel)
+    .some((fieldAction) => fieldAction === submitAction);
+}
+
 function draftToAnswers(
   args: RequestUserInputArgs,
   draft: RequestUserInputDraft,
@@ -326,7 +352,10 @@ function draftToAnswers(
         break;
       case 'confirm':
         if (fd.type === 'confirm') {
-          out[field.id] = { type: 'confirm', value: fd.state.value };
+          out[field.id] = {
+            type: 'confirm',
+            value: submitLabelConfirmsField(args, field, fd.state) || fd.state.value,
+          };
         }
         break;
     }
@@ -993,7 +1022,7 @@ function ConfirmRenderer({
 
   const toggle = () => {
     if (disabled) return;
-    setDraft({ type: 'confirm', state: { value: !value } });
+    setDraft({ type: 'confirm', state: { value: !value, touched: true } });
   };
 
   return (
