@@ -99,6 +99,24 @@ describe('SessionKanbanBoard interrupted and Inbox states', () => {
     expect(within(getInboxColumn()).queryByText(/queued/)).toBeNull();
   });
 
+  it('explains that child sessions are grouped under their parent workstreams', () => {
+    const parentCards = Array.from({ length: 139 }, (_, index) => makeMeta({
+      id: `parent-${index}`,
+      title: `Parent card ${index}`,
+      phase: 'planning',
+    }));
+    const childSessions = Array.from({ length: 5 }, (_, index) => makeMeta({
+      id: `child-${index}`,
+      title: `Child session ${index}`,
+      parentSessionId: `parent-${index}`,
+      phase: 'planning',
+    }));
+
+    renderBoard([...parentCards, ...childSessions]);
+
+    expect(screen.getByText('139 cards · 5 child sessions grouped under parent workstreams')).toBeTruthy();
+  });
+
   it('shows a persisted Head interruption as an orange card state', () => {
     renderBoard([
       makeMeta({

@@ -1099,6 +1099,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
   const filter = useAtomValue(sessionKanbanFilterAtom);
   const setFilter = useSetAtom(sessionKanbanFilterAtom);
   const totalCount = useAtomValue(sessionKanbanTotalCountAtom);
+  const sessionRegistry = useAtomValue(sessionRegistryAtom);
   const allTags = useAtomValue(sessionKanbanTagsAtom);
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [tagQuery, setTagQuery] = useState('');
@@ -1203,6 +1204,14 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
   const inputValue = showTagDropdown
     ? (filter.search ? filter.search + ' ' : '') + '#' + tagQuery
     : filter.search;
+  const groupedChildSessionCount = useMemo(() => (
+    [...sessionRegistry.values()].filter(session => (
+      Boolean(session.parentSessionId)
+      && !session.isArchived
+      && session.sessionType !== 'workstream'
+      && session.sessionType !== 'blitz'
+    )).length
+  ), [sessionRegistry]);
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 border-b border-nim bg-nim shrink-0" data-testid="kanban-toolbar">
@@ -1290,7 +1299,10 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
 
       {/* Count */}
       <span className="text-[11px] text-nim-faint shrink-0">
-        {totalCount} session{totalCount !== 1 ? 's' : ''}
+        {totalCount} card{totalCount !== 1 ? 's' : ''}
+        {groupedChildSessionCount > 0
+          ? ` · ${groupedChildSessionCount} child session${groupedChildSessionCount !== 1 ? 's' : ''} grouped under parent workstreams`
+          : ''}
       </span>
 
       {/* Show completed toggle */}

@@ -19,6 +19,47 @@ export interface RelationshipIndexDb {
   query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] } | unknown>;
 }
 
+export interface RelationshipIndexInitializer {
+  /** Build the derived index once for this process + workspace. */
+  ensure: (workspace: string) => Promise<void>;
+  /** Allow an explicit caller to force a future full rebuild. */
+  invalidate: (workspace: string) => void;
+}
+
+/**
+ * Coalesce concurrent backlink opens into one initial full rebuild per
+ * workspace. Subsequent field mutations update their own outgoing edges via
+ * `reindexItemRelationships`, so an item detail must not re-read every tracker
+ * row on a timer.
+ */
+export function createRelationshipIndexInitializer(
+  rebuild: (workspace: string) => Promise<unknown>,
+): RelationshipIndexInitializer {
+  const initialized = new Map<string, Promise<void>>();
+
+  return {
+    ensure(workspace: string): Promise<void> {
+      let pending = initialized.get(workspace);
+      if (!pending) {
+        pending = Promise.resolve().then(async () => {
+          await rebuild(workspace);
+        });
+        initialized.set(workspace, pending);
+        // A failed initialization is retryable on the next backlink request.
+        void pending.catch(() => {
+          if (initialized.get(workspace) === pending) {
+            initialized.delete(workspace);
+          }
+        });
+      }
+      return pending;
+    },
+    invalidate(workspace: string): void {
+      initialized.delete(workspace);
+    },
+  };
+}
+
 function edgeId(workspace: string, sourceItemId: string, fieldId: string, targetItemId: string): string {
   return `${workspace}|${sourceItemId}|${fieldId}|${targetItemId}`;
 }

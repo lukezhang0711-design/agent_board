@@ -12,15 +12,16 @@
  * - wakeup:focus-session ({ sessionId }) -> sent when user clicks the OS notification.
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron';
 import log from 'electron-log/main';
+import { safeHandle } from '../utils/ipcRegistry';
 import { getSessionWakeupsStore } from '../services/RepositoryManager';
 import { SessionWakeupScheduler } from '../services/SessionWakeupScheduler';
 
 const logger = log.scope('WakeupHandlers');
 
 export function registerWakeupHandlers(): void {
-  ipcMain.handle('wakeup:list-active', async (_event, workspacePath?: string) => {
+  safeHandle('wakeup:list-active', async (_event, workspacePath?: string) => {
     try {
       const store = getSessionWakeupsStore();
       if (workspacePath) {
@@ -38,7 +39,7 @@ export function registerWakeupHandlers(): void {
     }
   });
 
-  ipcMain.handle('wakeup:cancel', async (_event, id: string) => {
+  safeHandle('wakeup:cancel', async (_event, id: string) => {
     try {
       if (!id || typeof id !== 'string') {
         throw new Error('id is required');
@@ -51,7 +52,7 @@ export function registerWakeupHandlers(): void {
     }
   });
 
-  ipcMain.handle('wakeup:run-now', async (_event, id: string) => {
+  safeHandle('wakeup:run-now', async (_event, id: string) => {
     try {
       if (!id || typeof id !== 'string') {
         throw new Error('id is required');

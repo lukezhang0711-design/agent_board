@@ -17,7 +17,9 @@ import { getCurrentIdentity } from './TrackerIdentityService';
 import { applyCommentMutation, type CommentMutation } from './tracker/commentMutations';
 import { extractItemCustomFields } from './tracker/trackerRowCustomFields';
 import {
+  createRelationshipIndexInitializer,
   getBacklinks as getRelationshipBacklinks,
+  removeItemRelationships,
   reindexItemRelationships,
   rebuildWorkspaceRelationshipIndex,
 } from './tracker/trackerRelationshipIndexStore';
@@ -60,6 +62,12 @@ interface ResolvedFullDocumentFrontmatter {
   trackerType: string;
   trackerData: Record<string, any>;
 }
+
+// The tracker renderer currently has no pagination protocol. Bound each
+// source independently so opening the tracker cannot fetch or synthesize an
+// unbounded workspace, while retaining a usable board-sized window.
+const MAX_TRACKER_LIST_ITEMS = 500;
+const MAX_TRACKER_METADATA_CANDIDATES = 1000;
 
 function resolveFullDocumentFrontmatter(
   frontmatter: Record<string, any> | undefined,
@@ -1014,63 +1022,105 @@ export class ElectronDocumentService implements DocumentService {
     }
   }
 
+  private createFullDocumentTrackerItem(metadata: DocumentMetadataEntry): TrackerItem | null {
+    const pathLower = metadata.path.toLowerCase();
+    if (pathLower.includes('/agents/') || pathLower.includes('\\agents\\')) {
+      return null;
+    }
+
+    const resolved = resolveFullDocumentFrontmatter(metadata.frontmatter);
+    if (!resolved) return null;
+
+    const model = globalRegistry.get(resolved.trackerType);
+    if (!model?.modes?.fullDocument) return null;
+
+    const trackerData = resolved.trackerData;
+    const title = (trackerData.title as string)
+      || (metadata.frontmatter.title as string)
+      || metadata.path.split('/').pop()?.replace(/\.md$/, '')
+      || 'Untitled';
+
+    const coreFieldKeys = new Set([
+      'type', 'title', 'status', 'priority', 'owner', 'tags', 'created',
+      'updated', 'dueDate', 'progress', 'description',
+    ]);
+    const customFields: Record<string, any> = {};
+    for (const [key, value] of Object.entries(trackerData)) {
+      if (!coreFieldKeys.has(key) && value !== undefined) {
+        customFields[key] = value;
+      }
+    }
+
+    return {
+      id: buildFullDocumentTrackerId(resolved.trackerType, metadata.path),
+      type: resolved.trackerType as TrackerItemType,
+      typeTags: [resolved.trackerType],
+      title,
+      description: trackerData.description || undefined,
+      status: ((trackerData.status || metadata.frontmatter.status || 'to-do') as string).toLowerCase() as TrackerItem['status'],
+      priority: (trackerData.priority || metadata.frontmatter.priority || 'medium') as TrackerItem['priority'],
+      owner: trackerData.owner || undefined,
+      module: metadata.path,
+      lineNumber: 0,
+      workspace: this.workspacePath,
+      tags: Array.isArray(trackerData.tags) ? trackerData.tags : undefined,
+      created: trackerData.created ? String(trackerData.created) : undefined,
+      updated: trackerData.updated ? String(trackerData.updated) : undefined,
+      dueDate: trackerData.dueDate ? String(trackerData.dueDate) : undefined,
+      progress: typeof trackerData.progress === 'number' ? trackerData.progress : undefined,
+      lastIndexed: metadata.lastModified || metadata.lastIndexed || new Date(),
+      archived: false,
+      source: 'frontmatter',
+      sourceRef: metadata.path,
+      customFields: Object.keys(customFields).length > 0 ? customFields : undefined,
+    };
+  }
+
+  private getFullDocumentTrackerItemById(itemId: string): TrackerItem | null {
+    const parsed = parseFullDocumentTrackerId(itemId);
+    if (!parsed) return null;
+    const metadata = this.metadataByPath.get(parsed.relativePath);
+    if (!metadata) return null;
+    const item = this.createFullDocumentTrackerItem(metadata);
+    return item?.id === itemId ? item : null;
+  }
+
+  private mergeFrontmatterTrackerItem(dbItem: TrackerItem, frontmatterItem: TrackerItem): TrackerItem {
+    return {
+      ...dbItem,
+      title: frontmatterItem.title,
+      description: frontmatterItem.description,
+      status: frontmatterItem.status,
+      priority: frontmatterItem.priority,
+      owner: frontmatterItem.owner,
+      module: frontmatterItem.module,
+      tags: frontmatterItem.tags,
+      created: frontmatterItem.created,
+      updated: frontmatterItem.updated,
+      dueDate: frontmatterItem.dueDate,
+      progress: frontmatterItem.progress,
+      lastIndexed: frontmatterItem.lastIndexed,
+      source: frontmatterItem.source,
+      sourceRef: frontmatterItem.sourceRef,
+      customFields: {
+        ...(frontmatterItem.customFields || {}),
+        ...(dbItem.customFields || {}),
+      },
+    };
+  }
+
   private async listFullDocumentTrackerItemsFromMetadata(): Promise<TrackerItem[]> {
     this.startScanIfNeeded();
 
     const items: TrackerItem[] = [];
-
+    let candidatesScanned = 0;
     for (const metadata of this.metadataCache.values()) {
-      const pathLower = metadata.path.toLowerCase();
-      if (pathLower.includes('/agents/') || pathLower.includes('\\agents\\')) {
-        continue;
+      if (candidatesScanned >= MAX_TRACKER_METADATA_CANDIDATES || items.length >= MAX_TRACKER_LIST_ITEMS) {
+        break;
       }
-
-      const resolved = resolveFullDocumentFrontmatter(metadata.frontmatter);
-      if (!resolved) continue;
-
-      const model = globalRegistry.get(resolved.trackerType);
-      if (!model?.modes?.fullDocument) continue;
-
-      const trackerData = resolved.trackerData;
-      const title = (trackerData.title as string)
-        || (metadata.frontmatter.title as string)
-        || metadata.path.split('/').pop()?.replace(/\.md$/, '')
-        || 'Untitled';
-
-      const coreFieldKeys = new Set([
-        'type', 'title', 'status', 'priority', 'owner', 'tags', 'created',
-        'updated', 'dueDate', 'progress', 'description',
-      ]);
-      const customFields: Record<string, any> = {};
-      for (const [key, value] of Object.entries(trackerData)) {
-        if (!coreFieldKeys.has(key) && value !== undefined) {
-          customFields[key] = value;
-        }
-      }
-
-      items.push({
-        id: buildFullDocumentTrackerId(resolved.trackerType, metadata.path),
-        type: resolved.trackerType as TrackerItemType,
-        typeTags: [resolved.trackerType],
-        title,
-        description: trackerData.description || undefined,
-        status: ((trackerData.status || metadata.frontmatter.status || 'to-do') as string).toLowerCase() as TrackerItem['status'],
-        priority: (trackerData.priority || metadata.frontmatter.priority || 'medium') as TrackerItem['priority'],
-        owner: trackerData.owner || undefined,
-        module: metadata.path,
-        lineNumber: 0,
-        workspace: this.workspacePath,
-        tags: Array.isArray(trackerData.tags) ? trackerData.tags : undefined,
-        created: trackerData.created ? String(trackerData.created) : undefined,
-        updated: trackerData.updated ? String(trackerData.updated) : undefined,
-        dueDate: trackerData.dueDate ? String(trackerData.dueDate) : undefined,
-        progress: typeof trackerData.progress === 'number' ? trackerData.progress : undefined,
-        lastIndexed: metadata.lastModified || metadata.lastIndexed || new Date(),
-        archived: false,
-        source: 'frontmatter',
-        sourceRef: metadata.path,
-        customFields: Object.keys(customFields).length > 0 ? customFields : undefined,
-      });
+      candidatesScanned += 1;
+      const item = this.createFullDocumentTrackerItem(metadata);
+      if (item) items.push(item);
     }
 
     return items;
@@ -1078,10 +1128,17 @@ export class ElectronDocumentService implements DocumentService {
 
   private async listMergedTrackerItems(): Promise<TrackerItem[]> {
     const result = await database.query<any>(
-      `SELECT * FROM tracker_items WHERE workspace = $1 ORDER BY kanban_sort_order ASC NULLS LAST, last_indexed DESC`,
-      [this.workspacePath]
+      `SELECT * FROM tracker_items
+       WHERE workspace = $1
+       ORDER BY kanban_sort_order ASC NULLS LAST, last_indexed DESC
+       LIMIT $2`,
+      [this.workspacePath, MAX_TRACKER_LIST_ITEMS]
     );
-    const dbItems = result.rows.map(row => this.rowToTrackerItem(row));
+    // Keep the in-memory merge bounded too: adapters and test doubles should
+    // not be able to defeat the SQL LIMIT by returning more rows than asked.
+    const dbItems = result.rows
+      .slice(0, MAX_TRACKER_LIST_ITEMS)
+      .map(row => this.rowToTrackerItem(row));
     const metadataItems = await this.listFullDocumentTrackerItemsFromMetadata();
 
     const merged = new Map<string, TrackerItem>();
@@ -1090,31 +1147,12 @@ export class ElectronDocumentService implements DocumentService {
     }
     for (const item of dbItems) {
       const existing = merged.get(item.id);
-      if (existing && item.source === 'frontmatter') {
-        merged.set(item.id, {
-          ...item,
-          title: existing.title,
-          description: existing.description,
-          status: existing.status,
-          priority: existing.priority,
-          owner: existing.owner,
-          module: existing.module,
-          tags: existing.tags,
-          created: existing.created,
-          updated: existing.updated,
-          dueDate: existing.dueDate,
-          progress: existing.progress,
-          lastIndexed: existing.lastIndexed,
-          source: existing.source,
-          sourceRef: existing.sourceRef,
-          customFields: {
-            ...(existing.customFields || {}),
-            ...(item.customFields || {}),
-          },
-        });
-      } else {
-        merged.set(item.id, item);
-      }
+      merged.set(
+        item.id,
+        existing && item.source === 'frontmatter'
+          ? this.mergeFrontmatterTrackerItem(item, existing)
+          : item,
+      );
     }
 
     return Array.from(merged.values());
@@ -1355,16 +1393,37 @@ export class ElectronDocumentService implements DocumentService {
     };
   }
 
+  /** Maintain only this item's outgoing relationship edges after a local write. */
+  private async reindexTrackerItemRelationships(row: any): Promise<void> {
+    const data = typeof row.data === 'string' ? JSON.parse(row.data) : (row.data || {});
+    const updatedAt = typeof row.updated === 'string'
+      ? row.updated
+      : row.updated ? new Date(row.updated).toISOString() : null;
+    await reindexItemRelationships(
+      row.workspace,
+      row.id,
+      data,
+      globalRegistry.get(row.type)?.fields ?? [],
+      updatedAt,
+      database as any,
+    );
+  }
+
   /**
    * Get a single tracker item by ID, or null if not found.
    */
   async getTrackerItemById(itemId: string): Promise<TrackerItem | null> {
-    const merged = await this.listMergedTrackerItems();
-    const found = merged.find(item => item.id === itemId);
-    if (found) return found;
-
+    // Preserve the lazy metadata-cache warmup without paying for a merged
+    // tracker list before every item-detail request.
+    this.startScanIfNeeded();
     const row = await this.resolveTrackerRowForPublicId(itemId);
-    return row ? this.rowToTrackerItem(row) : null;
+    const frontmatterItem = this.getFullDocumentTrackerItemById(itemId);
+    if (!row) return frontmatterItem;
+
+    const dbItem = this.rowToTrackerItem(row);
+    return frontmatterItem && dbItem.source === 'frontmatter'
+      ? this.mergeFrontmatterTrackerItem(dbItem, frontmatterItem)
+      : dbItem;
   }
 
   /**
@@ -1448,6 +1507,7 @@ export class ElectronDocumentService implements DocumentService {
       `SELECT * FROM tracker_items WHERE id = $1`,
       [row.id]
     );
+    await this.reindexTrackerItemRelationships(result.rows[0]);
     const updated = this.rowToTrackerItem(result.rows[0]);
 
     const changeEvent: TrackerItemChangeEvent = {
@@ -1723,6 +1783,9 @@ export class ElectronDocumentService implements DocumentService {
       `DELETE FROM tracker_items WHERE id = $1`,
       [rowId]
     );
+    if (row) {
+      await removeItemRelationships(row.workspace, rowId, database as any);
+    }
 
     // Notify sync server so other clients remove the item too
     if (isTrackerSyncActive(this.workspacePath)) {
@@ -1876,14 +1939,14 @@ export class ElectronDocumentService implements DocumentService {
         `SELECT * FROM tracker_items WHERE id = $1`,
         [resolvedRow.id]
       );
+      await this.reindexTrackerItemRelationships(updated.rows[0]);
       item = this.rowToTrackerItem(updated.rows[0]);
     } else {
       const metadata = this.metadataByPath.get(relativePath);
       if (!metadata) {
         throw new Error(`Tracker item ${itemId} was updated in file but could not be reloaded from metadata`);
       }
-      const synthesized = (await this.listFullDocumentTrackerItemsFromMetadata())
-        .find(candidate => candidate.id === itemId);
+      const synthesized = this.getFullDocumentTrackerItemById(itemId);
       if (!synthesized) {
         throw new Error(`Tracker item ${itemId} was updated in file but could not be synthesized`);
       }
@@ -2196,6 +2259,7 @@ export class ElectronDocumentService implements DocumentService {
       throw new Error(`Failed to create tracker item ${payload.id}`);
     }
 
+    await this.reindexTrackerItemRelationships(result.rows[0]);
     const created = this.rowToTrackerItem(result.rows[0]);
 
     // Notify watchers
@@ -3273,29 +3337,22 @@ export function setupDocumentServiceHandlers(resolver: DocumentServiceResolver) 
     }
   });
 
-  // Relationship backlinks (Epic C Phase 2). The tracker_relationship_index is a
-  // local, rebuildable projection of relationship field values; build it lazily
-  // per workspace on first request, then return incoming links for an item. The
-  // UI resolves source titles from its already-loaded items map, so we return
-  // only the edge identity.
-  // Throttle full-workspace rebuilds: cheap enough to re-run so MCP/agent writes
-  // (which don't reindex incrementally) surface in backlinks, but not on every
-  // rapid item open. UI field edits reindex their own item immediately.
-  const relationshipIndexBuiltAt = new Map<string, number>();
-  const RELATIONSHIP_INDEX_TTL_MS = 2000;
+  // Relationship backlinks (Epic C Phase 2). The tracker_relationship_index is
+  // a local projection. Build it once on first backlink request, then keep it
+  // current through per-item writes instead of re-reading the whole workspace
+  // after a short TTL.
+  const relationshipIndexInitializer = createRelationshipIndexInitializer(
+    (workspace) => rebuildWorkspaceRelationshipIndex(
+      workspace,
+      (type) => globalRegistry.get(type)?.fields ?? [],
+      database as any,
+    ),
+  );
 
   async function ensureRelationshipIndex(workspace: string): Promise<void> {
-    const last = relationshipIndexBuiltAt.get(workspace) ?? 0;
-    if (Date.now() - last < RELATIONSHIP_INDEX_TTL_MS) return;
-    relationshipIndexBuiltAt.set(workspace, Date.now()); // set before await to dedupe concurrent builds
     try {
-      await rebuildWorkspaceRelationshipIndex(
-        workspace,
-        (type) => globalRegistry.get(type)?.fields ?? [],
-        database as any,
-      );
+      await relationshipIndexInitializer.ensure(workspace);
     } catch (err) {
-      relationshipIndexBuiltAt.delete(workspace); // allow a retry on next request
       console.error('[DocumentService] relationship index build failed:', err);
     }
   }

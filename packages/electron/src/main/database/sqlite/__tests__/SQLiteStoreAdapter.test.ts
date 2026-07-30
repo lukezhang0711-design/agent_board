@@ -184,4 +184,20 @@ describe('SQLiteStoreAdapter', () => {
     // Lower bm25 = better match in FTS5.
     expect(hits[0].rank).toBeLessThan(0);
   });
+
+  it('caps title LIKE candidates at 201 when callers omit a limit', async () => {
+    const adapter = createSQLiteStoreAdapter(db);
+    for (let index = 0; index < 240; index++) {
+      await adapter.query(
+        `INSERT INTO ai_sessions (id, workspace_id, title, provider)
+         VALUES ($1, $2, $3, $4)`,
+        [`session-${index}`, 'ws-search-limit', `Common title ${index}`, 'claude'],
+      );
+    }
+
+    const hits = await adapter.searchSessionTitles!('ws-search-limit', 'common');
+
+    // 200 visible results plus one sentinel preserves the IPC truncation signal.
+    expect(hits).toHaveLength(201);
+  });
 });

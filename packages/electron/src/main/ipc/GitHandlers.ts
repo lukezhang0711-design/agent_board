@@ -4,14 +4,13 @@
  * Handles git operations from the renderer process.
  */
 
-import { ipcMain } from 'electron';
 import simpleGit, { SimpleGit } from 'simple-git';
 import log from 'electron-log/main';
+import { safeHandle } from '../utils/ipcRegistry';
 import { existsSync } from 'fs';
 import { dirname, join, relative, isAbsolute, resolve } from 'path';
 import { gitOperationLock } from '../services/GitOperationLock';
 import { executeGitCommit } from '../services/GitCommitService';
-import { safeHandle } from '../utils/ipcRegistry';
 import { findGitRootForFile } from '../services/GitStatusService';
 import { isFileInWorkspaceOrWorktree } from '../utils/workspaceDetection';
 
@@ -125,7 +124,7 @@ export function registerGitHandlers(): void {
   /**
    * Get git status for a workspace or worktree
    */
-  ipcMain.handle('git:status', async (_event, workspacePath: string): Promise<GitStatusResult> => {
+  safeHandle('git:status', async (_event, workspacePath: string): Promise<GitStatusResult> => {
     if (!workspacePath) {
       throw new Error('workspacePath is required');
     }
@@ -157,7 +156,7 @@ export function registerGitHandlers(): void {
   /**
    * Get recent commits with optional filters
    */
-  ipcMain.handle(
+  safeHandle(
     'git:log',
     async (
       _event,
@@ -798,7 +797,7 @@ export function registerGitHandlers(): void {
   /**
    * Get file diff
    */
-  ipcMain.handle(
+  safeHandle(
     'git:diff',
     async (_event, workspacePath: string, filePath: string): Promise<string> => {
       if (!workspacePath) {
@@ -970,7 +969,7 @@ export function registerGitHandlers(): void {
   /**
    * Execute git commit
    */
-  ipcMain.handle(
+  safeHandle(
     'git:commit',
     async (
       _event,
