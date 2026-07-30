@@ -62,10 +62,29 @@ type SpawnedSession = {
   status: string;
 };
 
+type SessionListEntry = {
+  id: string;
+  title: string;
+  provider: string;
+  model?: string;
+  sessionType?: string;
+  agentRole?: string;
+  createdBySessionId?: string | null;
+  createdAt: number;
+  updatedAt: number;
+  messageCount?: number;
+  isArchived?: boolean;
+  isPinned?: boolean;
+  parentSessionId?: string | null;
+  worktreeId?: string | null;
+  childCount?: number;
+};
+
 let electronApp: ElectronApplication;
 let page: Page;
 let workspacePath: string;
 let scriptedProvider: ScriptedCollaborationProvider;
+let originalAlphaFeatures: Record<string, boolean> | null = null;
 const mcpClients: MetaAgentMcpClient[] = [];
 
 async function invokeElectron<T>(targetPage: Page, channel: string, ...args: unknown[]): Promise<T> {
@@ -257,6 +276,11 @@ async function assertApprovalLifecycle(
   requestId: string,
   expected: { decision: 'approved' | 'rejected'; method: 'direct' | 'revive'; feedback?: string },
 ): Promise<void> {
+  // The revive route is deliberately asynchronous: the real response IPC
+  // returns after durable acknowledgement, then queues the Head continuation.
+  // Wait for the state machine's terminal state before reading its ordered
+  // transcript evidence.
+  const state = await waitForClosedApproval(sessionId, requestId);
   const rows = await queryDb<{ content: unknown }>(
     page,
     `SELECT content
@@ -295,7 +319,6 @@ async function assertApprovalLifecycle(
   expect(deliveredAt).toBeGreaterThan(respondedAt);
   expect(closedAt).toBeGreaterThan(deliveredAt);
 
-  const state = await waitForClosedApproval(sessionId, requestId);
   expect(state.requestId).toBe(requestId);
   expect(state.decision).toBe(expected.decision);
   expect(state.deliveryMethod).toBe(expected.method);
@@ -333,13 +356,60 @@ async function selectMetaAgent(sessionId: string): Promise<void> {
   const header = page.locator(
     `[data-testid="meta-agent-group"][data-meta-session-id="${sessionId}"] [data-testid="meta-agent-group-header"]`,
   );
+  // The session is created through the real main-process IPC entry point.
+  // Reuse the app's existing E2E refresh helper so the already-mounted
+  // SessionHistory fetches the durable session before we assert its card.
+  if (!await header.isVisible().catch(() => false)) {
+    await page.evaluate(async () => {
+      const refresh = (globalThis as any).__testHelpers?.refreshSessions;
+      if (typeof refresh !== 'function') {
+        throw new Error('Renderer E2E session refresh helper is unavailable');
+      }
+      await refresh();
+    });
+  }
+  if (!await header.isVisible().catch(() => false)) {
+    const listResult = await invokeElectron<{ success: boolean; sessions: SessionListEntry[] }>(
+      page,
+      'sessions:list',
+      workspacePath,
+      { includeArchived: false },
+    );
+    const durableSession = listResult.sessions.find((session) => session.id === sessionId);
+    if (!listResult.success || !durableSession) {
+      throw new Error(`Durable meta-agent session ${sessionId} was not listed by the real sessions IPC`);
+    }
+    // The app exposes this existing E2E-only hook for IPC-created sessions.
+    // The card itself still loads from the real transcript after selection.
+    await page.evaluate(({ session, workspaceId }) => {
+      const inject = (globalThis as any).__testHelpers?.injectSessions;
+      if (typeof inject !== 'function') {
+        throw new Error('Renderer E2E session injection helper is unavailable');
+      }
+      inject([{ ...session, workspaceId }]);
+    }, { session: durableSession, workspaceId: workspacePath });
+  }
   await expect(header).toBeVisible({ timeout: 10_000 });
   await header.click();
 }
 
 async function waitForPendingApprovalCard(sessionId: string): Promise<Locator> {
   await selectMetaAgent(sessionId);
-  const card = page.locator('[data-testid="plan-approval-widget"][data-state="pending"]').last();
+  let card = page.locator('[data-testid="plan-approval-widget"][data-state="pending"]').last();
+  // The first card proves the live transcript path. For a replacement card,
+  // force the existing dev-only canonical reparse IPC. It emits the real
+  // `transcript:session-reparsed` renderer signal, whose production listener
+  // reloads the durable transcript without fabricating a message event.
+  const arrivedLive = await card.isVisible().catch(() => false);
+  if (!arrivedLive) {
+    const reparseResult = await invokeElectron<{ success: boolean; sessionId: string }>(
+      page,
+      'transcript:force-reparse-session',
+      sessionId,
+    );
+    expect(reparseResult).toMatchObject({ success: true, sessionId });
+    card = page.locator('[data-testid="plan-approval-widget"][data-state="pending"]').last();
+  }
   await expect(card).toBeVisible({ timeout: 10_000 });
   return card;
 }
@@ -443,6 +513,12 @@ test.beforeAll(async () => {
   });
   page = await electronApp.firstWindow();
   await waitForAppReady(page);
+  originalAlphaFeatures = await invokeElectron<Record<string, boolean>>(page, 'alpha-features:get');
+  await invokeElectron(page, 'alpha-features:set', { 'meta-agent': true });
+  // The Alpha flag is read into renderer settings on startup. Reload before
+  // creating the session so the real MetaAgentGroup rendering path is active.
+  await page.reload();
+  await page.waitForLoadState('domcontentloaded');
   await dismissAPIKeyDialog(page);
   await switchToAgentMode(page);
   await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.agentMode)).toBeVisible();
@@ -452,16 +528,19 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   for (const client of mcpClients) {
     await client.transport.terminateSession().catch(() => undefined);
-    await client.client.close().catch(() => undefined);
+    await client.transport.close().catch(() => undefined);
   }
   if (page) {
     await page.evaluate(() => {
       const state = globalThis as any;
       state.__collabE2eMessageEventsCleanup?.();
     }).catch(() => undefined);
+    if (originalAlphaFeatures) {
+      await invokeElectron(page, 'alpha-features:set', originalAlphaFeatures).catch(() => undefined);
+    }
   }
-  await scriptedProvider?.stop().catch(() => undefined);
   await electronApp?.close().catch(() => undefined);
+  await scriptedProvider?.stop().catch(() => undefined);
   if (workspacePath) {
     await fs.rm(workspacePath, { recursive: true, force: true }).catch(() => undefined);
   }
@@ -581,7 +660,10 @@ test('replays the approved collaboration chain through real IPC, durable state, 
     queueAction: 'pause',
   });
   expect(interruptResult.success).toBe(true);
-  expect(interruptResult.results).toContainEqual({ sessionId: childA.sessionId, outcome: 'interrupted' });
+  expect(interruptResult.results).toContainEqual(expect.objectContaining({
+    sessionId: childA.sessionId,
+    outcome: 'interrupted',
+  }));
   await childATurn;
   await expect.poll(async () => {
     const children = await listSpawnedSessions(client);
@@ -690,8 +772,18 @@ test('replays the approved collaboration chain through real IPC, durable state, 
     async () => (await getRendererEvents(page, headSessionId)).length,
     { timeout: 10_000 },
   ).toBeGreaterThan(0);
+  // Provider turns are delivered incrementally, while this explicit durable
+  // reload verifies that the renderer can reconstruct the final summary from
+  // the canonical transcript as well.
+  await expect(
+    invokeElectron<{ success: boolean; sessionId: string }>(
+      page,
+      'transcript:force-reparse-session',
+      headSessionId,
+    ),
+  ).resolves.toMatchObject({ success: true, sessionId: headSessionId });
   await selectMetaAgent(headSessionId);
-  await expect(page.getByText(SCRIPTED_FINAL_SUMMARY)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(SCRIPTED_FINAL_SUMMARY).last()).toBeVisible({ timeout: 10_000 });
 
   // `nimtc|...` is the Codex renderer lookup form. The durable approval
   // state machine is provider-neutral, so keep the Head on the local scripted

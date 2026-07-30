@@ -111,6 +111,13 @@ Run the durable Head-to-child collaboration gate by itself from `packages/electr
 npm run test:e2e:collab
 ```
 
+This command builds the Electron main/preload process and starts its own renderer
+server on `127.0.0.1:5273`; Playwright stops it after the gate exits. Do not start
+`npm run dev` separately. It refuses to reuse an occupied 5273 server, so an
+occupied port fails immediately with Playwright's URL-in-use error instead of
+testing stale code. Other E2E commands retain their existing developer-managed
+server convention.
+
 When running from a worktree or CI, run that command through the required
 `/e2e-devcontainer` flow. The spec starts a scripted OpenAI-compatible provider
 only on `127.0.0.1:8234`; it drives the real LM Studio provider, IPC handlers,

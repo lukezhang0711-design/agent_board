@@ -45,7 +45,7 @@
     "test:ai:watch": "vitest watch ../runtime/src/ai/providers/__tests__/",
     "test:e2e": "playwright test",
     "test:e2e:basic": "playwright test claude-code-basic.spec.ts",
-    "test:e2e:collab": "playwright test e2e/ai/collab-chain.spec.ts",
+    "test:e2e:collab": "playwright test --config=e2e/ai/collab.playwright.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "marketing:screenshots": "playwright test --config=marketing/playwright.marketing.config.ts",
     "marketing:screenshots:grep": "playwright test --config=marketing/playwright.marketing.config.ts --grep"
