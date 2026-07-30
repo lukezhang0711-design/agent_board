@@ -82,4 +82,18 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('Resume interrupted children in place');
     expect(prompt).toContain('Only create a replacement session when the original cannot be resumed');
   });
+
+  it('makes Codex Head plan approval submit_plan-only without changing Claude wording', () => {
+    const codexPrompt = buildMetaAgentSystemPrompt('codex', 'default', {
+      provider: 'openai-codex',
+      model: 'gpt-5.4-mini',
+    });
+    const claudePrompt = buildMetaAgentSystemPrompt('claude', 'default', {
+      provider: 'claude-code',
+      model: 'opus',
+    });
+
+    expect(codexPrompt).toContain('never use `PromptForUserInput` (server: `nimbalyst-mcp`) or `AskUserQuestion` (server: `nimbalyst-mcp`) to approve a plan');
+    expect(claudePrompt).not.toContain('never use `PromptForUserInput` (server: `nimbalyst-mcp`) or `AskUserQuestion` (server: `nimbalyst-mcp`) to approve a plan');
+  });
 });

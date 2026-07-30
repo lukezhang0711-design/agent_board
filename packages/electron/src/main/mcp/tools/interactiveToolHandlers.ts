@@ -33,10 +33,45 @@ import { broadcastMessageLogged } from "../../services/ai/claudeCliUserPromptLog
 import { ClaudeSettingsManager } from "../../services/ClaudeSettingsManager";
 import { getPermissionService } from "../../services/PermissionService";
 
-export function getInteractiveToolSchemas(sessionId: string | undefined) {
+export interface InteractiveToolSchemaOptions {
+  /** Codex Heads must use submit_plan rather than a generic approval card. */
+  excludePromptTools?: boolean;
+}
+
+const CODEX_HEAD_EXCLUDED_PROMPT_TOOL_NAMES = new Set([
+  "PromptForUserInput",
+  "AskUserQuestion",
+]);
+
+export function shouldExcludePromptToolsForCodexHead(
+  session: { provider?: unknown; agentRole?: unknown } | null | undefined,
+): boolean {
+  return session?.provider === "openai-codex" && session.agentRole === "meta-agent";
+}
+
+export async function isCodexHeadAgentSession(
+  sessionId: string | undefined,
+): Promise<boolean> {
+  if (!sessionId) return false;
+
+  try {
+    return shouldExcludePromptToolsForCodexHead(
+      await AISessionsRepository.get(sessionId),
+    );
+  } catch {
+    // A missing/unavailable session store must not make the whole MCP server
+    // unavailable. Normal app sessions have a durable record before ListTools.
+    return false;
+  }
+}
+
+export function getInteractiveToolSchemas(
+  sessionId: string | undefined,
+  options: InteractiveToolSchemaOptions = {},
+) {
   if (!sessionId) return [];
 
-  return [
+  const schemas = [
     requestUserInputSchema(),
     {
       name: "AskUserQuestion",
@@ -161,6 +196,24 @@ The commit message should follow these guidelines:
       },
     },
   ];
+
+  return options.excludePromptTools
+    ? schemas.filter((schema) => !CODEX_HEAD_EXCLUDED_PROMPT_TOOL_NAMES.has(schema.name))
+    : schemas;
+}
+
+/**
+ * Resolve the shared MCP interactive-tool surface for one durable session.
+ * Codex app-server ignores provider allowlists, so this server-side list is
+ * the enforceable boundary that keeps a Codex Head's plan approval on
+ * nimbalyst-meta-agent/submit_plan.
+ */
+export async function getInteractiveToolSchemasForSession(
+  sessionId: string | undefined,
+) {
+  return getInteractiveToolSchemas(sessionId, {
+    excludePromptTools: await isCodexHeadAgentSession(sessionId),
+  });
 }
 
 type McpToolResult = {

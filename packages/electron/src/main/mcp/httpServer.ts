@@ -62,7 +62,8 @@ import {
   handleToolPermission,
   handleGitCommitProposal,
   handleRequestUserInput,
-  getInteractiveToolSchemas,
+  getInteractiveToolSchemasForSession,
+  isCodexHeadAgentSession,
 } from "./tools/interactiveToolHandlers";
 import {
   handleFeedbackAnonymizeText,
@@ -316,7 +317,7 @@ function createSharedMcpServer(
       ...getEditorToolSchemas(sessionId),
       ...displayToolSchemas,
       ...voiceToolSchemas,
-      ...getInteractiveToolSchemas(sessionId),
+      ...(await getInteractiveToolSchemasForSession(sessionId)),
       ...trackerToolSchemas,
       ...feedbackToolSchemas,
     ];
@@ -361,6 +362,19 @@ function createSharedMcpServer(
     const toolName = name.replace(/^mcp__nimbalyst__/, "");
 
     try {
+      if (
+        (toolName === "AskUserQuestion" || toolName === "PromptForUserInput")
+        && await isCodexHeadAgentSession(sessionId)
+      ) {
+        return {
+          content: [{
+            type: "text",
+            text: "Codex Head plan approval must use mcp__nimbalyst-meta-agent__submit_plan. PromptForUserInput and AskUserQuestion are unavailable in this Head session.",
+          }],
+          isError: true,
+        };
+      }
+
       switch (toolName) {
         case "applyDiff":
           return handleApplyDiff(args);

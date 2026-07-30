@@ -22,8 +22,10 @@ import * as rtl from '@testing-library/react';
 import { createStore, Provider as JotaiProvider } from 'jotai';
 import type { TranscriptViewMessage } from '../../../../ai/server/transcript/TranscriptProjector';
 import type { CustomToolWidgetProps } from '../CustomToolWidgets/index';
+import { interactiveWidgetHostAtom } from '../../../../store/atoms/interactiveWidgetHost';
+import { clearRequestUserInputDraft } from '../../../../store/atoms/requestUserInputDraft';
 
-const { render, screen, fireEvent } = rtl;
+const { render, screen, fireEvent, waitFor } = rtl;
 
 // Mock clipboard
 vi.mock('../../../../utils/clipboard', () => ({
@@ -1053,6 +1055,127 @@ describe('AskUserQuestionWidget', () => {
     );
     expect(container.innerHTML).toBe('');
     warnSpy.mockRestore();
+  });
+});
+
+// ============================================================================
+// RequestUserInputWidget Tests
+// ============================================================================
+
+describe('RequestUserInputWidget', () => {
+  let RequestUserInputWidget: React.FC<CustomToolWidgetProps>;
+
+  beforeEach(async () => {
+    const mod = await import('../CustomToolWidgets/RequestUserInputWidget');
+    RequestUserInputWidget = mod.RequestUserInputWidget;
+  });
+
+  function renderConfirmationPrompt({
+    callId,
+    fieldId,
+    fieldLabel,
+    submitLabel,
+  }: {
+    callId: string;
+    fieldId: string;
+    fieldLabel: string;
+    submitLabel: string;
+  }) {
+    const sessionId = `request-user-input-${callId}`;
+    const store = createStore();
+    const requestUserInputSubmit = vi.fn().mockResolvedValue(undefined);
+    store.set(interactiveWidgetHostAtom(sessionId), {
+      requestUserInputSubmit,
+      requestUserInputCancel: vi.fn().mockResolvedValue(undefined),
+    } as any);
+    clearRequestUserInputDraft(callId);
+
+    const message = makeToolMessage('mcp__nimbalyst-mcp__PromptForUserInput', {
+      title: 'Revised plan',
+      fields: [
+        {
+          type: 'confirm',
+          id: fieldId,
+          label: fieldLabel,
+          defaultValue: false,
+        },
+      ],
+      submitLabel,
+    });
+    if (message.toolCall) {
+      message.toolCall.providerToolCallId = callId;
+    }
+
+    render(
+      <JotaiProvider store={store}>
+        <RequestUserInputWidget
+          message={message}
+          isExpanded={false}
+          onToggle={() => {}}
+          sessionId={sessionId}
+        />
+      </JotaiProvider>
+    );
+
+    return { requestUserInputSubmit };
+  }
+
+  it('submits true when the positive submit button names an untouched false confirmation', async () => {
+    const callId = 'approve-revised-plan';
+    const { requestUserInputSubmit } = renderConfirmationPrompt({
+      callId,
+      fieldId: 'approve_revised_plan',
+      fieldLabel: 'Approve revised plan',
+      submitLabel: 'Approve revised plan',
+    });
+
+    expect(screen.getByTestId('request-user-input-confirm-approve_revised_plan').dataset.checked).toBe('false');
+    fireEvent.click(screen.getByTestId('request-user-input-submit'));
+
+    await waitFor(() => {
+      expect(requestUserInputSubmit).toHaveBeenCalledWith(callId, {
+        approve_revised_plan: { type: 'confirm', value: true },
+      });
+    });
+  });
+
+  it('preserves an explicit No even when the submit button is named for approval', async () => {
+    const callId = 'explicit-no';
+    const { requestUserInputSubmit } = renderConfirmationPrompt({
+      callId,
+      fieldId: 'approve_revised_plan',
+      fieldLabel: 'Approve revised plan',
+      submitLabel: 'Approve revised plan',
+    });
+
+    const confirm = screen.getByTestId('request-user-input-confirm-approve_revised_plan');
+    fireEvent.click(confirm); // Yes
+    fireEvent.click(confirm); // Explicit No
+    fireEvent.click(screen.getByTestId('request-user-input-submit'));
+
+    await waitFor(() => {
+      expect(requestUserInputSubmit).toHaveBeenCalledWith(callId, {
+        approve_revised_plan: { type: 'confirm', value: false },
+      });
+    });
+  });
+
+  it('keeps an unmatched confirmation at its default until the user changes it', async () => {
+    const callId = 'unmatched-submit-label';
+    const { requestUserInputSubmit } = renderConfirmationPrompt({
+      callId,
+      fieldId: 'include_history',
+      fieldLabel: 'Include history',
+      submitLabel: 'Save preferences',
+    });
+
+    fireEvent.click(screen.getByTestId('request-user-input-submit'));
+
+    await waitFor(() => {
+      expect(requestUserInputSubmit).toHaveBeenCalledWith(callId, {
+        include_history: { type: 'confirm', value: false },
+      });
+    });
   });
 });
 

@@ -41,6 +41,8 @@ export interface RequestUserInputEditTextDraft {
 
 export interface RequestUserInputConfirmDraft {
   value: boolean;
+  /** True once the user has deliberately changed the Yes/No control. */
+  touched: boolean;
 }
 
 export type RequestUserInputFieldDraft =
