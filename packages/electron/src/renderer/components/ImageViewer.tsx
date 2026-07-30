@@ -12,9 +12,10 @@ import { nimAssetUrl } from '../utils/assetUrl';
 interface ImageViewerProps {
   filePath: string;
   fileName: string;
+  revision?: number;
 }
 
-export const ImageViewer: React.FC<ImageViewerProps> = ({ filePath, fileName }) => {
+export const ImageViewer: React.FC<ImageViewerProps> = ({ filePath, fileName, revision = 0 }) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -27,7 +28,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ filePath, fileName }) 
         // The main-process handler validates the path against allowlisted
         // workspace + userData roots.
         const absolute = filePath.startsWith('file://') ? filePath.replace(/^file:\/\//, '') : filePath;
-        setImageSrc(nimAssetUrl(absolute));
+        setImageSrc(nimAssetUrl(absolute, revision));
         setError(null);
       } catch (err) {
         setError('Failed to load image');
@@ -36,7 +37,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ filePath, fileName }) 
     };
 
     loadImage();
-  }, [filePath]);
+  }, [filePath, revision]);
 
   const handleImageError = () => {
     setError('Failed to load image');

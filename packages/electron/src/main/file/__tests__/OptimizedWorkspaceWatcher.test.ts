@@ -117,6 +117,25 @@ describe('OptimizedWorkspaceWatcher', () => {
     });
   });
 
+  describe('file events', () => {
+    it('notifies the renderer for a bypassed image reported as an add', async () => {
+      const window = fakeWindow(1);
+      await watcher.start(window, '/ws/a');
+
+      const listener = (mocks.subscribe.mock.calls[0] as unknown as [
+        string,
+        string,
+        { onAdd: (filePath: string, gitignoreBypassed?: boolean) => void },
+      ])[2];
+      listener.onAdd('/ws/a/ignored/preview.svg', true);
+
+      expect(window.webContents.send).toHaveBeenCalledWith(
+        'file-changed-on-disk',
+        { path: '/ws/a/ignored/preview.svg' },
+      );
+    });
+  });
+
   describe('addWatchedFolder', () => {
     it('adds a folder inside the workspace and forwards to the event bus', async () => {
       const window = fakeWindow(1);

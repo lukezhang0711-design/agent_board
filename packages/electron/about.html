@@ -55,6 +55,13 @@
       .about-version {
         font-size: 18px;
         color: #666;
+        margin: 0 0 8px 0;
+      }
+
+      .about-build {
+        font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+        font-size: 12px;
+        color: #888;
         margin: 0 0 35px 0;
       }
 
@@ -226,6 +233,10 @@
         color: #aaa;
       }
 
+      body.dark-theme .about-build {
+        color: #999;
+      }
+
       body.dark-theme .about-description {
         color: #ccc;
       }
@@ -269,6 +280,7 @@
         <img src="nimbalyst-logo.png" alt="Nimbalyst">
       </div>
       <p class="about-version" id="about-version">Version</p>
+      <p class="about-build" id="about-build">Build unknown</p>
 
       <p class="about-description">
         Nimbalyst is the visual workspace for building with Codex and Claude Code
@@ -334,6 +346,28 @@
             const el = document.getElementById('about-version');
             if (el) el.textContent = `Version ${version}`;
           }
+        } catch {}
+      })();
+
+      // Older packaged builds may not contain build-info.json. The IPC returns
+      // null in that case, and About deliberately keeps the neutral fallback.
+      (async () => {
+        const el = document.getElementById('about-build');
+        if (!el) return;
+
+        try {
+          const buildInfo = await window.electronAPI?.invoke?.('get-build-info');
+          if (
+            !buildInfo ||
+            typeof buildInfo.shortCommit !== 'string' ||
+            !/^[0-9a-f]{7,40}$/i.test(buildInfo.shortCommit) ||
+            typeof buildInfo.dirty !== 'boolean' ||
+            typeof buildInfo.builtAtUtc !== 'string'
+          ) {
+            return;
+          }
+
+          el.textContent = `Build ${buildInfo.shortCommit} · ${buildInfo.dirty ? 'dirty' : 'clean'} · UTC ${buildInfo.builtAtUtc}`;
         } catch {}
       })();
 

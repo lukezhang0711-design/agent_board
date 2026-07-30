@@ -1,8 +1,20 @@
 import { BrowserWindow } from 'electron';
+import { extname } from 'path';
 import { getFolderContents } from '../utils/FileTree';
 import { logger } from '../utils/logger';
 import { getWindowId, markRecentlyDeleted } from '../window/WindowManager';
 import * as workspaceEventBus from './WorkspaceEventBus';
+
+// SessionFileWatcher intentionally skips binary files. When macOS reports an
+// in-place image rewrite as a rename/add event, this watcher must therefore
+// forward the event itself so an open image preview can refresh.
+const IMAGE_PREVIEW_EXTENSIONS = new Set([
+    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.svg', '.webp',
+]);
+
+function isImagePreviewPath(filePath: string): boolean {
+    return IMAGE_PREVIEW_EXTENSIONS.has(extname(filePath).toLowerCase());
+}
 
 /**
  * Optimized workspace watcher.
@@ -71,7 +83,11 @@ export class OptimizedWorkspaceWatcher {
                 // own EXCLUDED_DIRS filtering, so gitignored files in non-excluded
                 // dirs (e.g. AI-created files) will correctly appear.
                 triggerUpdate();
-                if (gitignoreBypassed) return; // SessionFileWatcher handles editor notifications
+                // SessionFileWatcher owns tracked text-document notifications,
+                // but deliberately ignores binary images. A bypassed image can
+                // reach this branch when fs.watch classifies a rewrite as
+                // rename/add, so it must reach the renderer too.
+                if (gitignoreBypassed && !isImagePreviewPath(filePath)) return;
                 if (!window.isDestroyed()) {
                     window.webContents.send('file-changed-on-disk', { path: filePath });
                 }

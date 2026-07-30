@@ -15,6 +15,7 @@
  * a single FIFO buffer that flushes when ANY of the following triggers fire:
  *
  * - 200ms idle window since the last enqueue
+ * - 250ms maximum residency since the first row in the current batch
  * - 200 buffered rows
  * - Explicit `flushAll()` (called by `flushPendingWrites()` at turn-end /
  *   abort / shutdown)
@@ -33,6 +34,10 @@
 
 import type { CreateAgentMessageInput } from '../../ai/server/types';
 import { AgentMessagesRepository } from './AgentMessagesRepository';
+
+// Keep the existing 200ms trailing-idle debounce untouched, while limiting
+// continuous sub-200ms streaming chunks to one extra 50ms before persistence.
+const MAX_FIRST_ROW_RESIDENCY_MS = 250;
 
 export interface QueuedMessageWrite {
   message: CreateAgentMessageInput;
@@ -102,6 +107,9 @@ export class AgentMessageWriteQueue {
   private buffer: QueuedMessageWrite[] = [];
 
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private firstRowTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Set when the absolute cap expires while another flush still owns the writer. */
+  private firstRowFlushDue = false;
   private flushPromise: Promise<void> | null = null;
   private listeners: Set<BatchListener> = new Set();
   private closed = false;
@@ -149,10 +157,17 @@ export class AgentMessageWriteQueue {
       reject: rejectFn,
     };
 
+    const startsNewBatch = this.buffer.length === 0;
     this.buffer.push(entry);
+
+    if (startsNewBatch) {
+      this.firstRowFlushDue = false;
+      this.armFirstRowTimer();
+    }
 
     if (this.buffer.length >= this.rowFlushThreshold) {
       this.cancelIdleTimer();
+      this.cancelFirstRowTimer();
       this.scheduleImmediateFlush();
     } else {
       this.armIdleTimer();
@@ -168,6 +183,7 @@ export class AgentMessageWriteQueue {
    */
   async flushAll(): Promise<void> {
     this.cancelIdleTimer();
+    this.cancelFirstRowTimer();
     // If a flush is already in progress, wait for it to settle, then flush
     // any rows that came in while it was running. Loop until the buffer is
     // empty and no flush is in progress.
@@ -219,23 +235,53 @@ export class AgentMessageWriteQueue {
     }
   }
 
+  /**
+   * Unlike the idle timer, this deadline starts once per batch and is never
+   * re-armed by later chunks. It protects sustained low-frequency streams
+   * whose each chunk arrives before the trailing 200ms idle window expires.
+   */
+  private armFirstRowTimer(): void {
+    if (this.firstRowTimer !== null) return;
+
+    this.firstRowTimer = setTimeout(() => {
+      this.firstRowTimer = null;
+      this.firstRowFlushDue = true;
+      this.scheduleImmediateFlush();
+    }, MAX_FIRST_ROW_RESIDENCY_MS);
+  }
+
+  private cancelFirstRowTimer(): void {
+    if (this.firstRowTimer !== null) {
+      clearTimeout(this.firstRowTimer);
+      this.firstRowTimer = null;
+    }
+  }
+
   private scheduleImmediateFlush(): void {
     if (this.flushPromise) {
       // A flush is already running; the next entries will be picked up by
       // the loop in flushAll() or the next idle-timer fire.
       return;
     }
+    this.firstRowFlushDue = false;
     this.flushPromise = this.runFlush().finally(() => {
       this.flushPromise = null;
-      // If new rows arrived during the flush, arm the idle timer so they
-      // don't sit forever.
+      // If new rows arrived during the flush, preserve their original
+      // first-row deadline. If it elapsed while this flush held the writer,
+      // start their flush immediately instead of re-arming a trailing timer.
       if (this.buffer.length > 0) {
-        this.armIdleTimer();
+        if (this.firstRowFlushDue) {
+          this.scheduleImmediateFlush();
+        } else {
+          this.armIdleTimer();
+        }
       }
     });
   }
 
   private async runFlush(): Promise<void> {
+    this.cancelIdleTimer();
+    this.cancelFirstRowTimer();
     if (this.buffer.length === 0) return;
 
     const batch = this.buffer;
