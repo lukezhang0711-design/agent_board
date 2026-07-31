@@ -7,7 +7,7 @@
  * encoded absolute path, validates it against an allowlist of root prefixes,
  * checks the file extension is in the image allowlist, and serves the file.
  *
- * URL shape: `nim-asset://local/<base64url-of-absolute-path>`.
+ * URL shape: `nim-asset://local/<base64url-of-absolute-path>?revision=<n>`.
  *
  * Encoding the absolute path with base64url avoids any need to URL-encode
  * slashes / spaces / non-ASCII characters in the path, and the encoded
@@ -36,7 +36,8 @@ function toBase64Url(input: string): string {
  * userData/chat-attachments). The renderer does NOT need to know which
  * root it belongs to.
  */
-export function nimAssetUrl(absoluteFilePath: string): string {
+export function nimAssetUrl(absoluteFilePath: string, revision?: number): string {
   if (!absoluteFilePath) return "";
-  return `${SCHEME}://${HOST}/${toBase64Url(absoluteFilePath)}`;
+  const url = `${SCHEME}://${HOST}/${toBase64Url(absoluteFilePath)}`;
+  return revision === undefined ? url : `${url}?revision=${encodeURIComponent(String(revision))}`;
 }

@@ -1,7 +1,7 @@
 /**
  * Unit tests for AgentMessageWriteQueue.
  *
- * Covers: per-session ordering, flush triggers (idle / size / explicit),
+ * Covers: per-session ordering, flush triggers (idle / first-row maximum / size / explicit),
  * batched-INSERT-failure fallback to per-row writes, idempotent flushAll,
  * batch-event coalescing, multi-row pressure logging.
  */
@@ -130,39 +130,78 @@ describe('AgentMessageWriteQueue — idle flush', () => {
     try {
       const { writer } = makeRecordingWriter();
       const queue = new AgentMessageWriteQueue({
-        idleFlushMs: 200,
+        // Keep this test below the 250ms first-row maximum so it isolates the
+        // unchanged trailing-idle behavior.
+        idleFlushMs: 20,
         rowFlushThreshold: 1000,
         writer,
       });
 
-      // Enqueue at t=0, t=150, t=300, t=450, t=600. If the timer were a "deadline
-      // from first enqueue" it would fire at t=200 with only the first row. With
-      // proper reset semantics it should NOT fire until 200ms after the last
-      // enqueue (t=800).
+      // Enqueue at t=0, t=15, t=30, t=45, t=60. If the timer were a "deadline
+      // from first enqueue" it would fire at t=20 with only the first rows. With
+      // proper reset semantics it should NOT fire until 20ms after the last
+      // enqueue (t=80).
       queue.enqueue(makeMessage({ content: 'r1' }));
-      await vi.advanceTimersByTimeAsync(150);
+      await vi.advanceTimersByTimeAsync(15);
       queue.enqueue(makeMessage({ content: 'r2' }));
-      await vi.advanceTimersByTimeAsync(150);
+      await vi.advanceTimersByTimeAsync(15);
       queue.enqueue(makeMessage({ content: 'r3' }));
-      await vi.advanceTimersByTimeAsync(150);
+      await vi.advanceTimersByTimeAsync(15);
       queue.enqueue(makeMessage({ content: 'r4' }));
-      await vi.advanceTimersByTimeAsync(150);
+      await vi.advanceTimersByTimeAsync(15);
       queue.enqueue(makeMessage({ content: 'r5' }));
 
-      // t=600 now, last enqueue just happened. Writer must not have fired yet.
+      // t=60 now, last enqueue just happened. Writer must not have fired yet.
       expect(writer).not.toHaveBeenCalled();
 
-      // t=799 — still under the idle window since last enqueue.
-      await vi.advanceTimersByTimeAsync(199);
+      // t=79 — still under the idle window since last enqueue.
+      await vi.advanceTimersByTimeAsync(19);
       expect(writer).not.toHaveBeenCalled();
 
-      // t=801 — idle window since last enqueue elapsed; flush fires once with all 5 rows.
+      // t=81 — idle window since last enqueue elapsed; flush fires once with all 5 rows.
       await vi.advanceTimersByTimeAsync(2);
       vi.useRealTimers();
       await new Promise((r) => setTimeout(r, 0));
 
       expect(writer).toHaveBeenCalledTimes(1);
       expect(writer.mock.calls[0][0].length).toBe(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('AgentMessageWriteQueue — first-row maximum residency', () => {
+  it('flushes a continuously active low-frequency stream within 250ms of its first row', async () => {
+    vi.useFakeTimers();
+    try {
+      const { writer, batches } = makeRecordingWriter();
+      const queue = new AgentMessageWriteQueue({
+        idleFlushMs: 200,
+        rowFlushThreshold: 1000,
+        writer,
+      });
+
+      // Each row arrives before the 200ms trailing idle timer can fire. The
+      // legacy implementation therefore kept delaying persistence indefinitely.
+      const first = queue.enqueue(makeMessage({ content: 'stream-1' }));
+      await vi.advanceTimersByTimeAsync(100);
+      const second = queue.enqueue(makeMessage({ content: 'stream-2' }));
+      await vi.advanceTimersByTimeAsync(100);
+      const third = queue.enqueue(makeMessage({ content: 'stream-3' }));
+
+      await vi.advanceTimersByTimeAsync(49);
+      expect(writer).not.toHaveBeenCalled();
+
+      // The absolute cap must flush even though the last row arrived only 50ms ago.
+      await vi.advanceTimersByTimeAsync(1);
+      expect(writer).toHaveBeenCalledTimes(1);
+      await Promise.all([first, second, third]);
+      expect(batches[0].map((message) => message.content)).toEqual([
+        'stream-1',
+        'stream-2',
+        'stream-3',
+      ]);
     } finally {
       vi.useRealTimers();
     }

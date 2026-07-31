@@ -221,6 +221,20 @@ export const TabEditor: React.FC<TabEditorProps> = ({
   const [monacoDiffChangeCount, setMonacoDiffChangeCount] = useState(0); // Number of changes in Monaco diff mode
   const [showTreeView, setShowTreeView] = useState(false); // Debug tree view for Lexical (dev mode only)
 
+  // Images never mount a built-in editor, so they do not enter the
+  // `isEditorReady`-gated DocumentModel subscription below. Subscribe to the
+  // file watcher directly and increment a revision: the revision is part of
+  // both the asset URL and the image component key, so Chromium cannot reuse
+  // a cached response after the file is rewritten in place.
+  useEffect(() => {
+    if (!isImage) return;
+
+    return window.electronAPI.onFileChangedOnDisk(({ path }) => {
+      if (normalizePathForCompare(path) !== normalizePathForCompare(filePath)) return;
+      setReloadVersion((revision) => revision + 1);
+    });
+  }, [filePath, isImage]);
+
   // Track editor type usage when a file is opened.
   //
   // The emission is deferred until the resolved editor type settles. At startup
@@ -2689,9 +2703,10 @@ export const TabEditor: React.FC<TabEditorProps> = ({
             );
           })() : isImage ? (
             <ImageViewer
-              key={filePath}
+              key={`${filePath}-image-${reloadVersion}`}
               filePath={filePath}
               fileName={fileName}
+              revision={reloadVersion}
             />
           ) : isMarkdown && !sourceMode ? (
               <>

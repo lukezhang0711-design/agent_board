@@ -8,6 +8,60 @@
 const esbuild = require('esbuild');
 const path = require('path');
 const fs = require('fs');
+const { execFileSync } = require('child_process');
+
+const FULL_COMMIT_SHA = /^[0-9a-f]{40}$/i;
+const CI_COMMIT_ENV_NAMES = [
+  'GITHUB_SHA',
+  'CI_COMMIT_SHA',
+  'BUILDKITE_COMMIT',
+  'GIT_COMMIT',
+];
+
+function isFullCommitSha(value) {
+  return typeof value === 'string' && FULL_COMMIT_SHA.test(value.trim());
+}
+
+function runGit(args) {
+  return execFileSync('git', args, {
+    cwd: path.join(__dirname, '..'),
+    encoding: 'utf8',
+  }).trim();
+}
+
+/**
+ * Prefer the immutable CI SHA when it is available. Local builds resolve the
+ * current checkout so About can still identify a developer-built package.
+ */
+function getBuildInfo({
+  environment = process.env,
+  now = () => new Date(),
+  runGitCommand = runGit,
+} = {}) {
+  const ciCommit = CI_COMMIT_ENV_NAMES
+    .map((name) => environment[name])
+    .find(isFullCommitSha);
+  const commit = (ciCommit || runGitCommand(['rev-parse', 'HEAD'])).trim();
+
+  if (!isFullCommitSha(commit)) {
+    throw new Error(`Expected a 40-character commit SHA, received: ${commit || '(empty)'}`);
+  }
+
+  return {
+    commit,
+    shortCommit: commit.slice(0, 7),
+    dirty: runGitCommand(['status', '--porcelain']).length > 0,
+    builtAtUtc: now().toISOString(),
+  };
+}
+
+function writeBuildInfo(outDir, options) {
+  const buildInfo = getBuildInfo(options);
+  const buildInfoPath = path.join(outDir, 'build-info.json');
+  fs.writeFileSync(buildInfoPath, `${JSON.stringify(buildInfo, null, 2)}\n`, 'utf8');
+  console.log(`Build info created successfully at ${buildInfoPath}`);
+  return buildInfo;
+}
 
 async function buildWorker() {
   const outDir = path.join(__dirname, '../out');
@@ -113,10 +167,20 @@ async function buildWorker() {
         console.warn(`Warning: ${file} not found at ${src}`);
       }
     }
+
+    writeBuildInfo(outDir);
   } catch (error) {
     console.error('Failed to build worker bundle:', error);
     process.exit(1);
   }
 }
 
-buildWorker();
+if (require.main === module) {
+  buildWorker();
+}
+
+module.exports = {
+  getBuildInfo,
+  isFullCommitSha,
+  writeBuildInfo,
+};
