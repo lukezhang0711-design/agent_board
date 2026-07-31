@@ -179,6 +179,9 @@ export function registerSettingsHandlers() {
 
     safeHandle('app-settings:set', (_event, key: string, value: unknown) => {
         setAppSetting(key, value);
+        if (key === 'metaAgentPlanAutoApprove') {
+            logger.main.info(`[SettingsHandlers] Plan auto-approval setting changed: enabled=${value === true}`);
+        }
         return getAppSetting(key);
     });
 

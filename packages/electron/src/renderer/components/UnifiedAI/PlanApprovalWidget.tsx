@@ -72,6 +72,9 @@ const SubmittedPlanApprovalCard: React.FC<{
     ? args.risks.trim()
     : 'No risks provided.';
   const toolResult = toolCall.result ?? '';
+  const autoApproved = useMemo(() => {
+    try { return JSON.parse(toolResult).autoApproved === true; } catch { return false; }
+  }, [toolResult]);
   const isPending = toolResult === '';
   const approvalStateKey = useMemo(() => ({
     sessionId,
@@ -217,6 +220,11 @@ const SubmittedPlanApprovalCard: React.FC<{
               ? 'Changes requested'
               : 'Awaiting review'}
         </span>
+        {autoApproved && displayResult === 'approved' && (
+          <span data-testid="plan-auto-approved-badge" className="text-xs text-amber-700 dark:text-amber-300 shrink-0">
+            已自动批准（测试模式）
+          </span>
+        )}
       </div>
 
       <div className="p-4">

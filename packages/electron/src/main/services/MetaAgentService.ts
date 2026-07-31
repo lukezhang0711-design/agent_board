@@ -33,6 +33,7 @@ import {
 import { broadcastMessageLogged } from './ai/claudeCliUserPromptLog';
 import { computeNotificationSignature } from './metaAgentNotificationSignature';
 import { extractMessageText, extractUserPrompts } from './metaAgentMessageText';
+import { shouldShowTextApprovalGuard, TEXT_APPROVAL_CORRECTION } from './metaAgentTextApprovalGuard';
 import { ClaudeCliLauncherConfig } from './ai/claudeCliLauncherSingleton';
 import type {
   QueueCancelAction,
@@ -62,6 +63,7 @@ const PLAN_APPROVAL_FAST_POLL_INTERVAL_MS = 100;
 const PLAN_APPROVAL_SLOW_POLL_INTERVAL_MS = 2_000;
 const LIFETIME_BACKSTOP = 50;
 const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max']);
+const TEXT_APPROVAL_REMINDER = 'Head 正在用文字征求批准——请让它提交正式方案，或点此发送标准指令';
 
 class DispatchCapacityError extends Error {
   constructor(
@@ -491,6 +493,53 @@ export class MetaAgentService {
     });
   }
 
+  private async persistTextApprovalReminder(sessionId: string, workspacePath: string): Promise<void> {
+    await AgentMessagesRepository.create({
+      sessionId,
+      source: 'nimbalyst-meta-agent',
+      direction: 'input',
+      content: `<SYSTEM_REMINDER>${TEXT_APPROVAL_REMINDER}</SYSTEM_REMINDER>`,
+      createdAt: new Date(),
+      searchable: false,
+      metadata: {
+        promptType: 'system_reminder',
+        reminderKind: 'text_plan_approval',
+        actionPrompt: TEXT_APPROVAL_CORRECTION,
+      },
+    });
+    broadcastMessageLogged(sessionId, workspacePath);
+  }
+
+  private async handleHeadTurnCompleted(sessionId: string, workspacePath?: string): Promise<void> {
+    const head = await AISessionsRepository.get(sessionId);
+    if (!workspacePath || head?.agentRole !== 'meta-agent') return;
+    const { rows } = await databaseWorker.query<{ direction: string; content: unknown }>(
+      `SELECT direction, content FROM ai_agent_messages WHERE session_id = $1 ORDER BY created_at DESC, id DESC LIMIT 80`,
+      [sessionId],
+    );
+    const turnRows: Array<{ direction: string; content: unknown }> = [];
+    for (const row of rows) {
+      if (row.direction === 'input') break;
+      turnRows.push(row);
+    }
+    const submittedPlanThisTurn = turnRows.some((row) => {
+      try {
+        const value = typeof row.content === 'string' ? JSON.parse(row.content) : row.content as Record<string, unknown>;
+        return value?.type === 'nimbalyst_tool_use' && value.name === 'ExitPlanMode' && !!(value.input as Record<string, unknown> | undefined)?.planId;
+      } catch { return false; }
+    });
+    const finalText = turnRows
+      .map((row) => extractMessageText(typeof row.content === 'string' ? row.content : JSON.stringify(row.content)))
+      .find((text): text is string => !!text) ?? null;
+    const { rows: approvedPlans } = await databaseWorker.query<{ id: string }>(
+      `SELECT id FROM tracker_items WHERE workspace = $1 AND type = 'plan' AND source_ref = $2 AND data->>'status' = 'ready-for-development' LIMIT 1`,
+      [workspacePath, `meta-agent-submitted-plan:${sessionId}`],
+    );
+    if (shouldShowTextApprovalGuard({ finalText, submittedPlanThisTurn, hasApprovedPlan: approvedPlans.length > 0 })) {
+      await this.persistTextApprovalReminder(sessionId, workspacePath);
+    }
+  }
+
   private broadcastSessionListRefresh(workspacePath: string, sessionId: string): void {
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed()) {
@@ -584,6 +633,11 @@ export class MetaAgentService {
           return;
         }
         if (event.type === 'session:completed' || event.type === 'session:error' || event.type === 'session:waiting' || event.type === 'session:interrupted') {
+          if (event.type === 'session:completed') {
+            void this.handleHeadTurnCompleted(event.sessionId, event.workspacePath).catch((error) => {
+              console.error(`[MetaAgentService] Failed to check Head text approval request for ${event.sessionId}:`, error);
+            });
+          }
           void this.handleChildSessionEvent(event.sessionId, event.type);
         }
       });
@@ -1660,11 +1714,29 @@ export class MetaAgentService {
       `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=none, to=submitted`,
     );
 
+    const autoApproved = store.get('metaAgentPlanAutoApprove') === true;
+    if (autoApproved) {
+      const aiService = this.aiService;
+      if (!aiService) throw new Error('AI service not initialized');
+      const delivery = await aiService.respondToInteractivePrompt({
+        sessionId: metaSessionId,
+        promptId: requestId,
+        promptType: 'exit_plan_mode_request',
+        response: { approved: true },
+        respondedBy: 'desktop',
+      });
+      if (!delivery.success) throw new Error(delivery.error ?? 'Failed to auto-approve plan');
+      console.info(
+        `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=submitted, to=responded, autoApproved=true`,
+      );
+    }
+
     const response = await this.waitForPlanApprovalResponse(metaSessionId, requestId, planId);
     const finalStatus = response.approved ? 'ready-for-development' : 'in-review';
     const finalData: Record<string, unknown> = {
       ...planData,
       status: finalStatus,
+      ...(autoApproved ? { autoApproved: true } : {}),
     };
     if (response.approved) {
       finalData.approvedAt = new Date(response.respondedAt ?? Date.now()).toISOString();
@@ -1702,6 +1774,7 @@ export class MetaAgentService {
       approved: response.approved,
       status: finalStatus,
       deliveryMethod,
+      ...(autoApproved ? { autoApproved: true } : {}),
       ...(response.feedback ? { feedback: response.feedback } : {}),
     }, null, 2);
   }

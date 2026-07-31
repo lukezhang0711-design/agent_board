@@ -598,6 +598,16 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const sessionStatus = useAtomValue(sessionStatusAtom(sessionId));
   const metadataTeammates = useAtomValue(sessionCurrentTeammatesAtom(sessionId));
   const currentTodos = useAtomValue(sessionCurrentTodosAtom(sessionId)) as Todo[];
+
+  useEffect(() => {
+    const sendCorrection = (event: Event) => {
+      const prompt = (event as CustomEvent<{ prompt?: unknown }>).detail?.prompt;
+      if (typeof prompt !== 'string' || prompt.trim() === '') return;
+      void window.electronAPI.invoke('ai:sendMessage', prompt, undefined, sessionId, workspacePath);
+    };
+    window.addEventListener('nimbalyst:system-reminder-action', sendCorrection);
+    return () => window.removeEventListener('nimbalyst:system-reminder-action', sendCorrection);
+  }, [sessionId, workspacePath]);
   const sessionWorktreePath = useAtomValue(sessionWorktreePathAtom(sessionId));
   const sessionDocumentContext = useAtomValue(sessionDocumentContextAtom(sessionId));
   const rawEffortLevel = useAtomValue(sessionEffortLevelRawAtom(sessionId));

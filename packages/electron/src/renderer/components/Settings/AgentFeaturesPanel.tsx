@@ -73,6 +73,7 @@ export function AgentFeaturesPanel() {
   const [metaAgentMaxParallelInput, setMetaAgentMaxParallelInput] = useState(
     String(DEFAULT_META_AGENT_MAX_PARALLEL),
   );
+  const [metaAgentPlanAutoApprove, setMetaAgentPlanAutoApprove] = useState(false);
   const metaAgentMaxParallelRevision = useRef(0);
 
   const isDevelopment = import.meta.env.DEV;
@@ -110,6 +111,12 @@ export function AgentFeaturesPanel() {
     };
 
     loadAgentWorkflowSettings();
+  }, []);
+
+  useEffect(() => {
+    void window.electronAPI.invoke('app-settings:get', 'metaAgentPlanAutoApprove')
+      .then((value) => setMetaAgentPlanAutoApprove(value === true))
+      .catch((err) => console.error('Failed to load plan auto-approval setting:', err));
   }, []);
 
   useEffect(() => {
@@ -174,6 +181,16 @@ export function AgentFeaturesPanel() {
       }
     } catch (err) {
       console.error('Failed to save Meta Agent concurrency limit:', err);
+    }
+  }, []);
+
+  const handlePlanAutoApproveChange = useCallback(async (enabled: boolean) => {
+    setMetaAgentPlanAutoApprove(enabled);
+    try {
+      const confirmed = await window.electronAPI.invoke('app-settings:set', 'metaAgentPlanAutoApprove', enabled);
+      setMetaAgentPlanAutoApprove(confirmed === true);
+    } catch (err) {
+      console.error('Failed to save plan auto-approval setting:', err);
     }
   }, []);
 
@@ -328,6 +345,7 @@ export function AgentFeaturesPanel() {
               description={feature.description}
             />
             {feature.tag === 'meta-agent' && (
+              <>
               <div className="meta-agent-max-parallel-setting flex items-start justify-between gap-4 pl-4 pb-3">
                 <div className="flex-1 min-w-0">
                   <label
@@ -359,6 +377,15 @@ export function AgentFeaturesPanel() {
                   className="w-24 py-1.5 px-3 rounded-md text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
                 />
               </div>
+              <div className="pl-4 pb-3">
+                <SettingsToggle
+                  checked={metaAgentPlanAutoApprove}
+                  onChange={(checked) => void handlePlanAutoApproveChange(checked)}
+                  name="方案自动批准（测试模式）"
+                  description="提交方案后自动走正式批准流程。仅用于模型测试。"
+                />
+              </div>
+              </>
             )}
           </React.Fragment>
         ))}

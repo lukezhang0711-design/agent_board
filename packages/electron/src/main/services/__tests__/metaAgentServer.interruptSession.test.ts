@@ -45,7 +45,8 @@ describe('interrupt_session meta-agent tool registration', () => {
     const maxParallelOverrideDescription =
       'Optional positive integer for this dispatch only. It can only lower the global Head Agent concurrency limit; values above the global setting are capped to that setting.';
 
-    expect(submitPlanTool?.function.description).toContain('user approval');
+    expect(submitPlanTool?.function.description).toContain('only valid user-approval card');
+    expect(submitPlanTool?.function.description).toContain('never ask for approval in chat text');
     expect(submitPlanTool?.function.parameters).toMatchObject({
       properties: {
         title: { type: 'string' },
@@ -148,8 +149,9 @@ describe('interrupt_session meta-agent tool registration', () => {
       'Investigation sessions may be dispatched freely; implementation sessions require an approved plan',
     );
     expect(prompt).toContain(
-      'MUST call `mcp__nimbalyst-meta-agent__submit_plan` to present it as an approval card; plain-text plans do not satisfy this requirement.',
+      'Do not ask for approval in chat text (for example, “Should I proceed?”).',
     );
+    expect(prompt).toContain('is the only valid approval channel.');
     expect(prompt).toContain('Keep thinking effort high by default');
   });
 

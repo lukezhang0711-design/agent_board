@@ -190,6 +190,7 @@ export function MetaAgentMode({
 }: MetaAgentModeProps) {
   const defaultModel = useAtomValue(defaultAgentModelAtom);
   const [metaSessionId, setMetaSessionId] = useState<string | null>(externalSessionId ?? null);
+  const [planAutoApproveEnabled, setPlanAutoApproveEnabled] = useState(false);
   const [loadingSession, setLoadingSession] = useState(!externalSessionId);
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [childSessions, setChildSessions] = useState<SpawnedSessionSummary[]>([]);
@@ -289,6 +290,16 @@ export function MetaAgentMode({
     }
     void ensureMetaSession();
   }, [externalSessionId, ensureMetaSession]);
+
+  useEffect(() => {
+    let disposed = false;
+    const load = () => window.electronAPI.invoke('app-settings:get', 'metaAgentPlanAutoApprove')
+      .then((value) => { if (!disposed) setPlanAutoApproveEnabled(value === true); })
+      .catch((error) => console.error('[MetaAgentMode] Failed to load test-mode setting:', error));
+    void load();
+    const timer = window.setInterval(() => void load(), 1000);
+    return () => { disposed = true; window.clearInterval(timer); };
+  }, []);
 
   useEffect(() => {
     if (!metaSessionId) {
@@ -451,6 +462,11 @@ export function MetaAgentMode({
   return (
     <div className="meta-agent-mode relative flex-1 flex min-h-0" data-testid="meta-agent-mode">
       <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden border-r border-nim">
+        {planAutoApproveEnabled && (
+          <div data-testid="meta-agent-test-mode-badge" className="shrink-0 bg-amber-500 px-3 py-1 text-center text-xs font-semibold text-amber-950">
+            测试模式：方案将自动批准
+          </div>
+        )}
         <SessionTranscript
           sessionId={metaSessionId}
           workspacePath={workspacePath}

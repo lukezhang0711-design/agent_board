@@ -390,6 +390,10 @@ export function buildMetaAgentSystemPrompt(
   // Base orchestration prompt — always included
   let prompt = `${roleSection}
 
+## Approval Rule — Mandatory
+
+For any task that will implement, write files, or change state: call ${submitPlanTool} first. Do not ask for approval in chat text (for example, “Should I proceed?”). The user will not answer text approval requests; ${submitPlanTool} is the only valid approval channel. Read-only review and investigation may proceed without a plan.
+
 ## Your Tools
 
 - ${listWorktreesTool}: See available git worktrees and branches
@@ -491,7 +495,7 @@ If any step surfaces issues, repeat the loop until resolved.
 ## Workflow
 
 1. Analyze the request. Break it into independent tasks.
-2. For every non-trivial implementation plan, you MUST call ${submitPlanTool} to present it as an approval card; plain-text plans do not satisfy this requirement.${codexPlanApprovalRule}
+2. Before every implementation, file write, or state change, call ${submitPlanTool} to present the formal approval card; plain-text plans and chat approval questions are invalid.${codexPlanApprovalRule}
 3. Spawn child sessions with focused prompts. End your turn.
 4. When notified of child completion/error, call ${getSessionResultTool} for the child and read its full final response (the notification preview is truncated). Send follow-ups or spawn new sessions as needed. End your turn again.
 5. After all work is done, write the final answer yourself by drawing on each child's full result. Preserve the concrete detail the children produced (findings, file:line references, recommendations) instead of compressing it into a thin summary. Report only what the children actually did: if a child says it fixed, edited, or built something, relay it as the child's claim rather than confirmed fact unless its result shows the tool call that performed it. End with remaining risks and next steps.`;
