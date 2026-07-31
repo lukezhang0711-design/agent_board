@@ -187,7 +187,7 @@ const META_AGENT_TOOL_DEFS: Array<{
   {
     name: "submit_plan",
     description:
-      "Submit an implementation plan for durable user approval before dispatching implementation work. Creates or updates one plan card for this Head Agent session, then waits for the user to choose Approve or Request changes. Resubmit a revision to update the same card.",
+      "REQUIRED before any implementation, file write, or state change. Submit the only valid user-approval card; never ask for approval in chat text (the user will not answer it). Read-only investigation is exempt. Creates or updates one durable plan card and waits for approval; resubmit revisions here.",
     inputSchema: {
       type: "object",
       properties: {

@@ -9,6 +9,7 @@ const testState = vi.hoisted(() => ({
   stateManager: null as any,
   metaAgentToolFns: null as any,
   maxParallel: 4,
+  planAutoApprove: false,
   /** Every `webContents.send` the service makes, so tests can assert IPC signals. */
   sentIpc: [] as { channel: string; args: unknown[] }[],
 }));
@@ -50,7 +51,9 @@ vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
   getWorkspaceState: () => ({ issueKeyPrefix: 'NIM' }),
-  store: { get: (key: string) => key === 'metaAgentMaxParallel' ? testState.maxParallel : undefined },
+  store: { get: (key: string) => key === 'metaAgentMaxParallel'
+    ? testState.maxParallel
+    : key === 'metaAgentPlanAutoApprove' ? testState.planAutoApprove : undefined },
 }));
 vi.mock('../../utils/timestampUtils', () => ({ toMillis: (value: unknown) => value }));
 vi.mock('../WorktreeStore', () => ({ createWorktreeStore: vi.fn() }));
@@ -256,6 +259,7 @@ describe('MetaAgentService work-order persistence', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    testState.planAutoApprove = false;
     dbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nim-work-order-'));
     db = new SQLiteDatabase({
       dbDir,
@@ -1357,6 +1361,23 @@ describe('MetaAgentService work-order persistence', () => {
         planId: approval.planId,
       }),
     ]));
+  });
+
+  it('auto-approves a submitted plan through the durable approval path only when test mode is enabled', async () => {
+    testState.planAutoApprove = true;
+    const respondToInteractivePrompt = vi.fn(async ({ sessionId, promptId }: any) => {
+      await persistPlanApprovalResponse(promptId, true);
+      return { success: true };
+    });
+    (service as any).aiService.respondToInteractivePrompt = respondToInteractivePrompt;
+    const submitPlan = await getSubmitPlanTool();
+    const approval = JSON.parse(await submitPlan('head-session', workspacePath, {
+      title: 'Auto-approved test plan', planItems: ['Use durable approval'], workOrderCount: 1, risks: 'Test only',
+    }));
+    expect(respondToInteractivePrompt).toHaveBeenCalledWith(expect.objectContaining({
+      promptType: 'exit_plan_mode_request', response: { approved: true },
+    }));
+    expect(approval).toMatchObject({ approved: true, status: 'ready-for-development', autoApproved: true });
   });
 
   it('revives a dead Head turn after a durable rejection is recorded', async () => {

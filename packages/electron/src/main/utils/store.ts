@@ -72,6 +72,8 @@ interface AppStoreSchema {
   defaultAIModel?: string;
   // Global Head Agent child-session concurrency limit. Task-level dispatches may raise it.
   metaAgentMaxParallel: number;
+  // Test-only escape hatch: automatically settles submitted Head plans through the normal approval path.
+  metaAgentPlanAutoApprove?: boolean;
   // Default GitHub CLI account login for PR review. A per-project
   // override lives on WorkspaceState.prReviewGhAccountOverride.
   prReviewDefaultGhAccount?: string;
@@ -523,6 +525,7 @@ function getAppStore(): Store<AppStoreSchema> {
           openWorkspaces: [],
           analyticsEnabled: true, // Default to enabled
           metaAgentMaxParallel: 4,
+          metaAgentPlanAutoApprove: false,
         },
       });
       console.log('[Store] App store initialized at:', _appStore.path);

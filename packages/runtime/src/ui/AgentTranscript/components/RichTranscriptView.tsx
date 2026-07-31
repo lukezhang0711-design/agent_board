@@ -463,9 +463,21 @@ const SystemReminderCard: React.FC<{
         </span>
       </button>
       {isExpanded && (
-        <p className="m-0 mt-2 text-[0.875rem] leading-relaxed text-[var(--nim-text-muted)] whitespace-normal break-words">
-          {content}
-        </p>
+        <div className="mt-2">
+          <p className="m-0 text-[0.875rem] leading-relaxed text-[var(--nim-text-muted)] whitespace-normal break-words">{content}</p>
+          {typeof message.metadata?.actionPrompt === 'string' && message.metadata.actionPrompt && (
+            <button
+              type="button"
+              data-testid="system-reminder-action"
+              className="mt-2 rounded border border-[var(--nim-border)] px-2 py-1 text-xs text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+              onClick={() => window.dispatchEvent(new CustomEvent('nimbalyst:system-reminder-action', {
+                detail: { prompt: message.metadata?.actionPrompt },
+              }))}
+            >
+              发送标准指令
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
