@@ -35,6 +35,12 @@ describe('composeClaudeCliPtySubmission', () => {
     expect(composeClaudeCliPtySubmission({ prompt: '   ', attachments: [] })).toBe('');
   });
 
+  it('keeps a multi-line prompt as one logical PTY line', () => {
+    expect(
+      composeClaudeCliPtySubmission({ prompt: 'fix auth.ts\nalso update the tests' }),
+    ).toBe('fix auth.ts\\nalso update the tests');
+  });
+
   /**
    * NIM-818: the CLI is never told which document "this" is — the SDK path's
    * active-doc preamble was skipped entirely. The composer now appends a

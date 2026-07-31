@@ -26,6 +26,22 @@ import {
 const SUBMIT_TERMINATOR = '\r';
 /** Gap between the text write and the Enter write so the TUI consumes both. */
 export const SUBMIT_WRITE_GAP_MS = 25;
+/** Upper bound on the scaled gap, so a huge paste cannot stall submission. */
+export const SUBMIT_WRITE_GAP_MAX_MS = 1000;
+
+const BRACKETED_PASTE_START = '\x1b[200~';
+const BRACKETED_PASTE_END = '\x1b[201~';
+
+/**
+ * Give a large PTY write time to drain before Enter. Short prompts retain the
+ * established 25ms gap; 20k characters wait at least 200ms.
+ */
+export function submitWriteGapMs(payloadLength: number): number {
+  return Math.min(
+    SUBMIT_WRITE_GAP_MAX_MS,
+    Math.max(SUBMIT_WRITE_GAP_MS, Math.ceil(payloadLength / 100)),
+  );
+}
 
 export interface SubmitClaudeCliPromptInput {
   sessionId: string;
@@ -111,8 +127,14 @@ export async function submitClaudeCliPrompt(
       return { submitted: false };
     }
 
-    deps.writeToTerminal(input.sessionId, ptyText);
-    await deps.delay(SUBMIT_WRITE_GAP_MS);
+    // Keep the normal-prompt path atomic even when the OS fragments a large
+    // PTY write. Do not move this into the slash/# branch: its trigger must
+    // remain a real keystroke for the Claude TUI menu.
+    deps.writeToTerminal(
+      input.sessionId,
+      BRACKETED_PASTE_START + ptyText + BRACKETED_PASTE_END,
+    );
+    await deps.delay(submitWriteGapMs(ptyText.length));
     deps.writeToTerminal(input.sessionId, SUBMIT_TERMINATOR);
   }
 

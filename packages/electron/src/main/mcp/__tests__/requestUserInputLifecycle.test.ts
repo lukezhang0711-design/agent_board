@@ -5,6 +5,12 @@ import {
   buildCodexToolLookupId,
   getCodexToolLookupAliases,
 } from '@nimbalyst/runtime/ai/server/toolLookupIds';
+import {
+  clearPendingInteractiveWaiter,
+  countPendingInteractiveWaiters,
+  notePendingInteractiveWaiter,
+  shouldSettleFromSessionFallback,
+} from '../tools/interactivePromptFallback';
 
 const ipc = new EventEmitter();
 
@@ -39,6 +45,7 @@ function simulateMcpServer(
   let settled = false;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   const promptIdAliases = new Set(getCodexToolLookupAliases(promptId));
+  notePendingInteractiveWaiter(sessionId);
 
   return {
     isSettled: () => settled,
@@ -49,6 +56,7 @@ function simulateMcpServer(
       ) => {
         if (settled) return;
         settled = true;
+        clearPendingInteractiveWaiter(sessionId);
         if (pollTimer) {
           clearInterval(pollTimer);
           pollTimer = null;
@@ -64,11 +72,13 @@ function simulateMcpServer(
           typeof data?.promptId === 'string' ? data.promptId : null,
           typeof data?.rawPromptId === 'string' ? data.rawPromptId : null,
         ].filter((value): value is string => !!value);
-        const isSyntheticFallbackPrompt = promptId.startsWith('rui-');
         if (
-          !isSyntheticFallbackPrompt
-          && responsePromptIds.length > 0
-          && !responsePromptIds.some((id) => promptIdAliases.has(id))
+          !shouldSettleFromSessionFallback({
+            waiterPromptId: promptId,
+            promptIdAliasSet: promptIdAliases,
+            responsePromptIds,
+            pendingWaiterCountForSession: countPendingInteractiveWaiters(sessionId),
+          })
         ) {
           return;
         }
@@ -166,6 +176,9 @@ describe('RequestUserInput lifecycle', () => {
 
   afterEach(() => {
     ipc.removeAllListeners();
+    while (countPendingInteractiveWaiters(SESSION_ID) > 0) {
+      clearPendingInteractiveWaiter(SESSION_ID);
+    }
   });
 
   it('resolves via raw-item IPC channel when renderer responds with a synthetic Codex prompt id', async () => {
@@ -208,5 +221,31 @@ describe('RequestUserInput lifecycle', () => {
     expect(settled.source).toBe('ipc-fallback');
     expect(settled.answers).toEqual(answers);
     expect(mcp.isSettled()).toBe(true);
+  });
+
+  it('resumes a real Codex waiter when its fallback response carries a different exec id', async () => {
+    const answers = { field: { type: 'editText', text: 'accepted draft' } };
+    const mcp = simulateMcpServer(SESSION_ID, 'exec-67e90371');
+    simulateRendererResponse(
+      SESSION_ID,
+      buildCodexToolLookupId('exec-8cbfbb2c', 1784586037572, 43),
+      { answers },
+      { forceFallback: true },
+    );
+    await expect(mcp.promise).resolves.toMatchObject({ source: 'ipc-fallback', answers });
+  });
+
+  it('keeps mismatched fallback responses strict when two prompts are pending', async () => {
+    const first = simulateMcpServer(SESSION_ID, 'exec-aaaa1111');
+    const second = simulateMcpServer(SESSION_ID, 'exec-bbbb2222');
+    simulateRendererResponse(
+      SESSION_ID,
+      buildCodexToolLookupId('exec-cccc3333', 1784586037572, 7),
+      { answers: { field: { type: 'editText', text: 'x' } } },
+      { forceFallback: true },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(first.isSettled()).toBe(false);
+    expect(second.isSettled()).toBe(false);
   });
 });

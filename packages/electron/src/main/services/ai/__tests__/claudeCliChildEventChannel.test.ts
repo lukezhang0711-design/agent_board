@@ -75,6 +75,8 @@ const eventTypes = [
   'session:interrupted',
 ] as const;
 
+const pasted = (text: string) => `\x1b[200~${text}\x1b[201~`;
+
 describe('claude-code-cli child session event channel', () => {
   let dbDir: string;
   let db: SQLiteDatabase;
@@ -128,7 +130,7 @@ describe('claude-code-cli child session event channel', () => {
     ).resolves.toBe(true);
 
     expect(productionState.terminalWrites).toEqual([
-      [sessionId, notification],
+      [sessionId, pasted(notification.replace(/\r?\n/g, '\\n'))],
       [sessionId, '\r'],
     ]);
     await expect(queueStore.get(queued.id)).resolves.toMatchObject({
@@ -165,7 +167,7 @@ describe('claude-code-cli child session event channel', () => {
     ).resolves.toBe(true);
 
     expect(productionState.terminalWrites).toEqual([
-      [sessionId, prompt],
+      [sessionId, pasted(prompt)],
       [sessionId, '\r'],
     ]);
     await expect(queueStore.get(queued.id)).resolves.toMatchObject({

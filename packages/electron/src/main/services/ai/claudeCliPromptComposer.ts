@@ -110,7 +110,9 @@ export function composeClaudeCliContextPreamble(
  *   context alone is not a submission.
  */
 export function composeClaudeCliPtySubmission(input: ComposeClaudeCliInput): string {
-  const trimmed = (input.prompt ?? '').trim();
+  // A real newline is Enter to the CLI readline. Preserve the user's paragraph
+  // breaks as literal `\\n` so the whole prompt remains one PTY submission.
+  const trimmed = flattenToSingleLine((input.prompt ?? '').trim());
 
   const paths = (input.attachments ?? [])
     .map((a) => (a && typeof a.filepath === 'string' ? a.filepath.trim() : ''))

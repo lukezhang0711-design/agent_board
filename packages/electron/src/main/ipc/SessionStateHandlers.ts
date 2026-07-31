@@ -13,6 +13,18 @@ import {
   resolveOwnedWorkspacePath,
   sessionEventMatchesWorkspace,
 } from '../../shared/sessionWorkspaceRouting';
+import { parseJsonObjectColumn } from '../utils/jsonColumn';
+import {
+  getSessionsWithPendingPrompt,
+  resetPendingPromptTracking,
+  setSessionPendingPrompt,
+} from '../services/ai/pendingPromptPersistence';
+import {
+  clearStalePendingPromptOnTerminal,
+  findSessionsWithPendingPrompt,
+  selectStalePendingPromptSessions,
+} from '../services/ai/pendingPromptTerminalClear';
+import { hasLiveInteractivePrompt } from '../mcp/tools/interactivePromptLiveness';
 
 // Track if handlers are registered to prevent double registration
 let handlersRegistered = false;
@@ -22,6 +34,8 @@ const windowSubscriptions = new Map<number, () => void>();
 
 // Track sync subscription cleanup
 let syncSubscriptionCleanup: (() => void) | null = null;
+const PENDING_PROMPT_RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
+let pendingPromptReconcileInterval: ReturnType<typeof setInterval> | null = null;
 const sessionWorkspaceCache = new Map<string, string | null>();
 
 async function getCanonicalWorkspacePathForSession(sessionId: string): Promise<string | null> {
@@ -55,6 +69,50 @@ async function getCanonicalWorkspacePathForSession(sessionId: string): Promise<s
   }
 }
 
+async function readPersistedHasPendingPrompt(sessionId: string): Promise<boolean | null> {
+  try {
+    const { rows } = await database.query<{ metadata: unknown }>(
+      `SELECT metadata FROM ai_sessions WHERE id = $1 LIMIT 1`, [sessionId],
+    );
+    if (rows.length === 0) return null;
+    return parseJsonObjectColumn(rows[0].metadata).hasPendingPrompt === true;
+  } catch (error) {
+    console.error('[SessionStateHandlers] Failed to read hasPendingPrompt:', error);
+    return null;
+  }
+}
+
+async function clearStalePendingPromptsAtStartup(): Promise<void> {
+  try {
+    const { rows } = await database.query<{ id: string; metadata: unknown }>(
+      `SELECT id, metadata FROM ai_sessions`,
+    );
+    const staleIds = findSessionsWithPendingPrompt(
+      rows.map((row) => ({ id: row.id, metadata: parseJsonObjectColumn(row.metadata) })),
+    );
+    for (const sessionId of staleIds) await setSessionPendingPrompt(sessionId, false);
+    resetPendingPromptTracking();
+  } catch (error) {
+    console.error('[SessionStateHandlers] Failed to repair pending prompts at startup:', error);
+  }
+}
+
+async function reconcileStalePendingPrompts(
+  stateManager: ReturnType<typeof getSessionStateManager>,
+): Promise<void> {
+  try {
+    const tracked = new Set(stateManager.getTrackedSessionIds());
+    const staleIds = selectStalePendingPromptSessions({
+      sessionIds: getSessionsWithPendingPrompt(),
+      hasLiveInteractivePrompt,
+      isSessionTracked: (sessionId) => tracked.has(sessionId),
+    });
+    for (const sessionId of staleIds) await setSessionPendingPrompt(sessionId, false);
+  } catch (error) {
+    console.error('[SessionStateHandlers] Failed to reconcile stale pending prompts:', error);
+  }
+}
+
 export async function registerSessionStateHandlers() {
   if (handlersRegistered) {
     console.log('[SessionStateHandlers] Handlers already registered, skipping');
@@ -65,9 +123,22 @@ export async function registerSessionStateHandlers() {
 
   // Initialize the state manager
   await stateManager.initialize();
+  await clearStalePendingPromptsAtStartup();
+  pendingPromptReconcileInterval = setInterval(
+    () => void reconcileStalePendingPrompts(stateManager),
+    PENDING_PROMPT_RECONCILE_INTERVAL_MS,
+  );
 
   // Subscribe to state changes and sync to mobile
   setupSyncSubscription(stateManager);
+
+  stateManager.subscribe((event: SessionStateEvent) => {
+    void clearStalePendingPromptOnTerminal(event, {
+      readHasPendingPrompt: readPersistedHasPendingPrompt,
+      clearPendingPrompt: (sessionId) => setSessionPendingPrompt(sessionId, false),
+      onError: (err) => console.error('[SessionStateHandlers] Failed to clear stale pending prompt:', err),
+    });
+  });
 
   // Get tracked session IDs (bare map membership; may include idle sessions).
   // NOT a "running" signal — see getTrackedSessionIds / NIM-846. Most callers
@@ -350,6 +421,11 @@ export function hasActiveStreamingSessions(): boolean {
 export async function shutdownSessionStateHandlers() {
   const stateManager = getSessionStateManager();
   await stateManager.shutdown();
+
+  if (pendingPromptReconcileInterval) {
+    clearInterval(pendingPromptReconcileInterval);
+    pendingPromptReconcileInterval = null;
+  }
 
   // Clean up sync subscription
   if (syncSubscriptionCleanup) {
