@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   clearModelCache: vi.fn(),
   databaseQuery: vi.fn(),
   onPromptResolved: vi.fn(),
+  logInfo: vi.fn(),
+  logError: vi.fn(),
   ipcHandlers: new Map<string, (...args: any[]) => any>(),
 }));
 
@@ -97,8 +99,16 @@ vi.mock('../../analytics/AnalyticsService.ts', () => ({
   AnalyticsService: { getInstance: () => ({ sendEvent: vi.fn() }) },
 }));
 vi.mock('../../../utils/logger', () => {
-  const scope = new Proxy({}, { get: () => vi.fn() });
-  return { logger: new Proxy({}, { get: () => scope }) };
+  return {
+    logger: {
+      main: {
+        info: mocks.logInfo,
+        error: mocks.logError,
+        warn: vi.fn(),
+        debug: vi.fn(),
+      },
+    },
+  };
 });
 
 import { createPGLiteQueuedPromptsStore } from '../../PGLiteQueuedPromptsStore';
@@ -134,6 +144,49 @@ describe('AIService.stopSession', () => {
         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+  });
+
+  it('logs the durable create boundary and returns its persisted prompt ID', async () => {
+    const create = vi.fn(async (input) => ({
+      ...input,
+      origin: 'user' as const,
+      status: 'pending' as const,
+      createdAt: 123,
+    }));
+    mocks.getQueuedPromptsStore.mockReturnValue({ create });
+    mocks.getSession.mockResolvedValue(null);
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, { streamingHandler: { handle: vi.fn() } });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:createQueuedPrompt');
+    const sender = { isDestroyed: () => false, send: vi.fn() };
+
+    await expect(handler?.({ sender } as any, 'session-1', 'hello')).resolves.toMatchObject({
+      id: expect.stringMatching(/^local-/),
+      prompt: 'hello',
+      timestamp: 123,
+    });
+    const promptId = create.mock.calls[0][0].id;
+    expect(mocks.logInfo.mock.calls.map(([line]) => line)).toEqual(expect.arrayContaining([
+      expect.stringContaining(`[CliQueue] create received promptId=${promptId} sessionId=session-1 promptLength=5`),
+      expect.stringContaining(`[CliQueue] create persisted promptId=${promptId} sessionId=session-1 status=pending`),
+      expect.stringContaining(`[CliQueue] create response promptId=${promptId} sessionId=session-1 status=pending`),
+    ]));
+  });
+
+  it('logs and rethrows a durable create failure for the renderer to surface', async () => {
+    mocks.getQueuedPromptsStore.mockReturnValue({
+      create: vi.fn(async () => { throw new Error('store write failed'); }),
+    });
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, { streamingHandler: { handle: vi.fn() } });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:createQueuedPrompt');
+
+    await expect(handler?.({} as any, 'session-1', 'hello')).rejects.toThrow('store write failed');
+    expect(mocks.logError).toHaveBeenCalledWith(expect.stringContaining(
+      '[CliQueue] create failed',
+    ));
   });
 
   it('derives submitted → responded → delivered → closed from durable rows', () => {

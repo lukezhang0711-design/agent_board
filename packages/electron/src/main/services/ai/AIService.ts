@@ -2579,16 +2579,23 @@ export class AIService {
       // Generate a unique ID with 'local-' prefix to identify locally-created prompts
       // This prevents the mobile sync handler from re-broadcasting these prompts
       const promptId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      logger.main.info(`[CliQueue] create received promptId=${promptId} sessionId=${sessionId} promptLength=${prompt.length}`);
 
-      const created = await queueStore.create({
-        id: promptId,
-        sessionId,
-        prompt,
-        attachments,
-        documentContext,
-      });
-
-      logger.main.info(`[AIService] createQueuedPrompt: created ${promptId} for session ${sessionId}`);
+      let created;
+      try {
+        created = await queueStore.create({
+          id: promptId,
+          sessionId,
+          prompt,
+          attachments,
+          documentContext,
+        });
+        logger.main.info(`[CliQueue] create persisted promptId=${created.id} sessionId=${created.sessionId} status=${created.status}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.main.error(`[CliQueue] create failed promptId=${promptId} sessionId=${sessionId} error=${errorMessage}`);
+        throw error;
+      }
 
       // Look up the session once (lightweight — no message log) for both the
       // analytics event and the claude-code-cli idle-flush kick below.
@@ -2644,24 +2651,26 @@ export class AIService {
         const workspacePath = queuedSession.workspacePath ?? state?.workspacePath;
         if (terminalManager.isTerminalActive(sessionId) && workspacePath) {
           if (state?.status === 'idle') {
-            void flushNextClaudeCliQueuedPromptForSession(sessionId, workspacePath);
+            void flushNextClaudeCliQueuedPromptForSession(sessionId, workspacePath, 'immediate-kick');
           } else {
             void terminalManager.getClaudeCliLiveTurnState(sessionId).then((live) => {
               if (live === 'idle') {
-                void flushNextClaudeCliQueuedPromptForSession(sessionId, workspacePath);
+                void flushNextClaudeCliQueuedPromptForSession(sessionId, workspacePath, 'immediate-kick');
               }
             }).catch(() => {});
           }
         }
       }
 
-      return {
+      const response = {
         id: created.id,
         prompt: created.prompt,
         timestamp: created.createdAt,
         attachments: created.attachments,
         documentContext: created.documentContext,
       };
+      logger.main.info(`[CliQueue] create response promptId=${response.id} sessionId=${sessionId} status=${created.status}`);
+      return response;
     });
 
     // Delete a queued prompt (for user cancellation)
