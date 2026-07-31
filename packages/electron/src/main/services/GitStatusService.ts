@@ -1,8 +1,7 @@
-import { execSync } from 'child_process';
+import { execFile, execSync } from 'child_process';
 import { existsSync, statSync } from 'fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'path';
-import { isGitAvailable, logEbadfDiagnostic } from '../utils/gitUtils';
-import { getAllFilesInDirectory } from '../utils/fileUtils';
+import { getUntrackedFilesInDirectories, isGitAvailable, logEbadfDiagnostic } from '../utils/gitUtils';
 
 export interface FileGitStatus {
   filePath: string;
@@ -74,6 +73,9 @@ export function findGitRootForFile(filePath: string, boundary: string): string |
 export class GitStatusService {
   private cache: Map<string, { status: GitStatusResult; timestamp: number }> = new Map();
   private readonly CACHE_TTL_MS = 5000; // 5 seconds cache
+  private cacheGeneration = 0;
+  private readonly inFlightGitStatus = new Map<string, Promise<string>>();
+  private readonly inFlightUntrackedExpansion = new Map<string, Promise<Map<string, string[]>>>();
 
   /**
    * Get git status for a list of files in a workspace.
@@ -136,11 +138,12 @@ export class GitStatusService {
     }
 
     const result: GitStatusResult = {};
+    const cacheGeneration = this.cacheGeneration;
 
     for (const [rootPath, rootFiles] of filesByRoot) {
       let statusMap: Map<string, FileGitStatus>;
       try {
-        const statusOutput = this.executeGitStatus(rootPath);
+        const statusOutput = await this.executeGitStatus(rootPath);
         statusMap = this.parseGitStatus(statusOutput);
       } catch (error) {
         logEbadfDiagnostic('GitStatusService', error);
@@ -153,37 +156,43 @@ export class GitStatusService {
         continue;
       }
 
-      for (const filePath of rootFiles) {
-        // git status --porcelain prints paths relative to the repo root.
-        // Convert the requested filePath (may be absolute, may be relative
-        // to the workspace) to the same relative-to-root form before
-        // looking it up.
+      const requested = rootFiles.map(filePath => {
         const fileAbs = isAbsolute(filePath)
           ? filePath
           : resolve(workspacePath, filePath);
-        const relToRoot = relative(rootPath, fileAbs).replace(/\\/g, '/');
-        const normalizedPath = this.normalizePath(relToRoot);
-        let status = statusMap.get(normalizedPath);
+        return {
+          filePath,
+          normalizedPath: this.normalizePath(relative(rootPath, fileAbs).replace(/\\/g, '/')),
+        };
+      });
 
-        // If file not found directly, check if it's inside an untracked directory
-        // git status --porcelain shows untracked directories as a single entry (e.g., "?? plans/")
-        // so files inside won't be listed individually
-        if (!status) {
-          // Walk up the path to see if any parent directory is untracked
-          const pathParts = normalizedPath.split('/');
-          for (let i = pathParts.length - 1; i > 0; i--) {
-            const parentPath = pathParts.slice(0, i).join('/');
-            const parentStatus = statusMap.get(parentPath);
-            if (parentStatus && parentStatus.status === 'untracked') {
-              // File is inside an untracked directory, so it's also untracked
-              status = {
-                filePath,
-                status: 'untracked',
-                gitStatusCode: '??'
-              };
-              break;
-            }
+      const untrackedAncestors = new Map<string, string>();
+      for (const { normalizedPath } of requested) {
+        if (statusMap.has(normalizedPath)) continue;
+        const pathParts = normalizedPath.split('/');
+        for (let i = pathParts.length - 1; i > 0; i--) {
+          const parentPath = pathParts.slice(0, i).join('/');
+          const parentStatus = statusMap.get(parentPath);
+          if (parentStatus?.status === 'untracked') {
+            untrackedAncestors.set(normalizedPath, parentPath);
+            break;
           }
+        }
+      }
+
+      const expandedFiles = new Set<string>();
+      if (untrackedAncestors.size > 0) {
+        const ancestorDirs = Array.from(new Set(untrackedAncestors.values())).map(relDir => resolve(rootPath, relDir));
+        const expansions = await this.expandUntrackedDirectories(rootPath, ancestorDirs);
+        for (const relFiles of expansions.values()) {
+          for (const relFile of relFiles) expandedFiles.add(relFile);
+        }
+      }
+
+      for (const { filePath, normalizedPath } of requested) {
+        let status = statusMap.get(normalizedPath);
+        if (!status && expandedFiles.has(normalizedPath)) {
+          status = { filePath, status: 'untracked', gitStatusCode: '??' };
         }
 
         result[filePath] = status
@@ -199,7 +208,9 @@ export class GitStatusService {
     }
 
     // Cache the result
-    this.cache.set(cacheKey, { status: result, timestamp: Date.now() });
+    if (this.cacheGeneration === cacheGeneration) {
+      this.cache.set(cacheKey, { status: result, timestamp: Date.now() });
+    }
 
     return result;
   }
@@ -208,14 +219,47 @@ export class GitStatusService {
    * Execute git status --porcelain command and return raw output
    * @private
    */
-  private executeGitStatus(workspacePath: string): string {
-    // IMPORTANT: Don't trim() here as it removes the leading space from status codes
-    return execSync('git status --porcelain', {
-      cwd: workspacePath,
-      encoding: 'utf8',
-      timeout: 5000, // 5 second timeout
-      stdio: ['pipe', 'pipe', 'pipe']
+  private async executeGitStatus(workspacePath: string): Promise<string> {
+    const inFlight = this.inFlightGitStatus.get(workspacePath);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    let statusPromise: Promise<string>;
+    statusPromise = new Promise<string>((resolve, reject) => {
+      execFile('git', ['--no-optional-locks', 'status', '--porcelain'], {
+        cwd: workspacePath,
+        encoding: 'utf8',
+        timeout: 5000,
+      }, (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(stdout);
+      });
+    }).finally(() => {
+      if (this.inFlightGitStatus.get(workspacePath) === statusPromise) {
+        this.inFlightGitStatus.delete(workspacePath);
+      }
     });
+    this.inFlightGitStatus.set(workspacePath, statusPromise);
+    return statusPromise;
+  }
+
+  private expandUntrackedDirectories(rootPath: string, dirAbsolutePaths: string[]): Promise<Map<string, string[]>> {
+    if (dirAbsolutePaths.length === 0) return Promise.resolve(new Map());
+    const key = `${rootPath}\0${[...dirAbsolutePaths].sort().join('\0')}`;
+    const inFlight = this.inFlightUntrackedExpansion.get(key);
+    if (inFlight) return inFlight;
+    let expansionPromise: Promise<Map<string, string[]>>;
+    expansionPromise = getUntrackedFilesInDirectories(rootPath, dirAbsolutePaths).finally(() => {
+      if (this.inFlightUntrackedExpansion.get(key) === expansionPromise) {
+        this.inFlightUntrackedExpansion.delete(key);
+      }
+    });
+    this.inFlightUntrackedExpansion.set(key, expansionPromise);
+    return expansionPromise;
   }
 
   /**
@@ -297,6 +341,20 @@ export class GitStatusService {
     }
   }
 
+  private collectUntrackedDirectories(rootPath: string, statusMap: Map<string, FileGitStatus>): Set<string> {
+    const untrackedDirs = new Set<string>();
+    for (const [relativePath, fileStatus] of statusMap.entries()) {
+      if (fileStatus.status !== 'untracked') continue;
+      const absolutePath = resolve(rootPath, relativePath);
+      try {
+        if (statSync(absolutePath).isDirectory()) untrackedDirs.add(absolutePath);
+      } catch {
+        // Treat non-stattable entries as plain files.
+      }
+    }
+    return untrackedDirs;
+  }
+
   /**
    * Normalize file path (remove leading ./, handle quotes, trailing slashes, etc.)
    */
@@ -369,15 +427,17 @@ export class GitStatusService {
       return Object.keys(cached.status);
     }
 
+    const cacheGeneration = this.cacheGeneration;
     try {
       // Get git status for the entire repository using porcelain format
-      const statusOutput = this.executeGitStatus(workspacePath);
+      const statusOutput = await this.executeGitStatus(workspacePath);
 
       // Parse status output
       const statusMap = this.parseGitStatus(statusOutput);
 
-      // Filter for uncommitted files (untracked or modified, not deleted)
-      // Convert relative paths to absolute paths using path.resolve
+      const untrackedDirs = this.collectUntrackedDirectories(workspacePath, statusMap);
+      const expansions = await this.expandUntrackedDirectories(workspacePath, Array.from(untrackedDirs));
+
       const uncommittedFiles: string[] = [];
       const cacheResult: GitStatusResult = {};
 
@@ -390,28 +450,13 @@ export class GitStatusService {
           // Convert to absolute path (git returns paths relative to workspace)
           const absolutePath = resolve(workspacePath, relativePath);
 
-          // For untracked entries, check if it's a directory
-          // git status --porcelain shows untracked directories with trailing slash (e.g., "?? newdir/")
-          // or they may appear without trailing slash but be a directory
-          if (fileStatus.status === 'untracked') {
-            try {
-              const stats = statSync(absolutePath);
-              if (stats.isDirectory()) {
-                // Expand directory to get all files inside (returns absolute paths)
-                const filesInDir = getAllFilesInDirectory(absolutePath);
-                for (const filePath of filesInDir) {
-                  uncommittedFiles.push(filePath);
-                  cacheResult[filePath] = {
-                    filePath,
-                    status: 'untracked',
-                    gitStatusCode: '??'
-                  };
-                }
-                continue; // Skip adding the directory itself
-              }
-            } catch {
-              // If stat fails (file doesn't exist), just add the path as-is
+          if (untrackedDirs.has(absolutePath)) {
+            for (const relFile of expansions.get(absolutePath) ?? []) {
+              const filePath = resolve(workspacePath, relFile);
+              uncommittedFiles.push(filePath);
+              cacheResult[filePath] = { filePath, status: 'untracked', gitStatusCode: '??' };
             }
+            continue;
           }
 
           uncommittedFiles.push(absolutePath);
@@ -423,7 +468,9 @@ export class GitStatusService {
           };
         }
       }
-      this.cache.set(cacheKey, { status: cacheResult, timestamp: Date.now() });
+      if (this.cacheGeneration === cacheGeneration) {
+        this.cache.set(cacheKey, { status: cacheResult, timestamp: Date.now() });
+      }
 
       return uncommittedFiles;
     } catch (error) {
@@ -600,6 +647,7 @@ export class GitStatusService {
       return Object.keys(cached.status);
     }
 
+    const cacheGeneration = this.cacheGeneration;
     try {
       // Get the current branch of this worktree
       const worktreeBranch = this.getCurrentBranch(workspacePath);
@@ -666,7 +714,9 @@ export class GitStatusService {
       }
 
       // Cache the result
-      this.cache.set(cacheKey, { status: cacheResult, timestamp: Date.now() });
+      if (this.cacheGeneration === cacheGeneration) {
+        this.cache.set(cacheKey, { status: cacheResult, timestamp: Date.now() });
+      }
 
       // Convert Set to Array
       return Array.from(filePathSet);
@@ -707,12 +757,16 @@ export class GitStatusService {
       return cached.status;
     }
 
+    const cacheGeneration = this.cacheGeneration;
     try {
       // Get git status for the entire repository using porcelain format
-      const statusOutput = this.executeGitStatus(workspacePath);
+      const statusOutput = await this.executeGitStatus(workspacePath);
 
       // Parse status output
       const statusMap = this.parseGitStatus(statusOutput);
+
+      const untrackedDirs = this.collectUntrackedDirectories(workspacePath, statusMap);
+      const expansions = await this.expandUntrackedDirectories(workspacePath, Array.from(untrackedDirs));
 
       // Build result with absolute paths
       const result: GitStatusResult = {};
@@ -721,25 +775,12 @@ export class GitStatusService {
         if (fileStatus.status !== 'unchanged') {
           const absolutePath = resolve(workspacePath, relativePath);
 
-          // For untracked entries, check if it's a directory and expand it
-          if (fileStatus.status === 'untracked') {
-            try {
-              const stats = statSync(absolutePath);
-              if (stats.isDirectory()) {
-                // Expand directory to get all files inside (returns absolute paths)
-                const filesInDir = getAllFilesInDirectory(absolutePath);
-                for (const filePath of filesInDir) {
-                  result[filePath] = {
-                    filePath,
-                    status: 'untracked',
-                    gitStatusCode: '??'
-                  };
-                }
-                continue; // Skip adding the directory itself
-              }
-            } catch {
-              // If stat fails (file doesn't exist), just add the path as-is
+          if (untrackedDirs.has(absolutePath)) {
+            for (const relFile of expansions.get(absolutePath) ?? []) {
+              const filePath = resolve(workspacePath, relFile);
+              result[filePath] = { filePath, status: 'untracked', gitStatusCode: '??' };
             }
+            continue;
           }
 
           result[absolutePath] = {
@@ -750,7 +791,9 @@ export class GitStatusService {
       }
 
       // Cache the result
-      this.cache.set(cacheKey, { status: result, timestamp: Date.now() });
+      if (this.cacheGeneration === cacheGeneration) {
+        this.cache.set(cacheKey, { status: result, timestamp: Date.now() });
+      }
 
       return result;
     } catch (error) {
@@ -840,6 +883,7 @@ export class GitStatusService {
    * Clear the cache for a specific workspace or all workspaces
    */
   clearCache(workspacePath?: string): void {
+    this.cacheGeneration += 1;
     if (workspacePath) {
       // Clear cache entries for this workspace.
       //

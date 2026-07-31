@@ -1,5 +1,6 @@
 import { execFile, execSync } from 'child_process';
 import { readdirSync } from 'fs';
+import { relative } from 'path';
 import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
@@ -74,6 +75,90 @@ function checkGitAvailable(): boolean {
  */
 export function resetGitAvailableCache(): void {
   gitAvailableCache = null;
+}
+
+const LS_FILES_MAX_BUFFER = 64 * 1024 * 1024;
+const LS_FILES_MAX_PATHSPEC_BYTES = 96 * 1024;
+const LS_FILES_MAX_PATHSPECS_PER_CALL = 500;
+
+function chunkPathspecs(pathspecs: string[]): string[][] {
+  const chunks: string[][] = [];
+  let current: string[] = [];
+  let currentBytes = 0;
+  for (const pathspec of pathspecs) {
+    const bytes = Buffer.byteLength(pathspec) + 1;
+    if (current.length > 0 && (currentBytes + bytes > LS_FILES_MAX_PATHSPEC_BYTES || current.length >= LS_FILES_MAX_PATHSPECS_PER_CALL)) {
+      chunks.push(current);
+      current = [];
+      currentBytes = 0;
+    }
+    current.push(pathspec);
+    currentBytes += bytes;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
+/**
+ * List untracked, non-ignored files inside a set of untracked directories,
+ * honoring `.gitignore`, using asynchronous, argv-bounded `git ls-files` calls.
+ */
+export async function getUntrackedFilesInDirectories(
+  repoRoot: string,
+  dirAbsolutePaths: string[]
+): Promise<Map<string, string[]>> {
+  const byDirectory = new Map<string, string[]>();
+  if (dirAbsolutePaths.length === 0) return byDirectory;
+
+  const inputsByPathspec = new Map<string, string[]>();
+  for (const dirAbsolutePath of dirAbsolutePaths) {
+    const relDir = relative(repoRoot, dirAbsolutePath).replace(/\\/g, '/');
+    const pathspec = relDir === '' ? '.' : relDir;
+    const existing = inputsByPathspec.get(pathspec);
+    if (existing) existing.push(dirAbsolutePath);
+    else inputsByPathspec.set(pathspec, [dirAbsolutePath]);
+  }
+
+  let stdout: string;
+  try {
+    const chunks = chunkPathspecs(Array.from(inputsByPathspec.keys()));
+    const outputs = await Promise.all(chunks.map(chunk => new Promise<string>((resolveOutput, rejectOutput) => {
+      execFile(
+        'git',
+        ['--no-optional-locks', 'ls-files', '--others', '--exclude-standard', '-z', '--', ...chunk],
+        { cwd: repoRoot, encoding: 'utf8', maxBuffer: LS_FILES_MAX_BUFFER },
+        (error, chunkStdout) => {
+          if (error) {
+            rejectOutput(error);
+            return;
+          }
+          resolveOutput(chunkStdout);
+        }
+      );
+    })));
+    stdout = outputs.join('\0');
+  } catch (error) {
+    logEbadfDiagnostic('getUntrackedFilesInDirectories', error);
+    console.error('[gitUtils] git ls-files failed while expanding untracked directories', repoRoot, error);
+    return byDirectory;
+  }
+
+  for (const filePath of stdout.split('\0')) {
+    if (!filePath) continue;
+    const parts = filePath.split('/');
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const prefix = i === 0 ? '.' : parts.slice(0, i).join('/');
+      const inputs = inputsByPathspec.get(prefix);
+      if (!inputs) continue;
+      for (const input of inputs) {
+        const list = byDirectory.get(input);
+        if (list) list.push(filePath);
+        else byDirectory.set(input, [filePath]);
+      }
+      break;
+    }
+  }
+  return byDirectory;
 }
 
 /**

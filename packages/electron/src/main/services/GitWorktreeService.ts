@@ -17,7 +17,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ulid } from 'ulid';
 import log from 'electron-log/main';
-import { getAllFilesInDirectory } from '../utils/fileUtils';
+import { getUntrackedFilesInDirectories } from '../utils/gitUtils';
+import { GIT_INHERITED_ENV_UNSAFE } from './gitInheritedEnvUnsafe';
 import { gitOperationLock } from './GitOperationLock';
 
 const logger = log.scope('GitWorktreeService');
@@ -2242,14 +2243,26 @@ ${newLines.map(line => '+' + line).join('\n')}`;
 
     // logger.info('Getting changed files', { worktreePath });
 
-    const git: SimpleGit = simpleGit(worktreePath);
+    const git: SimpleGit = simpleGit(worktreePath, { unsafe: GIT_INHERITED_ENV_UNSAFE });
 
     try {
-      // Get only uncommitted changes from git status
-      // This shows files that need to be staged/committed, not the full branch diff
-      const gitStatus = await git.status();
+      // GIT_OPTIONAL_LOCKS=0 keeps this read-only status from refreshing the
+      // index and contending with concurrent git writers.
+      const gitStatus = await git.env({ ...process.env, GIT_OPTIONAL_LOCKS: '0' }).status();
 
       const changedFiles: Array<{ path: string; status: 'added' | 'modified' | 'deleted'; staged: boolean }> = [];
+
+      const untrackedDirs = new Set<string>();
+      for (const file of gitStatus.files) {
+        if (file.working_dir !== '?') continue;
+        const absolutePath = path.join(worktreePath, file.path);
+        try {
+          if (fs.statSync(absolutePath).isDirectory()) untrackedDirs.add(absolutePath);
+        } catch {
+          // Non-stattable entries remain plain files below.
+        }
+      }
+      const untrackedExpansions = await getUntrackedFilesInDirectories(worktreePath, Array.from(untrackedDirs));
 
       for (const file of gitStatus.files) {
         let status: 'added' | 'modified' | 'deleted';
@@ -2265,22 +2278,13 @@ ${newLines.map(line => '+' + line).join('\n')}`;
         // A file is staged if its index status is not ' ' (space) or '?' (untracked)
         const staged = file.index !== ' ' && file.index !== '?';
 
-        // For untracked entries (? in working_dir), check if it's a directory
-        // git status shows untracked directories as a single entry, not individual files
         if (file.working_dir === '?') {
           const absolutePath = path.join(worktreePath, file.path);
-          try {
-            const stats = fs.statSync(absolutePath);
-            if (stats.isDirectory()) {
-              // Expand directory to get all files inside (returns relative paths with forward slashes)
-              const filesInDir = getAllFilesInDirectory(absolutePath, { basePath: worktreePath, normalizeSlashes: true });
-              for (const filePath of filesInDir) {
-                changedFiles.push({ path: filePath, status: 'added', staged: false });
-              }
-              continue; // Skip adding the directory itself
+          if (untrackedDirs.has(absolutePath)) {
+            for (const filePath of untrackedExpansions.get(absolutePath) ?? []) {
+              changedFiles.push({ path: filePath, status: 'added', staged: false });
             }
-          } catch {
-            // If stat fails (file doesn't exist), just add the path as-is
+            continue;
           }
         }
 

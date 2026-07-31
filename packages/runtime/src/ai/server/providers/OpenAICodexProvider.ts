@@ -83,6 +83,8 @@ interface PendingAskUserQuestionEntry {
   sessionId: string;
 }
 
+const SHADOWING_CODEX_BROWSER_PLUGIN_ID = 'browser@openai-bundled';
+
 const PERSISTED_APP_SERVER_NOTIFICATION_METHODS = new Set([
   'item/started',
   'item/completed',
@@ -1975,6 +1977,16 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       // Codex SDK documents this config flag as the switch for surfacing
       // raw agent reasoning in streamed events.
       show_raw_agent_reasoning: true,
+      // ChatGPT.app enables this plugin in the shared ~/.codex/config.toml,
+      // but its in-app browser is unavailable in Nimbalyst. Disable it only
+      // for this provider-created session; the user configuration is untouched.
+      // The SDK flattens keys into TOML paths, so its @-bearing plugin id must
+      // be quoted while app-server receives the id verbatim.
+      plugins: {
+        [this.transport === 'sdk'
+          ? `"${SHADOWING_CODEX_BROWSER_PLUGIN_ID}"`
+          : SHADOWING_CODEX_BROWSER_PLUGIN_ID]: { enabled: false },
+      },
       ...(modelCatalogPath ? { model_catalog_json: modelCatalogPath } : {}),
     };
 

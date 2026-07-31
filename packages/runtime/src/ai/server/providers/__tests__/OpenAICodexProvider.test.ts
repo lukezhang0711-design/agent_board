@@ -45,6 +45,27 @@ describe('OpenAICodexProvider', () => {
     OpenAICodexProvider.setSecurityLogger(() => {});
   });
 
+  describe('shadowing ChatGPT.app browser plugin', () => {
+    const protocol = {
+      platform: 'test', createSession: vi.fn(), resumeSession: vi.fn(), forkSession: vi.fn(),
+      sendMessage: vi.fn(), abortSession: vi.fn(), cleanupSession: vi.fn(),
+    } as any;
+
+    it('disables browser@openai-bundled on app-server with the id verbatim', () => {
+      const provider = new OpenAICodexProvider({}, { transport: 'app-server', protocol });
+      expect((provider as any).buildCodexConfigOverrides({}).plugins).toEqual({
+        'browser@openai-bundled': { enabled: false },
+      });
+    });
+
+    it('quotes the plugin id for SDK serialization', () => {
+      const provider = new OpenAICodexProvider({}, { transport: 'sdk', protocol });
+      expect((provider as any).buildCodexConfigOverrides({}).plugins).toEqual({
+        '"browser@openai-bundled"': { enabled: false },
+      });
+    });
+  });
+
   it('updates currentTodos for app-server todoList raw events', async () => {
     const updateMetadata = vi.fn(async () => {});
     AISessionsRepository.setStore({
