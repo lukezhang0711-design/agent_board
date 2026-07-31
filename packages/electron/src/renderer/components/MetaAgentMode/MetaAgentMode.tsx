@@ -292,6 +292,14 @@ export function MetaAgentMode({
   }, [externalSessionId, ensureMetaSession]);
 
   useEffect(() => {
+    if (!metaSessionId) {
+      setChildSessions([]);
+      return;
+    }
+    void refreshSpawnedSessions(metaSessionId);
+  }, [metaSessionId, refreshSpawnedSessions]);
+
+  useEffect(() => {
     let disposed = false;
     const load = () => window.electronAPI.invoke('app-settings:get', 'metaAgentPlanAutoApprove')
       .then((value) => { if (!disposed) setPlanAutoApproveEnabled(value === true); })
@@ -300,14 +308,6 @@ export function MetaAgentMode({
     const timer = window.setInterval(() => void load(), 1000);
     return () => { disposed = true; window.clearInterval(timer); };
   }, []);
-
-  useEffect(() => {
-    if (!metaSessionId) {
-      setChildSessions([]);
-      return;
-    }
-    void refreshSpawnedSessions(metaSessionId);
-  }, [metaSessionId, refreshSpawnedSessions]);
 
   useEffect(() => {
     if (!metaSessionId) return;
