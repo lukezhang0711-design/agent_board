@@ -39,6 +39,7 @@ import type {
   AiAgentProviderContribution,
   ExtensionManifest,
 } from '@nimbalyst/extension-sdk';
+import { syncExtensionProviderSettings } from '../../shared/settings/keys';
 
 export type AgentProviderStatus =
   | 'registered'
@@ -87,6 +88,7 @@ class AgentProviderRegistryImpl {
     const existing = this.entries.get(key);
     const status: AgentProviderStatus = entry.status ?? existing?.status ?? 'registered';
     this.entries.set(key, { ...entry, status });
+    this.syncProviderSettings();
   }
 
   get(key: string): AgentProviderEntry | undefined;
@@ -145,11 +147,19 @@ class AgentProviderRegistryImpl {
     for (const [key, entry] of this.entries) {
       if (entry.extensionId === extensionId) this.entries.delete(key);
     }
+    this.syncProviderSettings();
   }
 
   /** Test-only: wipe everything. */
   __resetForTests(): void {
     this.entries.clear();
+    this.syncProviderSettings();
+  }
+
+  private syncProviderSettings(): void {
+    syncExtensionProviderSettings(
+      Array.from(this.entries.values(), (entry) => entry.contributionId),
+    );
   }
 }
 

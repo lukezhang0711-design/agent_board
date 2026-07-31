@@ -75,15 +75,26 @@ export function createTolerantAISettingsWriter(
 }
 
 /**
- * Moves provider entries outside the static settings allowlist to a durable
+ * Moves provider entries outside the current settings allowlist to a durable
  * quarantine. Keeping the original value lets a future matching provider
  * recover it deliberately instead of silently deleting user configuration.
+ * Extension provider keys enter that allowlist through AgentProviderRegistry,
+ * so a registered extension's previously quarantined slice is restored here
+ * during startup; unregistered extensions remain quarantined.
  */
 export function quarantineUnrecognizedAIProviderSettings(
   store: AISettingsStore,
 ): string[] {
   const providerSettings = store.get('providerSettings', {});
   if (!isRecord(providerSettings)) return [];
+
+  const storedQuarantine = store.get('_unrecognized', {});
+  const quarantine: Record<string, unknown> = isRecord(storedQuarantine)
+    ? { ...storedQuarantine }
+    : { _previousValue: storedQuarantine };
+  const quarantinedProviders = isRecord(quarantine.providerSettings)
+    ? quarantine.providerSettings
+    : {};
 
   const recognized: Record<string, unknown> = {};
   const unrecognized: Record<string, unknown> = {};
@@ -95,24 +106,33 @@ export function quarantineUnrecognizedAIProviderSettings(
     }
   }
 
-  const providerIds = Object.keys(unrecognized);
-  if (providerIds.length === 0) return [];
+  // A provider may have been unavailable at the previous launch but be
+  // registered now. Move only those newly-recognized entries back; entries
+  // for still-unavailable providers remain safely quarantined.
+  const remainingQuarantine: Record<string, unknown> = {};
+  for (const [providerId, config] of Object.entries(quarantinedProviders)) {
+    if (isSettingKey(`ai.provider.${providerId}`)) {
+      if (!(providerId in recognized)) recognized[providerId] = config;
+    } else {
+      remainingQuarantine[providerId] = config;
+    }
+  }
 
-  const storedQuarantine = store.get('_unrecognized', {});
-  const quarantine: Record<string, unknown> = isRecord(storedQuarantine)
-    ? { ...storedQuarantine }
-    : { _previousValue: storedQuarantine };
-  const quarantinedProviders = isRecord(quarantine.providerSettings)
-    ? quarantine.providerSettings
-    : {};
+  const providerIds = Object.keys(unrecognized);
+  const restoredProviderIds = Object.keys(quarantinedProviders)
+    .filter((providerId) => isSettingKey(`ai.provider.${providerId}`));
+  if (providerIds.length === 0 && restoredProviderIds.length === 0) return [];
 
   store.set('providerSettings', recognized);
-  store.set('_unrecognized', {
+  const nextQuarantine = {
     ...quarantine,
     providerSettings: {
-      ...quarantinedProviders,
+      ...remainingQuarantine,
       ...unrecognized,
     },
+  };
+  store.set('_unrecognized', {
+    ...nextQuarantine,
   });
 
   return providerIds.sort();
