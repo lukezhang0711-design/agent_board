@@ -25,6 +25,7 @@ import {
   getOutgoingRelationships,
   reindexItemRelationships,
   rebuildWorkspaceRelationshipIndex,
+  createRelationshipIndexInitializer,
 } from '../trackerRelationshipIndexStore';
 import type { RelationshipEdge, FieldDefinition } from '@nimbalyst/runtime/plugins/TrackerPlugin/models';
 
@@ -149,5 +150,19 @@ describe('trackerRelationshipIndexStore (SQLite, migration 0014)', () => {
     // 'ghost' is not in tracker_items, so a full rebuild must drop it.
     await rebuildWorkspaceRelationshipIndex(WS, () => planDefs, db);
     expect(await getOutgoingRelationships(WS, 'ghost', db)).toEqual([]);
+  });
+
+  it('initializes a 10,000-item workspace once across repeated backlink opens', async () => {
+    const largeWorkspaceFixture = Array.from({ length: 10_000 }, (_, index) => `item-${index}`);
+    const rebuild = vi.fn(async () => {
+      // Keep the large fixture in the test path: a rebuild would otherwise
+      // process every tracker item before a backlink result can be returned.
+      expect(largeWorkspaceFixture).toHaveLength(10_000);
+    });
+    const initializer = createRelationshipIndexInitializer(rebuild);
+
+    await Promise.all(Array.from({ length: 50 }, () => initializer.ensure(WS)));
+
+    expect(rebuild).toHaveBeenCalledTimes(1);
   });
 });

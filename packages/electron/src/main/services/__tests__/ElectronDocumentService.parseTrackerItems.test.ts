@@ -81,6 +81,65 @@ async function parseFile(content: string): Promise<any[]> {
   return await (service as any).parseTrackerItems(filePath, 'doc.md');
 }
 
+function makeTrackerRow(index: number) {
+  return {
+    id: `task-${index}`,
+    type: 'task',
+    data: JSON.stringify({ title: `Task ${index}`, status: 'to-do' }),
+    workspace: tempDir,
+    last_indexed: new Date().toISOString(),
+    source: 'native',
+  };
+}
+
+describe('tracker item list limits', () => {
+  beforeEach(() => {
+    // Keep these limit tests deterministic: they exercise the list path without
+    // starting the filesystem scan in the background.
+    (service as any).initializationPromise = Promise.resolve();
+  });
+
+  it('caps the database-backed tracker card query at 500 rows', async () => {
+    const rows = Array.from({ length: 600 }, (_, index) => makeTrackerRow(index));
+    mockQuery.mockResolvedValue({ rows });
+
+    const items = await service.listTrackerItems();
+
+    expect(items).toHaveLength(500);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('LIMIT $2'),
+      [tempDir, 500],
+    );
+  });
+
+  it('caps frontmatter-derived tracker cards at 500 rows', async () => {
+    const entries: Array<[string, any]> = Array.from({ length: 600 }, (_, index) => [
+      `document-${index}`,
+      {
+        id: `document-${index}`,
+        path: `plans/plan-${index}.md`,
+        frontmatter: { trackerStatus: { type: 'plan', title: `Plan ${index}` } },
+        lastModified: new Date(),
+      },
+    ]);
+    (service as any).metadataCache = new Map(entries);
+    mockGlobalRegistryGet.mockReturnValue({ modes: { fullDocument: true } });
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    expect(await service.listTrackerItems()).toHaveLength(500);
+  });
+
+  it('loads one tracker detail directly instead of first listing every card', async () => {
+    const target = makeTrackerRow(599);
+    mockQuery.mockImplementation(async (sql: string) => (
+      sql.includes('WHERE id = $1') ? { rows: [target] } : { rows: [] }
+    ));
+
+    expect(await service.getTrackerItemById(target.id)).toMatchObject({ id: target.id });
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('parseTrackerItems — correctness', () => {
   it('extracts a basic tracker item with title, type and props', async () => {
     const items = await parseFile('Fix the login flow #bug[id:bug-001 status:to-do]\n');

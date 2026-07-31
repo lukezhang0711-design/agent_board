@@ -115,6 +115,52 @@ function recordDurationSample(stats: IpcInvocationStats, durationMs: number): vo
   }
 }
 
+function instrumentIpcInvocation<T extends (...args: any[]) => any>(channel: string, handler: T): T {
+  return ((...args: any[]) => {
+    const stats = getOrCreateIpcStats(channel);
+    const t0 = performance.now();
+    stats.callCount += 1;
+    stats.inFlight += 1;
+    stats.maxInFlight = Math.max(stats.maxInFlight, stats.inFlight);
+
+    const finish = () => {
+      const dur = performance.now() - t0;
+      stats.inFlight = Math.max(0, stats.inFlight - 1);
+      stats.totalMs += dur;
+      stats.maxMs = Math.max(stats.maxMs, dur);
+      stats.lastMs = dur;
+      recordDurationSample(stats, dur);
+      if (dur >= IPC_SLOW_THRESHOLD_MS) {
+        stats.slowCount += 1;
+        ipcSlowLog(channel, dur);
+      }
+    };
+
+    try {
+      const result = handler(...args);
+      if (result && typeof result.then === 'function') {
+        return Promise.resolve(result).then(
+          (value) => {
+            finish();
+            return value;
+          },
+          (error) => {
+            stats.errorCount += 1;
+            finish();
+            throw error;
+          },
+        );
+      }
+      finish();
+      return result;
+    } catch (error) {
+      stats.errorCount += 1;
+      finish();
+      throw error;
+    }
+  }) as T;
+}
+
 function percentile(sortedValues: number[], pct: number): number {
   if (sortedValues.length === 0) return 0;
   const index = Math.min(
@@ -150,30 +196,7 @@ export function safeHandle(
   // Wrap so we can time every invocation. We can't observe how long the
   // promise takes from outside `ipcMain.handle`, so the wrap is the only
   // place to measure end-to-end main-side handler latency.
-  const instrumented = async (event: IpcMainInvokeEvent, ...args: any[]) => {
-    const stats = getOrCreateIpcStats(channel);
-    const t0 = performance.now();
-    stats.callCount += 1;
-    stats.inFlight += 1;
-    stats.maxInFlight = Math.max(stats.maxInFlight, stats.inFlight);
-    try {
-      return await handler(event, ...args);
-    } catch (error) {
-      stats.errorCount += 1;
-      throw error;
-    } finally {
-      const dur = performance.now() - t0;
-      stats.inFlight = Math.max(0, stats.inFlight - 1);
-      stats.totalMs += dur;
-      stats.maxMs = Math.max(stats.maxMs, dur);
-      stats.lastMs = dur;
-      recordDurationSample(stats, dur);
-      if (dur >= IPC_SLOW_THRESHOLD_MS) {
-        stats.slowCount += 1;
-        ipcSlowLog(channel, dur);
-      }
-    }
-  };
+  const instrumented = instrumentIpcInvocation(channel, handler);
 
   // Special case: electron-log registers its own '__ELECTRON_LOG__' handler
   // If we try to register after electron-log has already initialized, we'll get an error
@@ -200,7 +223,8 @@ export function safeHandle(
  * Use this instead of ipcMain.on() for all event-style handlers.
  * If the exact same handler function is already registered, this will skip.
  *
- * Note: This uses function identity to detect duplicates. If you pass
+ * Every listener invocation also enters the same duration/error statistics as
+ * `safeHandle`, including async listeners. This uses function identity to detect duplicates. If you pass
  * a new function each time, it won't prevent duplicates. For handlers
  * defined inline, consider using safeOnce() or defining the handler
  * as a named function.
@@ -223,7 +247,7 @@ export function safeOn(
     return;
   }
   handlers.add(handler);
-  ipcMain.on(channel, handler);
+  ipcMain.on(channel, instrumentIpcInvocation(channel, handler));
 }
 
 /**

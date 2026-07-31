@@ -12,8 +12,9 @@
  * created to compare the results using session context MCP tools.
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron';
 import log from 'electron-log/main';
+import { safeHandle } from '../utils/ipcRegistry';
 import { GitWorktreeService, WorkspaceHasNoCommitsError } from '../services/GitWorktreeService';
 import { createWorktreeStore } from '../services/WorktreeStore';
 import { getDatabase } from '../database/initialize';
@@ -130,7 +131,7 @@ export function registerBlitzHandlers(): void {
   /**
    * Create a new blitz: multiple worktrees with the same prompt
    */
-  ipcMain.handle('blitz:create', async (
+  safeHandle('blitz:create', async (
     _event,
     payload: {
       workspacePath: string;
@@ -381,7 +382,7 @@ export function registerBlitzHandlers(): void {
   /**
    * List all blitz sessions for a workspace
    */
-  ipcMain.handle('blitz:list', async (_event, workspacePath: string, _includeArchived = false) => {
+  safeHandle('blitz:list', async (_event, workspacePath: string, _includeArchived = false) => {
     try {
       const db = getDatabase();
       if (!db) throw new Error('Database not initialized');
@@ -419,7 +420,7 @@ export function registerBlitzHandlers(): void {
   /**
    * Get a single blitz by ID
    */
-  ipcMain.handle('blitz:get', async (_event, blitzId: string) => {
+  safeHandle('blitz:get', async (_event, blitzId: string) => {
     try {
       const session = await AISessionsRepository.get(blitzId);
 
@@ -452,7 +453,7 @@ export function registerBlitzHandlers(): void {
    * Delegates to archiveWorktree() for each child so worktrees get the full
    * cleanup: kill terminals, stop git watchers, delete from disk, etc.
    */
-  ipcMain.handle('blitz:archive', async (_event, blitzId: string, workspacePath: string) => {
+  safeHandle('blitz:archive', async (_event, blitzId: string, workspacePath: string) => {
     try {
       if (!workspacePath) throw new Error('workspacePath is required');
 
@@ -497,7 +498,7 @@ export function registerBlitzHandlers(): void {
   /**
    * Update blitz pinned status
    */
-  ipcMain.handle('blitz:update-pinned', async (_event, blitzId: string, isPinned: boolean) => {
+  safeHandle('blitz:update-pinned', async (_event, blitzId: string, isPinned: boolean) => {
     try {
       await AISessionsRepository.updateMetadata(blitzId, { isPinned } as any);
       return { success: true };
@@ -511,7 +512,7 @@ export function registerBlitzHandlers(): void {
    * Create an analysis session when all blitz children have completed.
    * Uses an atomic DB guard to prevent duplicate creation.
    */
-  ipcMain.handle('blitz:create-analysis-session', async (
+  safeHandle('blitz:create-analysis-session', async (
     _event,
     blitzId: string,
     workspacePath: string
@@ -618,7 +619,7 @@ export function registerBlitzHandlers(): void {
   /**
    * Update blitz display name
    */
-  ipcMain.handle('blitz:update-display-name', async (_event, blitzId: string, displayName: string) => {
+  safeHandle('blitz:update-display-name', async (_event, blitzId: string, displayName: string) => {
     try {
       await AISessionsRepository.updateMetadata(blitzId, { title: displayName });
       return { success: true };

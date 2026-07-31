@@ -56,6 +56,10 @@ function buildSessionArchivePredicate(includeArchived: boolean, sessionAlias = '
 
 const DEFAULT_SESSION_LIST_PAGE_SIZE = 75;
 const MAX_SESSION_LIST_PAGE_SIZE = 100;
+// Keep one extra candidate so `sessions:search` can return 200 visible results
+// while still reporting whether more matches exist. Search callers are never
+// allowed to make the fallback tsvector path scan an unbounded result set.
+const MAX_SESSION_SEARCH_CANDIDATE_LIMIT = 201;
 // A child row can introduce its parent into the visible list. Reading at most
 // two source windows keeps the first-screen query bounded while avoiding a
 // sparse page for normal workstream distributions.
@@ -964,10 +968,13 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
       // Default to 30 days to reduce database load
       const timeRange = options?.timeRange ?? '30d';
       const direction = options?.direction ?? 'all';
-      // IPC passes a small over-fetch (limit + 1) so it can report whether
-      // the visible search result set was truncated. Keep the cap in every
+      // IPC passes a one-row over-fetch (200 visible + 1) so it can report
+      // whether the visible result set was truncated. Keep that cap in every
       // backend query; slicing only at the end would still read all matches.
-      const searchLimit = options?.limit;
+      const requestedSearchLimit = options?.limit;
+      const searchLimit = typeof requestedSearchLimit === 'number' && Number.isFinite(requestedSearchLimit)
+        ? Math.max(1, Math.min(Math.floor(requestedSearchLimit), MAX_SESSION_SEARCH_CANDIDATE_LIMIT))
+        : MAX_SESSION_SEARCH_CANDIDATE_LIMIT;
 
       const searchTerms = query.trim();
 
@@ -1074,8 +1081,8 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
           AND to_tsvector('english', COALESCE(s.title, '')) @@ plainto_tsquery('english', $2)
           ${archiveFilter}
         ORDER BY rank DESC, s.updated_at DESC
-        ${searchLimit === undefined ? '' : 'LIMIT $3'}`,
-        [workspaceId, searchTerms, ...(searchLimit === undefined ? [] : [searchLimit])]
+        LIMIT $3`,
+        [workspaceId, searchTerms, searchLimit]
       );
 
       const contentQuery = (() => {
@@ -1104,10 +1111,8 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
         }
 
         contentQuerySql += ' GROUP BY t.session_id ORDER BY rank DESC';
-        if (searchLimit !== undefined) {
-          contentQueryParams.push(searchLimit);
-          contentQuerySql += ` LIMIT $${contentQueryParams.length}`;
-        }
+        contentQueryParams.push(searchLimit);
+        contentQuerySql += ` LIMIT $${contentQueryParams.length}`;
         return db.query<any>(contentQuerySql, contentQueryParams);
       })();
 

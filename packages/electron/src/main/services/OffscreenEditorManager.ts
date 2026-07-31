@@ -15,6 +15,7 @@ import electron, { BrowserWindow } from 'electron';
 import { join } from 'path';
 import { logger } from '../utils/logger';
 import { getPreloadPath } from '../utils/appPaths';
+import { removeHandler, safeHandle } from '../utils/ipcRegistry';
 import { findWindowByWorkspace } from '../window/WindowManager';
 
 interface OffscreenEditorEntry {
@@ -311,17 +312,16 @@ export class OffscreenEditorManager {
    */
   private async sendCaptureRequest(win: BrowserWindow, filePath: string, selector?: string, theme?: string): Promise<{ success: boolean; imageBase64?: string; error?: string }> {
     return new Promise((resolve, reject) => {
-      const { ipcMain } = require('electron');
       const responseChannel = `offscreen-editor:capture-screenshot-response:${Date.now()}-${Math.random()}`;
 
       const timeout = setTimeout(() => {
-        ipcMain.removeHandler(responseChannel);
+        removeHandler(responseChannel);
         reject(new Error('Screenshot request timed out after 30s'));
       }, 30000);
 
-      ipcMain.handle(responseChannel, async (_event: any, response: any) => {
+      safeHandle(responseChannel, async (_event: any, response: any) => {
         clearTimeout(timeout);
-        ipcMain.removeHandler(responseChannel);
+        removeHandler(responseChannel);
         resolve(response);
         return { received: true };
       });

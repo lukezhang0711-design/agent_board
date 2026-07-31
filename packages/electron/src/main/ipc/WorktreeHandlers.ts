@@ -5,8 +5,9 @@
  * Worktrees are stored in the database and managed via GitWorktreeService.
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron';
 import log from 'electron-log/main';
+import { safeHandle } from '../utils/ipcRegistry';
 import simpleGit from 'simple-git';
 import { FeatureUsageService, FEATURES } from '../services/FeatureUsageService';
 import { GitWorktreeService } from '../services/GitWorktreeService';
@@ -323,7 +324,7 @@ export function registerWorktreeHandlers(): void {
    * @param name - Optional custom name for the worktree
    * @returns Worktree data including id, path, branch, etc.
    */
-  ipcMain.handle('worktree:create', async (
+  safeHandle('worktree:create', async (
     _event,
     workspacePath: string,
     options?: { name?: string; baseBranch?: string }
@@ -491,7 +492,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreePath - Path to the worktree directory
    * @returns Git status including uncommitted changes, commits ahead/behind, merge status
    */
-  ipcMain.handle('worktree:get-status', async (_event, worktreePath: string, options?: { fetchFirst?: boolean }) => {
+  safeHandle('worktree:get-status', async (_event, worktreePath: string, options?: { fetchFirst?: boolean }) => {
     if (!worktreePath) {
       return { success: false, error: 'worktreePath is required' };
     }
@@ -557,7 +558,7 @@ export function registerWorktreeHandlers(): void {
    * @param workspacePath - Path to the main git repository
    * @returns Success status
    */
-  ipcMain.handle('worktree:delete', async (_event, worktreeId: string, workspacePath: string) => {
+  safeHandle('worktree:delete', async (_event, worktreeId: string, workspacePath: string) => {
     try {
       if (!worktreeId) {
         throw new Error('worktreeId is required');
@@ -611,7 +612,7 @@ export function registerWorktreeHandlers(): void {
    * @param workspacePath - Path to the workspace/project
    * @returns Array of worktrees
    */
-  ipcMain.handle('worktree:list', async (_event, workspacePath: string) => {
+  safeHandle('worktree:list', async (_event, workspacePath: string) => {
     try {
       if (!workspacePath) {
         throw new Error('workspacePath is required');
@@ -673,7 +674,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreeId - ID of the worktree
    * @returns Worktree data or null if not found
    */
-  ipcMain.handle('worktree:get', async (_event, worktreeId: string) => {
+  safeHandle('worktree:get', async (_event, worktreeId: string) => {
     try {
       if (!worktreeId) {
         throw new Error('worktreeId is required');
@@ -717,7 +718,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreePath - Path to the worktree
    * @returns Worktree data or null if not found
    */
-  ipcMain.handle('worktree:get-by-path', async (_event, worktreePath: string) => {
+  safeHandle('worktree:get-by-path', async (_event, worktreePath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -762,7 +763,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreeIds - Array of worktree IDs to fetch
    * @returns Map of worktree ID to worktree data with status
    */
-  ipcMain.handle('worktree:get-batch', async (_event, worktreeIds: string[]) => {
+  safeHandle('worktree:get-batch', async (_event, worktreeIds: string[]) => {
     try {
       if (!worktreeIds || !Array.isArray(worktreeIds)) {
         throw new Error('worktreeIds must be an array');
@@ -835,7 +836,7 @@ export function registerWorktreeHandlers(): void {
    * @param isPinned - Whether the worktree should be pinned
    * @returns Success status
    */
-  ipcMain.handle('worktree:update-pinned', async (_event, worktreeId: string, isPinned: boolean) => {
+  safeHandle('worktree:update-pinned', async (_event, worktreeId: string, isPinned: boolean) => {
     try {
       if (!worktreeId) {
         throw new Error('worktreeId is required');
@@ -870,7 +871,7 @@ export function registerWorktreeHandlers(): void {
    * @param displayName - New display name for the worktree
    * @returns Success status
    */
-  ipcMain.handle('worktree:update-display-name', async (_event, worktreeId: string, displayName: string) => {
+  safeHandle('worktree:update-display-name', async (_event, worktreeId: string, displayName: string) => {
     try {
       if (!worktreeId) {
         throw new Error('worktreeId is required');
@@ -919,7 +920,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreePath - Path to the worktree
    * @returns Array of changed files with their status
    */
-  ipcMain.handle('worktree:get-changed-files', async (_event, worktreePath: string) => {
+  safeHandle('worktree:get-changed-files', async (_event, worktreePath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -950,7 +951,7 @@ export function registerWorktreeHandlers(): void {
    * @param filePath - Relative path to the file
    * @returns File diff result
    */
-  ipcMain.handle('worktree:get-file-diff', async (_event, worktreePath: string, filePath: string) => {
+  safeHandle('worktree:get-file-diff', async (_event, worktreePath: string, filePath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -991,7 +992,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreePath - Path to the worktree
    * @returns Array of commits
    */
-  ipcMain.handle('worktree:get-commits', async (_event, worktreePath: string) => {
+  safeHandle('worktree:get-commits', async (_event, worktreePath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1045,7 +1046,7 @@ export function registerWorktreeHandlers(): void {
    * @param files - Optional array of specific files to commit
    * @returns Commit information
    */
-  ipcMain.handle('worktree:commit', async (_event, worktreePath: string, message: string, files?: string[]) => {
+  safeHandle('worktree:commit', async (_event, worktreePath: string, message: string, files?: string[]) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1087,7 +1088,7 @@ export function registerWorktreeHandlers(): void {
    * @param repoPath - Path to the git repository
    * @returns Current branch name
    */
-  ipcMain.handle('worktree:get-repo-current-branch', async (_event, repoPath: string) => {
+  safeHandle('worktree:get-repo-current-branch', async (_event, repoPath: string) => {
     try {
       if (!repoPath) {
         throw new Error('repoPath is required');
@@ -1117,7 +1118,7 @@ export function registerWorktreeHandlers(): void {
    * @param mainRepoPath - Path to the main repository
    * @returns Merge result
    */
-  ipcMain.handle('worktree:merge', async (_event, worktreePath: string, mainRepoPath: string) => {
+  safeHandle('worktree:merge', async (_event, worktreePath: string, mainRepoPath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1166,7 +1167,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreePath - Path to the worktree
    * @returns Rebase result with conflict details if conflicts detected
    */
-  ipcMain.handle('worktree:rebase', async (_event, worktreePath: string) => {
+  safeHandle('worktree:rebase', async (_event, worktreePath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1238,7 +1239,7 @@ export function registerWorktreeHandlers(): void {
    * @param workspacePath - Path to the main git repository
    * @returns Success status (for immediate database operations)
    */
-  ipcMain.handle('worktree:archive', async (_event, worktreeId: string, workspacePath: string) => {
+  safeHandle('worktree:archive', async (_event, worktreeId: string, workspacePath: string) => {
     return archiveWorktree(worktreeId, workspacePath);
   });
 
@@ -1249,7 +1250,7 @@ export function registerWorktreeHandlers(): void {
    *
    * @returns Array of archive tasks with their status
    */
-  ipcMain.handle('archive:get-tasks', async () => {
+  safeHandle('archive:get-tasks', async () => {
     try {
       const tasks = archiveProgressManager.getTasks();
       return {
@@ -1273,7 +1274,7 @@ export function registerWorktreeHandlers(): void {
    * @param commitHashes - Array of commit hashes to check
    * @returns Whether commits exist on other branches
    */
-  ipcMain.handle('worktree:check-commits-existence', async (_event, worktreePath: string, commitHashes: string[]) => {
+  safeHandle('worktree:check-commits-existence', async (_event, worktreePath: string, commitHashes: string[]) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1309,7 +1310,7 @@ export function registerWorktreeHandlers(): void {
    * @param message - Commit message for the squashed commit
    * @returns The new commit hash
    */
-  ipcMain.handle('worktree:squash-commits', async (_event, worktreePath: string, commitHashes: string[], message: string) => {
+  safeHandle('worktree:squash-commits', async (_event, worktreePath: string, commitHashes: string[], message: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1346,7 +1347,7 @@ export function registerWorktreeHandlers(): void {
    * @param filePath - Relative path of the file to stage/unstage
    * @param stage - true to stage, false to unstage
    */
-  ipcMain.handle('worktree:stage-file', async (_event, worktreePath: string, filePath: string, stage: boolean) => {
+  safeHandle('worktree:stage-file', async (_event, worktreePath: string, filePath: string, stage: boolean) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1387,7 +1388,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreePath - Path to the worktree directory
    * @param stage - true to stage all, false to unstage all
    */
-  ipcMain.handle('worktree:stage-all', async (_event, worktreePath: string, stage: boolean) => {
+  safeHandle('worktree:stage-all', async (_event, worktreePath: string, stage: boolean) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1426,7 +1427,7 @@ export function registerWorktreeHandlers(): void {
    *
    * @param worktreePath - Path to the worktree directory
    */
-  ipcMain.handle('worktree:start-watching', async (_event, worktreePath: string) => {
+  safeHandle('worktree:start-watching', async (_event, worktreePath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1452,7 +1453,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreePath - Path to the worktree directory
    * @returns List of files that would be removed and their count
    */
-  ipcMain.handle('worktree:list-gitignored', async (_event, worktreePath: string) => {
+  safeHandle('worktree:list-gitignored', async (_event, worktreePath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');
@@ -1480,7 +1481,7 @@ export function registerWorktreeHandlers(): void {
    * @param worktreePath - Path to the worktree directory
    * @returns List of removed files
    */
-  ipcMain.handle('worktree:clean-gitignored', async (_event, worktreePath: string) => {
+  safeHandle('worktree:clean-gitignored', async (_event, worktreePath: string) => {
     try {
       if (!worktreePath) {
         throw new Error('worktreePath is required');

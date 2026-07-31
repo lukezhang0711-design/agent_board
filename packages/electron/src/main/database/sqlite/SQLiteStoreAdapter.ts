@@ -18,6 +18,11 @@
 import type { SQLiteDatabase } from './SQLiteDatabase';
 import type { SQLiteDatabaseProxy } from './SQLiteDatabaseProxy';
 
+// Mirrors the session-search IPC contract: 200 visible results plus one
+// sentinel used to report truncation. Direct adapter callers get the same
+// bounded behavior when they omit an explicit limit.
+const MAX_SESSION_SEARCH_CANDIDATE_LIMIT = 201;
+
 /**
  * Either the in-process SQLiteDatabase (tests) or the worker-hosted proxy
  * (production). Both expose the same async `query<T>(sql, params)` surface
@@ -211,23 +216,24 @@ export function createSQLiteStoreAdapter(
       // overlap, so this is a behavioral diff: SQLite gives substring
       // matches without ranking. Acceptable for short titles.
       const includeArchived = opts?.includeArchived ?? false;
-      const limit = opts?.limit;
+      const requestedLimit = opts?.limit;
+      const limit = typeof requestedLimit === 'number' && Number.isFinite(requestedLimit)
+        ? Math.max(1, Math.min(Math.floor(requestedLimit), MAX_SESSION_SEARCH_CANDIDATE_LIMIT))
+        : MAX_SESSION_SEARCH_CANDIDATE_LIMIT;
       const archiveClause = includeArchived
         ? ''
         : `AND (s.is_archived = 0 OR s.is_archived IS NULL)
            AND (s.worktree_id IS NULL OR w.is_archived = 0 OR w.is_archived IS NULL)`;
-      const limitClause = typeof limit === 'number'
-        ? 'ORDER BY s.updated_at DESC LIMIT $limit'
-        : '';
       const sql = `SELECT s.id AS session_id, 1.0 AS rank
                    FROM ai_sessions AS s
                    LEFT JOIN worktrees AS w ON s.worktree_id = w.id
                    WHERE s.workspace_id = $wid
                      AND LOWER(COALESCE(s.title, '')) LIKE $needle
                      ${archiveClause}
-                   ${limitClause}`;
+                   ORDER BY s.updated_at DESC
+                   LIMIT $limit`;
       const { rows } = await db.query<{ session_id: string; rank: number }>(sql, [
-        { wid: workspaceId, needle: `%${query.toLowerCase()}%`, ...(limit !== undefined && { limit }) },
+        { wid: workspaceId, needle: `%${query.toLowerCase()}%`, limit },
       ]);
       return rows;
     },

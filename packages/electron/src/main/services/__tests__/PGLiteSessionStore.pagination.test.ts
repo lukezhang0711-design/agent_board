@@ -334,4 +334,20 @@ describe('PGLiteSessionStore list pagination', () => {
       await db.close();
     }
   });
+
+  it('caps an unbounded PGLite fallback search to 201 candidates', async () => {
+    const db = new PGlite();
+    try {
+      for (const statement of pgliteSchema) await db.query(statement);
+      await seedFixture(db, 240);
+      const store = createPGLiteSessionStore(db as any) as any;
+
+      const matches = await store.search(WORKSPACE, 'Session', { timeRange: 'all' });
+
+      // 200 visible results plus one sentinel preserves the IPC truncation signal.
+      expect(matches).toHaveLength(201);
+    } finally {
+      await db.close();
+    }
+  }, 60_000);
 });
