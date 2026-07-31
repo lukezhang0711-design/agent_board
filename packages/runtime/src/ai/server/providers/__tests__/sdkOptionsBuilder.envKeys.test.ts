@@ -32,6 +32,8 @@ vi.mock('../../../../electron/claudeCodeEnvironment', () => ({
 }));
 
 import { buildSdkOptions } from '../claudeCode/sdkOptionsBuilder';
+import { resolveClaudeCodeModelVariant } from '../../types';
+import { DEFAULT_EFFORT_LEVEL } from '../../effortLevels';
 
 function makeDeps(overrides: Partial<Parameters<typeof buildSdkOptions>[0]> = {}) {
   return {
@@ -144,5 +146,35 @@ describe('buildSdkOptions env-key hardening', () => {
     // Flags buildSdkOptions always composes onto the spawned session env.
     expect(options.env.ENABLE_TOOL_SEARCH).toBe('auto:2');
     expect(options.env.CLAUDE_CODE_ENTRYPOINT).toBe('cli');
+  });
+
+  it.each([
+    ['claude-code:opus-5', 'claude-opus-5'],
+    ['claude-code:sonnet-5', 'claude-sonnet-5'],
+  ])('carries non-default effort for %s into the SDK spawn environment', async (selectedModel, expectedSdkModel) => {
+    const { options } = await buildSdkOptions(
+      makeDeps({
+        config: { model: selectedModel, effortLevel: 'max' },
+        resolveModelVariant: () => resolveClaudeCodeModelVariant(selectedModel, 'claude-code:opus'),
+      }),
+      makeParams(),
+    );
+
+    expect(options.model).toBe(expectedSdkModel);
+    expect(options.env.CLAUDE_CODE_EFFORT_LEVEL).toBe('max');
+  });
+
+  it('omits the effort environment variable for the default level on a new model', async () => {
+    const selectedModel = 'claude-code:sonnet-5';
+    const { options } = await buildSdkOptions(
+      makeDeps({
+        config: { model: selectedModel, effortLevel: DEFAULT_EFFORT_LEVEL },
+        resolveModelVariant: () => resolveClaudeCodeModelVariant(selectedModel, 'claude-code:opus'),
+      }),
+      makeParams(),
+    );
+
+    expect(options.model).toBe('claude-sonnet-5');
+    expect(options.env).not.toHaveProperty('CLAUDE_CODE_EFFORT_LEVEL');
   });
 });
