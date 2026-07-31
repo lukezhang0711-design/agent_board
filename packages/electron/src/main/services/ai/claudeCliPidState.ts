@@ -25,6 +25,28 @@ export type ClaudePidStatus = 'busy' | 'idle' | 'waiting';
 /** Nimbalyst-side turn states the CLI status maps to. */
 export type ClaudeTurnState = 'running' | 'idle' | 'waiting_for_input';
 
+/** Why a CLI turn boundary was observed. */
+export type ClaudeTurnStateReason = 'pid-state' | 'fallback-silence';
+
+/**
+ * Conservative degradation thresholds for a live CLI whose PID state source
+ * cannot be read. We wait long enough to avoid startup/file-system races, then
+ * require a quiet terminal before attempting one queued-prompt flush.
+ */
+export const CLAUDE_CLI_STATE_SOURCE_UNREADABLE_FALLBACK_AFTER_MS = 45_000;
+export const CLAUDE_CLI_OUTPUT_SILENCE_FALLBACK_AFTER_MS = 8_000;
+
+export function shouldUseClaudeCliSilenceFallback(options: {
+  now: number;
+  stateSourceUnavailableSince: number;
+  lastPtyOutputAt: number;
+  hasAlreadyTriggered: boolean;
+}): boolean {
+  return !options.hasAlreadyTriggered &&
+    options.now - options.stateSourceUnavailableSince >= CLAUDE_CLI_STATE_SOURCE_UNREADABLE_FALLBACK_AFTER_MS &&
+    options.now - options.lastPtyOutputAt >= CLAUDE_CLI_OUTPUT_SILENCE_FALLBACK_AFTER_MS;
+}
+
 export interface ParsedClaudePidFile {
   status: ClaudePidStatus;
   pid?: number;
@@ -171,6 +193,8 @@ export interface PidStateWatcherOptions {
   now?: () => number;
   /** Liveness probe override (tests). Defaults to `process.kill(pid, 0)`. */
   isProcessAlive?: (pid: number) => boolean;
+  /** Reports whether this poll could parse a recognized PID state source. */
+  onStateSourceAvailability?: (available: boolean) => void;
   /**
    * Emitted only when the mapped turn state changes. `parsed` is null when the
    * state was synthesized by the liveness backstop (no readable PID file).
@@ -199,6 +223,7 @@ export function watchClaudePidState(options: PidStateWatcherOptions): () => void
   const isAlive = options.isProcessAlive ?? defaultIsProcessAlive;
 
   let lastState: ClaudeTurnState | undefined;
+  let lastStateSourceAvailability: boolean | undefined;
   let stopped = false;
 
   const tick = async () => {
@@ -208,6 +233,11 @@ export function watchClaudePidState(options: PidStateWatcherOptions): () => void
       parsed = parseClaudePidFile(await read(filePath));
     } catch {
       // File missing/unreadable (process not started yet, or already exited).
+    }
+    const stateSourceAvailable = parsed !== null;
+    if (stateSourceAvailable !== lastStateSourceAvailability) {
+      lastStateSourceAvailability = stateSourceAvailable;
+      options.onStateSourceAvailability?.(stateSourceAvailable);
     }
     let next: ClaudeTurnState | undefined;
     if (parsed) {

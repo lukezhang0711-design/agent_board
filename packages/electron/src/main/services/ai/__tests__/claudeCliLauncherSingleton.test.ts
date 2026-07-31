@@ -25,6 +25,7 @@ describe('claudeCliLauncherSingleton', () => {
       updateActivity: vi.fn(async () => undefined),
     };
     const launch = vi.fn(async (_input?: any): Promise<void> => undefined);
+    const flushQueuedPrompt = vi.fn(async () => false);
 
     vi.doMock('../../TerminalSessionManager', () => ({
       getTerminalSessionManager: () => manager,
@@ -58,8 +59,26 @@ describe('claudeCliLauncherSingleton', () => {
       startClaudeCliProxyObservation: vi.fn(),
       fireClaudeCliTurnCompletion: vi.fn(),
     }));
+    vi.doMock('../HooklessAgentFileWatcher', () => ({
+      HooklessAgentFileWatcher: class {
+        ensureForSession = vi.fn(async () => undefined);
+        scheduleStop = vi.fn();
+        stopForSession = vi.fn(async () => undefined);
+      },
+    }));
+    vi.doMock('../../AgentWorkflowService', () => ({
+      getAgentWorkflowService: () => ({
+        getClaudeProviderPluginPaths: vi.fn(async () => []),
+      }),
+    }));
+    vi.doMock('../../AttachmentService', () => ({
+      workspacePathToDir: (workspacePath: string) => workspacePath.replace(/[^a-z0-9]/gi, '-'),
+    }));
+    vi.doMock('../../PermissionService', () => ({
+      getPermissionService: () => ({ getPermissionMode: () => 'default' }),
+    }));
     vi.doMock('../claudeCliQueueFlushSingleton', () => ({
-      flushNextClaudeCliQueuedPromptForSession: vi.fn(async () => false),
+      flushNextClaudeCliQueuedPromptForSession: flushQueuedPrompt,
     }));
     vi.doMock('../ClaudeCliSessionLauncher', () => ({
       ClaudeCliSessionLauncher: class {
@@ -75,6 +94,7 @@ describe('claudeCliLauncherSingleton', () => {
       manager,
       stateManager,
       launch,
+      flushQueuedPrompt,
       getSession,
       buildMetaAgentSystemPrompt,
     };
@@ -182,5 +202,21 @@ describe('claudeCliLauncherSingleton', () => {
     const launchInput = h.launch.mock.calls[0][0];
     expect(launchInput).not.toHaveProperty('mcpProfile');
     expect(launchInput).not.toHaveProperty('systemPromptAppend');
+  }, 20000);
+
+  it('flushes once with fallback-silence when the terminal synthesizes an idle boundary', async () => {
+    const h = await loadHarness();
+
+    await h.ensureClaudeCliSession({ sessionId: 'session-1', workspacePath: '/work' });
+    const launchInput = h.launch.mock.calls[0][0];
+    launchInput.onTurnState('idle', null, 'fallback-silence');
+
+    await vi.waitFor(() => {
+      expect(h.flushQueuedPrompt).toHaveBeenCalledWith(
+        'session-1',
+        '/work',
+        'fallback-silence',
+      );
+    });
   }, 20000);
 });

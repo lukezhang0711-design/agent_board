@@ -6,6 +6,7 @@ import {
   isClaudePidFileStale,
   watchClaudePidState,
   readClaudePidTurnState,
+  shouldUseClaudeCliSilenceFallback,
   type ClaudeTurnState,
 } from '../claudeCliPidState';
 
@@ -200,5 +201,31 @@ describe('readClaudePidTurnState (one-shot)', () => {
       isProcessAlive: () => true,
     });
     expect(state).toBeNull();
+  });
+});
+
+describe('shouldUseClaudeCliSilenceFallback', () => {
+  it('waits for both a sustained unreadable state source and quiet PTY output', () => {
+    expect(shouldUseClaudeCliSilenceFallback({
+      now: 45_000,
+      stateSourceUnavailableSince: 0,
+      lastPtyOutputAt: 44_000,
+      hasAlreadyTriggered: false,
+    })).toBe(false);
+    expect(shouldUseClaudeCliSilenceFallback({
+      now: 45_000,
+      stateSourceUnavailableSince: 0,
+      lastPtyOutputAt: 0,
+      hasAlreadyTriggered: false,
+    })).toBe(true);
+  });
+
+  it('does not retry during the same source outage after one attempt', () => {
+    expect(shouldUseClaudeCliSilenceFallback({
+      now: 60_000,
+      stateSourceUnavailableSince: 0,
+      lastPtyOutputAt: 0,
+      hasAlreadyTriggered: true,
+    })).toBe(false);
   });
 });
