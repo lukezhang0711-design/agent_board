@@ -113,6 +113,7 @@ import { autoCommitEnabledAtom, setAutoCommitEnabledAtom } from '../../store/ato
 import { diffPeekSizeAtom, setDiffPeekSizeAtom } from '../../store/atoms/diffPeekSizeAtoms';
 import { registerSessionWorkspace, loadInitialSessionFileState } from '../../store/listeners/fileStateListeners';
 import { SESSION_PHASE_COLUMNS, setSessionPhaseAtom, type SessionPhase } from '../../store/atoms/sessionKanban';
+import { errorNotificationService } from '../../services/ErrorNotificationService';
 
 registerPlanApprovalWidget();
 
@@ -143,6 +144,26 @@ function isCorruptedSpreadOfString(value: unknown): boolean {
     if (k in obj) return false;
   }
   return true;
+}
+
+export async function surfaceQueuedPromptFailure<T>(
+  sessionId: string,
+  error: unknown,
+  invoke: (channel: string, ...args: unknown[]) => Promise<unknown>,
+  setQueuedPrompts: (queue: T[]) => void,
+): Promise<void> {
+  console.error('[SessionTranscript] Failed to queue prompt:', error);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  errorNotificationService.showError('Failed to queue prompt', errorMessage);
+  // Reconcile after a failed replacement so the badge cannot retain a
+  // deleted row from the local pre-write state.
+  try {
+    const persistedQueue = await invoke('ai:listPendingPrompts', sessionId) as T[];
+    setQueuedPrompts(persistedQueue ?? []);
+  } catch (refreshError) {
+    console.error('[SessionTranscript] Failed to refresh queued prompts after queue error:', refreshError);
+    setQueuedPrompts([]);
+  }
 }
 
 /**
@@ -1275,32 +1296,31 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         combinedAttachments = [...(lastQueued.attachments || []), ...currentAttachments];
       }
 
-      const result = await window.electronAPI.invoke(
+      await window.electronAPI.invoke(
         'ai:createQueuedPrompt',
         sessionId,
         combinedPrompt,
         combinedAttachments,
         serializableContext
-      ) as { id: string; prompt: string; timestamp: number };
+      );
 
-      setQueuedPrompts(prev => {
-        // Remove the old queued prompt (if we merged into it) and add the new combined one
-        const filtered = lastQueued ? prev.filter(p => p.id !== lastQueued.id) : prev;
-        return [...filtered, {
-          id: result.id,
-          prompt: combinedPrompt,
-          timestamp: result.timestamp,
-          documentContext: serializableContext,
-          attachments: combinedAttachments
-        }];
-      });
+      // The badge and queue list are derived from the durable queue, not an
+      // optimistic local append. A prompt claimed immediately by an idle CLI
+      // therefore disappears instead of becoming a phantom "1 QUEUED" row.
+      const persistedQueue = await window.electronAPI.invoke('ai:listPendingPrompts', sessionId) as typeof queuedPrompts;
+      setQueuedPrompts(persistedQueue ?? []);
 
       setLastSubmitAt(Date.now());
       setDraftInput('');
       setDraftAttachments([]);
       clearAIInputHistory(sessionId);
     } catch (error) {
-      console.error('[SessionTranscript] Failed to queue prompt:', error);
+      await surfaceQueuedPromptFailure(
+        sessionId,
+        error,
+        window.electronAPI.invoke,
+        setQueuedPrompts,
+      );
     } finally {
       setIsQueueing(false);
     }

@@ -38,6 +38,7 @@ import { startClaudeCliProxyObservation, fireClaudeCliTurnCompletion } from './c
 import { flushNextClaudeCliQueuedPromptForSession } from './claudeCliQueueFlushSingleton';
 import { maybeAutoNameClaudeCliSessionProduction } from './claudeCliSessionAutoNameSingleton';
 import type { ClaudeTurnState } from './claudeCliPidState';
+import { logger } from '../../utils/logger';
 
 interface ClaudeCliLauncherConfig {
   mcpServerPort: number | null;
@@ -329,6 +330,7 @@ export async function ensureClaudeCliSession(
         additionalDirectories,
         ...metaAgentLaunchConfig,
         onTurnState: (state: ClaudeTurnState) => {
+          logger.main.info(`[CliQueue] pid-state sessionId=${input.sessionId} state=${state}`);
           // idle is the terminal turn boundary; running/waiting are mid-turn.
           // Root the file watcher at the spawn cwd (the worktree for worktree
           // sessions), where edits actually land.
@@ -347,7 +349,7 @@ export async function ensureClaudeCliSession(
             void maybeAutoNameClaudeCliSessionProduction(input.sessionId);
             // Flush the next queued prompt (if any) into the now-idle CLI. The
             // write restarts the CLI, so the following idle drains the next one.
-            void flushNextClaudeCliQueuedPromptForSession(input.sessionId, input.workspacePath);
+            void flushNextClaudeCliQueuedPromptForSession(input.sessionId, input.workspacePath, 'idle-transition');
           } else if (state === 'running') {
             void stateManager.updateActivity({ sessionId: input.sessionId, status: 'running', isStreaming: true });
             // Idempotent; cancels any pending scheduled-stop from a prior turn.
