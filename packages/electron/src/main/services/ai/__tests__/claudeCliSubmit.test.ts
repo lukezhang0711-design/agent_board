@@ -1,18 +1,25 @@
 import { describe, it, expect, vi } from 'vitest';
-import { submitClaudeCliPrompt } from '../claudeCliSubmit';
+import {
+  submitClaudeCliPrompt,
+  submitWriteGapMs,
+  SUBMIT_WRITE_GAP_MS,
+} from '../claudeCliSubmit';
 import type { ChatAttachment } from '@nimbalyst/runtime/ai/server/types';
+
+const pasted = (text: string) => `\x1b[200~${text}\x1b[201~`;
 
 function harness() {
   const writes: Array<[string, string]> = [];
+  const delays: number[] = [];
   const logUserPrompt = vi.fn(async () => undefined);
   const sendAnalytics = vi.fn();
   const deps = {
     writeToTerminal: (sessionId: string, data: string) => { writes.push([sessionId, data]); },
     logUserPrompt,
     sendAnalytics,
-    delay: async () => undefined,
+    delay: async (ms: number) => { delays.push(ms); },
   };
-  return { writes, logUserPrompt, sendAnalytics, deps };
+  return { writes, delays, logUserPrompt, sendAnalytics, deps };
 }
 
 const img = (filepath: string): ChatAttachment => ({
@@ -20,6 +27,18 @@ const img = (filepath: string): ChatAttachment => ({
 });
 
 describe('submitClaudeCliPrompt', () => {
+  it('submits a 20k prompt as one bracketed paste before Enter', async () => {
+    const h = harness();
+    const prompt = 'x'.repeat(20_000);
+    await submitClaudeCliPrompt({ sessionId: 's1', workspacePath: '/w', prompt }, h.deps);
+    expect(h.writes).toEqual([
+      ['s1', pasted(prompt)],
+      ['s1', '\r'],
+    ]);
+    expect(h.delays).toEqual([submitWriteGapMs(prompt.length)]);
+    expect(h.delays[0]).toBeGreaterThan(SUBMIT_WRITE_GAP_MS);
+  });
+
   it('writes the composed PTY line, then a separate Enter', async () => {
     const h = harness();
     await submitClaudeCliPrompt(
@@ -27,7 +46,7 @@ describe('submitClaudeCliPrompt', () => {
       h.deps,
     );
     expect(h.writes).toEqual([
-      ['s1', 'do it /tmp/a.png'],
+      ['s1', pasted('do it /tmp/a.png')],
       ['s1', '\r'],
     ]);
   });
@@ -181,7 +200,7 @@ describe('submitClaudeCliPrompt', () => {
         h.deps,
       );
       expect(h.writes).toEqual([
-        ['s1', '/review /tmp/a.png'],
+        ['s1', pasted('/review /tmp/a.png')],
         ['s1', '\r'],
       ]);
     });

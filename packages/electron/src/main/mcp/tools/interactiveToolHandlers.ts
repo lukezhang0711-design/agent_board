@@ -32,6 +32,17 @@ import {
 import { broadcastMessageLogged } from "../../services/ai/claudeCliUserPromptLog";
 import { ClaudeSettingsManager } from "../../services/ClaudeSettingsManager";
 import { getPermissionService } from "../../services/PermissionService";
+import {
+  clearLiveInteractivePrompt,
+  noteLiveInteractivePrompt,
+} from "./interactivePromptLiveness";
+import { findFreshInteractiveResponse } from "./interactiveResponsePolling";
+import {
+  clearPendingInteractiveWaiter,
+  countPendingInteractiveWaiters,
+  notePendingInteractiveWaiter,
+  shouldSettleFromSessionFallback,
+} from "./interactivePromptFallback";
 
 export interface InteractiveToolSchemaOptions {
   /** Codex Heads must use submit_plan rather than a generic approval card. */
@@ -366,6 +377,7 @@ export async function handleAskUserQuestion(
     }
   }
 
+  if (sessionId) noteLiveInteractivePrompt(sessionId);
   return new Promise((resolve) => {
     let settled = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -377,6 +389,7 @@ export async function handleAskUserQuestion(
     }, source: string = 'unknown') => {
       if (settled) return;
       settled = true;
+      if (sessionId) clearLiveInteractivePrompt(sessionId);
 
       console.log(`[MCP Server] AskUserQuestion settled via ${source}: questionId=${questionId}, cancelled=${result?.cancelled}`);
 
@@ -1064,6 +1077,7 @@ export async function handleGitCommitProposal(
   // Wait for user confirmation with DB polling fallback.
   // The IPC listener is the fast path; DB polling catches responses when the
   // transport drops (the bug that caused this tool to hang indefinitely).
+  if (targetSessionId) noteLiveInteractivePrompt(targetSessionId);
   return new Promise((resolve) => {
     const getFilePath = (f: FileToStage) =>
       typeof f === "string" ? f : f.path;
@@ -1083,6 +1097,7 @@ export async function handleGitCommitProposal(
     const settle = (result: CommitResult, source: string) => {
       if (settled) return;
       settled = true;
+      if (targetSessionId) clearLiveInteractivePrompt(targetSessionId);
 
       console.log(
         `[MCP Server] Git commit proposal settled via ${source}: action=${result.action}, hash=${result.commitHash || "none"}`
@@ -1482,8 +1497,10 @@ export async function handleRequestUserInput(
     `rui-${sessionId || "unknown"}-${Date.now()}`;
   const { waiterPromptIds: promptIdAliases } = resolveRequestUserInputPromptTargets(promptId);
   const promptIdAliasSet = new Set(promptIdAliases);
-  const responseChannel = getRequestUserInputResponseChannel(sessionId || "unknown", promptId);
-  const fallbackResponseChannel = getRequestUserInputFallbackResponseChannel(sessionId || "unknown");
+  const responseNotBefore = Date.now();
+  const sessionKey = sessionId || "unknown";
+  const responseChannel = getRequestUserInputResponseChannel(sessionKey, promptId);
+  const fallbackResponseChannel = getRequestUserInputFallbackResponseChannel(sessionKey);
 
   console.log(
     `[MCP Server] RequestUserInput waiting for response: promptId=${promptId}, sessionId=${sessionId}`,
@@ -1550,6 +1567,8 @@ export async function handleRequestUserInput(
     TrayManager.getInstance().onPromptCreated(sessionId);
   }
 
+  notePendingInteractiveWaiter(sessionKey);
+  if (sessionId) noteLiveInteractivePrompt(sessionId);
   return new Promise((resolve) => {
     let settled = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -1560,6 +1579,8 @@ export async function handleRequestUserInput(
     ) => {
       if (settled) return;
       settled = true;
+      clearPendingInteractiveWaiter(sessionKey);
+      if (sessionId) clearLiveInteractivePrompt(sessionId);
 
       console.log(
         `[MCP Server] RequestUserInput settled via ${source}: promptId=${promptId}, cancelled=${result?.cancelled}`,
@@ -1697,11 +1718,13 @@ export async function handleRequestUserInput(
         typeof result.rawPromptId === "string" ? result.rawPromptId : null,
       ].filter((value): value is string => typeof value === "string" && value.length > 0);
 
-      const isSyntheticFallbackPrompt = promptId.startsWith("rui-");
       if (
-        !isSyntheticFallbackPrompt
-        && responsePromptIds.length > 0
-        && !responsePromptIds.some((id) => promptIdAliasSet.has(id))
+        !shouldSettleFromSessionFallback({
+          waiterPromptId: promptId,
+          promptIdAliasSet,
+          responsePromptIds,
+          pendingWaiterCountForSession: countPendingInteractiveWaiters(sessionKey),
+        })
       ) {
         return;
       }
@@ -1723,33 +1746,24 @@ export async function handleRequestUserInput(
             clearInterval(pollTimer);
             pollTimer = null;
           }
+          if (!settled) clearPendingInteractiveWaiter(sessionKey);
           return;
         }
 
         try {
-          const messages = await AgentMessagesRepository.list(sessionId, { limit: 20 });
-          for (const msg of messages) {
-            try {
-              const content = JSON.parse(msg.content);
-              const responsePromptIds = [
-                typeof content.promptId === "string" ? content.promptId : null,
-                typeof content.rawPromptId === "string" ? content.rawPromptId : null,
-              ].filter((value): value is string => typeof value === "string" && value.length > 0);
-
-              if (
-                content.type === "request_user_input_response"
-                && responsePromptIds.some((id) => promptIdAliasSet.has(id))
-              ) {
-                if (content.cancelled) {
-                  settle({ cancelled: true, respondedBy: content.respondedBy }, "db-poll");
-                } else {
-                  settle({ answers: content.answers, respondedBy: content.respondedBy }, "db-poll");
-                }
-                return;
-              }
-            } catch {
-              // Not valid JSON, skip.
-            }
+          const messages = await AgentMessagesRepository.list(sessionId, { limit: 50 });
+          const content = findFreshInteractiveResponse(messages, {
+            expectedType: 'request_user_input_response',
+            idFields: ['promptId', 'rawPromptId'],
+            acceptedIds: promptIdAliasSet,
+            notBefore: responseNotBefore,
+            matchAnyId: countPendingInteractiveWaiters(sessionKey) <= 1,
+          });
+          if (!content) return;
+          if (content.cancelled) {
+            settle({ cancelled: true, respondedBy: content.respondedBy as 'desktop' | 'mobile' | undefined }, 'db-poll');
+          } else {
+            settle({ answers: content.answers as Record<string, unknown> | undefined, respondedBy: content.respondedBy as 'desktop' | 'mobile' | undefined }, 'db-poll');
           }
         } catch {
           // Database error, keep polling.

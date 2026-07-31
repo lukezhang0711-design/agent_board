@@ -17,6 +17,17 @@ import { AISessionsRepository } from '@nimbalyst/runtime';
 import { getSyncProvider } from '../SyncManager';
 import { logger } from '../../utils/logger';
 
+/** Pending bits successfully persisted by this process since startup. */
+const sessionsWithPendingPrompt = new Set<string>();
+
+export function getSessionsWithPendingPrompt(): string[] {
+  return [...sessionsWithPendingPrompt];
+}
+
+export function resetPendingPromptTracking(): void {
+  sessionsWithPendingPrompt.clear();
+}
+
 export async function setSessionPendingPrompt(
   sessionId: string,
   hasPendingPrompt: boolean,
@@ -27,6 +38,8 @@ export async function setSessionPendingPrompt(
     await AISessionsRepository.updateMetadata(sessionId, {
       metadata: { hasPendingPrompt },
     });
+    if (hasPendingPrompt) sessionsWithPendingPrompt.add(sessionId);
+    else sessionsWithPendingPrompt.delete(sessionId);
   } catch (err) {
     logger.main.warn(
       `[pendingPromptPersistence] Failed to persist hasPendingPrompt=${hasPendingPrompt} for session ${sessionId}:`,
