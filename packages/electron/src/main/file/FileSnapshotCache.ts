@@ -178,7 +178,7 @@ export class FileSnapshotCache {
 
     // Get dirty files (tracked + untracked) via git status
     try {
-      const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
+      const { stdout } = await execFileAsync('git', ['--no-optional-locks', 'status', '--porcelain'], {
         cwd: workspacePath,
         timeout: 10000,
         maxBuffer: 5_000_000, // 5MB cap on git status output
