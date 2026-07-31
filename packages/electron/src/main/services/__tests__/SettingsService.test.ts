@@ -229,6 +229,26 @@ describe('SettingsService', () => {
     expect(svc.get('ai.apiKey.opencode')).toBe('sk-opencode-test');
   });
 
+  it('persists a registered extension provider through the ProviderConfigSchema', async () => {
+    const { getSettingsService, isSettingKey } = await import('../SettingsService');
+    const { registerExtensionProviderSetting } = await import('../../../shared/settings/keys');
+    registerExtensionProviderSetting('fixture-agent');
+    const svc = getSettingsService();
+
+    expect(isSettingKey('ai.provider.fixture-agent')).toBe(true);
+    svc.set('ai.provider.fixture-agent', {
+      enabled: true,
+      models: ['fixture-agent:low'],
+    });
+    expect(svc.get('ai.provider.fixture-agent')).toMatchObject({
+      enabled: true,
+      models: ['fixture-agent:low'],
+    });
+    expect(() => svc.set('ai.provider.fixture-agent', { enabled: 'yes' } as any)).toThrow(
+      'schema validation failed',
+    );
+  });
+
   it('preserves the existing on-disk shape (providerSettings.<id> path)', async () => {
     const { getSettingsService } = await import('../SettingsService');
     const svc = getSettingsService();

@@ -1,9 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createTolerantAISettingsWriter,
   quarantineUnrecognizedAIProviderSettings,
 } from '../aiSettingsCompatibility';
+import {
+  syncExtensionProviderSettings,
+} from '../../../../shared/settings/keys';
 
 function createStore(initial: Record<string, unknown>) {
   const values = structuredClone(initial) as Record<string, unknown>;
@@ -21,6 +24,9 @@ function createStore(initial: Record<string, unknown>) {
 }
 
 describe('AI settings compatibility', () => {
+  afterEach(() => {
+    syncExtensionProviderSettings([]);
+  });
   it('RED: skips an unknown provider slice without poisoning a following legitimate write', () => {
     const persisted = new Map<string, unknown>();
     const warnings: string[] = [];
@@ -111,5 +117,42 @@ describe('AI settings compatibility', () => {
     const writesAfterFirstRun = store.set.mock.calls.length;
     expect(quarantineUnrecognizedAIProviderSettings(store)).toEqual([]);
     expect(store.set).toHaveBeenCalledTimes(writesAfterFirstRun);
+  });
+
+  it('restores a quarantined provider slice only after its extension is registered', () => {
+    const geminiValue = {
+      enabled: true,
+      models: ['antigravity-gemini-agent:gemini-3-flash-agent'],
+    };
+    const store = createStore({
+      providerSettings: { claude: { enabled: true } },
+      _unrecognized: {
+        providerSettings: {
+          'antigravity-gemini-agent': geminiValue,
+          'not-installed': { enabled: true },
+        },
+      },
+    });
+
+    // First startup before the extension registers: neither quarantine entry
+    // is restored, because only current registrations are legal setting keys.
+    expect(quarantineUnrecognizedAIProviderSettings(store)).toEqual([]);
+    expect(store.snapshot().providerSettings).toEqual({ claude: { enabled: true } });
+
+    syncExtensionProviderSettings(['antigravity-gemini-agent']);
+    // Simulate the next startup: the registered slice is moved back from the
+    // quarantine, while the unavailable provider remains there.
+    expect(quarantineUnrecognizedAIProviderSettings(store)).toEqual([]);
+    expect(store.snapshot()).toEqual({
+      providerSettings: {
+        claude: { enabled: true },
+        'antigravity-gemini-agent': geminiValue,
+      },
+      _unrecognized: {
+        providerSettings: {
+          'not-installed': { enabled: true },
+        },
+      },
+    });
   });
 });

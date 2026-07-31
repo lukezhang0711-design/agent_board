@@ -228,19 +228,62 @@ export const SETTINGS_REGISTRY = {
   ),
 } as const;
 
-export type SettingKey = keyof typeof SETTINGS_REGISTRY;
-export type SettingValue<K extends SettingKey> = z.infer<typeof SETTINGS_REGISTRY[K]['schema']>;
+type StaticSettingKey = keyof typeof SETTINGS_REGISTRY;
+type DynamicProviderSettingKey = `ai.provider.${string}`;
+
+/**
+ * Extension agent providers are discovered at runtime, so their setting keys
+ * cannot live in the static registry above. Keep the descriptor identical to
+ * built-in provider descriptors: SettingsService still validates every write
+ * with ProviderConfigSchema and stores it at providerSettings.<providerId>.
+ */
+const dynamicProviderSettings = new Map<DynamicProviderSettingKey, SettingDescriptor<typeof ProviderConfigSchema>>();
+
+export type SettingKey = StaticSettingKey | DynamicProviderSettingKey;
+export type SettingValue<K extends SettingKey> = K extends StaticSettingKey
+  ? z.infer<typeof SETTINGS_REGISTRY[K]['schema']>
+  : ProviderConfig;
 
 export const SETTING_KEYS = Object.keys(SETTINGS_REGISTRY) as SettingKey[];
 
-export function isSettingKey(key: string): key is SettingKey {
-  return key in SETTINGS_REGISTRY;
+export function registerExtensionProviderSetting(providerId: string): void {
+  const key = `ai.provider.${providerId}` as DynamicProviderSettingKey;
+  if (key in SETTINGS_REGISTRY || dynamicProviderSettings.has(key)) return;
+  dynamicProviderSettings.set(
+    key,
+    setting(
+      ProviderConfigSchema,
+      { store: 'ai-settings', path: `providerSettings.${providerId}` },
+      { enabled: false, testStatus: 'idle' },
+    ),
+  );
+  SETTING_KEYS.push(key);
 }
 
-export function getDescriptor<K extends SettingKey>(key: K): SettingDescriptor<typeof SETTINGS_REGISTRY[K]['schema']> {
-  const d = SETTINGS_REGISTRY[key];
+/** Replace the extension-provider portion of the runtime key registry. */
+export function syncExtensionProviderSettings(providerIds: Iterable<string>): void {
+  const next = new Set(
+    Array.from(providerIds, (providerId) => `ai.provider.${providerId}` as DynamicProviderSettingKey),
+  );
+  for (const key of dynamicProviderSettings.keys()) {
+    if (next.has(key)) continue;
+    dynamicProviderSettings.delete(key);
+    const index = SETTING_KEYS.indexOf(key);
+    if (index >= 0) SETTING_KEYS.splice(index, 1);
+  }
+  for (const key of next) {
+    registerExtensionProviderSetting(key.slice('ai.provider.'.length));
+  }
+}
+
+export function isSettingKey(key: string): key is SettingKey {
+  return key in SETTINGS_REGISTRY || dynamicProviderSettings.has(key as DynamicProviderSettingKey);
+}
+
+export function getDescriptor(key: SettingKey): SettingDescriptor<z.ZodTypeAny> {
+  const d = SETTINGS_REGISTRY[key as StaticSettingKey] ?? dynamicProviderSettings.get(key as DynamicProviderSettingKey);
   if (!d) throw new Error(`Unknown setting key: ${key}`);
-  return d as SettingDescriptor<typeof SETTINGS_REGISTRY[K]['schema']>;
+  return d;
 }
 
 /**

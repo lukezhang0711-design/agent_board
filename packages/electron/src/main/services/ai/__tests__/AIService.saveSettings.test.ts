@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   ipcHandlers: new Map<string, (...args: any[]) => any>(),
@@ -68,6 +68,10 @@ vi.mock('../../../utils/logger', () => ({
 }));
 
 import { AIService } from '../AIService';
+import {
+  registerExtensionProviderSetting,
+  syncExtensionProviderSettings,
+} from '../../../../shared/settings/keys';
 
 describe('AIService ai:saveSettings', () => {
   beforeEach(() => {
@@ -75,11 +79,15 @@ describe('AIService ai:saveSettings', () => {
     mocks.ipcHandlers.clear();
   });
 
-  it('persists a legal provider slice when the same batch includes an unknown legacy provider', async () => {
+  afterEach(() => {
+    syncExtensionProviderSettings([]);
+  });
+
+  it('RED: skips an unregistered extension provider slice without poisoning a following legitimate write', async () => {
     const persisted = new Map<string, unknown>();
     mocks.settingsSet.mockImplementation((key: string, value: unknown) => {
-      if (key === 'ai.provider.antigravity-gemini-agent') {
-        throw new Error('Unknown setting key: ai.provider.antigravity-gemini-agent');
+      if (key === 'ai.provider.unregistered-agent') {
+        throw new Error('Unknown setting key: ai.provider.unregistered-agent');
       }
       persisted.set(key, value);
     });
@@ -93,7 +101,7 @@ describe('AIService ai:saveSettings', () => {
     const handler = mocks.ipcHandlers.get('ai:saveSettings');
     const result = await handler?.({} as Electron.IpcMainInvokeEvent, {
       providerSettings: {
-        'antigravity-gemini-agent': {
+        'unregistered-agent': {
           enabled: true,
           models: ['must-not-appear-in-the-log'],
         },
@@ -108,13 +116,51 @@ describe('AIService ai:saveSettings', () => {
       success: false,
       savedKeys: ['ai.provider.claude'],
       skipped: [{
-        key: 'ai.provider.antigravity-gemini-agent',
+        key: 'ai.provider.unregistered-agent',
         reason: 'unknown_key',
       }],
     });
     expect(mocks.logWarn).toHaveBeenCalledWith(
-      '[ai:saveSettings] skipped key=ai.provider.antigravity-gemini-agent reason=unknown_key',
+      '[ai:saveSettings] skipped key=ai.provider.unregistered-agent reason=unknown_key',
     );
     expect(String(mocks.logWarn.mock.calls)).not.toContain('must-not-appear-in-the-log');
+  });
+
+  it('GREEN: saves one selected Gemini model after the extension provider registers', async () => {
+    const persisted = new Map<string, unknown>();
+    mocks.settingsSet.mockImplementation((key: string, value: unknown) => {
+      persisted.set(key, value);
+    });
+    registerExtensionProviderSetting('antigravity-gemini-agent');
+
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, {
+      cachedNormalizedProviderSettings: null,
+      streamingHandler: { handle: vi.fn() },
+    });
+    (service as any).setupIpcHandlers();
+
+    const handler = mocks.ipcHandlers.get('ai:saveSettings');
+    const result = await handler?.({} as Electron.IpcMainInvokeEvent, {
+      providerSettings: {
+        'antigravity-gemini-agent': {
+          enabled: true,
+          models: ['antigravity-gemini-agent:gemini-3-flash-low'],
+        },
+      },
+    });
+
+    expect(persisted).toEqual(new Map([
+      ['ai.provider.antigravity-gemini-agent', {
+        enabled: true,
+        models: ['antigravity-gemini-agent:gemini-3-flash-low'],
+      }],
+    ]));
+    expect(result).toEqual({
+      success: true,
+      savedKeys: ['ai.provider.antigravity-gemini-agent'],
+      skipped: [],
+    });
+    expect(mocks.logWarn).not.toHaveBeenCalled();
   });
 });
