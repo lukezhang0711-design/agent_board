@@ -43,7 +43,9 @@ import type { ClaudeCliSpawnConfig } from './ai/claudeCliSpawnConfig';
 import {
   watchClaudePidState,
   readClaudePidTurnState,
+  shouldUseClaudeCliSilenceFallback,
   type ClaudeTurnState,
+  type ClaudeTurnStateReason,
   type ParsedClaudePidFile,
 } from './ai/claudeCliPidState';
 import {
@@ -968,7 +970,11 @@ export class TerminalSessionManager {
        * file (busy→running, idle→idle, waiting→waiting_for_input). Wired by the
        * launcher to `SessionStateManager`. The watcher is torn down on exit.
        */
-      onTurnState?: (state: ClaudeTurnState, parsed: ParsedClaudePidFile | null) => void;
+      onTurnState?: (
+        state: ClaudeTurnState,
+        parsed: ParsedClaudePidFile | null,
+        reason?: ClaudeTurnStateReason,
+      ) => void;
       /**
        * Extra teardown to run when the PTY exits — e.g. stopping the per-session
        * proxy observation backend (NIM-806, Phase 3). Composed with the
@@ -1043,21 +1049,60 @@ export class TerminalSessionManager {
       outputSequence: 0,
     };
 
+    // This lightweight timestamp only supports the PID-state degradation path.
+    // It is intentionally raw PTY activity rather than a screen scrape: any
+    // redraw means the CLI may still be working and must not be treated idle.
+    const spawnedAt = Date.now();
+    let lastPtyOutputAt = spawnedAt;
+    let stateSourceAvailable = false;
+    let stateSourceUnavailableSince = spawnedAt;
+    let fallbackTriggered = false;
+    ptyProcess.onData(() => {
+      lastPtyOutputAt = Date.now();
+    });
+
     // Drive turn-level state off the CLI's PID file. node-pty's `pid` is the
     // spawned `claude` process, which is the pid the CLI writes its state file
     // under (`~/.claude/sessions/{pid}.json`). Torn down on exit via `cleanup`.
     let stopPidWatcher: (() => void) | undefined;
+    let stopFallbackTimer: (() => void) | undefined;
     if (options.onTurnState && typeof ptyProcess.pid === 'number') {
       stopPidWatcher = watchClaudePidState({
         pid: ptyProcess.pid,
-        onTurnState: options.onTurnState,
+        onTurnState: (state, parsed) => options.onTurnState?.(state, parsed, 'pid-state'),
+        onStateSourceAvailability: (available) => {
+          stateSourceAvailable = available;
+          if (available) {
+            // A recovered source begins a new outage window; the next outage may
+            // safely have one fallback attempt of its own.
+            fallbackTriggered = false;
+          } else {
+            stateSourceUnavailableSince = Date.now();
+          }
+        },
       });
+      const fallbackTimer = setInterval(() => {
+        if (stateSourceAvailable || !this.terminals.has(terminalId)) return;
+        if (!shouldUseClaudeCliSilenceFallback({
+          now: Date.now(),
+          stateSourceUnavailableSince,
+          lastPtyOutputAt,
+          hasAlreadyTriggered: fallbackTriggered,
+        })) return;
+
+        // One attempt per continuous state-source outage. The queue flusher's
+        // own claim/submit guards handle an empty queue or a failed write.
+        fallbackTriggered = true;
+        options.onTurnState?.('idle', null, 'fallback-silence');
+      }, 1_000);
+      stopFallbackTimer = () => clearInterval(fallbackTimer);
     }
     // Compose the PID-watcher teardown with any caller teardown (proxy stop).
     const onExit = options.onExit;
     if (stopPidWatcher || onExit) {
       terminalProcess.cleanup = (exitCode: number) => {
         stopPidWatcher?.();
+        stopFallbackTimer?.();
         onExit?.(exitCode);
       };
     }

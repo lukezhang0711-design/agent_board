@@ -18,7 +18,7 @@ import { flushNextClaudeCliQueuedPrompt } from './claudeCliQueueFlush';
 /** Per-session guard so two close `idle` events can't double-flush. */
 const flushInFlight = new Set<string>();
 
-export type ClaudeCliQueueFlushReason = 'idle-transition' | 'immediate-kick' | 'other';
+export type ClaudeCliQueueFlushReason = 'idle-transition' | 'fallback-silence' | 'immediate-kick' | 'other';
 
 /**
  * Flush the next queued prompt for a session on PID `idle`. Best-effort and
