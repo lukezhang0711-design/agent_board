@@ -129,6 +129,8 @@ interface AppServerSessionRaw {
   dynamicTools: DynamicToolSpec[];
   /** Snapshot of any uncompleted turn for abort handling. */
   activeTurnId: string | null;
+  /** User-input requests pause the turn watchdog until Codex can continue. */
+  userInputPause: UserInputPauseState;
   /** stderr buffer for diagnostic surface on failure. */
   stderrTail: string[];
   runtimeSource: 'system' | 'bundled';
@@ -140,6 +142,17 @@ interface TurnRetryState {
   lastError?: string;
   awaitingRecovery: boolean;
 }
+
+interface UserInputPauseState {
+  requestCount: number;
+  itemIds: Set<string>;
+  onStateChanged?: (state: 'paused' | 'resumed') => void;
+}
+
+// Three minutes allows normal model/tool scheduling jitter while turning a truly
+// dead stream into a recoverable error before the UI appears permanently busy.
+export const CODEX_TURN_WATCHDOG_SILENCE_MS = 180_000;
+export const CODEX_TURN_WATCHDOG_ERROR = '引擎响应中断';
 
 function previewForLog(value: string | undefined, max = 300): string | undefined {
   if (!value) return value;
@@ -216,6 +229,43 @@ function isRecoveryNotification(
   }
 
   return method !== 'turn/completed' || params?.turn?.status !== 'failed';
+}
+
+function isActiveTurnNotification(
+  paramsUnknown: unknown,
+  raw: AppServerSessionRaw,
+): boolean {
+  const params = paramsUnknown as {
+    threadId?: string;
+    turnId?: string;
+    turn?: { id?: string };
+  } | undefined;
+  const turnId = params?.turn?.id ?? params?.turnId;
+  return params?.threadId === raw.threadId && turnId === raw.activeTurnId;
+}
+
+function isUserInputToolName(name: unknown): boolean {
+  if (typeof name !== 'string') return false;
+  const normalized = name.replace(/^mcp__.+?__/, '').replace(/[^a-z]/gi, '').toLowerCase();
+  return normalized === 'askuserquestion'
+    || normalized === 'requestuserinput'
+    || normalized === 'promptforuserinput';
+}
+
+function isUserInputPaused(state: UserInputPauseState): boolean {
+  return state.requestCount > 0 || state.itemIds.size > 0;
+}
+
+function updateUserInputPause(
+  state: UserInputPauseState,
+  update: () => void,
+): void {
+  const wasPaused = isUserInputPaused(state);
+  update();
+  const isPaused = isUserInputPaused(state);
+  if (wasPaused !== isPaused) {
+    state.onStateChanged?.(isPaused ? 'paused' : 'resumed');
+  }
 }
 
 export class CodexAppServerProtocol implements AgentProtocol {
@@ -343,11 +393,68 @@ export class CodexAppServerProtocol implements AgentProtocol {
       retryCount: 0,
       awaitingRecovery: false,
     };
+    let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
+    let watchdogStalled = false;
+    let lastEventAt = 0;
+    let lastEventType = 'turn/start';
+    let turnStartResultId: string | null = null;
+    const watchdogSessionId = message.sessionId ?? session.id;
+    const stopWatchdog = () => {
+      if (watchdogTimer) {
+        clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+      }
+    };
+    const armWatchdog = () => {
+      stopWatchdog();
+      if (
+        watchdogStalled
+        || isUserInputPaused(raw.userInputPause)
+        || raw.activeTurnId !== turnStartResultId
+      ) {
+        return;
+      }
+      const silenceMs = Date.now() - lastEventAt;
+      watchdogTimer = setTimeout(() => {
+        watchdogTimer = null;
+        const currentSilenceMs = Date.now() - lastEventAt;
+        if (
+          watchdogStalled
+          || isUserInputPaused(raw.userInputPause)
+          || raw.activeTurnId !== turnStartResultId
+          || currentSilenceMs < CODEX_TURN_WATCHDOG_SILENCE_MS
+        ) {
+          return;
+        }
+        watchdogStalled = true;
+        console.error(
+          `[CodexWatchdog] stalled sessionId=${watchdogSessionId} lastEvent=${lastEventType} silenceMs=${currentSilenceMs}`,
+        );
+        push({ kind: 'fail', error: new Error(CODEX_TURN_WATCHDOG_ERROR) });
+      }, Math.max(0, CODEX_TURN_WATCHDOG_SILENCE_MS - silenceMs));
+    };
+    const recordProtocolActivity = (eventType: string) => {
+      if (watchdogStalled) return;
+      lastEventAt = Date.now();
+      lastEventType = eventType;
+      armWatchdog();
+    };
+    const onUserInputStateChanged = (state: 'paused' | 'resumed') => {
+      if (state === 'paused') {
+        stopWatchdog();
+        return;
+      }
+      recordProtocolActivity('request_user_input/resolved');
+    };
 
     const unsubscribers: Array<() => void> = [];
 
     const onNotification = (method: string, params: unknown) => {
       try {
+        if (isActiveTurnNotification(params, raw)) {
+          recordProtocolActivity(method);
+          this.updateUserInputPauseFromNotification(method, params, raw.userInputPause);
+        }
         this.dispatchNotification(
           method,
           params,
@@ -370,7 +477,6 @@ export class CodexAppServerProtocol implements AgentProtocol {
 
     // Start the turn. Errors from the request itself are surfaced as fail.
     const turnInput = await this.buildInput(message);
-    let turnStartResultId: string | null = null;
     try {
       const turnStart = await raw.client.request<{ turn?: { id?: string } }>('turn/start', {
         threadId: raw.threadId,
@@ -378,6 +484,8 @@ export class CodexAppServerProtocol implements AgentProtocol {
       } as TurnStartParams);
       turnStartResultId = turnStart?.turn?.id ?? null;
       raw.activeTurnId = turnStartResultId;
+      raw.userInputPause.onStateChanged = onUserInputStateChanged;
+      recordProtocolActivity('turn/start');
     } catch (err) {
       const baseMsg = err instanceof Error ? err.message : String(err);
       yield {
@@ -422,6 +530,10 @@ export class CodexAppServerProtocol implements AgentProtocol {
         }
       }
     } finally {
+      stopWatchdog();
+      if (raw.userInputPause.onStateChanged === onUserInputStateChanged) {
+        raw.userInputPause.onStateChanged = undefined;
+      }
       for (const unsub of unsubscribers) {
         try { unsub(); } catch { /* noop */ }
       }
@@ -569,7 +681,11 @@ export class CodexAppServerProtocol implements AgentProtocol {
         warn: (m, ...a) => console.warn('[CODEX][APPSERVER]', m, ...a),
       },
     });
-    this.wireServerRequestHandlers(client);
+    const userInputPause: UserInputPauseState = {
+      requestCount: 0,
+      itemIds: new Set<string>(),
+    };
+    this.wireServerRequestHandlers(client, userInputPause);
     let initResponse: InitializeResponse;
     try {
       initResponse = await client.request<InitializeResponse>('initialize', {
@@ -593,6 +709,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
       initResponse,
       dynamicTools: this.extractDynamicTools(options),
       activeTurnId: null,
+      userInputPause,
       stderrTail,
       runtimeSource,
     };
@@ -712,7 +829,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
    * surface, etc.). Defaults are intentionally permissive to mirror today's
    * `approvalPolicy: 'never'` behavior in the SDK transport.
    */
-  private wireServerRequestHandlers(client: JsonRpcClient): void {
+  private wireServerRequestHandlers(client: JsonRpcClient, userInputPause: UserInputPauseState): void {
     const deny: ApprovalResponse = { decision: 'denied' };
     const allow: ApprovalResponse = { decision: 'approved' };
 
@@ -759,7 +876,16 @@ export class CodexAppServerProtocol implements AgentProtocol {
     });
 
     client.setServerRequestHandler('item/tool/requestUserInput', async (raw) => {
-      if (this.host.handleToolUserInput) return this.host.handleToolUserInput(raw);
+      if (this.host.handleToolUserInput) {
+        updateUserInputPause(userInputPause, () => { userInputPause.requestCount += 1; });
+        try {
+          return await this.host.handleToolUserInput(raw);
+        } finally {
+          updateUserInputPause(userInputPause, () => {
+            userInputPause.requestCount = Math.max(0, userInputPause.requestCount - 1);
+          });
+        }
+      }
       return null;
     });
 
@@ -771,6 +897,31 @@ export class CodexAppServerProtocol implements AgentProtocol {
       }
       return { isError: true, content: [{ type: 'text', text: `dynamic tool ${params.tool} not registered on host` }] };
     });
+  }
+
+  private updateUserInputPauseFromNotification(
+    method: string,
+    paramsUnknown: unknown,
+    userInputPause: UserInputPauseState,
+  ): void {
+    const item = (paramsUnknown as { item?: { id?: unknown; type?: unknown; tool?: unknown } } | undefined)?.item;
+    if (!item || typeof item.id !== 'string') return;
+
+    const itemType = typeof item.type === 'string' ? item.type : '';
+    const toolName = typeof item.tool === 'string'
+      ? item.tool
+      : item.tool && typeof item.tool === 'object'
+        ? (item.tool as { name?: unknown }).name
+        : undefined;
+    const asksForUserInput = isUserInputToolName(toolName)
+      || (itemType.toLowerCase().includes('userinput') && itemType.toLowerCase().includes('request'));
+
+    if (method === 'item/started' && asksForUserInput) {
+      updateUserInputPause(userInputPause, () => { userInputPause.itemIds.add(item.id as string); });
+    }
+    if (method === 'item/completed' && userInputPause.itemIds.has(item.id)) {
+      updateUserInputPause(userInputPause, () => { userInputPause.itemIds.delete(item.id as string); });
+    }
   }
 
   /**

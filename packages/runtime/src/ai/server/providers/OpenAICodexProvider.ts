@@ -1418,7 +1418,11 @@ export class OpenAICodexProvider extends BaseAgentProvider {
               break;
 
             case 'error':
-              yield { type: 'error', error: item.message };
+              yield {
+                type: 'error',
+                error: item.message,
+                isCodexWatchdogError: item.message === '引擎响应中断',
+              };
               break;
 
             case 'raw_event':

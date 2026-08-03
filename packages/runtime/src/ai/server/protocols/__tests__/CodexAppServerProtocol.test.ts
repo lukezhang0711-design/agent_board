@@ -50,6 +50,8 @@ describe('CodexAppServerProtocol', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
     if (!child.killed) child.kill();
   });
 
@@ -1217,5 +1219,117 @@ describe('CodexAppServerProtocol', () => {
       await iterator.return?.();
       protocol.cleanupSession(session);
     }
+  });
+
+  it('fails a turn that goes silent after item/started and logs the last protocol event', async () => {
+    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const protocol = new CodexAppServerProtocol();
+    child
+      .scriptResult('initialize', { codexHome: '/fake', platformFamily: 'unix', platformOs: 'macos', userAgent: 'fake/0' })
+      .scriptResult('thread/start', { thread: { id: 'thread-watchdog' } });
+    const session = await protocol.createSession({ workspacePath: '/tmp/ws' });
+    const events: ProtocolEvent[] = [];
+    const collector = (async () => {
+      for await (const event of protocol.sendMessage(session, { content: 'keep working', sessionId: 'session-watchdog' })) {
+        events.push(event);
+      }
+    })();
+
+    await nextWrittenMatching(child, 'turn/start');
+    vi.useFakeTimers();
+    child.emitLine({ id: child.requests('turn/start')[0].id, result: { turn: { id: 'turn-watchdog', items: [], status: 'inProgress' } } });
+    await vi.advanceTimersByTimeAsync(0);
+    child.emitLine({
+      method: 'item/started',
+      params: {
+        threadId: 'thread-watchdog',
+        turnId: 'turn-watchdog',
+        item: { id: 'item-watchdog', type: 'webSearch', status: 'inProgress', query: 'watchdog' },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(180_000);
+    await collector;
+
+    expect(events.find((event) => event.type === 'error')).toMatchObject({
+      error: '引擎响应中断',
+    });
+    expect(logSpy).toHaveBeenCalledWith(
+      '[CodexWatchdog] stalled sessionId=session-watchdog lastEvent=item/started silenceMs=180000',
+    );
+    protocol.cleanupSession(session);
+  }, 500);
+
+  it('does not fail while protocol events continue for ten minutes', async () => {
+    const protocol = new CodexAppServerProtocol();
+    child
+      .scriptResult('initialize', { codexHome: '/fake', platformFamily: 'unix', platformOs: 'macos', userAgent: 'fake/0' })
+      .scriptResult('thread/start', { thread: { id: 'thread-heartbeat' } });
+    const session = await protocol.createSession({ workspacePath: '/tmp/ws' });
+    const events: ProtocolEvent[] = [];
+    const collector = (async () => {
+      for await (const event of protocol.sendMessage(session, { content: 'keep thinking' })) events.push(event);
+    })();
+
+    const turnRequest = await nextWrittenMatching(child, 'turn/start');
+    vi.useFakeTimers();
+    child.emitLine({ id: turnRequest.id, result: { turn: { id: 'turn-heartbeat', items: [], status: 'inProgress' } } });
+    await vi.advanceTimersByTimeAsync(0);
+
+    for (let minute = 1; minute <= 10; minute += 1) {
+      await vi.advanceTimersByTimeAsync(60_000);
+      child.emitLine({
+        method: 'item/reasoning/textDelta',
+        params: { threadId: 'thread-heartbeat', turnId: 'turn-heartbeat', itemId: 'reasoning-1', delta: `minute ${minute}` },
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    child.emitTurnCompleted({
+      threadId: 'thread-heartbeat',
+      turn: { id: 'turn-heartbeat', status: 'completed' },
+    });
+    await collector;
+
+    expect(events.some((event) => event.type === 'error')).toBe(false);
+    expect(events.at(-1)).toMatchObject({ type: 'complete' });
+    protocol.cleanupSession(session);
+  });
+
+  it('does not fail while item/tool/requestUserInput is waiting for the user', async () => {
+    let resolveUserInput!: (value: unknown) => void;
+    const userInput = new Promise<unknown>((resolve) => { resolveUserInput = resolve; });
+    const protocol = new CodexAppServerProtocol({
+      host: { handleToolUserInput: () => userInput },
+    });
+    child
+      .scriptResult('initialize', { codexHome: '/fake', platformFamily: 'unix', platformOs: 'macos', userAgent: 'fake/0' })
+      .scriptResult('thread/start', { thread: { id: 'thread-user-input' } });
+    const session = await protocol.createSession({ workspacePath: '/tmp/ws' });
+    const events: ProtocolEvent[] = [];
+    const collector = (async () => {
+      for await (const event of protocol.sendMessage(session, { content: 'ask me' })) events.push(event);
+    })();
+
+    const turnRequest = await nextWrittenMatching(child, 'turn/start');
+    vi.useFakeTimers();
+    child.emitLine({ id: turnRequest.id, result: { turn: { id: 'turn-user-input', items: [], status: 'inProgress' } } });
+    await vi.advanceTimersByTimeAsync(0);
+    child.emitLine({
+      id: 'request-user-input-1',
+      method: 'item/tool/requestUserInput',
+      params: { threadId: 'thread-user-input', turnId: 'turn-user-input', question: 'Continue?' },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(180_000);
+
+    expect(events.some((event) => event.type === 'error')).toBe(false);
+    resolveUserInput({ answer: 'yes' });
+    await vi.advanceTimersByTimeAsync(0);
+    child.emitTurnCompleted({
+      threadId: 'thread-user-input',
+      turn: { id: 'turn-user-input', status: 'completed' },
+    });
+    await collector;
+    protocol.cleanupSession(session);
   });
 });

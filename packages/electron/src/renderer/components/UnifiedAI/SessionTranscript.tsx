@@ -1540,6 +1540,44 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     }
   }, [sessionId, sessionData, isLoading, getEffectiveDocumentContext, aiMode, workspacePath, setDraftInput, setDraftAttachments, setLastSubmitAt, resetHistory, updateSessionStore, handleQueue, setIsProcessing, messages, sessionHasMessages, startedCliSessionId, mode, onClearSession, onClearAgentSession, clearAIInputHistory, provider, recordClaudeActivity]);
 
+  const handleCodexWatchdogRetry = useCallback(async () => {
+    const lastUserMessage = [...messages].reverse().find(
+      (message) => message.type === 'user_message' && typeof message.text === 'string' && message.text.trim().length > 0,
+    );
+    if (!lastUserMessage || isLoading) return;
+
+    setIsProcessing(true);
+    try {
+      const effectiveContext = await getEffectiveDocumentContext();
+      const attachments = lastUserMessage.attachments;
+      const docContext = {
+        ...serializeDocumentContext(effectiveContext),
+        attachments: attachments && attachments.length > 0 ? attachments : undefined,
+        mode: lastUserMessage.mode,
+        inputType: 'user' as const,
+      };
+      await window.electronAPI.invoke(
+        'ai:sendMessage',
+        lastUserMessage.text,
+        docContext,
+        sessionId,
+        workspacePath,
+      );
+      recordCodexActivity();
+    } catch (error) {
+      console.error('[SessionTranscript] Failed to retry stalled Codex turn:', error);
+      updateSessionStore({
+        sessionId,
+        updates: {
+          messages: [...messages, makeOptimisticError(
+            `Error: ${error instanceof Error ? error.message : 'Failed to retry the Codex request'}`,
+          )],
+        },
+      });
+      setIsProcessing(false);
+    }
+  }, [messages, isLoading, setIsProcessing, getEffectiveDocumentContext, sessionId, workspacePath, recordCodexActivity, updateSessionStore]);
+
   // Launch a sibling session from a `launch: new-session` action prompt.
   // Builds the originating-session mention prefix here (in the renderer) so the
   // main process doesn't have to know about session titles or shortIds, and
@@ -2814,6 +2852,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             onOpenInExternalEditor={hasExternalEditor ? handleOpenInExternalEditor : undefined}
             externalEditorName={externalEditorName}
             onCompact={handleCompact}
+            onRetry={handleCodexWatchdogRetry}
             promptAdditions={showPromptAdditions ? promptAdditions : null}
             currentTeammates={transcriptTeammates}
             waitingForNoun={waitingForNoun}

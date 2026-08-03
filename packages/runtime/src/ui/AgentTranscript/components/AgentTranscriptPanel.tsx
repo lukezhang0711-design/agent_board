@@ -86,6 +86,8 @@ interface AgentTranscriptPanelProps {
   externalEditorName?: string;
   /** Optional: Callback to trigger /compact command */
   onCompact?: () => void;
+  /** Optional: Retry the prompt that produced a recoverable Codex error. */
+  onRetry?: () => void;
   /** Optional: Prompt additions for debugging (system prompt, user message, and attachments) */
   promptAdditions?: {
     systemPromptAddition: string | null;
@@ -144,6 +146,7 @@ const AgentTranscriptPanelComponent = React.forwardRef<
   onOpenInExternalEditor,
   externalEditorName,
   onCompact,
+  onRetry,
   promptAdditions,
   appStartTime,
   renderEmbeddedFile,
@@ -383,6 +386,7 @@ const AgentTranscriptPanelComponent = React.forwardRef<
           onOpenFile={onFileClick}
           onOpenSession={onOpenSession}
           onCompact={onCompact}
+          onRetry={onRetry}
           promptAdditions={promptAdditions}
           currentTeammates={currentTeammates ?? sessionData.metadata?.currentTeammates as Array<{ agentId: string; status: 'running' | 'completed' | 'errored' | 'idle' }> | undefined}
           waitingForNoun={waitingForNoun}

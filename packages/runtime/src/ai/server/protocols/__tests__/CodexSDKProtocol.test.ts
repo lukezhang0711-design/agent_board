@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { CodexSDKProtocol } from '../CodexSDKProtocol';
 
 function createAsyncEventStream(events: any[]): AsyncIterable<any> {
@@ -15,6 +15,10 @@ function createAsyncEventStream(events: any[]): AsyncIterable<any> {
 }
 
 describe('CodexSDKProtocol', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
   it('delivers the session abort signal to runStreamed and preserves its abort event', async () => {
     const abortController = new AbortController();
     let receivedSignal: AbortSignal | undefined;
@@ -326,5 +330,135 @@ describe('CodexSDKProtocol', () => {
     } finally {
       await fs.unlink(tmpFile).catch(() => {});
     }
+  });
+
+  it('fails a turn that goes silent after item.started and logs the last protocol event', async () => {
+    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const events = {
+      async *[Symbol.asyncIterator]() {
+        yield {
+          type: 'item.started',
+          item: { id: 'item-watchdog', type: 'web_search', query: 'watchdog' },
+        };
+        await new Promise<void>(() => {});
+      },
+    };
+    const protocol = new CodexSDKProtocol(
+      'test-key',
+      async () => ({
+        Codex: class {
+          startThread = vi.fn(() => ({ id: 'thread-watchdog', runStreamed: vi.fn(async () => ({ events })) }));
+          resumeThread = vi.fn();
+        },
+      }) as any,
+    );
+    const session = await protocol.createSession({ workspacePath: process.cwd() });
+    const emitted: any[] = [];
+    vi.useFakeTimers();
+    const collector = (async () => {
+      for await (const event of protocol.sendMessage(session, { content: 'keep working', sessionId: 'session-watchdog' })) {
+        emitted.push(event);
+      }
+    })();
+
+    await vi.advanceTimersByTimeAsync(180_000);
+    await collector;
+
+    expect(emitted.find((event) => event.type === 'error')).toMatchObject({
+      error: '引擎响应中断',
+    });
+    expect(logSpy).toHaveBeenCalledWith(
+      '[CodexWatchdog] stalled sessionId=session-watchdog lastEvent=item.started silenceMs=180000',
+    );
+  }, 500);
+
+  it('does not fail while SDK protocol events continue for ten minutes', async () => {
+    const events = {
+      async *[Symbol.asyncIterator]() {
+        yield { type: 'item.started', item: { id: 'heartbeat', type: 'web_search', query: 'watchdog' } };
+        for (let minute = 1; minute <= 10; minute += 1) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 60_000));
+          yield { type: 'item.updated', item: { id: 'reasoning', type: 'reasoning', text: `minute ${minute}` } };
+        }
+      },
+    };
+    const runStreamed = vi.fn(async () => ({ events }));
+    const protocol = new CodexSDKProtocol(
+      'test-key',
+      async () => ({
+        Codex: class {
+          startThread = vi.fn(() => ({ id: 'thread-heartbeat', runStreamed }));
+          resumeThread = vi.fn();
+        },
+      }) as any,
+    );
+    const session = await protocol.createSession({ workspacePath: process.cwd() });
+    const emitted: any[] = [];
+    vi.useFakeTimers();
+    const collector = (async () => {
+      for await (const event of protocol.sendMessage(session, { content: 'keep thinking' })) emitted.push(event);
+    })();
+
+    await vi.advanceTimersByTimeAsync(0);
+    for (let minute = 1; minute <= 10; minute += 1) {
+      await vi.advanceTimersByTimeAsync(60_000);
+    }
+    await collector;
+
+    expect(emitted.some((event) => event.type === 'error')).toBe(false);
+    expect(emitted.at(-1)).toMatchObject({ type: 'complete' });
+  });
+
+  it('does not fail while SDK request_user_input is waiting for the user', async () => {
+    let releaseUserInput!: () => void;
+    const userInput = new Promise<void>((resolve) => { releaseUserInput = resolve; });
+    const events = {
+      async *[Symbol.asyncIterator]() {
+        yield {
+          type: 'item.started',
+          item: {
+            id: 'request-input',
+            type: 'mcp_tool_call',
+            server: 'nimbalyst-mcp',
+            tool: 'AskUserQuestion',
+            arguments: { questions: [] },
+          },
+        };
+        await userInput;
+        yield {
+          type: 'item.completed',
+          item: {
+            id: 'request-input',
+            type: 'mcp_tool_call',
+            server: 'nimbalyst-mcp',
+            tool: 'AskUserQuestion',
+            arguments: { questions: [] },
+            result: { answers: {} },
+          },
+        };
+      },
+    };
+    const protocol = new CodexSDKProtocol(
+      'test-key',
+      async () => ({
+        Codex: class {
+          startThread = vi.fn(() => ({ id: 'thread-user-input', runStreamed: vi.fn(async () => ({ events })) }));
+          resumeThread = vi.fn();
+        },
+      }) as any,
+    );
+    const session = await protocol.createSession({ workspacePath: process.cwd() });
+    const emitted: any[] = [];
+    vi.useFakeTimers();
+    const collector = (async () => {
+      for await (const event of protocol.sendMessage(session, { content: 'ask me' })) emitted.push(event);
+    })();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(emitted.some((event) => event.type === 'error')).toBe(false);
+    releaseUserInput();
+    await vi.advanceTimersByTimeAsync(0);
+    await collector;
   });
 });

@@ -172,6 +172,30 @@ describe('MessageSegment', () => {
     expect(errorDiv).not.toBeNull();
   });
 
+  it('renders the Codex watchdog error card and retries on one click', () => {
+    const onRetry = vi.fn();
+    const message = makeMessage({
+      type: 'assistant_message',
+      text: 'Error: 引擎响应中断',
+      isError: true,
+    });
+    render(
+      <MessageSegment
+        message={message}
+        isUser={false}
+        showToolCalls={false}
+        showThinking={false}
+        expandedTools={new Set()}
+        onToggleToolExpand={() => {}}
+        onRetry={onRetry}
+      />
+    );
+
+    expect(screen.getByTestId('codex-watchdog-error-card')).toBeDefined();
+    fireEvent.click(screen.getByTestId('codex-watchdog-retry'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
   it('renders the Codex auth required CTA when isCodexAuthRequired is set', () => {
     const message = makeMessage({
       type: 'system_message',
