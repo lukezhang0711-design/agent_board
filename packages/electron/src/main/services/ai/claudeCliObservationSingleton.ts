@@ -60,6 +60,18 @@ import { getSyncProvider, isDesktopTrulyAway } from '../SyncManager';
 import { AISessionsRepository } from '@nimbalyst/runtime';
 import type { AssembledAssistantMessage } from './claudeCliObservation/claudeApiMessageAssembler';
 
+// In-memory marker closes the race between the CLI's idle callback and the
+// health service deleting its temporary session row.
+const channelHealthSessionIds = new Set<string>();
+
+export function markClaudeCliChannelHealthSession(sessionId: string): void {
+  channelHealthSessionIds.add(sessionId);
+}
+
+export function clearClaudeCliChannelHealthSession(sessionId: string): void {
+  channelHealthSessionIds.delete(sessionId);
+}
+
 /** Read the actual model already attached to an assembled upstream SSE turn. */
 export function extractResolvedClaudeCliModel(message: unknown): string | null {
   if (!message || typeof message !== 'object') return null;
@@ -136,6 +148,12 @@ async function notifyClaudeCliTurnComplete(
  * there's no observed summary (terminal-only mode / a turn that produced nothing).
  */
 export function fireClaudeCliTurnCompletion(sessionId: string, workspacePath: string): void {
+  if (channelHealthSessionIds.has(sessionId)) {
+    // ChannelHealthService consumes the existing assistant-turn receipt to
+    // measure first response. Leave it available until that isolated service
+    // reads it, then it clears the entry during cleanup.
+    return;
+  }
   const summary = takeClaudeCliTurnSummary(sessionId);
   if (!summary) return;
   void notifyClaudeCliTurnComplete(sessionId, workspacePath, summary.lastAssistantText);

@@ -226,6 +226,11 @@ export const SETTINGS_REGISTRY = {
     { store: 'ai-settings', path: 'showGeminiUsageIndicator' },
     true,
   ),
+  'ai.channelHealth.autoCheckOnStartup': setting(
+    z.boolean(),
+    { store: 'ai-settings', path: 'channelHealth.autoCheckOnStartup' },
+    true,
+  ),
 } as const;
 
 type StaticSettingKey = keyof typeof SETTINGS_REGISTRY;

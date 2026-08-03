@@ -574,6 +574,115 @@ describe('child session event hidden delivery channel', () => {
     ]);
   });
 
+  it('keeps a failed channel-health send isolated from the next ordinary handler send', async () => {
+    const healthSessionId = 'health-failure-isolation';
+    const normalSessionId = 'normal-after-health-failure';
+    const healthPrompt = 'Reply with one word: pong';
+    await AISessionsRepository.create({
+      id: healthSessionId,
+      provider: 'openai',
+      workspaceId: '/workspace',
+      title: 'Health check',
+    });
+    await AISessionsRepository.create({
+      id: normalSessionId,
+      provider: 'openai',
+      workspaceId: '/workspace',
+      title: 'Normal session',
+    });
+
+    const modelInputs: string[] = [];
+    const provider = {
+      initialize: vi.fn().mockResolvedValue(undefined),
+      registerToolHandler: vi.fn(),
+      async *sendMessage(message: string) {
+        modelInputs.push(message);
+        if (message === healthPrompt) {
+          yield { type: 'error', error: 'not logged in' };
+          return;
+        }
+        yield { type: 'text', content: 'ordinary response' };
+      },
+    };
+    handlerTestState.provider = provider;
+
+    const addMessage = vi.fn().mockResolvedValue(undefined);
+    const analytics = { sendEvent: vi.fn() };
+    const sessionManager = {
+      loadSession: vi.fn(async (sessionId: string) => ({
+        id: sessionId,
+        provider: 'openai',
+        workspacePath: '/workspace',
+        title: sessionId === healthSessionId ? 'Health check' : 'Normal session',
+        messages: [],
+        metadata: {},
+        providerConfig: {},
+      })),
+      addMessage,
+      updateSessionTitle: vi.fn().mockResolvedValue(undefined),
+      updateProviderSessionData: vi.fn().mockResolvedValue(undefined),
+    };
+    const handler = new MessageStreamingHandler({
+      sessionManager,
+      analytics,
+      sendMessageHandler: null,
+      processingQueuedPromptIds: new Set<string>(),
+      matchDebounceTimers: new Map(),
+      sessionsProcessingQueue: new Set<string>(),
+      documentContextService: {
+        prepareContext: () => ({ documentContext: {}, userMessageAdditions: {} }),
+      },
+      hooklessWatcher: {
+        ensureForSession: vi.fn().mockResolvedValue(undefined),
+        stopForSession: vi.fn().mockResolvedValue(undefined),
+        scheduleStop: vi.fn(),
+      },
+      getSettingsStore: () => ({ get: vi.fn() }),
+      getApiKeyForProvider: () => undefined,
+      buildClaudeCodeRuntimeConfig: vi.fn(),
+      continueQueuedPromptChain: vi.fn(),
+      tryDispatchNextQueuedPrompt: vi.fn(),
+      isSessionQueuePaused: vi.fn().mockResolvedValue(false),
+      runAutoContextCommand: vi.fn(),
+      createToolHandler: () => ({}),
+      inferWorktreePathFromFilePath: () => null,
+      inferWorktreePathFromCommand: () => null,
+      adoptWorktreeForSession: vi.fn(),
+    } as any);
+
+    try {
+      await expect(handler.handle(
+        { sender: { id: 1 } } as any,
+        healthPrompt,
+        { channelHealthCheck: { onFirstResponse: vi.fn() } } as any,
+        healthSessionId,
+        '/workspace',
+      )).rejects.toThrow('not logged in');
+
+      await expect(handler.handle(
+        { sender: { id: 1 } } as any,
+        'ordinary user message',
+        {} as any,
+        normalSessionId,
+        '/workspace',
+      )).resolves.toEqual({ content: 'ordinary response' });
+    } finally {
+      handler.destroy();
+    }
+
+    expect(modelInputs).toEqual([healthPrompt, 'ordinary user message']);
+    expect(addMessage).toHaveBeenCalledTimes(1);
+    expect(addMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'user', content: 'ordinary user message' }),
+      normalSessionId,
+    );
+    expect(analytics.sendEvent).toHaveBeenCalledWith(
+      'ai_message_sent',
+      expect.objectContaining({ provider: 'openai' }),
+    );
+    expect(handlerTestState.stateManager.startSession).toHaveBeenCalledTimes(1);
+  });
+
   it('preserves a dispatch-sourced title and named flag through the first user message', async () => {
     const result = await runFirstMessageTitleCase({
       sessionId: 'dispatch-title-session',

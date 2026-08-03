@@ -119,6 +119,12 @@ export type SendMessageHandler = (
   workspacePath?: string,
 ) => Promise<{ content: string }>;
 
+type ChannelHealthDocumentContext = DocumentContext & {
+  channelHealthCheck?: {
+    onFirstResponse?: (elapsedMs: number) => void;
+  };
+};
+
 type ProviderMessageLogger = (
   sessionId: string,
   source: string,
@@ -355,6 +361,9 @@ export class MessageStreamingHandler {
     sessionId?: string,
     workspacePath?: string,
   ) => {
+    const channelHealthCheck = (documentContext as ChannelHealthDocumentContext | undefined)
+      ?.channelHealthCheck;
+    const isChannelHealthCheck = channelHealthCheck !== undefined;
     // Check for queued prompt deduplication - prevents duplicate execution from multiple renderer panels
     const queuedPromptId = (documentContext as any)?.queuedPromptId as string | undefined;
     const isChildSessionEvent = queuedPromptId !== undefined
@@ -372,7 +381,9 @@ export class MessageStreamingHandler {
     }
 
     // Track prompt submission in feature usage system
-    FeatureUsageService.getInstance().recordUsage(FEATURES.AI_PROMPT_SUBMITTED);
+    if (!isChannelHealthCheck) {
+      FeatureUsageService.getInstance().recordUsage(FEATURES.AI_PROMPT_SUBMITTED);
+    }
 
     // Extract attachments from documentContext if present
     // Mobile attachments arrive as EncryptedAttachment[] (with encryptedData/iv fields)
@@ -440,7 +451,7 @@ export class MessageStreamingHandler {
     // For worktree sessions, use the parent project path for permission lookups
     // This is passed through documentContext to avoid changing sendMessage signature
     let permissionsPath = session.worktreeProjectPath || effectiveWorkspacePath;
-    if (isAgentProvider(session.provider)) {
+    if (!isChannelHealthCheck && isAgentProvider(session.provider)) {
       await this.svc.hooklessWatcher.ensureForSession(session.id, effectiveWorkspacePath);
     }
 
@@ -469,7 +480,7 @@ export class MessageStreamingHandler {
     perfLog.provider = session.provider;
     perfLog.model = session.model || 'default';
 
-    if (!isChildSessionEvent) {
+    if (!isChildSessionEvent && !isChannelHealthCheck) {
       // Add user message to session (include attachments if present)
       const userMessage: Message = {
         role: 'user',
@@ -688,6 +699,12 @@ export class MessageStreamingHandler {
           console.error('[CLAUDE-CODE-SERVICE] Init config was:', reinitConfig);
         }
 
+        // A health check must report the transport error to its isolated
+        // caller, not turn it into a temporary conversation message.
+        if (isChannelHealthCheck) {
+          throw initError;
+        }
+
         // Add provider initialization error as an assistant message in the conversation
         // This provides better UX than showing a generic "Failed to load session" error
         const errorMessage: Message = {
@@ -779,7 +796,7 @@ export class MessageStreamingHandler {
     // renderer's session registry holds only the visible project's
     // sessions, so it can't always resolve the path on its own.
     const onMessageLogged = (data: { sessionId: string; direction: string; hidden?: boolean }) => {
-      if (data.hidden) return;
+      if (isChannelHealthCheck || data.hidden) return;
       safeSend(event, 'ai:message-logged', { ...data, workspacePath: effectiveWorkspacePath });
     };
     // Replace this handler's previous 'message:logged' subscription only,
@@ -790,6 +807,7 @@ export class MessageStreamingHandler {
     // path) to all renderers so the session list updates in real time.
     // Mirrors the broadcast that SessionNamingService does for the MCP-tool path.
     const onSessionTitleUpdated = (data: { sessionId: string; title: string }) => {
+      if (isChannelHealthCheck) return;
       for (const window of BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) {
           window.webContents.send('session:title-updated', data);
@@ -804,6 +822,7 @@ export class MessageStreamingHandler {
     // the MCP-tool path so direct repo writes from the provider do not bypass
     // the kanban refresh and iOS push.
     const onSessionMetadataUpdated = (data: { sessionId: string; metadata: Record<string, unknown> }) => {
+      if (isChannelHealthCheck) return;
       for (const window of BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) {
           window.webContents.send('sessions:session-updated', data.sessionId, data.metadata);
@@ -1094,54 +1113,62 @@ export class MessageStreamingHandler {
     this.installListener(provider, 'teammates:allCompleted', onTeammatesAllCompleted);
 
     // Track user @ mentions in the message
-    try {
-      await sessionFileTracker.trackUserMessage(
-        session.id,
-        effectiveWorkspacePath,
-        message,
-        session.messages.length // Current message index
-      );
-      // Notify renderer that files were tracked (if message had @ mentions)
-      if (message.includes('@')) {
-        safeSend(event, 'session-files:updated', session.id);
+    if (!isChannelHealthCheck) {
+      try {
+        await sessionFileTracker.trackUserMessage(
+          session.id,
+          effectiveWorkspacePath,
+          message,
+          session.messages.length // Current message index
+        );
+        // Notify renderer that files were tracked (if message had @ mentions)
+        if (message.includes('@')) {
+          safeSend(event, 'session-files:updated', session.id);
+        }
+      } catch (error) {
+        logger.main.warn('[AIService] Failed to track user @ mentions:', error);
       }
-    } catch (error) {
-      logger.main.warn('[AIService] Failed to track user @ mentions:', error);
     }
 
     // Track ai_message_sent analytics event
-    const slashCommandInfo = detectNimbalystSlashCommand(message, effectiveWorkspacePath);
+    const slashCommandInfo = isChannelHealthCheck
+      ? null
+      : detectNimbalystSlashCommand(message, effectiveWorkspacePath);
     const contentMode = (documentContext as any)?.contentMode;
     const fileExtension = getFileExtensionForAnalytics(documentContext?.filePath);
-    this.svc.analytics.sendEvent('ai_message_sent', {
-      provider: session.provider,
-      hasDocumentContext: !!documentContext,
-      hasAttachments: !!(attachments && attachments.length > 0),
-      attachmentCount: attachments?.length || 0,
-      messageLength: bucketMessageLength(message.length),
-      contentMode: contentMode || 'unknown',
-      // Include session mode (planning/agent) when available
-      ...(session.mode && { sessionMode: session.mode }),
-      // Include file extension when document context is present
-      ...(fileExtension && { fileExtension }),
-      // Slash command tracking - only included if a Nimbalyst package command was used
-      ...(slashCommandInfo && {
-        usedSlashCommand: true,
-        slashCommandName: slashCommandInfo.commandName,
-        slashCommandPackageId: slashCommandInfo.packageId,
-      }),
-    });
+    if (!isChannelHealthCheck) {
+      this.svc.analytics.sendEvent('ai_message_sent', {
+        provider: session.provider,
+        hasDocumentContext: !!documentContext,
+        hasAttachments: !!(attachments && attachments.length > 0),
+        attachmentCount: attachments?.length || 0,
+        messageLength: bucketMessageLength(message.length),
+        contentMode: contentMode || 'unknown',
+        // Include session mode (planning/agent) when available
+        ...(session.mode && { sessionMode: session.mode }),
+        // Include file extension when document context is present
+        ...(fileExtension && { fileExtension }),
+        // Slash command tracking - only included if a Nimbalyst package command was used
+        ...(slashCommandInfo && {
+          usedSlashCommand: true,
+          slashCommandName: slashCommandInfo.commandName,
+          slashCommandPackageId: slashCommandInfo.packageId,
+        }),
+      });
+    }
 
     // Mark session as running/active
     const stateManager = getSessionStateManager();
-    await stateManager.startSession({
-      sessionId: session.id,
-      workspacePath: session.workspacePath || effectiveWorkspacePath,
-    });
+    if (!isChannelHealthCheck) {
+      await stateManager.startSession({
+        sessionId: session.id,
+        workspacePath: session.workspacePath || effectiveWorkspacePath,
+      });
+    }
 
     // Mark session as executing for mobile sync (shows "Running" indicator)
     const syncProvider = getSyncProvider();
-    if (syncProvider) {
+    if (!isChannelHealthCheck && syncProvider) {
       syncProvider.pushChange(session.id, {
         type: 'metadata_updated',
         metadata: { isExecuting: true } as any,
@@ -1171,13 +1198,15 @@ export class MessageStreamingHandler {
       const streamStartTime = Date.now();
 
       // Send performance metrics to renderer
-      safeSend(event, 'ai:performanceMetrics', {
-        phase: 'start',
-        provider: session.provider,
-        model: session.model || 'default',
-        messageLength: message.length,
-        contextMessages: sessionMessages.length
-      });
+      if (!isChannelHealthCheck) {
+        safeSend(event, 'ai:performanceMetrics', {
+          phase: 'start',
+          provider: session.provider,
+          model: session.model || 'default',
+          messageLength: message.length,
+          contextMessages: sessionMessages.length
+        });
+      }
 
       // Stream the response
       const isClaudeCode = session.provider === 'claude-code';
@@ -1287,7 +1316,7 @@ export class MessageStreamingHandler {
 
       // Update MCP document state for Claude Code provider so it knows which tools to show
       // Always update with workspacePath, even if no file is open, so global-scoped tools are available
-      if (isClaudeCode && effectiveWorkspacePath) {
+      if (!isChannelHealthCheck && isClaudeCode && effectiveWorkspacePath) {
         const { updateDocumentState, registerWorkspaceWindow } = await import('../../mcp/httpServer');
         updateDocumentState({
           filePath: contextWithSession?.filePath,
@@ -1305,7 +1334,7 @@ export class MessageStreamingHandler {
 
       // Start file snapshot cache + watcher for agentic sessions (diff support)
       // Only start once per session; persists across turns
-      if (isAgentProvider(session.provider)
+      if (!isChannelHealthCheck && isAgentProvider(session.provider)
         && effectiveWorkspacePath
       ) {
         try {
@@ -1315,7 +1344,7 @@ export class MessageStreamingHandler {
         }
       }
 
-      if (session.provider === 'openai-codex' && effectiveWorkspacePath) {
+      if (!isChannelHealthCheck && session.provider === 'openai-codex' && effectiveWorkspacePath) {
         try {
           await getAgentWorkflowService(effectiveWorkspacePath).ensureCodexExports();
         } catch (workflowError) {
@@ -1352,7 +1381,9 @@ export class MessageStreamingHandler {
       const isStandardExtensionSession =
         isExtensionAgentSession && session.agentRole !== 'meta-agent';
       const extensionAgentTools =
-        isMetaAgentExtensionSession &&
+        isChannelHealthCheck
+          ? undefined
+          : isMetaAgentExtensionSession &&
         MetaAgentService.getInstance().getPort() !== null &&
         session.id &&
         effectiveWorkspacePath
@@ -1386,7 +1417,9 @@ export class MessageStreamingHandler {
           ? rawWorkflowPreset
           : 'default';
       const extensionAgentSystemPrompt =
-        isMetaAgentExtensionSession
+        isChannelHealthCheck
+          ? undefined
+          : isMetaAgentExtensionSession
           ? buildMetaAgentSystemPrompt('codex', extensionWorkflowPreset, {
               provider: session.provider,
               model: session.model ?? undefined,
@@ -1414,16 +1447,24 @@ export class MessageStreamingHandler {
         if (!firstChunkTime) {
           firstChunkTime = Date.now();
           perfLog.timeToFirstChunk = firstChunkTime - startTime;
+          channelHealthCheck?.onFirstResponse?.(perfLog.timeToFirstChunk);
 
           // Send first chunk metrics
-          safeSend(event, 'ai:performanceMetrics', {
-            phase: 'firstChunk',
-            timeToFirstChunk: perfLog.timeToFirstChunk
-          });
+          if (!isChannelHealthCheck) {
+            safeSend(event, 'ai:performanceMetrics', {
+              phase: 'firstChunk',
+              timeToFirstChunk: perfLog.timeToFirstChunk
+            });
+          }
+        }
+        if (isChannelHealthCheck && chunk.type !== 'text' && chunk.type !== 'complete' && chunk.type !== 'error') {
+          // A fixed one-word smoke check must never be allowed to execute a
+          // tool or mutate the workspace simply because an engine ignored it.
+          throw new Error(`Channel health check received unexpected ${chunk.type} chunk`);
         }
         switch (chunk.type) {
           case 'text':
-            if (chunk.isSystem && session.provider === 'openai-codex') {
+            if (!isChannelHealthCheck && chunk.isSystem && session.provider === 'openai-codex') {
               await notificationService.showNotification({
                 title: 'Codex Runtime', body: chunk.content || '系统版 Codex 不兼容，已回退内置版',
                 sessionId: session.id, workspacePath, provider: session.provider,
@@ -1436,7 +1477,7 @@ export class MessageStreamingHandler {
             lastTextSection += chunkContent;  // Accumulate for notification (reset on tool calls)
 
             // Update activity to indicate streaming
-            if (textChunks === 1) {
+            if (!isChannelHealthCheck && textChunks === 1) {
               await stateManager.updateActivity({
                 sessionId: session.id,
                 isStreaming: true
@@ -1445,11 +1486,13 @@ export class MessageStreamingHandler {
             // if (isClaudeCode && textChunks <= 5) {
             // }
             // Send ACCUMULATED response to renderer (not just the chunk)
-            safeSend(event, 'ai:streamResponse', {
-              sessionId: session.id,
-              partial: fullResponse,  // Send the full accumulated text
-              isComplete: false
-            });
+            if (!isChannelHealthCheck) {
+              safeSend(event, 'ai:streamResponse', {
+                sessionId: session.id,
+                partial: fullResponse,  // Send the full accumulated text
+                isComplete: false
+              });
+            }
             break;
 
           case 'pre_edit_snapshot':
@@ -2053,6 +2096,10 @@ export class MessageStreamingHandler {
             }
             console.error(`${logPrefix} Provider error:`, chunk.error || 'Unknown error');
 
+            if (isChannelHealthCheck) {
+              throw new Error(chunk.error || 'Provider reported a channel health error');
+            }
+
             // The Codex protocol watchdog has detected a stream that stopped
             // producing events. Throw into the established catch/finalization
             // path so the session is marked failed and all normal recovery UI
@@ -2116,6 +2163,16 @@ export class MessageStreamingHandler {
             break;
 
           case 'complete':
+            if (isChannelHealthCheck) {
+              const completedContent = fullResponse || chunk.content || '';
+              if (!completedContent.trim()) {
+                throw new Error('Channel health check completed without text');
+              }
+              // Deliberately return before normal transcript, analytics,
+              // notification, and queue-completion side effects. The caller
+              // owns this ephemeral session and deletes it in a finally block.
+              return { content: completedContent };
+            }
             // if (isClaudeCode) {
             // }
             perfLog.totalTime = Date.now() - startTime;
@@ -2688,6 +2745,13 @@ export class MessageStreamingHandler {
       }
 
       console.error(`${logPrefix} Error after ${errorTime}ms:`, error);
+
+      if (isChannelHealthCheck) {
+        // The service records only a classified, prompt-free failure. Do not
+        // mutate user-visible session state or emit normal error UI for the
+        // ephemeral smoke-test session.
+        throw error;
+      }
 
       // Track AI request failure (only if we have session info)
       if (session) {

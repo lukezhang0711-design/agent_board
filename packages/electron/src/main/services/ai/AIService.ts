@@ -113,11 +113,35 @@ import {
   categorizeAIError,
 } from './aiServiceUtils';
 import { MessageStreamingHandler } from './MessageStreamingHandler';
+import {
+  CHANNEL_HEALTH_TIMEOUT_MS,
+  ChannelHealthError,
+  ChannelHealthService,
+  type ChannelHealthChannel,
+  type ChannelHealthRunContext,
+  type ChannelHealthTransportResult,
+} from './ChannelHealthService';
 import { HooklessAgentFileWatcher } from './HooklessAgentFileWatcher';
 import { getAgentWorkflowService } from '../AgentWorkflowService';
 import { tryClaimAndDispatchNextQueuedPrompt } from './queuedPromptDispatcher';
 import { dispatchQueuedPromptToClaudeCli } from './claudeCliQueueDispatch';
-import { ensureClaudeCliSession, claudeCliSessionSupportsPlugins } from './claudeCliLauncherSingleton';
+import {
+  claudeCliSessionSupportsPlugins,
+  ensureClaudeCliSession,
+} from './claudeCliLauncherSingleton';
+import {
+  clearClaudeCliQueueAuthPrecheck,
+  getClaudeCliQueueAuthPrecheck,
+} from './ClaudeCliSessionLauncher';
+import { submitClaudeCliPromptProduction } from './claudeCliSubmitSingleton';
+import {
+  clearClaudeCliChannelHealthSession,
+  markClaudeCliChannelHealthSession,
+} from './claudeCliObservationSingleton';
+import {
+  clearClaudeCliTurnSummary,
+  takeClaudeCliTurnSummary,
+} from './claudeCliTurnSummary';
 import { supportsWorkspaceSlashWorkflowProvider } from '../../../shared/agentWorkflowProviders';
 import {
   cancelRequestWithQueueSemantics,
@@ -322,12 +346,21 @@ export class AIService {
 
   // Owns the streaming send-message lifecycle (extracted from setupIpcHandlers).
   private streamingHandler: MessageStreamingHandler;
+  private readonly channelHealthService: ChannelHealthService;
+  private startupChannelHealthScheduled = false;
   private readonly codexModelRefreshService: CodexModelRefreshService;
 
   constructor(sessionStore: SessionStore) {
     logger.main.info('[AIService] Constructor called');
     this.sessionManager = new SessionManager(sessionStore);
     this.streamingHandler = new MessageStreamingHandler(this);
+    this.channelHealthService = new ChannelHealthService({
+      listEnabledChannels: () => this.listEnabledChannelHealthChannels(),
+      runChannel: (input) => this.runChannelHealthPrompt(input),
+      isAutoCheckEnabled: () =>
+        getSettingsService().get('ai.channelHealth.autoCheckOnStartup') === true,
+      log: (line) => logger.main.info(line),
+    });
 
     const settingsDirectory = path.dirname(this.getSettingsStore().path);
     this.codexModelRefreshService = new CodexModelRefreshService({
@@ -407,6 +440,327 @@ export class AIService {
     const cleaned = this.sessionManager.cleanupAllSessions();
     if (cleaned > 0) {
       console.log(`[AIService] Cleaned ${cleaned} empty messages from existing sessions on startup`);
+    }
+  }
+
+  /**
+   * Schedule one background pass after boot has a real workspace window.
+   * A workspace can be restored asynchronously, so retry briefly instead of
+   * treating a splash/document-only window as a provider failure.
+   */
+  public scheduleStartupChannelHealthCheck(
+    resolveContext: () => ChannelHealthRunContext | null,
+  ): void {
+    if (this.startupChannelHealthScheduled) return;
+    this.startupChannelHealthScheduled = true;
+
+    const deadline = Date.now() + 60_000;
+    const attempt = async (): Promise<void> => {
+      if (getSettingsService().get('ai.channelHealth.autoCheckOnStartup') !== true) {
+        logger.main.info('[ChannelHealth] {"event":"startup-skipped","reason":"disabled"}');
+        return;
+      }
+      const context = resolveContext();
+      if (!context) {
+        if (Date.now() < deadline) {
+          setTimeout(() => void attempt(), 1_000);
+        } else {
+          logger.main.info('[ChannelHealth] {"event":"startup-skipped","reason":"no-workspace"}');
+        }
+        return;
+      }
+      try {
+        await this.channelHealthService.runOnStartup(context);
+      } catch (error) {
+        // Health checks are explicitly isolated from normal conversation
+        // routing. A scheduler failure is observable but never fatal to boot.
+        logger.main.error('[ChannelHealth] startup run failed', error);
+      }
+    };
+
+    setTimeout(() => void attempt(), 1_500);
+  }
+
+  private listEnabledChannelHealthChannels(): ChannelHealthChannel[] {
+    const providerSettings = this.getNormalizedProviderSettings();
+    const builtIns: Array<ChannelHealthChannel & { enabled: boolean }> = [
+      {
+        id: 'claude-code',
+        displayName: 'Claude（嵌入式）',
+        transport: 'streaming',
+        enabled: providerSettings['claude-code']?.enabled !== false,
+      },
+      {
+        id: 'claude-code-cli',
+        displayName: 'Claude CLI',
+        transport: 'claude-cli',
+        enabled: providerSettings['claude-code-cli']?.enabled !== false,
+      },
+      {
+        id: 'openai-codex',
+        displayName: 'Codex',
+        transport: 'streaming',
+        enabled: providerSettings['openai-codex']?.enabled === true,
+      },
+      {
+        id: 'opencode',
+        displayName: 'OpenCode',
+        transport: 'streaming',
+        enabled: providerSettings['opencode']?.enabled === true,
+      },
+      {
+        id: 'copilot-cli',
+        displayName: 'GitHub Copilot',
+        transport: 'streaming',
+        enabled: providerSettings['copilot-cli']?.enabled === true,
+      },
+      {
+        id: 'claude',
+        displayName: 'Claude API',
+        transport: 'streaming',
+        enabled: providerSettings['claude']?.enabled === true,
+      },
+      {
+        id: 'openai',
+        displayName: 'OpenAI',
+        transport: 'streaming',
+        enabled: providerSettings['openai']?.enabled === true,
+      },
+      {
+        id: 'lmstudio',
+        displayName: 'LM Studio',
+        transport: 'streaming',
+        enabled: providerSettings['lmstudio']?.enabled === true,
+      },
+    ];
+    const extensionProviders: ChannelHealthChannel[] = getAgentProviderRegistry()
+      .list()
+      .filter((entry) => entry.status === 'active' && providerSettings[entry.contributionId]?.enabled !== false)
+      .map((entry) => ({
+        id: entry.contributionId,
+        displayName: entry.contribution.displayName || entry.contributionId,
+        transport: 'streaming',
+      }));
+
+    return [
+      ...builtIns.filter((channel) => channel.enabled).map(({ enabled: _enabled, ...channel }) => channel),
+      ...extensionProviders,
+    ];
+  }
+
+  private async runChannelHealthPrompt(input: {
+    channel: ChannelHealthChannel;
+    event: Electron.IpcMainInvokeEvent;
+    workspacePath: string;
+    prompt: string;
+  }): Promise<ChannelHealthTransportResult> {
+    if (input.channel.transport === 'claude-cli') {
+      return this.runClaudeCliChannelHealthPrompt(input);
+    }
+    return this.runStreamingChannelHealthPrompt(input);
+  }
+
+  private async runStreamingChannelHealthPrompt(input: {
+    channel: ChannelHealthChannel;
+    event: Electron.IpcMainInvokeEvent;
+    workspacePath: string;
+    prompt: string;
+  }): Promise<ChannelHealthTransportResult> {
+    if (!this.sendMessageHandler) {
+      throw new ChannelHealthError('engine_error', 'AI send handler is not ready');
+    }
+
+    const previousSession = this.sessionManager.getCurrentSession();
+    const session = await this.sessionManager.createSession(
+      input.channel.id as AIProviderType,
+      undefined,
+      input.workspacePath,
+    );
+    const startedAt = Date.now();
+    let firstResponseMs: number | undefined;
+    try {
+      const sendPromise = this.sendMessageHandler(
+        input.event,
+        input.prompt,
+        {
+          channelHealthCheck: {
+            onFirstResponse: (elapsedMs: number) => {
+              firstResponseMs ??= elapsedMs;
+            },
+          },
+        } as DocumentContext,
+        session.id,
+        input.workspacePath,
+      );
+      const response = await this.withChannelHealthTransportTimeout(
+        sendPromise,
+        session.id,
+      );
+      return {
+        firstResponseMs,
+        completionMs: Date.now() - startedAt,
+        responseText: response.content,
+      };
+    } finally {
+      await this.disposeChannelHealthSession(session.id, input.workspacePath, previousSession);
+    }
+  }
+
+  private async withChannelHealthTransportTimeout<T>(
+    operation: Promise<T>,
+    sessionId: string,
+  ): Promise<T> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        try {
+          ProviderFactory.destroyProvider(sessionId);
+        } catch {
+          // The provider may not have been constructed when initialization hangs.
+        }
+        reject(new ChannelHealthError('timeout', 'Channel health transport timed out'));
+      }, CHANNEL_HEALTH_TIMEOUT_MS - 500);
+    });
+    try {
+      return await Promise.race([operation, timeout]);
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+  }
+
+  private async runClaudeCliChannelHealthPrompt(input: {
+    channel: ChannelHealthChannel;
+    event: Electron.IpcMainInvokeEvent;
+    workspacePath: string;
+    prompt: string;
+  }): Promise<ChannelHealthTransportResult> {
+    const previousSession = this.sessionManager.getCurrentSession();
+    const session = await this.sessionManager.createSession(
+      'claude-code-cli',
+      undefined,
+      input.workspacePath,
+    );
+    markClaudeCliChannelHealthSession(session.id);
+    const terminalManager = getTerminalSessionManager();
+    const startedAt = Date.now();
+    try {
+      // The CT login preflight is part of ensureClaudeCliSession. We consume
+      // its cached receipt below instead of spawning a second auth-status probe.
+      const launch = await ensureClaudeCliSession({
+        sessionId: session.id,
+        workspacePath: input.workspacePath,
+        model: session.model ?? undefined,
+      });
+      if (!launch.success) {
+        throw new ChannelHealthError(
+          launch.claudeNotInstalled ? 'missing_binary' : 'engine_error',
+          launch.error,
+        );
+      }
+      if (getClaudeCliQueueAuthPrecheck(session.id)) {
+        throw new ChannelHealthError('not_logged_in');
+      }
+
+      const submitResult = await submitClaudeCliPromptProduction({
+        sessionId: session.id,
+        workspacePath: input.workspacePath,
+        prompt: input.prompt,
+        // Reuse the real PTY submit boundary without creating a user transcript
+        // row for the fixed health prompt.
+        origin: 'child_session_event',
+      });
+      if (!submitResult.submitted) {
+        throw new ChannelHealthError('engine_error', 'Claude CLI did not accept the health prompt');
+      }
+
+      return this.waitForClaudeCliHealthResponse({
+        sessionId: session.id,
+        startedAt,
+      });
+    } finally {
+      clearClaudeCliQueueAuthPrecheck(session.id);
+      await terminalManager.destroyTerminal(session.id);
+      clearClaudeCliChannelHealthSession(session.id);
+      clearClaudeCliTurnSummary(session.id);
+      await this.disposeChannelHealthSession(session.id, input.workspacePath, previousSession);
+    }
+  }
+
+  private async waitForClaudeCliHealthResponse(input: {
+    sessionId: string;
+    startedAt: number;
+  }): Promise<ChannelHealthTransportResult> {
+    const terminalManager = getTerminalSessionManager();
+    const deadline = input.startedAt + CHANNEL_HEALTH_TIMEOUT_MS;
+    let firstResponseMs: number | undefined;
+    while (Date.now() < deadline) {
+      // PTY scrollback includes the user's typed prompt, so it cannot prove an
+      // engine response. The existing CLI observation chain records only an
+      // assembled assistant turn; consume that safe receipt without retaining
+      // the raw text in health state or logs.
+      const observedTurn = takeClaudeCliTurnSummary(input.sessionId);
+      if (observedTurn?.lastAssistantText.trim()) {
+        firstResponseMs = Date.now() - input.startedAt;
+      }
+      const liveState = await terminalManager.getClaudeCliLiveTurnState(input.sessionId);
+      if (firstResponseMs !== undefined && liveState === 'idle') {
+        return {
+          firstResponseMs,
+          completionMs: Date.now() - input.startedAt,
+          // The raw PTY buffer is deliberately not retained; it may contain
+          // terminal control sequences. Its growth is the response receipt.
+          responseText: 'observed-cli-response',
+        };
+      }
+      // A PID state source may be unavailable on a supported platform. An
+      // actual assistant receipt is still stronger than terminal echo, and a
+      // fixed one-word smoke turn has no reason to remain alive afterward.
+      if (firstResponseMs !== undefined && liveState === null) {
+        return {
+          firstResponseMs,
+          completionMs: Date.now() - input.startedAt,
+          responseText: 'observed-cli-response',
+        };
+      }
+      if (!terminalManager.isTerminalActive(input.sessionId)) {
+        throw new ChannelHealthError('engine_error', 'Claude CLI terminal exited before responding');
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    }
+    throw new ChannelHealthError('timeout', 'Claude CLI health check timed out');
+  }
+
+  private async disposeChannelHealthSession(
+    sessionId: string,
+    workspacePath: string,
+    previousSession: SessionData | null,
+  ): Promise<void> {
+    try {
+      ProviderFactory.destroyProvider(sessionId);
+    } catch {
+      // A failed health transport can have no in-process provider yet.
+    }
+    try {
+      await getSessionStateManager().endSession(sessionId);
+    } catch {
+      // The health marker avoids normal session-state bookkeeping.
+    }
+    // SessionManager uses a compatibility "current" pointer. A health
+    // session must never leave that pointer blank or replace a real user
+    // session. If a concurrent user action has already moved it elsewhere,
+    // preserve that newer pointer instead of restoring a stale one.
+    const healthSessionStillCurrent = this.sessionManager.getCurrentSession()?.id === sessionId;
+    await this.sessionManager.deleteSession(sessionId, workspacePath);
+    if (healthSessionStillCurrent && previousSession?.id) {
+      try {
+        await this.sessionManager.loadSession(
+          previousSession.id,
+          previousSession.workspacePath || workspacePath,
+        );
+      } catch {
+        // The previous session may have been deleted or moved while this
+        // background check ran. Keep the safety cleanup non-fatal.
+      }
     }
   }
 
@@ -2362,6 +2716,31 @@ export class AIService {
     // Stored on this.sendMessageHandler so queue processing and other paths can re-invoke it.
     this.sendMessageHandler = this.streamingHandler.handle;
     safeHandle('ai:sendMessage', this.sendMessageHandler);
+
+    // Product-level channel health dashboard. The health service itself calls
+    // the same send boundaries as ordinary sessions; these handlers only expose
+    // its safe, prompt-free status snapshot to Settings.
+    safeHandle('channel-health:get', async () => {
+      return this.channelHealthService.getSnapshot();
+    });
+    safeHandle(
+      'channel-health:run',
+      async (event, workspacePath?: string, channelId?: string) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        const activeWorkspacePath = window
+          ? resolveActiveWorkspacePathForWindowId(getWindowId(window))
+          : undefined;
+        const resolvedWorkspacePath = workspacePath || activeWorkspacePath;
+        if (!resolvedWorkspacePath) {
+          throw new Error('Open a workspace before running channel health checks');
+        }
+        return this.channelHealthService.runManually({
+          event,
+          workspacePath: resolvedWorkspacePath,
+          channelId: typeof channelId === 'string' ? channelId : undefined,
+        });
+      },
+    );
 
     // Get session history (full session data with messages - slow)
     safeHandle('ai:getSessions', async (event, workspacePath?: string) => {
