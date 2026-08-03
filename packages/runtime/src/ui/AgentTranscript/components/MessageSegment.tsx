@@ -33,6 +33,8 @@ interface MessageSegmentProps {
   onOpenSession?: (sessionId: string) => void;
   /** Optional: Callback to trigger /compact command */
   onCompact?: () => void;
+  /** Optional: Retry the prompt that produced a recoverable Codex error. */
+  onRetry?: () => void;
   /** Optional: Provider name for provider-specific rendering (e.g., 'openai-codex') */
   provider?: string;
 }
@@ -52,6 +54,7 @@ export const MessageSegment: React.FC<MessageSegmentProps> = ({
   onOpenFile,
   onOpenSession,
   onCompact,
+  onRetry,
   provider
 }) => {
   const [isDiffExpanded, setDiffExpanded] = useState(false);
@@ -340,6 +343,28 @@ export const MessageSegment: React.FC<MessageSegmentProps> = ({
     if (!message.isError || message.type === 'tool_call') return null;
 
     const errorMessage = message.text || 'Error';
+
+    if (errorMessage.includes('引擎响应中断')) {
+      return (
+        <div
+          className="my-2 rounded-lg border border-[rgba(239,68,68,0.35)] bg-[rgba(239,68,68,0.1)] p-3"
+          data-testid="codex-watchdog-error-card"
+          role="alert"
+        >
+          <div className="text-sm font-semibold text-nim-error">引擎响应中断</div>
+          <div className="mt-1 text-xs text-[var(--nim-text-muted)]">未收到新的引擎事件，请重试。</div>
+          <button
+            type="button"
+            className="mt-3 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] px-2.5 py-1 text-xs text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="codex-watchdog-retry"
+            disabled={!onRetry}
+            onClick={onRetry}
+          >
+            重试
+          </button>
+        </div>
+      );
+    }
 
     // Pre-flight Codex app-server auth failure -- prefer the structured CTA
     // over the generic OpenAIAuthWidget so the user gets a one-click jump to

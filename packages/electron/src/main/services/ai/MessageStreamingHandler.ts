@@ -2053,6 +2053,14 @@ export class MessageStreamingHandler {
             }
             console.error(`${logPrefix} Provider error:`, chunk.error || 'Unknown error');
 
+            // The Codex protocol watchdog has detected a stream that stopped
+            // producing events. Throw into the established catch/finalization
+            // path so the session is marked failed and all normal recovery UI
+            // receives exactly one terminal error notification.
+            if (chunk.isCodexWatchdogError) {
+              throw new Error(chunk.error || '引擎响应中断');
+            }
+
             // Track stream interruption due to error. errorCategory lets us
             // split resume_mismatch / stream_closed / auth / ... instead of
             // lumping every Claude Code failure into a single bucket.

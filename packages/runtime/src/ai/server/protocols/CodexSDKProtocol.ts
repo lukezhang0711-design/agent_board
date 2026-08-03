@@ -46,6 +46,18 @@ import {
 } from '../providers/codex/codexSdkLoader';
 import { parseCodexEvent } from '../providers/codex/codexEventParser';
 
+// Three minutes allows normal model/tool scheduling jitter while turning a truly
+// dead stream into a recoverable error before the UI appears permanently busy.
+export const CODEX_TURN_WATCHDOG_SILENCE_MS = 180_000;
+export const CODEX_TURN_WATCHDOG_ERROR = '引擎响应中断';
+
+function isUserInputToolName(name: string): boolean {
+  const normalized = name.replace(/^mcp__.+?__/, '').replace(/[^a-z]/gi, '').toLowerCase();
+  return normalized === 'askuserquestion'
+    || normalized === 'requestuserinput'
+    || normalized === 'promptforuserinput';
+}
+
 /**
  * OpenAI Codex SDK Protocol Adapter
  *
@@ -192,6 +204,43 @@ export class CodexSDKProtocol implements AgentProtocol {
     let usage: { input_tokens: number; output_tokens: number; total_tokens: number } | undefined;
     let contextFillTokens: number | undefined;
     let contextWindow: number | undefined;
+    let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
+    let watchdogStalled = false;
+    let awaitingUserInput = false;
+    let lastEventAt = 0;
+    let lastEventType = 'turn/start';
+    let resolveStall!: () => void;
+    const stalled = new Promise<void>((resolve) => {
+      resolveStall = resolve;
+    });
+    const watchdogSessionId = message.sessionId ?? session.id;
+    const stopWatchdog = () => {
+      if (watchdogTimer) {
+        clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+      }
+    };
+    const armWatchdog = () => {
+      stopWatchdog();
+      if (watchdogStalled || awaitingUserInput) return;
+      const silenceMs = Date.now() - lastEventAt;
+      watchdogTimer = setTimeout(() => {
+        watchdogTimer = null;
+        const currentSilenceMs = Date.now() - lastEventAt;
+        if (watchdogStalled || awaitingUserInput || currentSilenceMs < CODEX_TURN_WATCHDOG_SILENCE_MS) return;
+        watchdogStalled = true;
+        console.error(
+          `[CodexWatchdog] stalled sessionId=${watchdogSessionId} lastEvent=${lastEventType} silenceMs=${currentSilenceMs}`,
+        );
+        resolveStall();
+      }, Math.max(0, CODEX_TURN_WATCHDOG_SILENCE_MS - silenceMs));
+    };
+    const recordProtocolActivity = (eventType: string) => {
+      if (watchdogStalled) return;
+      lastEventAt = Date.now();
+      lastEventType = eventType;
+      armWatchdog();
+    };
 
     try {
       // Run the thread with streaming
@@ -202,12 +251,29 @@ export class CodexSDKProtocol implements AgentProtocol {
       // Thread ID is captured from thread.started event during streaming (see event loop below)
 
       // Stream events
-      const events = getEventsIterable(runResult);
-      for await (const event of events) {
+      const eventIterator = getEventsIterable(runResult)[Symbol.asyncIterator]();
+      recordProtocolActivity('turn/start');
+      while (true) {
+        const next = await Promise.race([
+          eventIterator.next(),
+          stalled.then(() => ({ stalled: true } as const)),
+        ]);
+        if ('stalled' in next) {
+          yield { type: 'error', error: CODEX_TURN_WATCHDOG_ERROR };
+          return;
+        }
+        if (next.done) break;
+        const event = next.value;
         // Check for abort
         if (rawOptions?.abortSignal?.aborted) {
           throw new Error('Operation cancelled');
         }
+
+        recordProtocolActivity(
+          event && typeof event === 'object' && typeof (event as { type?: unknown }).type === 'string'
+            ? (event as { type: string }).type
+            : 'unknown',
+        );
 
         // Emit raw SDK event so callers can persist every Codex output,
         // even when it doesn't map to a known parsed event shape yet.
@@ -246,6 +312,15 @@ export class CodexSDKProtocol implements AgentProtocol {
 
           // Tool call event
           if (parsedEvent.toolCall) {
+            if (isUserInputToolName(parsedEvent.toolCall.name)) {
+              if (parsedEvent.toolCall.result === undefined || parsedEvent.toolCall.result === null) {
+                awaitingUserInput = true;
+                stopWatchdog();
+              } else {
+                awaitingUserInput = false;
+                recordProtocolActivity('request_user_input/resolved');
+              }
+            }
             yield {
               type: 'tool_call',
               toolCall: {
@@ -320,6 +395,8 @@ export class CodexSDKProtocol implements AgentProtocol {
           error: configHint ? `${errorMessage}\n\n${configHint}` : errorMessage,
         };
       }
+    } finally {
+      stopWatchdog();
     }
   }
 
