@@ -30,6 +30,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { buildDocumentAttachmentPromptText } from '../providers/codex/documentAttachmentPrompt';
 import { describeCodexConfigError } from './codexConfigError';
+import { isInteractivePromptToolName } from './CodexSDKProtocol';
 import { reverseCodexPatch, type CodexPatchKind } from '../providers/codex/patchReverse';
 import {
   AgentProtocol,
@@ -129,7 +130,7 @@ interface AppServerSessionRaw {
   dynamicTools: DynamicToolSpec[];
   /** Snapshot of any uncompleted turn for abort handling. */
   activeTurnId: string | null;
-  /** User-input requests pause the turn watchdog until Codex can continue. */
+  /** Durable interactive prompts pause the turn watchdog until Codex can continue. */
   userInputPause: UserInputPauseState;
   /** stderr buffer for diagnostic surface on failure. */
   stderrTail: string[];
@@ -242,14 +243,6 @@ function isActiveTurnNotification(
   } | undefined;
   const turnId = params?.turn?.id ?? params?.turnId;
   return params?.threadId === raw.threadId && turnId === raw.activeTurnId;
-}
-
-function isUserInputToolName(name: unknown): boolean {
-  if (typeof name !== 'string') return false;
-  const normalized = name.replace(/^mcp__.+?__/, '').replace(/[^a-z]/gi, '').toLowerCase();
-  return normalized === 'askuserquestion'
-    || normalized === 'requestuserinput'
-    || normalized === 'promptforuserinput';
 }
 
 function isUserInputPaused(state: UserInputPauseState): boolean {
@@ -444,7 +437,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
         stopWatchdog();
         return;
       }
-      recordProtocolActivity('request_user_input/resolved');
+      recordProtocolActivity('interactive_prompt/resolved');
     };
 
     const unsubscribers: Array<() => void> = [];
@@ -913,7 +906,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
       : item.tool && typeof item.tool === 'object'
         ? (item.tool as { name?: unknown }).name
         : undefined;
-    const asksForUserInput = isUserInputToolName(toolName)
+    const asksForUserInput = isInteractivePromptToolName(toolName)
       || (itemType.toLowerCase().includes('userinput') && itemType.toLowerCase().includes('request'));
 
     if (method === 'item/started' && asksForUserInput) {

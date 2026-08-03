@@ -1295,6 +1295,67 @@ describe('CodexAppServerProtocol', () => {
     protocol.cleanupSession(session);
   });
 
+  it('pauses for a pending submit_plan MCP approval, then resumes watchdog timing when it settles', async () => {
+    const protocol = new CodexAppServerProtocol();
+    child
+      .scriptResult('initialize', { codexHome: '/fake', platformFamily: 'unix', platformOs: 'macos', userAgent: 'fake/0' })
+      .scriptResult('thread/start', { thread: { id: 'thread-plan-approval' } });
+    const session = await protocol.createSession({ workspacePath: '/tmp/ws' });
+    const events: ProtocolEvent[] = [];
+    const collector = (async () => {
+      for await (const event of protocol.sendMessage(session, { content: 'submit my plan', sessionId: 'session-plan-approval' })) {
+        events.push(event);
+      }
+    })();
+
+    await nextWrittenMatching(child, 'turn/start');
+    vi.useFakeTimers();
+    child.emitLine({ id: child.requests('turn/start')[0].id, result: { turn: { id: 'turn-plan-approval', items: [], status: 'inProgress' } } });
+    await vi.advanceTimersByTimeAsync(0);
+    child.emitLine({
+      method: 'item/started',
+      params: {
+        threadId: 'thread-plan-approval',
+        turnId: 'turn-plan-approval',
+        item: {
+          id: 'submit-plan-1',
+          type: 'mcpToolCall',
+          status: 'inProgress',
+          server: 'nimbalyst-meta-agent',
+          tool: 'submit_plan',
+          arguments: { plan: 'wait for approval' },
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(events.some((event) => event.type === 'error')).toBe(false);
+
+    child.emitLine({
+      method: 'item/completed',
+      params: {
+        threadId: 'thread-plan-approval',
+        turnId: 'turn-plan-approval',
+        item: {
+          id: 'submit-plan-1',
+          type: 'mcpToolCall',
+          status: 'completed',
+          server: 'nimbalyst-meta-agent',
+          tool: 'submit_plan',
+          arguments: { plan: 'wait for approval' },
+          result: { approved: true },
+        },
+      },
+    });
+    await vi.advanceTimersByTimeAsync(180_000);
+    await collector;
+
+    expect(events.find((event) => event.type === 'error')).toMatchObject({
+      error: '引擎响应中断',
+    });
+    protocol.cleanupSession(session);
+  }, 500);
+
   it('does not fail while item/tool/requestUserInput is waiting for the user', async () => {
     let resolveUserInput!: (value: unknown) => void;
     const userInput = new Promise<unknown>((resolve) => { resolveUserInput = resolve; });

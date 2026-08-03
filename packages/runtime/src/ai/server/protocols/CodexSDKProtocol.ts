@@ -51,11 +51,28 @@ import { parseCodexEvent } from '../providers/codex/codexEventParser';
 export const CODEX_TURN_WATCHDOG_SILENCE_MS = 180_000;
 export const CODEX_TURN_WATCHDOG_ERROR = '引擎响应中断';
 
-function isUserInputToolName(name: string): boolean {
+/**
+ * Durable prompts that intentionally hold an MCP call open until the user
+ * responds. Keep this list aligned with docs/INTERACTIVE_PROMPTS.md.
+ */
+export const INTERACTIVE_PROMPT_TOOL_NAMES = [
+  'submit_plan',
+  'ExitPlanMode',
+  'AskUserQuestion',
+  'request_user_input',
+  'PromptForUserInput',
+  'request_tool_permission',
+  'developer_git_commit_proposal',
+] as const;
+
+const INTERACTIVE_PROMPT_TOOL_NAME_SET = new Set(
+  INTERACTIVE_PROMPT_TOOL_NAMES.map((name) => name.replace(/[^a-z]/gi, '').toLowerCase()),
+);
+
+export function isInteractivePromptToolName(name: unknown): boolean {
+  if (typeof name !== 'string') return false;
   const normalized = name.replace(/^mcp__.+?__/, '').replace(/[^a-z]/gi, '').toLowerCase();
-  return normalized === 'askuserquestion'
-    || normalized === 'requestuserinput'
-    || normalized === 'promptforuserinput';
+  return INTERACTIVE_PROMPT_TOOL_NAME_SET.has(normalized);
 }
 
 /**
@@ -206,7 +223,7 @@ export class CodexSDKProtocol implements AgentProtocol {
     let contextWindow: number | undefined;
     let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
     let watchdogStalled = false;
-    let awaitingUserInput = false;
+    let awaitingInteractivePrompt = false;
     let lastEventAt = 0;
     let lastEventType = 'turn/start';
     let resolveStall!: () => void;
@@ -222,12 +239,12 @@ export class CodexSDKProtocol implements AgentProtocol {
     };
     const armWatchdog = () => {
       stopWatchdog();
-      if (watchdogStalled || awaitingUserInput) return;
+      if (watchdogStalled || awaitingInteractivePrompt) return;
       const silenceMs = Date.now() - lastEventAt;
       watchdogTimer = setTimeout(() => {
         watchdogTimer = null;
         const currentSilenceMs = Date.now() - lastEventAt;
-        if (watchdogStalled || awaitingUserInput || currentSilenceMs < CODEX_TURN_WATCHDOG_SILENCE_MS) return;
+        if (watchdogStalled || awaitingInteractivePrompt || currentSilenceMs < CODEX_TURN_WATCHDOG_SILENCE_MS) return;
         watchdogStalled = true;
         console.error(
           `[CodexWatchdog] stalled sessionId=${watchdogSessionId} lastEvent=${lastEventType} silenceMs=${currentSilenceMs}`,
@@ -312,13 +329,13 @@ export class CodexSDKProtocol implements AgentProtocol {
 
           // Tool call event
           if (parsedEvent.toolCall) {
-            if (isUserInputToolName(parsedEvent.toolCall.name)) {
+            if (isInteractivePromptToolName(parsedEvent.toolCall.name)) {
               if (parsedEvent.toolCall.result === undefined || parsedEvent.toolCall.result === null) {
-                awaitingUserInput = true;
+                awaitingInteractivePrompt = true;
                 stopWatchdog();
               } else {
-                awaitingUserInput = false;
-                recordProtocolActivity('request_user_input/resolved');
+                awaitingInteractivePrompt = false;
+                recordProtocolActivity('interactive_prompt/resolved');
               }
             }
             yield {

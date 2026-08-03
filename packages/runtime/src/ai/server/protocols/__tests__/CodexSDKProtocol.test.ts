@@ -2,7 +2,11 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { CodexSDKProtocol } from '../CodexSDKProtocol';
+import {
+  CodexSDKProtocol,
+  INTERACTIVE_PROMPT_TOOL_NAMES,
+  isInteractivePromptToolName,
+} from '../CodexSDKProtocol';
 
 function createAsyncEventStream(events: any[]): AsyncIterable<any> {
   return {
@@ -18,6 +22,19 @@ describe('CodexSDKProtocol', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it('classifies every durable interactive prompt as a watchdog exemption', () => {
+    expect(INTERACTIVE_PROMPT_TOOL_NAMES).toEqual([
+      'submit_plan',
+      'ExitPlanMode',
+      'AskUserQuestion',
+      'request_user_input',
+      'PromptForUserInput',
+      'request_tool_permission',
+      'developer_git_commit_proposal',
+    ]);
+    expect(isInteractivePromptToolName('mcp__nimbalyst-mcp__developer_git_commit_proposal')).toBe(true);
   });
   it('delivers the session abort signal to runStreamed and preserves its abort event', async () => {
     const abortController = new AbortController();
@@ -409,7 +426,7 @@ describe('CodexSDKProtocol', () => {
     expect(emitted.at(-1)).toMatchObject({ type: 'complete' });
   });
 
-  it('does not fail while SDK request_user_input is waiting for the user', async () => {
+  it('does not fail while SDK submit_plan is waiting for approval', async () => {
     let releaseUserInput!: () => void;
     const userInput = new Promise<void>((resolve) => { releaseUserInput = resolve; });
     const events = {
@@ -417,23 +434,23 @@ describe('CodexSDKProtocol', () => {
         yield {
           type: 'item.started',
           item: {
-            id: 'request-input',
+            id: 'submit-plan',
             type: 'mcp_tool_call',
-            server: 'nimbalyst-mcp',
-            tool: 'AskUserQuestion',
-            arguments: { questions: [] },
+            server: 'nimbalyst-meta-agent',
+            tool: 'submit_plan',
+            arguments: { plan: 'wait for approval' },
           },
         };
         await userInput;
         yield {
           type: 'item.completed',
           item: {
-            id: 'request-input',
+            id: 'submit-plan',
             type: 'mcp_tool_call',
-            server: 'nimbalyst-mcp',
-            tool: 'AskUserQuestion',
-            arguments: { questions: [] },
-            result: { answers: {} },
+            server: 'nimbalyst-meta-agent',
+            tool: 'submit_plan',
+            arguments: { plan: 'wait for approval' },
+            result: { approved: true },
           },
         };
       },
