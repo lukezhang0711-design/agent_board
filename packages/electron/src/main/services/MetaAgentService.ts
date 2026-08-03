@@ -177,6 +177,12 @@ interface PlanSubmissionOptions {
   requestId?: string;
   planFilePath?: string;
   planSummary?: string;
+  /**
+   * Claude's MCP submit_plan request remains open while a user reviews the
+   * card. Settlement must resolve that exact request before lifecycle state can
+   * claim delivery.
+   */
+  resolveOriginalMcpCall?: (result: string) => boolean | Promise<boolean>;
 }
 
 interface PlanApprovalResponse {
@@ -637,8 +643,11 @@ export class MetaAgentService {
       setMetaAgentToolFns({
         listWorktrees: (_metaSessionId, workspaceId) =>
           this.listWorktreesJson(workspaceId),
-        submitPlan: (metaSessionId, workspaceId, args, signal) =>
-          this.submitPlan(metaSessionId, workspaceId, args, signal),
+        submitPlan: (metaSessionId, workspaceId, args, signal, mcpCall) =>
+          this.submitPlan(metaSessionId, workspaceId, args, signal, {
+            requestId: mcpCall?.requestId,
+            resolveOriginalMcpCall: mcpCall?.resolveOriginalMcpCall,
+          }),
         createSession: (metaSessionId, workspaceId, args) =>
           this.createChildSession(metaSessionId, workspaceId, args),
         spawnSession: (callerSessionId, workspaceId, args) =>
@@ -1613,6 +1622,8 @@ export class MetaAgentService {
     requestId: string,
     response: PlanApprovalResponse,
     requestedMethod: PlanApprovalDeliveryMethod,
+    directMcpResult?: string,
+    resolveOriginalMcpCall?: (result: string) => boolean | Promise<boolean>,
   ): Promise<PlanApprovalDeliveryMethod> {
     if (!this.aiService) {
       throw new Error('AI service not initialized');
@@ -1621,7 +1632,34 @@ export class MetaAgentService {
     if (!deliveryState || deliveryState.status === 'submitted') {
       throw new Error(`Plan approval ${requestId} has not been responded to`);
     }
-    if (deliveryState.status === 'responded' && requestedMethod === 'revive') {
+    let deliveryMethod = requestedMethod;
+    if (
+      deliveryState.status === 'responded'
+      && deliveryMethod === 'direct'
+      && resolveOriginalMcpCall
+    ) {
+      let originalMcpCallReceived = false;
+      try {
+        originalMcpCallReceived = directMcpResult
+          ? await resolveOriginalMcpCall(directMcpResult)
+          : false;
+      } catch (error) {
+        console.warn(
+          '[MetaAgentService] Original MCP plan approval response failed: requestId=' + requestId,
+          error,
+        );
+      }
+      if (!originalMcpCallReceived) {
+        // The original Claude MCP request has already gone away. Its
+        // transcript-only direct delivery would be invisible to that engine,
+        // so revive the session instead of falsely recording a direct delivery.
+        deliveryMethod = 'revive';
+        console.info(
+          '[MetaAgentService] Plan approval direct response unavailable; falling back to revive: requestId=' + requestId,
+        );
+      }
+    }
+    if (deliveryState.status === 'responded' && deliveryMethod === 'revive') {
       await this.sendPromptToSession(
         metaSessionId,
         workspaceId,
@@ -1638,13 +1676,13 @@ export class MetaAgentService {
       deliveryState = await this.aiService.markPlanApprovalDelivered(
         metaSessionId,
         requestId,
-        requestedMethod,
+        deliveryMethod,
       );
       console.info(
-        `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=responded, to=delivered, method=${deliveryState.deliveryMethod ?? requestedMethod}`,
+        `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=responded, to=delivered, method=${deliveryState.deliveryMethod ?? deliveryMethod}`,
       );
     }
-    const method = deliveryState.deliveryMethod ?? requestedMethod;
+    const method = deliveryState.deliveryMethod ?? deliveryMethod;
     if (deliveryState.status !== 'closed') {
       await persistInteractivePromptToolResult({
         sessionId: metaSessionId,
@@ -1855,16 +1893,12 @@ export class MetaAgentService {
     }
     this.notifyTrackerItemsChanged();
 
-    const deliveryMethod = await this.deliverPlanApprovalResponse(
-      metaSessionId,
-      workspaceId,
-      planId,
-      requestId,
-      response,
-      signal?.aborted ? 'revive' : 'direct',
-    );
-
-    return JSON.stringify({
+    const resolveClaudeOriginalMcpCall = (
+      metaSession.provider === 'claude-code' || metaSession.provider === 'claude-code-cli'
+    )
+      ? options.resolveOriginalMcpCall
+      : undefined;
+    const serializeMcpResult = (deliveryMethod: PlanApprovalDeliveryMethod) => JSON.stringify({
       planId,
       approved: response.approved,
       status: finalStatus,
@@ -1872,6 +1906,21 @@ export class MetaAgentService {
       ...(autoApproved ? { autoApproved: true } : {}),
       ...(response.feedback ? { feedback: response.feedback } : {}),
     }, null, 2);
+    const directMcpResult = serializeMcpResult('direct');
+    const deliveryMethod = await this.deliverPlanApprovalResponse(
+      metaSessionId,
+      workspaceId,
+      planId,
+      requestId,
+      response,
+      signal?.aborted ? 'revive' : 'direct',
+      directMcpResult,
+      resolveClaudeOriginalMcpCall,
+    );
+
+    return deliveryMethod === 'direct'
+      ? directMcpResult
+      : serializeMcpResult(deliveryMethod);
   }
 
   private async createChildSession(
