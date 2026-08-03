@@ -156,6 +156,8 @@ export interface ClaudeCliSpawnInput {
    * nudges. Head sessions pass the shared runtime Meta Agent prompt here.
    */
   systemPromptAppend?: string;
+  /** Whether this launch is for a Head (meta-agent) session. */
+  isMetaAgent?: boolean;
   /** Extra CLI args appended verbatim (escape hatch for flags we pass through). */
   extraArgs?: string[];
 }
@@ -199,6 +201,9 @@ const FORBIDDEN_ENV_KEYS: readonly string[] = [
  * It keeps rendering natively in the TUI (answerable there) until Phase 4.
  */
 const CLAUDE_CLI_DISALLOWED_TOOLS: readonly string[] = ['AskUserQuestion'];
+
+/** Head-only: force delegation through Nimbalyst's create_session MCP tool. */
+const CLAUDE_CLI_META_AGENT_DISALLOWED_TOOLS: readonly string[] = ['Agent', 'Task'];
 
 /** RFC-4122 UUID matcher — the only `--session-id` value the CLI accepts. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -335,7 +340,12 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
     args.push('--allowedTools', ...allowedServerEntries);
   }
   // Force the model off the built-in TUI AskUserQuestion and onto our MCP tool.
-  args.push('--disallowedTools', ...CLAUDE_CLI_DISALLOWED_TOOLS);
+  // Head sessions also cannot use Claude's private subagent channel.
+  args.push(
+    '--disallowedTools',
+    ...CLAUDE_CLI_DISALLOWED_TOOLS,
+    ...(input.isMetaAgent ? CLAUDE_CLI_META_AGENT_DISALLOWED_TOOLS : []),
+  );
   const systemPromptAppend = input.systemPromptAppend
     ? `${CLAUDE_CLI_SYSTEM_PROMPT_APPEND}\n\n${input.systemPromptAppend}`
     : CLAUDE_CLI_SYSTEM_PROMPT_APPEND;

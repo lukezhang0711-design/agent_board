@@ -97,7 +97,10 @@ function createEmptyClaudeQuery() {
  * SDK options passed to `query`. `customRole` is what getMetaAgentCustomRole returns
  * (undefined => built-in default role).
  */
-async function createMetaAgentProviderProbe(customRole?: string): Promise<ClaudeCodeProvider> {
+async function createClaudeProviderProbe(
+  agentRole: 'standard' | 'meta-agent' = 'meta-agent',
+  customRole?: string,
+): Promise<ClaudeCodeProvider> {
   const provider = new ClaudeCodeProvider();
   await provider.initialize({ model: 'claude-code:opus' });
 
@@ -110,7 +113,7 @@ async function createMetaAgentProviderProbe(customRole?: string): Promise<Claude
     createTurnEndSnapshots: vi.fn(async () => {}),
   };
   const internals = provider as any;
-  internals.getAgentRole = vi.fn(async () => 'meta-agent');
+  internals.getAgentRole = vi.fn(async () => agentRole);
   internals.getWorkflowPreset = vi.fn(async () => 'default');
   internals.getMetaAgentCustomRole = vi.fn(async () => customRole);
   internals.createToolHooksService = vi.fn(() => hooks);
@@ -121,7 +124,11 @@ async function createMetaAgentProviderProbe(customRole?: string): Promise<Claude
   return provider;
 }
 
-async function captureMetaAgentSdkOptions(
+async function createMetaAgentProviderProbe(customRole?: string): Promise<ClaudeCodeProvider> {
+  return createClaudeProviderProbe('meta-agent', customRole);
+}
+
+async function captureClaudeSdkOptions(
   provider: ClaudeCodeProvider,
 ): Promise<Record<string, unknown>> {
   for await (const _chunk of provider.sendMessage(
@@ -188,6 +195,8 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     // Acceptance upgrade: the Head Agent must personally verify a child's work.
     expect(prompt).toContain("Verify, don't trust the prose");
     expect(prompt).toContain('personally verify');
+    expect(prompt).toContain('You do not have built-in `Agent` or `Task` tools');
+    expect(prompt).toContain('mcp__nimbalyst-meta-agent__create_session');
   });
 
   it('retains the orchestration MCP allow-list without amputating native tools', () => {
@@ -238,17 +247,28 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     expect(config).not.toHaveProperty('nimbalyst-settings');
   });
 
-  it('no longer hard-blocks Claude native file and command tools in the SDK options', async () => {
+  it('blocks only the built-in Agent and Task delegation tools in Head SDK options', async () => {
     const provider = await createMetaAgentProviderProbe();
-    const options = await captureMetaAgentSdkOptions(provider);
+    const options = await captureClaudeSdkOptions(provider);
 
     // Orchestration allow-list is still applied (auto-approve for orchestration tools).
     expect(options.allowedTools).toEqual(META_AGENT_ALLOWED_TOOLS);
 
-    // Native workspace tools are NO LONGER injected into disallowed/blocked — the Head
-    // Agent has full native capability, gated only by the normal permission flow.
-    expect(options.disallowedTools).toBeUndefined();
+    // Head delegation must go through mcp__nimbalyst-meta-agent__create_session so
+    // Nimbalyst retains approval, queue, concurrency, and Tracker control.
+    expect(options.disallowedTools).toEqual(['Agent', 'Task']);
+    // Keep native workspace tools available through the normal permission flow.
+    expect(options.disallowedTools).not.toEqual(
+      expect.arrayContaining(['Read', 'Write', 'Edit', 'Bash']),
+    );
     expect(options.blockedTools).toBeUndefined();
+  });
+
+  it('leaves built-in subagent tools available to a standard SDK session', async () => {
+    const provider = await createClaudeProviderProbe('standard');
+    const options = await captureClaudeSdkOptions(provider);
+
+    expect(options.disallowedTools).toBeUndefined();
   });
 
   it('replaces the default Head Agent role with custom metadata role text, keeping orchestration sections', () => {
@@ -285,7 +305,7 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
   it('threads a custom Head Agent role from session metadata into the Claude system prompt', async () => {
     const customRole = 'You are Atlas, a bespoke orchestrator wired via session metadata.';
     const provider = await createMetaAgentProviderProbe(customRole);
-    const options = await captureMetaAgentSdkOptions(provider);
+    const options = await captureClaudeSdkOptions(provider);
 
     // The meta-agent system prompt is passed as a plain string; it carries the custom role.
     expect(options.systemPrompt).toContain(customRole);

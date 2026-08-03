@@ -297,6 +297,7 @@ export class ClaudeCliSessionLauncher {
       additionalDirectories: input.additionalDirectories,
       pluginDirs,
       systemPromptAppend: input.systemPromptAppend,
+      isMetaAgent: input.mcpProfile === 'meta-agent',
     });
 
     // 4. Spawn the genuine interactive CLI in the terminal strip. Tear the proxy
