@@ -2981,6 +2981,15 @@ export class MetaAgentService {
     }
   }
 
+  /**
+   * Work-order status lives in the tracker projection rather than the session
+   * model. Invalidate that projection after each status write so open Tracker
+   * and session-board views refetch through their established IPC channel.
+   */
+  private emitWorkOrderStatusChanged(): void {
+    this.emitTrackerItemsChanged();
+  }
+
   private async updateWorkOrderStatusForSession(
     sessionId: string,
     status: WorkOrderStatus,
@@ -3019,7 +3028,7 @@ export class MetaAgentService {
       [JSON.stringify(data), row.id],
     );
 
-    this.emitTrackerItemsChanged();
+    this.emitWorkOrderStatusChanged();
   }
 
   private extractLastAgentResponse(messages: Array<{ direction: string; content: string; metadata?: Record<string, unknown> | null }>, maxLength: number = 500): string | null {
