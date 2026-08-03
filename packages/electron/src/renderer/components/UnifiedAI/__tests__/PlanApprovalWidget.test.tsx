@@ -105,6 +105,18 @@ describe('PlanApprovalWidget', () => {
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
   });
 
+  it('renders a native Claude Head plan summary in the existing approval card', () => {
+    renderWidget({
+      ...planArguments,
+      planSummary: '完整中文方案\n1. 进入 durable 审批。\n2. 批准后带 planId 派发。',
+    });
+
+    expect(screen.getByTestId('plan-approval-summary')).toBeTruthy();
+    expect(screen.getByText('完整中文方案', { exact: false })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
+    expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
+  });
+
   it('does not invent a response ID when the durable provider tool-call ID is missing', () => {
     renderWidget(planArguments, {}, null);
 
