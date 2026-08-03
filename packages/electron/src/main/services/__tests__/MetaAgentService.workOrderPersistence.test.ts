@@ -8,6 +8,7 @@ const testState = vi.hoisted(() => ({
   stateListener: null as ((event: any) => void) | null,
   stateManager: null as any,
   metaAgentToolFns: null as any,
+  nativeHeadPlanApprovalHandler: null as any,
   maxParallel: 4,
   planAutoApprove: false,
   /** Every `webContents.send` the service makes, so tests can assert IPC signals. */
@@ -15,7 +16,12 @@ const testState = vi.hoisted(() => ({
 }));
 
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
-  ClaudeCodeProvider: { setMetaAgentServerPort: vi.fn() },
+  ClaudeCodeProvider: {
+    setMetaAgentServerPort: vi.fn(),
+    setNativeHeadPlanApprovalHandler: vi.fn((handler: unknown) => {
+      testState.nativeHeadPlanApprovalHandler = handler;
+    }),
+  },
   OpenAICodexProvider: { setMetaAgentServerPort: vi.fn() },
   OpenAICodexACPProvider: { setMetaAgentServerPort: vi.fn() },
   SessionManager: class { async initialize() {} },
@@ -257,6 +263,25 @@ describe('MetaAgentService work-order persistence', () => {
     return testState.metaAgentToolFns.submitPlan;
   }
 
+  async function getNativeHeadPlanApprovalHandler(): Promise<(
+    request: {
+      sessionId: string;
+      requestId: string;
+      planSummary: string;
+      planFilePath: string;
+      signal: AbortSignal;
+    },
+  ) => Promise<{
+    approved: boolean;
+    planId: string;
+    feedback?: string;
+    deliveryMethod: 'direct' | 'revive';
+  } | null>> {
+    await service.start((service as any).aiService);
+    expect(testState.nativeHeadPlanApprovalHandler).toBeTypeOf('function');
+    return testState.nativeHeadPlanApprovalHandler;
+  }
+
   function toCodexTranscriptRequestId(requestId: string): string {
     return `nimtc|${requestId}|1784297999209|21431`;
   }
@@ -291,6 +316,7 @@ describe('MetaAgentService work-order persistence', () => {
     await db.initialize();
     testState.db = db;
     testState.metaAgentToolFns = null;
+    testState.nativeHeadPlanApprovalHandler = null;
     testState.maxParallel = 4;
     testState.sentIpc = [];
     AISessionsRepository.setStore(createPGLiteSessionStore(db));
@@ -1267,6 +1293,145 @@ describe('MetaAgentService work-order persistence', () => {
     } finally {
       freshnessSpy.mockRestore();
     }
+  });
+
+  it('routes a Claude Head native ExitPlanMode request through the durable approval lifecycle', async () => {
+    const nativeApproval = await getNativeHeadPlanApprovalHandler();
+    const firstRequestId = 'toolu_01V5qt_native_head_initial';
+    const firstSubmission = nativeApproval({
+      sessionId: 'head-session',
+      requestId: firstRequestId,
+      planSummary: [
+        '# Claude Head 原生方案',
+        '1. 接入现有 durable 审批状态机。',
+        '2. 复用 PlanApprovalWidget 展示审批卡。',
+        '风险：旧的短超时取消可能导致重复提交。',
+      ].join('\n'),
+      planFilePath: '/workspace/.claude/plans/claude-head-plan.md',
+      signal: new AbortController().signal,
+    });
+    const firstPrompt = await waitForPlanApprovalPrompt();
+
+    expect(firstPrompt).toMatchObject({ requestId: firstRequestId });
+    expect(firstPrompt.input).toMatchObject({
+      planId: expect.any(String),
+      planFilePath: '/workspace/.claude/plans/claude-head-plan.md',
+      planSummary: expect.stringContaining('Claude Head 原生方案'),
+    });
+
+    await persistPlanApprovalResponse(
+      firstRequestId,
+      false,
+      '请把状态迁移和回归验证拆成明确步骤。',
+    );
+    const rejected = await firstSubmission;
+    expect(rejected).toMatchObject({
+      approved: false,
+      planId: firstPrompt.input.planId,
+      feedback: '请把状态迁移和回归验证拆成明确步骤。',
+      deliveryMethod: 'direct',
+    });
+    await expect(readTestPlanApprovalState('head-session', firstRequestId)).resolves.toMatchObject({
+      status: 'closed',
+      decision: 'rejected',
+      deliveryMethod: 'direct',
+    });
+
+    const secondRequestId = 'toolu_01V5qt_native_head_revision';
+    const revisedSubmission = nativeApproval({
+      sessionId: 'head-session',
+      requestId: secondRequestId,
+      planSummary: [
+        '# Claude Head 修订方案',
+        '1. 写入 submitted 审批卡。',
+        '2. 记录 responded、delivered、closed。',
+        '3. 用批准后的 planId 派发实现任务。',
+        '风险：需要保持普通会话的原生确认流程。',
+      ].join('\n'),
+      planFilePath: '/workspace/.claude/plans/claude-head-plan.md',
+      signal: new AbortController().signal,
+    });
+    const revisedPrompt = await waitForPlanApprovalPrompt([firstRequestId]);
+    expect(revisedPrompt).toMatchObject({ requestId: secondRequestId });
+    expect(revisedPrompt.input.planId).toBe(firstPrompt.input.planId);
+    await persistPlanApprovalResponse(secondRequestId, true);
+
+    const approved = await revisedSubmission;
+    if (!approved) {
+      throw new Error('Native Head durable approval did not return a result');
+    }
+    expect(approved).toMatchObject({
+      approved: true,
+      planId: firstPrompt.input.planId,
+      deliveryMethod: 'direct',
+    });
+    await expect(readTestPlanApprovalState('head-session', secondRequestId)).resolves.toMatchObject({
+      status: 'closed',
+      decision: 'approved',
+      deliveryMethod: 'direct',
+    });
+
+    const { rows: lifecycleRows } = await db.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1 AND content LIKE $2
+       ORDER BY created_at ASC, id ASC`,
+      ['head-session', `%${secondRequestId}%`],
+    );
+    expect(lifecycleRows.map((row) => parseStoredJson<any>(row.content).type)).toEqual([
+      'nimbalyst_tool_use',
+      'exit_plan_mode_response',
+      'plan_approval_delivery',
+      'nimbalyst_tool_result',
+    ]);
+
+    const implementation = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Implement the approved Claude Head plan',
+        prompt: 'Use the approved native plan ID for dispatch authorization.',
+        intent: 'implementation',
+        planId: approved.planId,
+      },
+    ));
+    expect(implementation).toMatchObject({
+      createdBySessionId: 'head-session',
+    });
+
+    const { rows: cancellationRows } = await db.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1 AND content LIKE '%"cancelled":true%'`,
+      ['head-session'],
+    );
+    expect(cancellationRows).toHaveLength(0);
+  });
+
+  it('does not route a non-Head native ExitPlanMode request into durable approval', async () => {
+    const nativeApproval = await getNativeHeadPlanApprovalHandler();
+    await db.query(
+      `UPDATE ai_sessions SET agent_role = 'standard' WHERE id = $1`,
+      ['head-session'],
+    );
+
+    await expect(nativeApproval({
+      sessionId: 'head-session',
+      requestId: 'toolu_01V5qt_standard_session',
+      planSummary: '普通会话原生规划确认。',
+      planFilePath: '/workspace/.claude/plans/standard-plan.md',
+      signal: new AbortController().signal,
+    })).resolves.toBeNull();
+
+    const { rows } = await db.query<{ count: number }>(
+      `SELECT COUNT(*) AS count
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND content LIKE '%"type":"nimbalyst_tool_use"%'
+         AND content LIKE $2`,
+      ['head-session', '%"id":"toolu_01V5qt_standard_session"%'],
+    );
+    expect(Number(rows[0].count)).toBe(0);
   });
 
   it('persists the approval prompt and allows implementation only after approval', async () => {

@@ -158,12 +158,66 @@ interface SubmitPlanArgs {
   risks: string;
 }
 
+interface NativeHeadPlanApprovalRequest {
+  sessionId: string;
+  requestId: string;
+  planSummary: string;
+  planFilePath: string;
+  signal: AbortSignal;
+}
+
+interface NativeHeadPlanApprovalResult {
+  approved: boolean;
+  planId: string;
+  feedback?: string;
+  deliveryMethod: 'direct' | 'revive';
+}
+
+interface PlanSubmissionOptions {
+  requestId?: string;
+  planFilePath?: string;
+  planSummary?: string;
+}
+
 interface PlanApprovalResponse {
   approved: boolean;
   decision?: 'approved' | 'rejected' | 'dismissed';
   feedback?: string;
   respondedAt?: number;
   respondedBy?: string;
+}
+
+function buildNativeHeadPlanArgs(planSummary: string, planFilePath: string): SubmitPlanArgs {
+  const normalizedSummary = planSummary.trim() || `Plan file: ${planFilePath}`;
+  const lines = normalizedSummary
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const heading = lines.find((line) => /^#{1,6}\s+/.test(line));
+  const firstNarrativeLine = lines.find((line) =>
+    !/^#{1,6}\s+/.test(line)
+    && !/^(?:[-*+]\s+|\d+[.)、]\s+)/.test(line)
+    && !/^(?:风险|risks?)\s*[:：]?/i.test(line),
+  );
+  const title = (heading?.replace(/^#{1,6}\s+/, '') || firstNarrativeLine || path.basename(planFilePath) || 'Claude Head native plan').trim();
+  const planItems = lines
+    .filter((line) => /^(?:[-*+]\s+|\d+[.)、]\s+)/.test(line))
+    .map((line) => line.replace(/^(?:[-*+]\s+|\d+[.)、]\s+)/, '').trim())
+    .filter(Boolean);
+  const inlineRisk = lines.find((line) => /^(?:风险|risks?)\s*[:：]/i.test(line));
+  const riskHeadingIndex = lines.findIndex((line) => /^(?:#{1,6}\s*)?(?:风险|risks?)\s*$/i.test(line));
+  const risks = inlineRisk
+    ? inlineRisk.replace(/^(?:风险|risks?)\s*[:：]\s*/i, '').trim()
+    : riskHeadingIndex >= 0
+      ? (lines.slice(riskHeadingIndex + 1).find(Boolean) ?? 'No risks provided.')
+      : 'No risks provided.';
+
+  return {
+    title,
+    planItems: planItems.length > 0 ? planItems : [normalizedSummary],
+    workOrderCount: planItems.length || 1,
+    risks,
+  };
 }
 
 interface InterruptSessionArgs {
@@ -607,6 +661,9 @@ export class MetaAgentService {
       this.serverPort = result.port;
       console.log(`[MetaAgentService] MCP server started on port ${result.port}`);
 
+      ClaudeCodeProvider.setNativeHeadPlanApprovalHandler((request) =>
+        this.handleNativeHeadPlanApproval(request),
+      );
       ClaudeCodeProvider.setMetaAgentServerPort(result.port);
       OpenAICodexProvider.setMetaAgentServerPort(result.port);
       OpenAICodexACPProvider.setMetaAgentServerPort(result.port);
@@ -665,6 +722,7 @@ export class MetaAgentService {
     this.interruptedChildSessionIds.clear();
     this.releasedDispatchPromptIdsByHead.clear();
     await shutdownMetaAgentServer();
+    ClaudeCodeProvider.setNativeHeadPlanApprovalHandler(null);
     ClaudeCodeProvider.setMetaAgentServerPort(null);
     OpenAICodexProvider.setMetaAgentServerPort(null);
     OpenAICodexACPProvider.setMetaAgentServerPort(null);
@@ -1406,6 +1464,41 @@ export class MetaAgentService {
     }
   }
 
+  private async handleNativeHeadPlanApproval(
+    request: NativeHeadPlanApprovalRequest,
+  ): Promise<NativeHeadPlanApprovalResult | null> {
+    const metaSession = await AISessionsRepository.get(request.sessionId);
+    if (
+      !metaSession
+      || metaSession.agentRole !== 'meta-agent'
+      || !metaSession.workspacePath
+    ) {
+      return null;
+    }
+
+    const result = JSON.parse(await this.submitPlan(
+      request.sessionId,
+      metaSession.workspacePath,
+      buildNativeHeadPlanArgs(request.planSummary, request.planFilePath),
+      request.signal,
+      {
+        requestId: request.requestId,
+        planFilePath: request.planFilePath,
+        planSummary: request.planSummary,
+      },
+    )) as Record<string, unknown>;
+    if (typeof result.planId !== 'string' || !result.planId.trim()) {
+      throw new Error(`Native Head plan approval ${request.requestId} completed without a planId`);
+    }
+
+    return {
+      approved: result.approved === true,
+      planId: result.planId,
+      feedback: typeof result.feedback === 'string' ? result.feedback : undefined,
+      deliveryMethod: result.deliveryMethod === 'revive' ? 'revive' : 'direct',
+    };
+  }
+
   private async waitForPlanApprovalResponse(
     sessionId: string,
     requestId: string,
@@ -1582,6 +1675,7 @@ export class MetaAgentService {
     workspaceId: string,
     args: SubmitPlanArgs,
     signal?: AbortSignal,
+    options: PlanSubmissionOptions = {},
   ): Promise<string> {
     const title = args?.title?.trim();
     const risks = args?.risks?.trim();
@@ -1619,7 +1713,7 @@ export class MetaAgentService {
     );
     const existing = existingRows[0];
     const planId = existing?.id ?? randomUUID();
-    const requestId = randomUUID();
+    const requestId = options.requestId ?? randomUUID();
     let priorData: Record<string, unknown> = {};
     if (existing?.data) {
       try {
@@ -1677,13 +1771,14 @@ export class MetaAgentService {
       toolUseId: requestId,
       toolName: 'ExitPlanMode',
       input: {
-        planFilePath: '',
+        planFilePath: options.planFilePath ?? '',
         allowedPrompts: [],
         planId,
         title,
         planItems,
         workOrderCount: args.workOrderCount,
         risks,
+        ...(options.planSummary?.trim() ? { planSummary: options.planSummary.trim() } : {}),
       },
     });
 

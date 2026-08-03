@@ -181,6 +181,26 @@ export interface ScheduleWakeupRequest {
   reason: string;
 }
 
+/**
+ * Bridge payload for a Claude SDK-native ExitPlanMode call from a Meta Head.
+ * The runtime provider owns the SDK callback; Electron owns the durable
+ * approval state machine, so the bridge deliberately contains no state.
+ */
+export interface NativeHeadPlanApprovalRequest {
+  sessionId: string;
+  requestId: string;
+  planSummary: string;
+  planFilePath: string;
+  signal: AbortSignal;
+}
+
+export interface NativeHeadPlanApprovalResult {
+  approved: boolean;
+  planId: string;
+  feedback?: string;
+  deliveryMethod: 'direct' | 'revive';
+}
+
 
 export class ClaudeCodeProvider extends BaseAgentProvider {
   private currentMode?: 'planning' | 'agent' | 'auto'; // Track session mode for prompt customization and tool filtering
@@ -447,6 +467,15 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
   private static scheduleWakeupHandler: ((request: ScheduleWakeupRequest) => Promise<void>) | null = null;
   public static setScheduleWakeupHandler(handler: ((request: ScheduleWakeupRequest) => Promise<void>) | null): void {
     ClaudeCodeProvider.scheduleWakeupHandler = handler;
+  }
+
+  private static nativeHeadPlanApprovalHandler: ((
+    request: NativeHeadPlanApprovalRequest,
+  ) => Promise<NativeHeadPlanApprovalResult | null>) | null = null;
+  public static setNativeHeadPlanApprovalHandler(handler: ((
+    request: NativeHeadPlanApprovalRequest,
+  ) => Promise<NativeHeadPlanApprovalResult | null>) | null): void {
+    ClaudeCodeProvider.nativeHeadPlanApprovalHandler = handler;
   }
 
   async initialize(config: ProviderConfig): Promise<void> {
@@ -2563,6 +2592,79 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     const requestId = options.toolUseID || `exit-plan-${sessionId}-${Date.now()}`;
     const planSummary = input?.plan || '';
 
+    // Retain the SDK-native request as audit evidence. It deliberately has no
+    // planId; Meta Heads immediately create a second, canonical tool-use row
+    // below via the durable approval state machine.
+    const exitPlanModeContent = {
+      type: 'exit_plan_mode_request' as const,
+      requestId,
+      planSummary,
+      planFilePath,
+      timestamp: Date.now(),
+      status: 'pending' as const,
+    };
+
+    if (sessionId) {
+      await this.logAgentMessage(
+        sessionId, 'claude-code', 'output',
+        JSON.stringify(exitPlanModeContent),
+        { messageType: 'exit_plan_mode_request' }
+      );
+    }
+
+    // A Meta Head must never use the provider-local map: its approval can outlive
+    // the SDK callback and needs the durable submit → respond → deliver → close
+    // lifecycle. Ordinary sessions deliberately retain their legacy behavior.
+    const isMetaAgent = await this.getAgentRole(sessionId) === 'meta-agent';
+    if (isMetaAgent) {
+      const handler = ClaudeCodeProvider.nativeHeadPlanApprovalHandler;
+      if (!handler || !sessionId) {
+        return {
+          behavior: 'deny',
+          message: 'The durable plan approval service is unavailable. Keep planning and retry ExitPlanMode once it is ready.',
+        };
+      }
+
+      try {
+        const approval = await handler({
+          sessionId,
+          requestId,
+          planSummary,
+          planFilePath,
+          signal: options.signal,
+        });
+        if (!approval) {
+          return {
+            behavior: 'deny',
+            message: 'The durable plan approval service could not confirm this Head session. Keep planning and retry ExitPlanMode.',
+          };
+        }
+        if (approval.approved) {
+          this.currentMode = 'agent';
+          return {
+            behavior: 'allow',
+            // ExitPlanModeInput permits extension fields. Preserve the native
+            // request while making the approved planId available to the next
+            // dispatch call, where FB-004 validates it.
+            updatedInput: { ...input, planId: approval.planId },
+          };
+        }
+        const feedbackText = approval.feedback
+          ? `\n\nUser feedback: "${approval.feedback}"`
+          : '';
+        return {
+          behavior: 'deny',
+          message: `The user chose to continue planning.${feedbackText}`,
+        };
+      } catch (error) {
+        console.error('[CLAUDE-CODE] Durable Head ExitPlanMode failed:', error);
+        return {
+          behavior: 'deny',
+          message: 'The durable plan approval could not be submitted. Keep planning and retry ExitPlanMode.',
+        };
+      }
+    }
+
     // Create a promise that will be resolved when user responds via the widget
     const confirmationPromise = new Promise<{ approved: boolean; clearContext?: boolean; feedback?: string }>((resolve, reject) => {
       this.pendingExitPlanModeConfirmations.set(requestId, { resolve, reject });
@@ -2596,24 +2698,6 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
         }, { once: true });
       }
     });
-
-    // Persist the request as a durable prompt
-    const exitPlanModeContent = {
-      type: 'exit_plan_mode_request' as const,
-      requestId,
-      planSummary,
-      planFilePath,
-      timestamp: Date.now(),
-      status: 'pending' as const,
-    };
-
-    if (sessionId) {
-      await this.logAgentMessage(
-        sessionId, 'claude-code', 'output',
-        JSON.stringify(exitPlanModeContent),
-        { messageType: 'exit_plan_mode_request' }
-      );
-    }
 
     // Emit event to notify renderer to show confirmation UI
     this.emit('exitPlanMode:confirm', {

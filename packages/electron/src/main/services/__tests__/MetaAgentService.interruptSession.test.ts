@@ -16,7 +16,7 @@ vi.mock('@nimbalyst/runtime', () => ({
   SessionFilesRepository: { getFilesBySession: vi.fn().mockResolvedValue([]) },
 }));
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
-  ClaudeCodeProvider: { setMetaAgentServerPort: vi.fn() },
+  ClaudeCodeProvider: { setMetaAgentServerPort: vi.fn(), setNativeHeadPlanApprovalHandler: vi.fn() },
   OpenAICodexProvider: { setMetaAgentServerPort: vi.fn() },
   OpenAICodexACPProvider: { setMetaAgentServerPort: vi.fn() },
   SessionManager: class { async initialize() {} },

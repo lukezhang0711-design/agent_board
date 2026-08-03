@@ -21,6 +21,7 @@ interface SubmittedPlanArgs {
   planItems?: unknown[];
   workOrderCount?: number;
   risks?: string;
+  planSummary?: string;
 }
 
 const PLAN_APPROVAL_WIDGET_SOURCE = 'nimbalyst:electron-plan-approval';
@@ -71,6 +72,9 @@ const SubmittedPlanApprovalCard: React.FC<{
   const risks = typeof args.risks === 'string' && args.risks.trim()
     ? args.risks.trim()
     : 'No risks provided.';
+  const planSummary = typeof args.planSummary === 'string' && args.planSummary.trim()
+    ? args.planSummary.trim()
+    : null;
   const toolResult = toolCall.result ?? '';
   const autoApproved = useMemo(() => {
     try { return JSON.parse(toolResult).autoApproved === true; } catch { return false; }
@@ -228,6 +232,15 @@ const SubmittedPlanApprovalCard: React.FC<{
       </div>
 
       <div className="p-4">
+        {planSummary && (
+          <div data-testid="plan-approval-summary" className="mb-3 rounded-md bg-nim-tertiary p-3">
+            <div className="text-xs font-semibold text-nim mb-1">Plan summary</div>
+            <div className="text-[13px] leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
+              {planSummary}
+            </div>
+          </div>
+        )}
+
         <ol className="m-0 pl-5 space-y-1 text-[13px] text-nim select-text">
           {planItems.map((item, index) => (
             <li key={`${index}-${item}`}>{item}</li>
