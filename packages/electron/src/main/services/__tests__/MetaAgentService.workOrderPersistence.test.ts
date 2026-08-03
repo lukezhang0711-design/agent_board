@@ -128,6 +128,27 @@ describe('MetaAgentService work-order persistence', () => {
   const parseStoredJson = <T = Record<string, unknown>>(value: unknown): T =>
     (typeof value === 'string' ? JSON.parse(value) : value) as T;
 
+  async function expectWorkOrderStatus(sessionId: string, status: string): Promise<void> {
+    await vi.waitFor(async () => {
+      const { rows } = await db.query<any>(
+        `SELECT data FROM tracker_items WHERE source_ref = $1`,
+        [`meta-agent-work-order:${sessionId}`],
+      );
+      expect(parseStoredJson<Record<string, unknown>>(rows[0]?.data).status).toBe(status);
+    });
+  }
+
+  function expectTrackerInvalidation(): void {
+    const invalidations = testState.sentIpc.filter(
+      (sent) => sent.channel === 'document-service:tracker-items-changed',
+    );
+    expect(invalidations).toEqual([
+      expect.objectContaining({
+        args: [expect.objectContaining({ added: [], updated: [], removed: [] })],
+      }),
+    ]);
+  }
+
   async function readTestPlanApprovalState(sessionId: string, promptId: string): Promise<any | null> {
     const aliases = getCodexToolLookupAliases(promptId);
     const requestId = aliases[aliases.length - 1] ?? promptId;
@@ -2030,6 +2051,48 @@ describe('MetaAgentService work-order persistence', () => {
       const data = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
       expect(data.status).toBe('running');
     });
+  });
+
+  it('publishes the established tracker invalidation for interrupt, resume, and completion', async () => {
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      { prompt: 'Interrupt, resume, and complete this delegated task' },
+    );
+    await db.query(
+      `UPDATE ai_sessions SET status = 'running' WHERE id = $1`,
+      [child.sessionId],
+    );
+    (service as any).aiService = {
+      ...(service as any).aiService,
+      stopSession: vi.fn().mockResolvedValue({ success: true, queue: 'paused' }),
+    };
+    await service.start((service as any).aiService);
+
+    testState.sentIpc = [];
+    await service.interruptSession('head-session', workspacePath, { sessionId: child.sessionId });
+    await expectWorkOrderStatus(child.sessionId, 'interrupted');
+    expectTrackerInvalidation();
+
+    testState.sentIpc = [];
+    testState.stateListener?.({
+      type: 'session:started',
+      sessionId: child.sessionId,
+      workspacePath,
+      timestamp: new Date(),
+    });
+    await expectWorkOrderStatus(child.sessionId, 'running');
+    expectTrackerInvalidation();
+
+    testState.sentIpc = [];
+    testState.stateListener?.({
+      type: 'session:completed',
+      sessionId: child.sessionId,
+      workspacePath,
+      timestamp: new Date(),
+    });
+    await expectWorkOrderStatus(child.sessionId, 'completed');
+    expectTrackerInvalidation();
   });
 
   it('persists Head interruption state and clears it when the child becomes active again', async () => {

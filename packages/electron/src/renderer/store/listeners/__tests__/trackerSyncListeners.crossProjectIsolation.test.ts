@@ -21,6 +21,7 @@ import { initTrackerSyncListeners } from '../trackerSyncListeners';
 describe('trackerSyncListeners cross-project isolation (NIM-346 / NIM-794)', () => {
   let cleanup: (() => void) | undefined;
   let changeHandler: ((change: TrackerItemChangeEvent) => void) | undefined;
+  let trackerItems: TrackerItem[];
 
   function makeItem(id: string, workspace: string | undefined): TrackerItem {
     return {
@@ -38,13 +39,14 @@ describe('trackerSyncListeners cross-project isolation (NIM-346 / NIM-794)', () 
 
   beforeEach(() => {
     changeHandler = undefined;
+    trackerItems = [];
     store.set(activeWorkspacePathAtom, '/ws/A');
 
     const invoke = vi.fn(async (channel: string) => {
       if (channel === 'get-initial-state') {
         return { mode: 'workspace', workspacePath: '/ws/A' };
       }
-      if (channel === 'document-service:tracker-items-list') return [];
+      if (channel === 'document-service:tracker-items-list') return trackerItems;
       return undefined;
     });
 
@@ -116,5 +118,34 @@ describe('trackerSyncListeners cross-project isolation (NIM-346 / NIM-794)', () 
 
     const ids = store.get(trackerItemsArrayAtom).map((r) => r.id);
     expect(ids).toContain('legacy_1');
+  });
+
+  it('refetches an open tracker view for interrupt and completion invalidations with no item payload', async () => {
+    trackerItems = [makeItem('work-order_1', '/ws/A')];
+    trackerItems[0].status = 'running';
+    cleanup = initTrackerSyncListeners();
+
+    await vi.waitFor(() => {
+      expect(changeHandler).toBeTypeOf('function');
+      expect(store.get(trackerItemsArrayAtom).find((item) => item.id === 'work-order_1')?.fields.status).toBe('running');
+    });
+
+    // MetaAgentService writes the work-order in the main process, then reuses
+    // the established tracker-items-changed channel with an empty delta.
+    trackerItems = [makeItem('work-order_1', '/ws/A')];
+    trackerItems[0].status = 'interrupted';
+    changeHandler!({ added: [], updated: [], removed: [], timestamp: new Date() });
+
+    await vi.waitFor(() => {
+      expect(store.get(trackerItemsArrayAtom).find((item) => item.id === 'work-order_1')?.fields.status).toBe('interrupted');
+    });
+
+    trackerItems = [makeItem('work-order_1', '/ws/A')];
+    trackerItems[0].status = 'completed';
+    changeHandler!({ added: [], updated: [], removed: [], timestamp: new Date() });
+
+    await vi.waitFor(() => {
+      expect(store.get(trackerItemsArrayAtom).find((item) => item.id === 'work-order_1')?.fields.status).toBe('completed');
+    });
   });
 });
