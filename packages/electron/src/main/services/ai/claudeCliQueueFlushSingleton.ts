@@ -14,10 +14,10 @@ import { getQueuedPromptsStore } from '../RepositoryManager';
 import { logger } from '../../utils/logger';
 import { submitClaudeCliPromptProduction } from './claudeCliSubmitSingleton';
 import { flushNextClaudeCliQueuedPrompt } from './claudeCliQueueFlush';
+import { getClaudeCliQueueAuthPrecheck } from './ClaudeCliSessionLauncher';
 
 /** Per-session guard so two close `idle` events can't double-flush. */
 const flushInFlight = new Set<string>();
-
 export type ClaudeCliQueueFlushReason = 'idle-transition' | 'fallback-silence' | 'immediate-kick' | 'other';
 
 /**
@@ -29,6 +29,11 @@ export async function flushNextClaudeCliQueuedPromptForSession(
   workspacePath: string,
   reason: ClaudeCliQueueFlushReason = 'other',
 ): Promise<boolean> {
+  const precheckResult = getClaudeCliQueueAuthPrecheck(sessionId);
+  if (precheckResult) {
+    logger.main.info(`[CliQueue] precheck result=${precheckResult} action=blocked`);
+    return false;
+  }
   if (flushInFlight.has(sessionId)) {
     logger.main.info(`[CliQueue] flush skipped sessionId=${sessionId} reason=${reason} result=in-flight`);
     return false;

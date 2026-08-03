@@ -26,7 +26,9 @@
 import { promises as fs, existsSync } from 'fs';
 import os from 'os';
 import path from 'path';
+import { execFile } from 'child_process';
 import { buildClaudeCliSpawnConfig } from './claudeCliSpawnConfig';
+import { logClaudeCliUpstreamError } from './claudeCliErrorLog';
 import {
   buildPermissionHookSettingsJson,
   buildElectronNodeHookCommand,
@@ -109,6 +111,43 @@ export interface ClaudeCliSessionLauncherDeps {
    * loader is the only gate); paired with `loadPluginDirs` in production.
    */
   cliSupportsPluginDir?: (executable: string) => boolean;
+  /** Read-only CLI login check, injected by tests. Must not invoke login/logout. */
+  runAuthStatus?: (input: { executable: string; cwd: string; env: Record<string, string> }) => Promise<string>;
+}
+
+const CLI_AUTH_GUIDANCE = 'Claude 命令行未登录订阅账号——请在终端运行 claude /login 登录后重试';
+const authPrecheckBlocks = new Map<string, string>();
+
+/** Shared with every queue entry point, including immediate-kick. */
+export function setClaudeCliQueueAuthPrecheck(sessionId: string, result: { blocked: boolean; raw: string }): void {
+  if (result.blocked) authPrecheckBlocks.set(sessionId, result.raw);
+  else authPrecheckBlocks.delete(sessionId);
+}
+
+export function getClaudeCliQueueAuthPrecheck(sessionId: string): string | undefined {
+  return authPrecheckBlocks.get(sessionId);
+}
+
+export function clearClaudeCliQueueAuthPrecheck(sessionId: string): void {
+  authPrecheckBlocks.delete(sessionId);
+}
+
+function isUsableSubscriptionAuth(raw: string): boolean {
+  try {
+    const parsed = JSON.parse(raw) as { loggedIn?: unknown; authMethod?: unknown };
+    return parsed.loggedIn === true && typeof parsed.authMethod === 'string' && /oauth/i.test(parsed.authMethod);
+  } catch {
+    return false;
+  }
+}
+
+function runClaudeAuthStatus(input: { executable: string; cwd: string; env: Record<string, string> }): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(input.executable, ['auth', 'status'], { cwd: input.cwd, env: input.env, timeout: 750, maxBuffer: 16_384 }, (error, stdout) => {
+      if (error) reject(error);
+      else resolve(stdout.trim());
+    });
+  });
 }
 
 export interface LaunchClaudeCliSessionInput {
@@ -300,6 +339,22 @@ export class ClaudeCliSessionLauncher {
       isMetaAgent: input.mcpProfile === 'meta-agent',
     });
 
+    // The probe uses the exact final spawn environment, after credential stripping.
+    // An unstable CLI status command degrades to a visible log only; it never blocks.
+    let authPrecheck = { blocked: false, raw: 'unavailable' };
+    try {
+      const raw = await (this.deps.runAuthStatus ?? runClaudeAuthStatus)({
+        executable: spawnConfig.executable,
+        cwd: spawnConfig.env.PWD ?? cwd,
+        env: spawnConfig.env,
+      });
+      authPrecheck = { blocked: !isUsableSubscriptionAuth(raw), raw };
+    } catch (err) {
+      authPrecheck = { blocked: false, raw: `unavailable:${err instanceof Error ? err.message : String(err)}` };
+    }
+    setClaudeCliQueueAuthPrecheck(sessionId, authPrecheck);
+    console.log(`[CliQueue] precheck result=${authPrecheck.raw} action=${authPrecheck.blocked ? 'blocked' : 'allowed'}`);
+
     // 4. Spawn the genuine interactive CLI in the terminal strip. Tear the proxy
     // down when the PTY exits (composed with the PID-watcher cleanup downstream).
     try {
@@ -313,6 +368,7 @@ export class ClaudeCliSessionLauncher {
         onExit: observation || input.onExit
           ? (exitCode) => {
               observation?.stop();
+              clearClaudeCliQueueAuthPrecheck(sessionId);
               input.onExit?.(exitCode);
             }
           : undefined,
@@ -320,7 +376,16 @@ export class ClaudeCliSessionLauncher {
     } catch (err) {
       // Spawn failed — don't leak the proxy.
       observation?.stop();
+      clearClaudeCliQueueAuthPrecheck(sessionId);
       throw err;
+    }
+
+    if (authPrecheck.blocked) {
+      void logClaudeCliUpstreamError({
+        sessionId,
+        workspacePath,
+        failure: { kind: 'auth', statusCode: 401, message: CLI_AUTH_GUIDANCE },
+      });
     }
 
     return { mcpConfigPath };

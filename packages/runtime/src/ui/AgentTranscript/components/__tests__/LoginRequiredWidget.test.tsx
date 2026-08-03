@@ -32,6 +32,7 @@ describe('LoginRequiredWidget', () => {
 
     expect(invoke).not.toHaveBeenCalled();
     expect(screen.getByText('Not logged in. Please complete the authentication flow.')).toBeDefined();
+    expect(screen.getByText('Claude 命令行未登录订阅账号——请在终端运行 claude /login 登录后重试')).toBeDefined();
   });
 
   it('forces the shared status only when the user asks to refresh', async () => {

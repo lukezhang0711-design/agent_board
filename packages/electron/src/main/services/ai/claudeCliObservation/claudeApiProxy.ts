@@ -46,7 +46,7 @@ export interface ClaudeApiProxyCallbacks {
    * body for classification. Lets the observation layer surface a failed turn in
    * the rich transcript instead of leaving a silent hang.
    */
-  onUpstreamError?: (info: { statusCode: number; body?: string; retryAfter?: string }) => void;
+  onUpstreamError?: (info: { requestId: string; method: string; path: string; statusCode: number; body?: string; retryAfter?: string }) => void;
 }
 
 /** Cap on the captured upstream error body — Anthropic error envelopes are tiny. */
@@ -161,6 +161,9 @@ export function createClaudeApiProxy(
               upstreamDone = true;
               clientRes.end();
               callbacks.onUpstreamError?.({
+                requestId,
+                method,
+                path: reqPath,
                 statusCode,
                 body: errBuf.length > 0 ? errBuf : undefined,
                 retryAfter,

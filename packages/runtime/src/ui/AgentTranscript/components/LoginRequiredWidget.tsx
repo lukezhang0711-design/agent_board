@@ -196,7 +196,10 @@ export const LoginRequiredWidget: React.FC = () => {
             <span className="font-medium text-[var(--nim-success)]">You are logged in and can continue your conversation</span>
           </>
         ) : (
-          'An Anthropic account is required to use Claude Agent. Please login or create an account.'
+          <>
+            <span>An Anthropic account is required to use Claude Agent. Please login or create an account.</span>
+            <span>Claude 命令行未登录订阅账号——请在终端运行 claude /login 登录后重试</span>
+          </>
         )}
       </div>
 

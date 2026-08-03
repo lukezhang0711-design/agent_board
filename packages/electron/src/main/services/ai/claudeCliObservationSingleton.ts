@@ -299,7 +299,10 @@ export async function startClaudeCliProxyObservation(opts: {
         .showNotification({ title: 'Claude CLI -- paused', body, sessionId, workspacePath, provider: 'claude-code-cli' })
         .catch(() => {});
     },
-    onUpstreamError: ({ statusCode, body, retryAfter }) => {
+    onUpstreamError: ({ requestId, method, path, statusCode, body, retryAfter }) => {
+      if (statusCode === 401 || statusCode === 403) {
+        console.warn(`[ClaudeCliObservation] auth-correlation requestId=${requestId} method=${method} path=${path} status=${statusCode} phase=${errorSurfacePolicy.hasProducedAssistantTurn() ? 'turn' : 'startup'}`);
+      }
       // Render a failed turn IN the rich transcript so a rate-limited / failed
       // turn is a visible "paused"/"failed" state, not a silent hang (NIM-808).
       const failure = classifyClaudeCliUpstreamError({ statusCode, body, retryAfter });

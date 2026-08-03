@@ -32,11 +32,31 @@ vi.mock('../../../utils/logger', () => ({
   logger: { main: { info: mocks.info, warn: mocks.warn, error: mocks.error } },
 }));
 
-import { flushNextClaudeCliQueuedPromptForSession } from '../claudeCliQueueFlushSingleton';
+import {
+  flushNextClaudeCliQueuedPromptForSession,
+} from '../claudeCliQueueFlushSingleton';
+import { clearClaudeCliQueueAuthPrecheck, setClaudeCliQueueAuthPrecheck } from '../ClaudeCliSessionLauncher';
 
 describe('flushNextClaudeCliQueuedPromptForSession observability', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearClaudeCliQueueAuthPrecheck('session-1');
+  });
+
+  it('does not claim or submit when the launcher blocked the auth precheck', async () => {
+    setClaudeCliQueueAuthPrecheck('session-1', {
+      blocked: true,
+      raw: '{"loggedIn":false,"authMethod":"none"}',
+    });
+
+    await expect(flushNextClaudeCliQueuedPromptForSession('session-1', '/workspace')).resolves.toBe(false);
+
+    expect(mocks.listPending).not.toHaveBeenCalled();
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.submit).not.toHaveBeenCalled();
+    expect(mocks.info).toHaveBeenCalledWith(
+      '[CliQueue] precheck result={"loggedIn":false,"authMethod":"none"} action=blocked',
+    );
   });
 
   it('emits the same prompt ID through list, claim, and submit', async () => {

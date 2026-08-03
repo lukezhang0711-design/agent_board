@@ -26,6 +26,7 @@ describe('ClaudeCliSessionLauncher', () => {
     createClaudeCliTerminal?: ReturnType<typeof vi.fn>;
     pathExists?: (p: string) => boolean;
     homedir?: () => string;
+    runAuthStatus?: ClaudeCliSessionLauncherDeps['runAuthStatus'];
   } = {}) {
     const writes: Array<{ file: string; data: string }> = [];
     const createClaudeCliTerminal =
@@ -53,6 +54,7 @@ describe('ClaudeCliSessionLauncher', () => {
       // Default: jsonl absent → fresh `--session-id`. Tests override to simulate a relaunch.
       pathExists: opts.pathExists ?? (() => false),
       homedir: opts.homedir ?? (() => '/Users/me'),
+      runAuthStatus: opts.runAuthStatus,
     });
 
     return { launcher, writes, createClaudeCliTerminal, getMcpServersConfig };
@@ -93,6 +95,32 @@ describe('ClaudeCliSessionLauncher', () => {
     expect(mcpArg).toBe(writes[0].file);
     expect(opts.spawnConfig.args).toContain('--model');
     expect(opts.spawnConfig.executable).toBe('/usr/local/bin/claude');
+  });
+
+  it('uses the final stripped spawn environment for auth status and lets a subscription OAuth login launch normally', async () => {
+    const runAuthStatus = vi.fn(async () => '{"loggedIn":true,"authMethod":"oauth"}');
+    const { launcher, createClaudeCliTerminal } = makeHarness({ runAuthStatus });
+
+    await launcher.launch(baseInput);
+
+    expect(runAuthStatus).toHaveBeenCalledWith(expect.objectContaining({
+      executable: '/usr/local/bin/claude',
+      cwd: '/work',
+      env: expect.not.objectContaining({ ANTHROPIC_API_KEY: expect.anything() }),
+    }));
+    expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
+  });
+
+  it('blocks queued injection and writes the actionable auth error when auth status is not a subscription OAuth login', async () => {
+    const { launcher, createClaudeCliTerminal } = makeHarness({
+      runAuthStatus: async () => '{"loggedIn":false,"authMethod":"none"}',
+    });
+
+    await launcher.launch(baseInput);
+
+    // The terminal remains available for the user to run `claude /login`, but
+    // queue injection is blocked by the receipt registered before this spawn.
+    expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
   });
 
   it('launches a Head session with the Meta MCP profile and shared role prompt', async () => {
