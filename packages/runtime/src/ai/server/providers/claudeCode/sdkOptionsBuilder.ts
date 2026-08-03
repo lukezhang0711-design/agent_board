@@ -243,6 +243,10 @@ export async function buildSdkOptions(
       // hook causes the SDK to re-run the original tool call.
       'PermissionDenied': [{ hooks: [toolHooksService.createPermissionDeniedHook()] }],
     },
+    // Head delegation must pass through Nimbalyst's create_session MCP tool so
+    // every child is subject to approval, dispatch, concurrency, and tracking.
+    // Standard and dispatched child sessions retain their native subagent tools.
+    ...(isMetaAgent ? { disallowedTools: ['Agent', 'Task'] } : {}),
   };
 
   if (currentMode === 'planning') {

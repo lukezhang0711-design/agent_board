@@ -184,10 +184,11 @@ describe('buildClaudeCliSpawnConfig', () => {
     ]);
   });
 
-  it('appends the Head role prompt without adding native tool restrictions', () => {
+  it('adds built-in subagent tool restrictions only for the Head CLI session', () => {
     const standard = buildClaudeCliSpawnConfig(base);
     const head = buildClaudeCliSpawnConfig({
       ...base,
+      isMetaAgent: true,
       systemPromptAppend: 'HEAD_ROLE_PROMPT',
     });
 
@@ -205,8 +206,8 @@ describe('buildClaudeCliSpawnConfig', () => {
       head.args.indexOf('--disallowedTools') + 1,
       headAppendIndex,
     );
-    expect(headDisallowed).toEqual(standardDisallowed);
-    expect(headDisallowed).toEqual(['AskUserQuestion']);
+    expect(headDisallowed).toEqual(['AskUserQuestion', 'Agent', 'Task']);
+    expect(standardDisallowed).toEqual(['AskUserQuestion']);
     expect(head.args).not.toContain('--tools');
   });
 

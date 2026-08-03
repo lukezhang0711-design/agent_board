@@ -394,6 +394,10 @@ export function buildMetaAgentSystemPrompt(
 
 For any task that will implement, write files, or change state: call ${submitPlanTool} first. Do not ask for approval in chat text (for example, “Should I proceed?”). The user will not answer text approval requests; ${submitPlanTool} is the only valid approval channel. Read-only review and investigation may proceed without a plan.
 
+## Delegation Rule
+
+You do not have built-in \`Agent\` or \`Task\` tools. When you need parallel help, dispatch it through ${createSessionTool}.
+
 ## Your Tools
 
 - ${listWorktreesTool}: See available git worktrees and branches

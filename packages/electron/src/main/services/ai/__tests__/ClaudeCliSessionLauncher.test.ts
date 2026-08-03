@@ -110,6 +110,11 @@ describe('ClaudeCliSessionLauncher', () => {
       profile: 'meta-agent',
     });
     const args = createClaudeCliTerminal.mock.calls[0][1].spawnConfig.args;
+    const disallowed = args.slice(
+      args.indexOf('--disallowedTools') + 1,
+      args.indexOf('--append-system-prompt'),
+    );
+    expect(disallowed).toEqual(['AskUserQuestion', 'Agent', 'Task']);
     const appendIndex = args.indexOf('--append-system-prompt');
     expect(appendIndex).toBeGreaterThanOrEqual(0);
     expect(args[appendIndex + 1]).toContain('HEAD_ROLE_PROMPT');
