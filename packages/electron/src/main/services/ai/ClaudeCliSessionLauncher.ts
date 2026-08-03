@@ -23,7 +23,7 @@
  * node-pty / electron / a live MCP server.
  */
 
-import { promises as fs, existsSync } from 'fs';
+import { promises as fs, existsSync, type Stats } from 'fs';
 import os from 'os';
 import path from 'path';
 import { execFile } from 'child_process';
@@ -113,6 +113,10 @@ export interface ClaudeCliSessionLauncherDeps {
   cliSupportsPluginDir?: (executable: string) => boolean;
   /** Read-only CLI login check, injected by tests. Must not invoke login/logout. */
   runAuthStatus?: (input: { executable: string; cwd: string; env: Record<string, string> }) => Promise<string>;
+  /** File metadata probe for diagnostics after two unavailable auth checks. */
+  lstat?: (targetPath: string) => Promise<Pick<Stats, 'isFile' | 'mode' | 'size'>>;
+  /** Delay before retrying an unavailable auth check. Injectable to keep unit tests fast. */
+  waitForPrecheckRetry?: (delayMs: number) => Promise<void>;
 }
 
 const CLI_AUTH_GUIDANCE = 'Claude 命令行未登录订阅账号——请在终端运行 claude /login 登录后重试';
@@ -148,6 +152,34 @@ function runClaudeAuthStatus(input: { executable: string; cwd: string; env: Reco
       else resolve(stdout.trim());
     });
   });
+}
+
+function precheckErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function precheckErrno(error: unknown): string {
+  if (!error || typeof error !== 'object') return 'unknown';
+  const { code, errno } = error as { code?: unknown; errno?: unknown };
+  if (typeof code === 'string' || typeof code === 'number') return String(code);
+  if (typeof errno === 'string' || typeof errno === 'number') return String(errno);
+  return 'unknown';
+}
+
+function waitForPrecheckRetry(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+async function describePrecheckTarget(
+  targetPath: string,
+  lstat: (targetPath: string) => Promise<Pick<Stats, 'isFile' | 'mode' | 'size'>>,
+): Promise<string> {
+  try {
+    const stat = await lstat(targetPath);
+    return `file=${stat.isFile()} size=${stat.size} mode=${stat.mode}`;
+  } catch (error) {
+    return `error=${precheckErrorMessage(error)} errno=${precheckErrno(error)}`;
+  }
 }
 
 export interface LaunchClaudeCliSessionInput {
@@ -341,16 +373,32 @@ export class ClaudeCliSessionLauncher {
 
     // The probe uses the exact final spawn environment, after credential stripping.
     // An unstable CLI status command degrades to a visible log only; it never blocks.
+    const precheckInput = {
+      executable: spawnConfig.executable,
+      cwd: spawnConfig.env.PWD ?? cwd,
+      env: spawnConfig.env,
+    };
+    const runAuthStatus = this.deps.runAuthStatus ?? runClaudeAuthStatus;
     let authPrecheck = { blocked: false, raw: 'unavailable' };
     try {
-      const raw = await (this.deps.runAuthStatus ?? runClaudeAuthStatus)({
-        executable: spawnConfig.executable,
-        cwd: spawnConfig.env.PWD ?? cwd,
-        env: spawnConfig.env,
-      });
+      const raw = await runAuthStatus(precheckInput);
       authPrecheck = { blocked: !isUsableSubscriptionAuth(raw), raw };
-    } catch (err) {
-      authPrecheck = { blocked: false, raw: `unavailable:${err instanceof Error ? err.message : String(err)}` };
+    } catch {
+      await (this.deps.waitForPrecheckRetry ?? waitForPrecheckRetry)(500);
+      try {
+        const raw = await runAuthStatus(precheckInput);
+        authPrecheck = { blocked: !isUsableSubscriptionAuth(raw), raw };
+      } catch (retryError) {
+        const lstat = await describePrecheckTarget(
+          precheckInput.executable,
+          this.deps.lstat ?? fs.lstat,
+        );
+        console.warn(
+          `[CliQueue] precheck unavailable after retry cwd=${precheckInput.cwd} ` +
+            `executable=${precheckInput.executable} lstat=${lstat} errno=${precheckErrno(retryError)}`,
+        );
+        authPrecheck = { blocked: false, raw: `unavailable:${precheckErrorMessage(retryError)}` };
+      }
     }
     setClaudeCliQueueAuthPrecheck(sessionId, authPrecheck);
     console.log(`[CliQueue] precheck result=${authPrecheck.raw} action=${authPrecheck.blocked ? 'blocked' : 'allowed'}`);

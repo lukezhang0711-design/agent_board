@@ -27,6 +27,8 @@ describe('ClaudeCliSessionLauncher', () => {
     pathExists?: (p: string) => boolean;
     homedir?: () => string;
     runAuthStatus?: ClaudeCliSessionLauncherDeps['runAuthStatus'];
+    lstat?: ClaudeCliSessionLauncherDeps['lstat'];
+    waitForPrecheckRetry?: ClaudeCliSessionLauncherDeps['waitForPrecheckRetry'];
   } = {}) {
     const writes: Array<{ file: string; data: string }> = [];
     const createClaudeCliTerminal =
@@ -55,6 +57,8 @@ describe('ClaudeCliSessionLauncher', () => {
       pathExists: opts.pathExists ?? (() => false),
       homedir: opts.homedir ?? (() => '/Users/me'),
       runAuthStatus: opts.runAuthStatus,
+      lstat: opts.lstat,
+      waitForPrecheckRetry: opts.waitForPrecheckRetry,
     });
 
     return { launcher, writes, createClaudeCliTerminal, getMcpServersConfig };
@@ -120,6 +124,39 @@ describe('ClaudeCliSessionLauncher', () => {
 
     // The terminal remains available for the user to run `claude /login`, but
     // queue injection is blocked by the receipt registered before this spawn.
+    expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
+  });
+
+  it('retries an unavailable auth precheck once after 500ms and preserves the launch when it succeeds', async () => {
+    const unavailable = Object.assign(new Error('spawn /usr/local/bin/claude ENOENT'), { code: 'ENOENT' });
+    const runAuthStatus = vi.fn()
+      .mockRejectedValueOnce(unavailable)
+      .mockResolvedValueOnce('{"loggedIn":true,"authMethod":"oauth"}');
+    const waitForPrecheckRetry = vi.fn(async () => undefined);
+    const { launcher, createClaudeCliTerminal } = makeHarness({ runAuthStatus, waitForPrecheckRetry });
+
+    await launcher.launch(baseInput);
+
+    expect(waitForPrecheckRetry).toHaveBeenCalledWith(500);
+    expect(runAuthStatus).toHaveBeenCalledTimes(2);
+    expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
+  });
+
+  it('logs cwd, executable lstat, and errno after the retry also fails without blocking launch', async () => {
+    const unavailable = Object.assign(new Error('spawn /usr/local/bin/claude ENOENT'), { code: 'ENOENT' });
+    const runAuthStatus = vi.fn().mockRejectedValue(unavailable);
+    const lstat = vi.fn(async () => ({ isFile: () => true, size: 1234, mode: 0o100755 }));
+    const waitForPrecheckRetry = vi.fn(async () => undefined);
+    const logSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { launcher, createClaudeCliTerminal } = makeHarness({ runAuthStatus, lstat, waitForPrecheckRetry });
+
+    await launcher.launch(baseInput);
+
+    expect(runAuthStatus).toHaveBeenCalledTimes(2);
+    expect(lstat).toHaveBeenCalledWith('/usr/local/bin/claude');
+    expect(logSpy).toHaveBeenCalledWith(
+      '[CliQueue] precheck unavailable after retry cwd=/work executable=/usr/local/bin/claude lstat=file=true size=1234 mode=33261 errno=ENOENT',
+    );
     expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
   });
 
