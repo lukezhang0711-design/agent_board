@@ -32,7 +32,7 @@ export interface ClaudeCliProxyObservationDeps {
   /** Upstream rate-limit (429) / overloaded (529) — surfaced to the user. */
   onRateLimit?: (info: { statusCode: number; retryAfter?: string }) => void;
   /** Any non-2xx upstream response (>= 400) with a bounded error body — surfaced in the transcript. */
-  onUpstreamError?: (info: { statusCode: number; body?: string; retryAfter?: string }) => void;
+  onUpstreamError?: (info: { requestId: string; method: string; path: string; statusCode: number; body?: string; retryAfter?: string }) => void;
   /** Test seam — point the proxy at a fake upstream. Defaults to the real API. */
   upstreamUrl?: string;
 }

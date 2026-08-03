@@ -22,6 +22,8 @@
 import type { ClaudeCliFailure } from './claudeCliErrorClassifier';
 
 export interface ClaudeCliErrorSurfacePolicy {
+  /** Whether a visible assistant turn has completed; used only for safe logs. */
+  hasProducedAssistantTurn(): boolean;
   /**
    * Note an observed assistant message. `visible` is false for hidden
    * sub-agent (Task) turns — they end a failure episode but don't close the
@@ -41,6 +43,9 @@ export function createClaudeCliErrorSurfacePolicy(options?: {
   let startupTransientBudget = options?.startupTransientBudget ?? 2;
 
   return {
+    hasProducedAssistantTurn(): boolean {
+      return hasProducedAssistantTurn;
+    },
     noteAssistantMessage(visible: boolean): void {
       lastSurfacedKind = null;
       if (visible) hasProducedAssistantTurn = true;
