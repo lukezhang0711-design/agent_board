@@ -223,6 +223,15 @@ export function initTrackerSyncListeners(): () => void {
                 store.set(removeTrackerItemAtom, id);
               }
             }
+
+            // MetaAgentService owns work-order cards directly in the tracker
+            // table. Its status writes intentionally reuse this event channel,
+            // but do not have a TrackerItem-shaped delta to attach. Reload the
+            // shared read model for that explicit invalidation so every open
+            // tracker view and the Agent tracker panel see the new card state.
+            if (!change.added?.length && !change.updated?.length && !change.removed?.length) {
+              void loadAllTrackerItems();
+            }
           }
         )
       );
