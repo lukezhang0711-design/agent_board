@@ -57,6 +57,27 @@ type SubmitPlanArgs = {
   risks: string;
 };
 
+/**
+ * The original MCP call that is waiting for a plan approval result.
+ *
+ * Claude keeps a submit_plan call open while the user reviews the card. Its
+ * approval result must settle this call, rather than only being written to the
+ * transcript for a later model turn.
+ */
+interface SubmitPlanMcpCall {
+  requestId: string;
+  resolveOriginalMcpCall: (result: string) => boolean;
+}
+
+interface MetaAgentServerOptions {
+  /**
+   * Kept configurable for deterministic liveness tests. Production uses the
+   * 30-second default, leaving a 10x margin below Claude's 300-second
+   * no-progress watchdog.
+   */
+  planApprovalProgressIntervalMs?: number;
+}
+
 type RespondToPromptArgs = {
   sessionId: string;
   promptId: string;
@@ -83,6 +104,7 @@ interface MetaAgentToolFns {
     workspaceId: string,
     args: SubmitPlanArgs,
     signal?: AbortSignal,
+    mcpCall?: SubmitPlanMcpCall,
   ) => Promise<string>;
   createSession: (
     metaSessionId: string,
@@ -140,6 +162,8 @@ interface StreamableTransportMetadata {
 
 const activeTransports = new Map<string, TransportMetadata>();
 const activeStreamableTransports = new Map<string, StreamableTransportMetadata>();
+const PLAN_APPROVAL_PROGRESS_HEARTBEAT_INTERVAL_MS = 30_000;
+const PLAN_APPROVAL_PROGRESS_MESSAGE = "Waiting for user plan approval.";
 
 let httpServerInstance: any = null;
 let toolFns: MetaAgentToolFns | null = null;
@@ -523,7 +547,10 @@ export async function dispatchMetaAgentTool(
   aiSessionId: string,
   workspaceId: string,
   args: Record<string, unknown> | undefined,
-  context?: { signal?: AbortSignal },
+  context?: {
+    signal?: AbortSignal;
+    submitPlanMcpCall?: SubmitPlanMcpCall;
+  },
 ): Promise<string> {
   if (!toolFns) {
     throw new Error("Meta-agent service not initialized");
@@ -537,6 +564,15 @@ export async function dispatchMetaAgentTool(
     case "list_worktrees":
       return toolFns.listWorktrees(aiSessionId, effectiveWorkspaceId);
     case "submit_plan":
+      if (context?.submitPlanMcpCall) {
+        return toolFns.submitPlan(
+          aiSessionId,
+          effectiveWorkspaceId,
+          (args ?? {}) as SubmitPlanArgs,
+          context.signal,
+          context.submitPlanMcpCall,
+        );
+      }
       if (context?.signal) {
         return toolFns.submitPlan(
           aiSessionId,
@@ -616,6 +652,154 @@ export function cleanupMetaAgentServer(): void {
   activeStreamableTransports.clear();
 }
 
+function getPlanApprovalProgressIntervalMs(options: MetaAgentServerOptions): number {
+  const configuredIntervalMs = options.planApprovalProgressIntervalMs;
+  return typeof configuredIntervalMs === "number"
+    && Number.isFinite(configuredIntervalMs)
+    && configuredIntervalMs > 0
+    ? configuredIntervalMs
+    : PLAN_APPROVAL_PROGRESS_HEARTBEAT_INTERVAL_MS;
+}
+
+function startPlanApprovalProgressHeartbeat(
+  extra: {
+    _meta?: { progressToken?: string | number };
+    sendNotification: (notification: {
+      method: "notifications/progress";
+      params: {
+        progressToken: string | number;
+        progress: number;
+        message: string;
+      };
+    }) => Promise<void>;
+  },
+  intervalMs: number,
+): () => void {
+  const progressToken = extra._meta?.progressToken;
+  if (typeof progressToken !== "string" && typeof progressToken !== "number") {
+    return () => {};
+  }
+
+  let stopped = false;
+  let progress = 0;
+  const timer = setInterval(() => {
+    if (stopped) {
+      return;
+    }
+    void extra.sendNotification({
+      method: "notifications/progress",
+      params: {
+        progressToken,
+        progress: ++progress,
+        message: PLAN_APPROVAL_PROGRESS_MESSAGE,
+      },
+    }).catch((error) => {
+      // A closed MCP transport is handled by the approval settlement fallback;
+      // do not turn one missed heartbeat into an unhandled rejection.
+      console.warn("[MCP:nimbalyst-meta-agent] Plan approval progress notification failed:", error);
+    });
+  }, intervalMs);
+
+  return () => {
+    stopped = true;
+    clearInterval(timer);
+  };
+}
+
+async function awaitSubmitPlanMcpResult(
+  name: string,
+  aiSessionId: string,
+  workspaceId: string,
+  args: Record<string, unknown> | undefined,
+  extra: {
+    signal: AbortSignal;
+    _meta?: { progressToken?: string | number };
+    sendNotification: (notification: {
+      method: "notifications/progress";
+      params: {
+        progressToken: string | number;
+        progress: number;
+        message: string;
+      };
+    }) => Promise<void>;
+  },
+  progressIntervalMs: number,
+): Promise<string> {
+  const stopHeartbeat = startPlanApprovalProgressHeartbeat(extra, progressIntervalMs);
+  let settled = false;
+  let resolveOriginalResult!: (result: string) => void;
+  let rejectOriginalResult!: (error: Error) => void;
+
+  const clearAbortListener = () => {
+    extra.signal.removeEventListener("abort", rejectForAbort);
+  };
+  const settleResult = (result: string): boolean => {
+    if (settled || extra.signal.aborted) {
+      return false;
+    }
+    settled = true;
+    clearAbortListener();
+    resolveOriginalResult(result);
+    return true;
+  };
+  const rejectForAbort = () => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    clearAbortListener();
+    rejectOriginalResult(new Error("submit_plan MCP call was cancelled before approval settled"));
+  };
+
+  const originalResult = new Promise<string>((resolve, reject) => {
+    resolveOriginalResult = resolve;
+    rejectOriginalResult = reject;
+  });
+
+  if (extra.signal.aborted) {
+    rejectForAbort();
+  } else {
+    extra.signal.addEventListener("abort", rejectForAbort, { once: true });
+  }
+
+  const mcpCall: SubmitPlanMcpCall = {
+    requestId: randomUUID(),
+    resolveOriginalMcpCall: settleResult,
+  };
+
+  void dispatchMetaAgentTool(
+    name,
+    aiSessionId,
+    workspaceId,
+    args,
+    {
+      signal: extra.signal,
+      submitPlanMcpCall: mcpCall,
+    },
+  ).then(
+    // Non-Claude callers and pre-existing adapters return directly. Claude's
+    // settlement path resolves this same promise before it marks delivery.
+    (result) => {
+      settleResult(result);
+    },
+    (error: unknown) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearAbortListener();
+      rejectOriginalResult(error instanceof Error ? error : new Error(String(error)));
+    },
+  );
+
+  try {
+    return await originalResult;
+  } finally {
+    clearAbortListener();
+    stopHeartbeat();
+  }
+}
+
 export function shutdownMetaAgentServer(): Promise<void> {
   return new Promise((resolve) => {
     if (!httpServerInstance) {
@@ -672,7 +856,8 @@ export function shutdownMetaAgentServer(): Promise<void> {
 }
 
 export async function startMetaAgentServer(
-  startPort: number = 3461
+  startPort: number = 3461,
+  options: MetaAgentServerOptions = {},
 ): Promise<{ httpServer: any; port: number }> {
   let port = startPort;
   let httpServer: any = null;
@@ -680,7 +865,7 @@ export async function startMetaAgentServer(
 
   while (remainingAttempts > 0) {
     try {
-      httpServer = await tryCreateMetaAgentServer(port);
+      httpServer = await tryCreateMetaAgentServer(port, options);
       break;
     } catch (error: any) {
       if (error?.code === "EADDRINUSE") {
@@ -704,7 +889,8 @@ export async function startMetaAgentServer(
 
 function createMetaAgentMcpServer(
   aiSessionId: string,
-  workspaceId: string
+  workspaceId: string,
+  options: MetaAgentServerOptions,
 ): Server {
   const server = new Server(
     {
@@ -747,13 +933,23 @@ function createMetaAgentMcpServer(
       // launched with workspaceId = worktree directory, but sessions compare
       // workspace ids by exact string match against the renderer's active
       // workspace (the parent repo path).
-      const text = await dispatchMetaAgentTool(
-        name,
-        aiSessionId,
-        workspaceId,
-        args,
-        { signal: extra.signal },
-      );
+      const toolName = name.replace(/^mcp__nimbalyst-meta-agent__/, "");
+      const text = toolName === "submit_plan"
+        ? await awaitSubmitPlanMcpResult(
+            name,
+            aiSessionId,
+            workspaceId,
+            args,
+            extra,
+            getPlanApprovalProgressIntervalMs(options),
+          )
+        : await dispatchMetaAgentTool(
+            name,
+            aiSessionId,
+            workspaceId,
+            args,
+            { signal: extra.signal },
+          );
       return {
         content: [{ type: "text", text }],
         isError: false,
@@ -822,7 +1018,10 @@ function isInitializePayload(payload: unknown): boolean {
   return isInitializeMessage(payload);
 }
 
-async function tryCreateMetaAgentServer(port: number): Promise<any> {
+async function tryCreateMetaAgentServer(
+  port: number,
+  options: MetaAgentServerOptions,
+): Promise<any> {
   return new Promise((resolve, reject) => {
     const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
       const parsedUrl = parseUrl(req.url || "", true);
@@ -885,7 +1084,7 @@ async function tryCreateMetaAgentServer(port: number): Promise<any> {
           return;
         }
 
-        const server = createMetaAgentMcpServer(aiSessionId, workspaceId);
+        const server = createMetaAgentMcpServer(aiSessionId, workspaceId, options);
         const transport = new SSEServerTransport("/mcp", res);
         activeTransports.set(transport.sessionId, {
           transport,
@@ -976,7 +1175,7 @@ async function tryCreateMetaAgentServer(port: number): Promise<any> {
             return;
           }
 
-          const server = createMetaAgentMcpServer(aiSessionId, workspaceId);
+          const server = createMetaAgentMcpServer(aiSessionId, workspaceId, options);
           const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => randomUUID(),
             onsessioninitialized: (streamableSessionId) => {

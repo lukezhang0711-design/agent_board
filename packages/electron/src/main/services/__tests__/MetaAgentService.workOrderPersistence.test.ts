@@ -257,6 +257,10 @@ describe('MetaAgentService work-order persistence', () => {
     workspaceId: string,
     args: Record<string, unknown>,
     signal?: AbortSignal,
+    mcpCall?: {
+      requestId: string;
+      resolveOriginalMcpCall: (result: string) => boolean;
+    },
   ) => Promise<string>> {
     await service.start((service as any).aiService);
     expect(testState.metaAgentToolFns?.submitPlan).toBeTypeOf('function');
@@ -1547,6 +1551,180 @@ describe('MetaAgentService work-order persistence', () => {
         planId: approval.planId,
       }),
     ]));
+  });
+
+  it('marks a Claude approval direct only after it resolves the original MCP call', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const resolveOriginalMcpCall = vi.fn((result: string) => {
+      expect(JSON.parse(result)).toMatchObject({
+        approved: true,
+        deliveryMethod: 'direct',
+      });
+      return true;
+    });
+    const markPlanApprovalDelivered = (service as any).aiService.markPlanApprovalDelivered;
+    (service as any).aiService.markPlanApprovalDelivered = vi.fn(async (...args: any[]) => {
+      expect(resolveOriginalMcpCall).toHaveBeenCalledTimes(1);
+      return markPlanApprovalDelivered(...args);
+    });
+
+    const submission = submitPlan('head-session', workspacePath, {
+      title: 'Resolve Claude MCP approval',
+      planItems: ['Resolve the original request', 'Then record delivery'],
+      workOrderCount: 0,
+      risks: 'Transcript-only delivery leaves the Claude tool call hanging.',
+    }, undefined, {
+      requestId: 'claude-original-mcp-request',
+      resolveOriginalMcpCall,
+    });
+    const prompt = await waitForPlanApprovalPrompt();
+    expect(prompt.requestId).toBe('claude-original-mcp-request');
+
+    await persistPlanApprovalResponse(prompt.requestId, true);
+    const approval = JSON.parse(await submission);
+
+    expect(resolveOriginalMcpCall).toHaveBeenCalledTimes(1);
+    expect(approval).toMatchObject({
+      approved: true,
+      planId: prompt.input.planId,
+      deliveryMethod: 'direct',
+    });
+    await expect(readTestPlanApprovalState(
+      'head-session',
+      prompt.requestId,
+    )).resolves.toMatchObject({
+      status: 'closed',
+      decision: 'approved',
+      deliveryMethod: 'direct',
+    });
+  });
+
+  it('returns a Claude rejection through the original MCP call before closing it direct', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const resolveOriginalMcpCall = vi.fn((result: string) => {
+      expect(JSON.parse(result)).toMatchObject({
+        approved: false,
+        deliveryMethod: 'direct',
+        feedback: 'Split the integration work before approval.',
+      });
+      return true;
+    });
+    const markPlanApprovalDelivered = (service as any).aiService.markPlanApprovalDelivered;
+    (service as any).aiService.markPlanApprovalDelivered = vi.fn(async (...args: any[]) => {
+      expect(resolveOriginalMcpCall).toHaveBeenCalledTimes(1);
+      return markPlanApprovalDelivered(...args);
+    });
+
+    const submission = submitPlan('head-session', workspacePath, {
+      title: 'Resolve Claude MCP rejection',
+      planItems: ['Return revision feedback through the original request'],
+      workOrderCount: 0,
+      risks: 'A rejected plan must not leave the original MCP call hanging.',
+    }, undefined, {
+      requestId: 'claude-original-mcp-rejection',
+      resolveOriginalMcpCall,
+    });
+    const prompt = await waitForPlanApprovalPrompt();
+
+    await persistPlanApprovalResponse(
+      prompt.requestId,
+      false,
+      'Split the integration work before approval.',
+    );
+    const rejection = JSON.parse(await submission);
+
+    expect(resolveOriginalMcpCall).toHaveBeenCalledTimes(1);
+    expect(rejection).toMatchObject({
+      approved: false,
+      planId: prompt.input.planId,
+      deliveryMethod: 'direct',
+      feedback: 'Split the integration work before approval.',
+    });
+    await expect(readTestPlanApprovalState(
+      'head-session',
+      prompt.requestId,
+    )).resolves.toMatchObject({
+      status: 'closed',
+      decision: 'rejected',
+      deliveryMethod: 'direct',
+    });
+  });
+
+  it('keeps Codex direct delivery on its existing transcript path', async () => {
+    await db.query(
+      'UPDATE ai_sessions SET provider = $1 WHERE id = $2',
+      ['openai-codex', 'head-session'],
+    );
+    const submitPlan = await getSubmitPlanTool();
+    const resolveOriginalMcpCall = vi.fn(() => true);
+    const submission = submitPlan('head-session', workspacePath, {
+      title: 'Keep Codex direct delivery',
+      planItems: ['Use the existing transcript delivery'],
+      workOrderCount: 0,
+      risks: 'Codex does not use the Claude MCP promise resolver.',
+    }, undefined, {
+      requestId: 'codex-direct-transcript-request',
+      resolveOriginalMcpCall,
+    });
+    const prompt = await waitForPlanApprovalPrompt();
+
+    await persistPlanApprovalResponse(prompt.requestId, true);
+    const approval = JSON.parse(await submission);
+
+    expect(resolveOriginalMcpCall).not.toHaveBeenCalled();
+    expect(approval).toMatchObject({
+      approved: true,
+      deliveryMethod: 'direct',
+    });
+    await expect(readTestPlanApprovalState(
+      'head-session',
+      prompt.requestId,
+    )).resolves.toMatchObject({
+      status: 'closed',
+      decision: 'approved',
+      deliveryMethod: 'direct',
+    });
+  });
+
+  it('revives instead of marking direct when the original Claude MCP call is gone', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const resolveOriginalMcpCall = vi.fn(() => false);
+    const submission = submitPlan('head-session', workspacePath, {
+      title: 'Recover absent Claude MCP call',
+      planItems: ['Detect unavailable original call', 'Revive the Head session'],
+      workOrderCount: 0,
+      risks: 'A stale call must not be recorded as direct delivery.',
+    }, undefined, {
+      requestId: 'claude-unavailable-mcp-request',
+      resolveOriginalMcpCall,
+    });
+    const prompt = await waitForPlanApprovalPrompt();
+    expect(prompt.requestId).toBe('claude-unavailable-mcp-request');
+
+    await persistPlanApprovalResponse(prompt.requestId, true);
+    const approval = JSON.parse(await submission);
+
+    expect(resolveOriginalMcpCall).toHaveBeenCalledTimes(1);
+    expect(approval).toMatchObject({
+      approved: true,
+      deliveryMethod: 'revive',
+    });
+    expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
+      'head-session',
+      expect.stringContaining('The user approved plan'),
+      undefined,
+      undefined,
+      'child_session_event',
+      expect.stringContaining(prompt.requestId),
+    );
+    await expect(readTestPlanApprovalState(
+      'head-session',
+      prompt.requestId,
+    )).resolves.toMatchObject({
+      status: 'closed',
+      decision: 'approved',
+      deliveryMethod: 'revive',
+    });
   });
 
   it('auto-approves a submitted plan through the durable approval path only when test mode is enabled', async () => {
