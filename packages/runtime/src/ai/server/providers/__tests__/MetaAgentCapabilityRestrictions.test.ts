@@ -172,7 +172,7 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     vi.restoreAllMocks();
   });
 
-  it('builds a responsibility-constrained Head Agent role with no capability ban', () => {
+  it('builds a responsibility-constrained Head Agent role with failure reporting discipline', () => {
     const prompt = buildMetaAgentSystemPrompt('claude', 'default', {
       provider: 'claude-code',
       model: 'opus',
@@ -197,6 +197,9 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     expect(prompt).toContain('personally verify');
     expect(prompt).toContain('You do not have built-in `Agent` or `Task` tools');
     expect(prompt).toContain('mcp__nimbalyst-meta-agent__create_session');
+    expect(prompt).toContain('Child Failure Discipline');
+    expect(prompt).toContain('exact error text');
+    expect(prompt).toContain('wait for the user\'s instruction before retrying or re-dispatching');
   });
 
   it('retains the orchestration MCP allow-list without amputating native tools', () => {
@@ -247,7 +250,7 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     expect(config).not.toHaveProperty('nimbalyst-settings');
   });
 
-  it('blocks only the built-in Agent and Task delegation tools in Head SDK options', async () => {
+  it('blocks native delegation and file-writing tools only in Head SDK options', async () => {
     const provider = await createMetaAgentProviderProbe();
     const options = await captureClaudeSdkOptions(provider);
 
@@ -256,11 +259,19 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
 
     // Head delegation must go through mcp__nimbalyst-meta-agent__create_session so
     // Nimbalyst retains approval, queue, concurrency, and Tracker control.
-    expect(options.disallowedTools).toEqual(['Agent', 'Task']);
-    // Keep native workspace tools available through the normal permission flow.
+    expect(options.disallowedTools).toEqual([
+      'Agent',
+      'Task',
+      'Write',
+      'Edit',
+      'MultiEdit',
+      'NotebookEdit',
+    ]);
+    // Keep native read/diagnostic tools and the MCP dispatch path available.
     expect(options.disallowedTools).not.toEqual(
-      expect.arrayContaining(['Read', 'Write', 'Edit', 'Bash']),
+      expect.arrayContaining(['Read', 'Glob', 'Grep', 'LS', 'Bash']),
     );
+    expect(options.allowedTools).toContain('mcp__nimbalyst-meta-agent__create_session');
     expect(options.blockedTools).toBeUndefined();
   });
 

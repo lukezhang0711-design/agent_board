@@ -206,8 +206,19 @@ describe('buildClaudeCliSpawnConfig', () => {
       head.args.indexOf('--disallowedTools') + 1,
       headAppendIndex,
     );
-    expect(headDisallowed).toEqual(['AskUserQuestion', 'Agent', 'Task']);
+    expect(headDisallowed).toEqual([
+      'AskUserQuestion',
+      'Agent',
+      'Task',
+      'Write',
+      'Edit',
+      'MultiEdit',
+      'NotebookEdit',
+    ]);
     expect(standardDisallowed).toEqual(['AskUserQuestion']);
+    expect(standardDisallowed).not.toEqual(
+      expect.arrayContaining(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']),
+    );
     expect(head.args).not.toContain('--tools');
   });
 

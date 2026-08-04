@@ -276,7 +276,15 @@ describe('ClaudeCliSessionLauncher', () => {
       args.indexOf('--disallowedTools') + 1,
       args.indexOf('--append-system-prompt'),
     );
-    expect(disallowed).toEqual(['AskUserQuestion', 'Agent', 'Task']);
+    expect(disallowed).toEqual([
+      'AskUserQuestion',
+      'Agent',
+      'Task',
+      'Write',
+      'Edit',
+      'MultiEdit',
+      'NotebookEdit',
+    ]);
     const appendIndex = args.indexOf('--append-system-prompt');
     expect(appendIndex).toBeGreaterThanOrEqual(0);
     expect(args[appendIndex + 1]).toContain('HEAD_ROLE_PROMPT');
