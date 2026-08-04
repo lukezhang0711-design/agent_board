@@ -19,7 +19,7 @@
         "supportsAttachments": [
           "image"
         ],
-        "modelDiscovery": "static",
+        "modelDiscovery": "dynamic",
         "models": [
           {
             "id": "antigravity-gemini-agent:gemini-3-flash-agent",

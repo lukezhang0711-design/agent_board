@@ -2,16 +2,19 @@
  * Session Kanban Board Atoms
  *
  * State for the session kanban board view in TrackerMode.
- * Sessions/workstreams/worktrees are organized into phase columns
+ * Sessions/workstreams/worktrees are organized into effective phase columns
  * (backlog, planning, implementing, validating, complete).
  *
- * Phase is stored in metadata.phase on each session.
+ * A linked work-order status is projected first; metadata.phase remains the
+ * fallback for sessions without a work order.
  * Only sessions with a phase appear on the board.
  */
 
 import { atom } from 'jotai';
 import { atomFamily } from '../debug/atomFamilyRegistry';
 import type { SessionMeta } from '@nimbalyst/runtime';
+import type { TrackerRecord } from '@nimbalyst/runtime/core/TrackerRecord';
+import { trackerItemsMapAtom } from '@nimbalyst/runtime/plugins/TrackerPlugin/trackerDataAtoms';
 import {
   sessionRegistryAtom,
   sessionProcessingAtom,
@@ -61,6 +64,123 @@ const PHASE_PRIORITY: Record<string, number> = {
   complete: 4,
 };
 
+type WorkOrderStatus =
+  | 'queued'
+  | 'dispatched'
+  | 'running'
+  | 'waiting'
+  | 'interrupted'
+  | 'completed'
+  | 'failed';
+
+const WORK_ORDER_TYPE = 'work-order';
+
+function isWorkOrder(record: TrackerRecord): boolean {
+  return record.primaryType === WORK_ORDER_TYPE
+    || (Array.isArray(record.typeTags) && record.typeTags.includes(WORK_ORDER_TYPE));
+}
+
+function workOrderUpdatedAt(record: TrackerRecord): number {
+  const timestamp = Date.parse(record.system.updatedAt);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+/**
+ * Find the latest work-order projection associated with a session.
+ *
+ * `childSessionId` is the direct link written by MetaAgentService. The two
+ * link collections are compatibility fallbacks for older cards and for
+ * records restored through a sync/import path.
+ */
+export function findWorkOrderForSession(
+  sessionId: string,
+  records: Iterable<TrackerRecord>,
+  linkedTrackerItemIds: readonly string[] = [],
+): TrackerRecord | undefined {
+  const linkedIds = new Set(linkedTrackerItemIds);
+  const candidates: TrackerRecord[] = [];
+
+  for (const record of records) {
+    if (!isWorkOrder(record)) continue;
+    const childSessionId = record.fields.childSessionId;
+    const linkedSessions = record.system.linkedSessions ?? [];
+    if (
+      childSessionId === sessionId
+      || linkedSessions.includes(sessionId)
+      || linkedIds.has(record.id)
+    ) {
+      candidates.push(record);
+    }
+  }
+
+  candidates.sort((a, b) => {
+    const updatedDifference = workOrderUpdatedAt(b) - workOrderUpdatedAt(a);
+    return updatedDifference !== 0 ? updatedDifference : b.id.localeCompare(a.id);
+  });
+  return candidates[0];
+}
+
+function normalizedWorkOrderStatus(status: unknown): WorkOrderStatus | undefined {
+  if (typeof status !== 'string') return undefined;
+  const normalized = status.trim().toLowerCase();
+  return (
+    normalized === 'queued'
+    || normalized === 'dispatched'
+    || normalized === 'running'
+    || normalized === 'waiting'
+    || normalized === 'interrupted'
+    || normalized === 'completed'
+    || normalized === 'failed'
+  ) ? normalized : undefined;
+}
+
+/**
+ * Map the work-order lifecycle to the five phase-board columns.
+ *
+ * Failed work orders stay visible in their last known non-terminal phase; if
+ * history has no phase, Implementing is the visible failure bucket. This keeps
+ * a failed dispatch out of Complete while the card gets a dedicated failure
+ * badge below.
+ */
+export function phaseForWorkOrderStatus(
+  status: unknown,
+  fallbackPhase?: string,
+): SessionPhase | undefined {
+  const normalized = normalizedWorkOrderStatus(status);
+  switch (normalized) {
+    case 'queued':
+    case 'dispatched':
+      return 'planning';
+    case 'running':
+      return 'implementing';
+    case 'waiting':
+    case 'interrupted':
+      return VALID_PHASES.has(fallbackPhase ?? '') && fallbackPhase !== 'complete'
+        ? fallbackPhase as SessionPhase
+        : 'implementing';
+    case 'completed':
+      return 'complete';
+    case 'failed':
+      return VALID_PHASES.has(fallbackPhase ?? '') && fallbackPhase !== 'complete'
+        ? fallbackPhase as SessionPhase
+        : 'implementing';
+    default:
+      return VALID_PHASES.has(fallbackPhase ?? '') ? fallbackPhase as SessionPhase : undefined;
+  }
+}
+
+/** Resolve one session's board phase, including a work-order projection. */
+export function effectiveSessionPhase(
+  meta: SessionMeta,
+  records: Iterable<TrackerRecord>,
+): SessionPhase | undefined {
+  const workOrder = findWorkOrderForSession(meta.id, records, meta.linkedTrackerItemIds);
+  if (workOrder) {
+    return phaseForWorkOrderStatus(workOrder.fields.status, meta.phase);
+  }
+  return VALID_PHASES.has(meta.phase ?? '') ? meta.phase as SessionPhase : undefined;
+}
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -78,17 +198,22 @@ export function getCardType(meta: SessionMeta | undefined): KanbanCardType {
  * Returns the "most active" child phase (implementing > validating > planning > backlog > complete).
  * Returns undefined if no children have a phase.
  */
-function derivePhaseFromChildren(parentId: string, registry: Map<string, SessionMeta>): string | undefined {
+function derivePhaseFromChildren(
+  parentId: string,
+  registry: Map<string, SessionMeta>,
+  records: Iterable<TrackerRecord>,
+): string | undefined {
   let bestPhase: string | undefined;
   let bestPriority = Infinity;
 
   for (const [_id, meta] of registry) {
     if (meta.parentSessionId !== parentId) continue;
-    if (meta.phase && VALID_PHASES.has(meta.phase)) {
-      const priority = PHASE_PRIORITY[meta.phase] ?? Infinity;
+    const phase = effectiveSessionPhase(meta, records);
+    if (phase) {
+      const priority = PHASE_PRIORITY[phase] ?? Infinity;
       if (priority < bestPriority) {
         bestPriority = priority;
-        bestPhase = meta.phase;
+        bestPhase = phase;
       }
     }
   }
@@ -124,6 +249,7 @@ export type SessionPhaseKey = SessionPhase | 'unphased';
 export const sessionsByPhaseAtom = atom((get) => {
   const registry = get(sessionRegistryAtom);
   const filter = get(sessionKanbanFilterAtom);
+  const trackerRecords = Array.from(get(trackerItemsMapAtom).values());
 
   const grouped = new Map<SessionPhaseKey, SessionMeta[]>();
   grouped.set('unphased', []);
@@ -136,14 +262,16 @@ export const sessionsByPhaseAtom = atom((get) => {
     if (meta.parentSessionId) continue;
 
     // For workstream parents without an explicit phase, derive from children
-    const phase = meta.phase
-      ?? (meta.childCount > 0 ? derivePhaseFromChildren(meta.id, registry) : undefined);
+    const phase = effectiveSessionPhase(meta, trackerRecords)
+      ?? (meta.childCount > 0 ? derivePhaseFromChildren(meta.id, registry, trackerRecords) : undefined);
+    const workOrder = findWorkOrderForSession(meta.id, trackerRecords, meta.linkedTrackerItemIds);
+    const workOrderFailed = normalizedWorkOrderStatus(workOrder?.fields.status) === 'failed';
 
     // Skip complete if filter says hide
     if (!filter.showComplete && phase === 'complete') continue;
 
     // Skip archived unless in complete column
-    if (meta.isArchived && phase !== 'complete') continue;
+    if (meta.isArchived && phase !== 'complete' && !workOrderFailed) continue;
 
     // Apply search filter
     if (filter.search) {
@@ -220,6 +348,21 @@ export const sessionDispatchQueuedAtom = atomFamily((sessionId: string) =>
  */
 export const sessionInterruptedAtom = atomFamily((sessionId: string) =>
   atom((get): boolean => get(sessionRegistryAtom).get(sessionId)?.interruptedByHead === true)
+);
+
+/** Latest tracker work-order status for a session, if one is linked. */
+export const sessionWorkOrderStatusAtom = atomFamily((sessionId: string) =>
+  atom((get): string | undefined => {
+    const meta = get(sessionRegistryAtom).get(sessionId);
+    const records = get(trackerItemsMapAtom).values();
+    const workOrder = findWorkOrderForSession(sessionId, records, meta?.linkedTrackerItemIds);
+    return typeof workOrder?.fields.status === 'string' ? workOrder.fields.status : undefined;
+  })
+);
+
+/** True when the linked work order is terminally failed. */
+export const sessionWorkOrderFailedAtom = atomFamily((sessionId: string) =>
+  atom((get): boolean => normalizedWorkOrderStatus(get(sessionWorkOrderStatusAtom(sessionId))) === 'failed')
 );
 
 // ============================================================

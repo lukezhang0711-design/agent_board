@@ -250,6 +250,9 @@ declare global {
     /** Drop all state for a session (memory only; the host owns persisted DB). */
     cleanupSession(sessionId: string): Promise<void> | void;
 
+    /** Return the cached agy-backed model list for dynamic host discovery. */
+    listModels(): Promise<Array<{ id: string; name: string; default?: boolean }>>;
+
     /**
      * Read-only usage/quota probe. Returns the live Antigravity usage snapshot
      * (account credits + per-model quota) when the language server is already

@@ -80,6 +80,58 @@ describe('agy CLI model mapping', () => {
   });
 });
 
+describe('agy CLI dynamic model catalog', () => {
+  it('discovers a new agy model and maps it for a request', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    spawnMock
+      .mockReturnValueOnce(mockChild({
+        stdout: 'Available models:\n  gemini-3.1-flash-low\n',
+      }))
+      .mockImplementationOnce(() => mockChild({
+        stdout: JSON.stringify({ result: 'dynamic', conversation_id: 'dynamic-1' }),
+      }));
+
+    const manager = freshManager();
+    const catalog = await manager.getAvailableAgyModels();
+    expect(catalog.map((model) => model.key)).toContain('gemini-3.1-flash-low');
+
+    await expect(manager.getModelResponse('one', 'gemini-3.1-flash-low'))
+      .resolves.toBe('dynamic');
+    expect(spawnMock.mock.calls[1][1]).toEqual([
+      '-p', 'one',
+      '--model', 'gemini-3.1-flash-low',
+      '--output-format', 'json',
+      '--print-timeout', '120s',
+    ]);
+  });
+
+  it('caches the dynamic catalog for repeated reads', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    spawnMock.mockReturnValue(mockChild({
+      stdout: 'gemini-3.6-flash-high\ngemini-3.1-flash-low\n',
+    }));
+
+    const manager = freshManager();
+    const first = await manager.getAvailableAgyModels();
+    const second = await manager.getAvailableAgyModels();
+
+    expect(second).toEqual(first);
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the existing static catalog when agy models fails', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    spawnMock.mockReturnValue(mockChild({ code: 1, stderr: 'agy models unavailable' }));
+
+    const manager = freshManager();
+    await expect(manager.getAvailableAgyModels()).resolves.toEqual([
+      expect.objectContaining({ key: 'gemini-3-flash-agent', agyModel: 'gemini-3.6-flash-high' }),
+      expect.objectContaining({ key: 'gemini-3.5-flash-low', agyModel: 'gemini-3.6-flash-medium' }),
+      expect.objectContaining({ key: 'gemini-3.5-flash-extra-low', agyModel: 'gemini-3.6-flash-low' }),
+    ]);
+  });
+});
+
 describe('agy CLI process boundary', () => {
   it('detects CLI-only install and sends the mapped one-shot command', async () => {
     mockEnvironment({ desktop: false, agy: true });
@@ -135,8 +187,15 @@ describe('agy CLI process boundary', () => {
     mockEnvironment({ desktop: false, agy: true });
     const manager = freshManager();
 
-    await expect(manager.getModelResponse('one', 'gemini-model-that-does-not-exist'))
-      .rejects.toBeInstanceOf(AntigravityAgyModelError);
+    const error = await manager.getModelResponse('one', 'gemini-model-that-does-not-exist')
+      .catch((err) => err);
+    expect(error).toBeInstanceOf(AntigravityAgyModelError);
+    expect(error).toHaveProperty(
+      'message',
+      expect.stringContaining(
+        'supported extension models: gemini-3-flash-agent, gemini-3.5-flash-low, gemini-3.5-flash-extra-low',
+      ),
+    );
     expect(spawnMock).not.toHaveBeenCalled();
   });
 
