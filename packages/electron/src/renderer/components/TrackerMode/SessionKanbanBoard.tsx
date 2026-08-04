@@ -42,6 +42,8 @@ import {
   childRunStatesAtom,
   sessionDispatchQueuedAtom,
   sessionInterruptedAtom,
+  sessionWorkOrderStatusAtom,
+  sessionWorkOrderFailedAtom,
   getCardType,
   SESSION_PHASE_COLUMNS,
   type SessionPhase,
@@ -157,7 +159,7 @@ function CardTypeIcon({ type, provider }: { type: KanbanCardType; provider?: str
 // ============================================================
 
 /** The visual state of a card, used for both background tint and status badge */
-type CardVisualState = 'running' | 'waiting' | 'queued' | 'interrupted' | 'unread' | 'idle';
+type CardVisualState = 'running' | 'waiting' | 'queued' | 'interrupted' | 'failed' | 'unread' | 'idle';
 
 /** Background + border tints for each visual state */
 const CARD_STATE_STYLES: Record<CardVisualState, { bg: string; border: string }> = {
@@ -167,6 +169,7 @@ const CARD_STATE_STYLES: Record<CardVisualState, { bg: string; border: string }>
   // Tinting it like `running` would overstate what the board is showing.
   queued:   { bg: 'rgba(148, 163, 184, 0.06)', border: 'rgba(148, 163, 184, 0.22)' },
   interrupted: { bg: 'rgba(249, 115, 22, 0.06)', border: 'rgba(249, 115, 22, 0.25)' },
+  failed:   { bg: 'rgba(239, 68, 68, 0.07)',    border: 'rgba(239, 68, 68, 0.35)' },
   unread:   { bg: 'rgba(96, 165, 250, 0.04)',  border: 'rgba(96, 165, 250, 0.18)' },
   idle:     { bg: 'transparent',                border: '' },
 };
@@ -191,6 +194,17 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   const isParent = cardType !== 'session';
   const hasChildRunning = isParent && childStates.running > 0;
   const hasChildWaiting = isParent && childStates.waiting > 0;
+  const isWorkOrderFailed = useAtomValue(sessionWorkOrderFailedAtom(sessionId));
+
+  if (isWorkOrderFailed) {
+    return {
+      state: 'failed',
+      badgeLabel: 'failed',
+      badgeIcon: 'error',
+      badgeColor: '#ef4444',
+      spinIcon: false,
+    };
+  }
 
   // Checked before everything else: a queued placeholder has no messages and is
   // not processing, so every other branch would fall through to `idle` and the
@@ -292,6 +306,18 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
         title="Interrupted by Head Agent"
       >
         <MaterialSymbol icon="cancel" size={12} />
+        {info.badgeLabel}
+      </span>
+    );
+  }
+  if (info.state === 'failed') {
+    return (
+      <span
+        className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-red-500/10"
+        style={{ color: info.badgeColor }}
+        title="Work order failed"
+      >
+        <MaterialSymbol icon="error" size={12} />
         {info.badgeLabel}
       </span>
     );
@@ -491,6 +517,8 @@ interface SessionKanbanCardProps {
 function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor, isFocused, isSelected, selectedCount = 1, showPeekOverride, onPeekToggle }: SessionKanbanCardProps) {
   const cardType = useMemo(() => getCardType(session), [session]);
   const cardState = useCardState(session.id, cardType);
+  const workOrderStatus = useAtomValue(sessionWorkOrderStatusAtom(session.id));
+  const workOrderFailed = useAtomValue(sessionWorkOrderFailedAtom(session.id));
   const stateStyle = CARD_STATE_STYLES[cardState.state];
   const tags = session.tags || [];
   const cardRef = useRef<HTMLDivElement>(null);
@@ -609,6 +637,8 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
         onContextMenu={handleContextMenu}
         data-testid="session-kanban-card"
         data-session-id={session.id}
+        data-work-order-status={workOrderStatus}
+        data-work-order-failed={workOrderFailed ? 'true' : undefined}
       >
         {/* Title row: type/provider icon + title + unread dot */}
         <div className="flex items-start gap-1.5 mb-1.5">

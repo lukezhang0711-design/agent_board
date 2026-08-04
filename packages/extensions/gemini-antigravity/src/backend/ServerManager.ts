@@ -30,6 +30,21 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { randomUUID } from 'crypto';
 import { acquireSpawnLock, releaseSpawnLock } from './spawnLock';
+import {
+  AGY_MODEL_MAP,
+  STATIC_AGY_MODELS,
+  buildAgyModelCatalog,
+  parseAgyModelsOutput,
+  type AgyModelDescriptor,
+} from './agyModelCatalog';
+
+export {
+  AGY_MODEL_MAP,
+  STATIC_AGY_MODELS,
+  buildAgyModelCatalog,
+  parseAgyModelsOutput,
+};
+export type { AgyModelDescriptor } from './agyModelCatalog';
 
 const SERVICE = 'exa.language_server_pb.LanguageServerService';
 
@@ -63,17 +78,6 @@ export interface AntigravityServerConfig {
   overrideIdeVersion?: string;
   spawnPortCandidates?: readonly number[];
 }
-
-/**
- * Stable extension model keys mapped to the model ids printed by `agy models`.
- * The extension ids stay stable so existing sessions/settings keep working;
- * only the command-line id sent to agy changes.
- */
-export const AGY_MODEL_MAP: Readonly<Record<string, string>> = Object.freeze({
-  'gemini-3-flash-agent': 'gemini-3.6-flash-high',
-  'gemini-3.5-flash-low': 'gemini-3.6-flash-medium',
-  'gemini-3.5-flash-extra-low': 'gemini-3.6-flash-low',
-});
 
 export class AntigravityVersionGateError extends Error {
   constructor(message: string) {
@@ -126,7 +130,7 @@ export class AntigravityAgyProtocolError extends AntigravityAgyError {
 
 /** Resolve an extension model key to a real agy model id. */
 export function mapAgyModel(modelKey: string): string {
-  const key = modelKey.includes(':') ? modelKey.split(':').slice(1).join(':') : modelKey;
+  const key = extractAgyModelKey(modelKey);
   const mapped = AGY_MODEL_MAP[key];
   if (!mapped) {
     throw new AntigravityAgyModelError(
@@ -180,6 +184,9 @@ export class AntigravityServerManager {
   private enumCache = new Map<string, string>();
   /** Session key -> agy conversation id, owned only by this backend process. */
   private agyConversationIds = new Map<string, string>();
+  /** First-use model discovery cache; a failed probe resolves to the static list. */
+  private agyModelCatalogPromise: Promise<readonly AgyModelDescriptor[]> | null = null;
+  private agyModelCatalog: readonly AgyModelDescriptor[] | null = null;
 
   // Injected configuration. Falls back to the hardcoded defaults when the
   // host hasn't called configure() (dev harness, unit tests).
@@ -373,6 +380,44 @@ export class AntigravityServerManager {
     this.endpoint = null;
     this.enumCache.clear();
     this.agyConversationIds.clear();
+    this.agyModelCatalogPromise = null;
+    this.agyModelCatalog = null;
+  }
+
+  /**
+   * Read the current agy model catalog once per backend lifetime.
+   *
+   * This is intentionally CLI-only. Desktop mode has its own RPC model catalog,
+   * while `agy models` is the source of truth for model ids accepted by the
+   * fallback engine. Any missing binary, non-zero exit, timeout, or unparseable
+   * output falls back to the existing static entries without breaking startup.
+   */
+  async getAvailableAgyModels(
+    timeoutMs = 10_000,
+    workspacePath?: string,
+  ): Promise<readonly AgyModelDescriptor[]> {
+    if (!this.agyModelCatalogPromise) {
+      this.agyModelCatalogPromise = this.loadAgyModelCatalog(timeoutMs, workspacePath)
+        .catch(() => STATIC_AGY_MODELS)
+        .then((catalog) => {
+          this.agyModelCatalog = catalog;
+          return catalog;
+        });
+    }
+    return this.agyModelCatalogPromise;
+  }
+
+  private async loadAgyModelCatalog(
+    timeoutMs: number,
+    workspacePath?: string,
+  ): Promise<readonly AgyModelDescriptor[]> {
+    const engine = this.resolveEngine();
+    if (engine.kind !== 'agy') return STATIC_AGY_MODELS;
+
+    const output = await this.runAgy(engine.binary, ['models'], timeoutMs, workspacePath);
+    const modelIds = parseAgyModelsOutput(output);
+    const catalog = buildAgyModelCatalog(modelIds);
+    return catalog.length > 0 ? catalog : STATIC_AGY_MODELS;
   }
 
   /** Drop a CLI conversation id when the host creates or cleans up a session. */
@@ -563,13 +608,16 @@ export class AntigravityServerManager {
     workspacePath: string | undefined,
     binary: string,
   ): Promise<string> {
-    const agyModel = mapAgyModel(modelKey);
     const key = conversationKey || 'default';
     const conversationId = this.agyConversationIds.get(key);
     const args = ['-p', prompt];
     if (conversationId) {
       args.push('--conversation', conversationId);
     } else {
+      const resolvedAgyModel = this.resolveAgyModel(modelKey, timeoutMs, workspacePath);
+      const agyModel = resolvedAgyModel instanceof Promise
+        ? await resolvedAgyModel
+        : resolvedAgyModel;
       args.push('--model', agyModel);
     }
     // JSON output keeps the response one-shot while also carrying the
@@ -600,6 +648,35 @@ export class AntigravityServerManager {
     } catch (err) {
       throw this.normalizeAgyError(err);
     }
+  }
+
+  private resolveAgyModel(
+    modelKey: string,
+    timeoutMs: number,
+    workspacePath?: string,
+  ): string | Promise<string> {
+    const key = extractAgyModelKey(modelKey);
+    const staticModel = AGY_MODEL_MAP[key];
+    if (staticModel) return staticModel;
+
+    // Preserve the old no-spawn failure for malformed keys while allowing
+    // versioned Gemini ids (e.g. gemini-3.1-*) to come from agy discovery.
+    if (!/^gemini-\d/.test(key)) {
+      return mapAgyModel(modelKey);
+    }
+
+    const resolveFromCatalog = (catalog: readonly AgyModelDescriptor[]): string => {
+      const discovered = catalog.find((model) => model.key === key || model.agyModel === key);
+      if (discovered) return discovered.agyModel;
+
+      throw new AntigravityAgyModelError(
+        `agy model ${key} is not mapped; supported extension models: ` +
+        `${catalog.map((model) => model.key).join(', ')}`,
+      );
+    };
+
+    if (this.agyModelCatalog) return resolveFromCatalog(this.agyModelCatalog);
+    return this.getAvailableAgyModels(timeoutMs, workspacePath).then(resolveFromCatalog);
   }
 
   private runAgy(
@@ -1087,6 +1164,10 @@ function firstString(record: Record<string, unknown> | null, keys: string[]): st
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
   return undefined;
+}
+
+function extractAgyModelKey(raw: string): string {
+  return raw.includes(':') ? raw.split(':').slice(1).join(':') : raw;
 }
 
 function safeExists(candidate: string): boolean {

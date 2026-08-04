@@ -48,6 +48,7 @@ interface SessionState {
 }
 
 const DEFAULT_MODEL_KEY = 'gemini-3-flash-agent';
+const PROVIDER_ID = 'antigravity-gemini-agent';
 
 /**
  * Read-only dev tool names. Calls with these names route to the host's
@@ -477,6 +478,15 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
       session.toolLoop.abort();
       AntigravityServerManager.shared().resetConversation(sessionId);
       sessions.delete(sessionId);
+    },
+
+    async listModels(): Promise<Array<{ id: string; name: string; default?: boolean }>> {
+      const models = await AntigravityServerManager.shared().getAvailableAgyModels();
+      return models.map((model) => ({
+        id: `${PROVIDER_ID}:${model.key}`,
+        name: model.displayName,
+        ...(model.default ? { default: true } : {}),
+      }));
     },
 
     async getUsageSnapshot(): Promise<UsageSnapshotResult> {

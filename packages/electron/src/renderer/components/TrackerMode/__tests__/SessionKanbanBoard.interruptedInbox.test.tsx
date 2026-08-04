@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider, createStore } from 'jotai';
 import type { SessionMeta } from '@nimbalyst/runtime';
+import type { TrackerRecord } from '@nimbalyst/runtime/core/TrackerRecord';
+import { trackerItemsMapAtom } from '@nimbalyst/runtime/plugins/TrackerPlugin/trackerDataAtoms';
 import { SessionKanbanBoard } from '../SessionKanbanBoard';
 import { sessionRegistryAtom } from '../../../store/atoms/sessions';
 
@@ -57,9 +59,10 @@ function makeMeta(overrides: Partial<SessionMeta> = {}): SessionMeta {
   } as SessionMeta;
 }
 
-function renderBoard(metas: SessionMeta[]): void {
+function renderBoard(metas: SessionMeta[], records: TrackerRecord[] = []): void {
   const store = createStore();
   store.set(sessionRegistryAtom, new Map(metas.map((meta) => [meta.id, meta])));
+  store.set(trackerItemsMapAtom, new Map(records.map((record) => [record.id, record])));
   render(
     <Provider store={store}>
       <SessionKanbanBoard />
@@ -131,5 +134,37 @@ describe('SessionKanbanBoard interrupted and Inbox states', () => {
     const badge = within(card).getByText('interrupted');
     expect(badge.className).toContain('bg-orange-500/10');
     expect(within(card).getByText('cancel')).toBeTruthy();
+  });
+
+  it('shows a linked failed work order as a visible red card state', () => {
+    const session = makeMeta({
+      id: 'failed-card',
+      title: 'Failed delegated task',
+      phase: 'planning',
+    });
+    const workOrder: TrackerRecord = {
+      id: 'work-order-failed-card',
+      primaryType: 'work-order',
+      typeTags: ['work-order'],
+      source: 'native',
+      archived: false,
+      syncStatus: 'local',
+      system: {
+        workspace: '/workspace',
+        createdAt: '2026-08-04T00:00:00.000Z',
+        updatedAt: '2026-08-04T00:00:01.000Z',
+        linkedSessions: [session.id],
+      },
+      fields: { status: 'failed', childSessionId: session.id },
+    };
+
+    renderBoard([session], [workOrder]);
+
+    const card = screen.getByTestId('session-kanban-card');
+    expect(card.dataset.workOrderStatus).toBe('failed');
+    expect(card.dataset.workOrderFailed).toBe('true');
+    const badge = within(card).getByText('failed');
+    expect(badge.className).toContain('bg-red-500/10');
+    expect(within(card).getByText('error')).toBeTruthy();
   });
 });
