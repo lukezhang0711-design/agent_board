@@ -120,34 +120,58 @@ export interface ClaudeCliSessionLauncherDeps {
 }
 
 const CLI_AUTH_GUIDANCE = 'Claude 命令行未登录订阅账号——请在终端运行 claude /login 登录后重试';
-const authPrecheckBlocks = new Map<string, string>();
+export const CLAUDE_AUTH_STATUS_TIMEOUT_MS = 5_000;
 
-/** Shared with every queue entry point, including immediate-kick. */
-export function setClaudeCliQueueAuthPrecheck(sessionId: string, result: { blocked: boolean; raw: string }): void {
-  if (result.blocked) authPrecheckBlocks.set(sessionId, result.raw);
-  else authPrecheckBlocks.delete(sessionId);
+export interface ClaudeCliQueueAuthPrecheck {
+  /** Only this status blocks queue injection. */
+  status: 'not_logged_in' | 'unknown';
+  raw: string;
+  /** Unknown prechecks are visible to health checks but never block a user prompt. */
+  reason?: 'timeout' | 'process_error' | 'invalid_response';
 }
 
-export function getClaudeCliQueueAuthPrecheck(sessionId: string): string | undefined {
-  return authPrecheckBlocks.get(sessionId);
+const authPrechecks = new Map<string, ClaudeCliQueueAuthPrecheck>();
+
+/** Shared with every queue entry point, including immediate-kick. */
+export function setClaudeCliQueueAuthPrecheck(
+  sessionId: string,
+  result: ClaudeCliQueueAuthPrecheck | null,
+): void {
+  if (result) authPrechecks.set(sessionId, result);
+  else authPrechecks.delete(sessionId);
+}
+
+export function getClaudeCliQueueAuthPrecheck(sessionId: string): ClaudeCliQueueAuthPrecheck | undefined {
+  return authPrechecks.get(sessionId);
 }
 
 export function clearClaudeCliQueueAuthPrecheck(sessionId: string): void {
-  authPrecheckBlocks.delete(sessionId);
+  authPrechecks.delete(sessionId);
 }
 
-function isUsableSubscriptionAuth(raw: string): boolean {
+function classifyClaudeCliAuthStatus(raw: string): ClaudeCliQueueAuthPrecheck | null {
   try {
-    const parsed = JSON.parse(raw) as { loggedIn?: unknown; authMethod?: unknown };
-    return parsed.loggedIn === true && typeof parsed.authMethod === 'string' && /oauth/i.test(parsed.authMethod);
+    const parsed = JSON.parse(raw) as { loggedIn?: unknown };
+    if (parsed.loggedIn === false) {
+      return { status: 'not_logged_in', raw };
+    }
+    if (parsed.loggedIn === true) {
+      return null;
+    }
+    return { status: 'unknown', raw, reason: 'invalid_response' };
   } catch {
-    return false;
+    return { status: 'unknown', raw, reason: 'invalid_response' };
   }
 }
 
 function runClaudeAuthStatus(input: { executable: string; cwd: string; env: Record<string, string> }): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile(input.executable, ['auth', 'status'], { cwd: input.cwd, env: input.env, timeout: 750, maxBuffer: 16_384 }, (error, stdout) => {
+    execFile(input.executable, ['auth', 'status'], {
+      cwd: input.cwd,
+      env: input.env,
+      timeout: CLAUDE_AUTH_STATUS_TIMEOUT_MS,
+      maxBuffer: 16_384,
+    }, (error, stdout) => {
       if (error) reject(error);
       else resolve(stdout.trim());
     });
@@ -164,6 +188,16 @@ function precheckErrno(error: unknown): string {
   if (typeof code === 'string' || typeof code === 'number') return String(code);
   if (typeof errno === 'string' || typeof errno === 'number') return String(errno);
   return 'unknown';
+}
+
+function precheckFailureReason(error: unknown): 'timeout' | 'process_error' {
+  if (error && typeof error === 'object') {
+    const { code, killed, signal } = error as { code?: unknown; killed?: unknown; signal?: unknown };
+    if (code === 'ETIMEDOUT' || killed === true || signal === 'SIGTERM') return 'timeout';
+  }
+  return /timed?\s*out|timeout/i.test(precheckErrorMessage(error))
+    ? 'timeout'
+    : 'process_error';
 }
 
 function waitForPrecheckRetry(delayMs: number): Promise<void> {
@@ -372,22 +406,23 @@ export class ClaudeCliSessionLauncher {
     });
 
     // The probe uses the exact final spawn environment, after credential stripping.
-    // An unstable CLI status command degrades to a visible log only; it never blocks.
+    // Only an explicit { loggedIn: false } receipt blocks dispatch. Timeouts,
+    // process errors, and malformed output are retryable unknowns instead.
     const precheckInput = {
       executable: spawnConfig.executable,
       cwd: spawnConfig.env.PWD ?? cwd,
       env: spawnConfig.env,
     };
     const runAuthStatus = this.deps.runAuthStatus ?? runClaudeAuthStatus;
-    let authPrecheck = { blocked: false, raw: 'unavailable' };
+    let authPrecheck: ClaudeCliQueueAuthPrecheck | null = null;
     try {
       const raw = await runAuthStatus(precheckInput);
-      authPrecheck = { blocked: !isUsableSubscriptionAuth(raw), raw };
+      authPrecheck = classifyClaudeCliAuthStatus(raw);
     } catch {
       await (this.deps.waitForPrecheckRetry ?? waitForPrecheckRetry)(500);
       try {
         const raw = await runAuthStatus(precheckInput);
-        authPrecheck = { blocked: !isUsableSubscriptionAuth(raw), raw };
+        authPrecheck = classifyClaudeCliAuthStatus(raw);
       } catch (retryError) {
         const lstat = await describePrecheckTarget(
           precheckInput.executable,
@@ -397,11 +432,19 @@ export class ClaudeCliSessionLauncher {
           `[CliQueue] precheck unavailable after retry cwd=${precheckInput.cwd} ` +
             `executable=${precheckInput.executable} lstat=${lstat} errno=${precheckErrno(retryError)}`,
         );
-        authPrecheck = { blocked: false, raw: `unavailable:${precheckErrorMessage(retryError)}` };
+        authPrecheck = {
+          status: 'unknown',
+          raw: `unavailable:${precheckErrorMessage(retryError)}`,
+          reason: precheckFailureReason(retryError),
+        };
       }
     }
     setClaudeCliQueueAuthPrecheck(sessionId, authPrecheck);
-    console.log(`[CliQueue] precheck result=${authPrecheck.raw} action=${authPrecheck.blocked ? 'blocked' : 'allowed'}`);
+    console.log(
+      `[CliQueue] precheck result=${authPrecheck?.raw ?? 'authenticated'} ` +
+        `classification=${authPrecheck?.status ?? 'authenticated'} ` +
+        `action=${authPrecheck?.status === 'not_logged_in' ? 'blocked' : 'allowed'}`,
+    );
 
     // 4. Spawn the genuine interactive CLI in the terminal strip. Tear the proxy
     // down when the PTY exits (composed with the PID-watcher cleanup downstream).
@@ -428,7 +471,7 @@ export class ClaudeCliSessionLauncher {
       throw err;
     }
 
-    if (authPrecheck.blocked) {
+    if (authPrecheck?.status === 'not_logged_in') {
       void logClaudeCliUpstreamError({
         sessionId,
         workspacePath,

@@ -67,7 +67,7 @@ vi.mock('../../../utils/logger', () => ({
   logger: { main: { info: vi.fn(), warn: mocks.logWarn, error: vi.fn(), debug: vi.fn() } },
 }));
 
-import { AIService } from '../AIService';
+import { AIService, listChannelHealthChannels } from '../AIService';
 import {
   registerExtensionProviderSetting,
   syncExtensionProviderSettings,
@@ -162,5 +162,37 @@ describe('AIService ai:saveSettings', () => {
       skipped: [],
     });
     expect(mocks.logWarn).not.toHaveBeenCalled();
+  });
+
+  it('RED: includes every active extension provider, with disabled ones retained as non-requestable rows', () => {
+    const gemini = {
+      status: 'active',
+      contributionId: 'antigravity-gemini-agent',
+      contribution: { displayName: 'Gemini' },
+    };
+
+    const enabled = listChannelHealthChannels(
+      { 'antigravity-gemini-agent': { enabled: true } },
+      [gemini],
+    );
+    const disabled = listChannelHealthChannels(
+      { 'antigravity-gemini-agent': { enabled: false } },
+      [gemini],
+    );
+
+    expect(enabled).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'antigravity-gemini-agent',
+        displayName: 'Gemini',
+        transport: 'streaming',
+        enabled: true,
+      }),
+    ]));
+    expect(disabled).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'antigravity-gemini-agent',
+        enabled: false,
+      }),
+    ]));
   });
 });

@@ -30,8 +30,8 @@ export async function flushNextClaudeCliQueuedPromptForSession(
   reason: ClaudeCliQueueFlushReason = 'other',
 ): Promise<boolean> {
   const precheckResult = getClaudeCliQueueAuthPrecheck(sessionId);
-  if (precheckResult) {
-    logger.main.info(`[CliQueue] precheck result=${precheckResult} action=blocked`);
+  if (precheckResult?.status === 'not_logged_in') {
+    logger.main.info(`[CliQueue] precheck result=${precheckResult.raw} action=blocked`);
     return false;
   }
   if (flushInFlight.has(sessionId)) {

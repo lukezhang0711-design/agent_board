@@ -45,7 +45,7 @@ describe('flushNextClaudeCliQueuedPromptForSession observability', () => {
 
   it('does not claim or submit when the launcher blocked the auth precheck', async () => {
     setClaudeCliQueueAuthPrecheck('session-1', {
-      blocked: true,
+      status: 'not_logged_in',
       raw: '{"loggedIn":false,"authMethod":"none"}',
     });
 
@@ -73,5 +73,24 @@ describe('flushNextClaudeCliQueuedPromptForSession observability', () => {
       '[CliQueue] flush submit sessionId=session-1 promptId=trace-1 result=submitted',
     ]));
     expect(mocks.info).not.toHaveBeenCalledWith(expect.stringContaining('secret prompt'));
+  });
+
+  it('allows dispatch when the precheck is unknown, so a transient status failure cannot block a normal prompt', async () => {
+    setClaudeCliQueueAuthPrecheck('session-1', {
+      status: 'unknown',
+      reason: 'timeout',
+      raw: 'unavailable:auth status timed out',
+    });
+    mocks.listPending.mockResolvedValue([{ id: 'unknown-precheck-1', prompt: 'retry me', origin: 'user' }]);
+    mocks.claim.mockResolvedValue({ id: 'unknown-precheck-1', prompt: 'retry me', origin: 'user' });
+    mocks.submit.mockResolvedValue({ submitted: true });
+
+    await expect(flushNextClaudeCliQueuedPromptForSession('session-1', '/workspace')).resolves.toBe(true);
+
+    expect(mocks.listPending).toHaveBeenCalledWith('session-1');
+    expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'session-1',
+      prompt: 'retry me',
+    }));
   });
 });

@@ -8,22 +8,27 @@
 
 export const CHANNEL_HEALTH_PROMPT = 'Reply with one word: pong';
 export const CHANNEL_HEALTH_SLOW_MS = 10_000;
-export const CHANNEL_HEALTH_TIMEOUT_MS = 20_000;
+export const CHANNEL_HEALTH_TIMEOUT_MS = 60_000;
 export const CHANNEL_HEALTH_AUTO_DEDUPE_MS = 10 * 60 * 1_000;
 
 export type ChannelHealthTrigger = 'manual' | 'automatic';
 export type ChannelHealthTransport = 'streaming' | 'claude-cli';
-export type ChannelHealthState = 'never' | 'healthy' | 'slow' | 'failed';
+export type ChannelHealthState = 'never' | 'healthy' | 'slow' | 'failed' | 'unknown' | 'disabled';
 export type ChannelHealthFailureKind =
   | 'not_logged_in'
   | 'missing_binary'
   | 'timeout'
+  | 'missing_api_key'
+  | 'auth_check_timeout'
+  | 'auth_check_unknown'
   | 'engine_error';
 
 export interface ChannelHealthChannel {
   id: string;
   displayName: string;
   transport: ChannelHealthTransport;
+  /** Disabled rows remain visible but must never send a health request. */
+  enabled?: boolean;
 }
 
 export interface ChannelHealthTransportResult {
@@ -87,6 +92,9 @@ export class ChannelHealthError extends Error {
 export function classifyChannelHealthError(error: unknown): ChannelHealthFailureKind {
   if (error instanceof ChannelHealthError) return error.failureKind;
   const message = error instanceof Error ? error.message : String(error);
+  if (/(?:api[\s_-]?key|密钥).*(?:not configured|missing|required|未配置)|(?:not configured|missing|required).*(?:api[\s_-]?key|密钥)/i.test(message)) {
+    return 'missing_api_key';
+  }
   if (/not.?logged.?in|not authenticated|unauthenticated|auth(?:entication)? failed|oauth|login|\b401\b/i.test(message)) {
     return 'not_logged_in';
   }
@@ -119,6 +127,12 @@ export function channelHealthFailureCopy(
       return { summary: '未找到本地引擎', guidance: '请安装或配置该引擎后重试' };
     case 'timeout':
       return { summary: '请求超时', guidance: '请检查网络或引擎状态后重试' };
+    case 'missing_api_key':
+      return { summary: '未配置密钥', guidance: '在设置中填入 API Key，或不使用此通道可忽略' };
+    case 'auth_check_timeout':
+      return { summary: '检测超时', guidance: '请稍后重试；若持续出现，请检查 Claude CLI 状态' };
+    case 'auth_check_unknown':
+      return { summary: '检测状态未知', guidance: '请稍后重试；若持续出现，请检查 Claude CLI 状态' };
     case 'engine_error':
       return { summary: '引擎错误', guidance: '请检查引擎配置后重试' };
   }
@@ -145,9 +159,18 @@ export class ChannelHealthService {
     const channels = await this.deps.listEnabledChannels();
     return {
       running: this.running !== null,
-      results: channels.map((channel) => this.results.get(channel.id) ?? {
-        ...channel,
-        state: 'never' as const,
+      results: channels.map((channel) => {
+        if (channel.enabled === false) {
+          return {
+            ...channel,
+            state: 'disabled' as const,
+            summary: '未启用',
+          };
+        }
+        return this.results.get(channel.id) ?? {
+          ...channel,
+          state: 'never' as const,
+        };
       }),
     };
   }
@@ -192,6 +215,7 @@ export class ChannelHealthService {
       : channels;
 
     for (const channel of selectedChannels) {
+      if (channel.enabled === false) continue;
       const now = this.now();
       if (
         trigger === 'automatic'
@@ -255,9 +279,12 @@ export class ChannelHealthService {
     } catch (error) {
       const failureKind = classifyChannelHealthError(error);
       const copy = channelHealthFailureCopy(channel.id, failureKind);
+      const state: ChannelHealthState = failureKind === 'auth_check_timeout' || failureKind === 'auth_check_unknown'
+        ? 'unknown'
+        : 'failed';
       const result: ChannelHealthResult = {
         ...channel,
-        state: 'failed',
+        state,
         checkedAt: this.now(),
         trigger,
         completionMs: Math.max(0, this.now() - startedAt),

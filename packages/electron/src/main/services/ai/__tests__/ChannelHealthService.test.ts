@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   CHANNEL_HEALTH_AUTO_DEDUPE_MS,
   CHANNEL_HEALTH_PROMPT,
+  CHANNEL_HEALTH_TIMEOUT_MS,
   ChannelHealthError,
   ChannelHealthService,
+  channelHealthFailureCopy,
+  classifyChannelHealthError,
   type ChannelHealthChannel,
 } from '../ChannelHealthService';
 
@@ -91,6 +94,94 @@ describe('ChannelHealthService', () => {
       firstResponseMs: 400,
       completionMs: 10_001,
     });
+  });
+
+  it('RED: waits for a Codex fixture that completes in 25 seconds, then marks it slow instead of timing out', async () => {
+    vi.useFakeTimers();
+    try {
+      const codex = channels.find((channel) => channel.id === 'openai-codex')!;
+      const service = new ChannelHealthService({
+        listEnabledChannels: () => [codex],
+        runChannel: () => new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({ responseText: 'pong', firstResponseMs: 12_000, completionMs: 25_000 });
+          }, 25_000);
+        }),
+        isAutoCheckEnabled: () => true,
+        log: vi.fn(),
+      });
+
+      const snapshotPromise = service.runManually({ event: event(), workspacePath: '/fixture' });
+      await vi.advanceTimersByTimeAsync(25_000);
+
+      await expect(snapshotPromise).resolves.toMatchObject({
+        results: [expect.objectContaining({
+          id: 'openai-codex',
+          state: 'slow',
+          completionMs: 25_000,
+        })],
+      });
+      expect(CHANNEL_HEALTH_TIMEOUT_MS).toBe(60_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('RED: reports a missing API key with the actionable key-setup guidance', () => {
+    expect(classifyChannelHealthError(new Error('Anthropic API key not configured')))
+      .toBe('missing_api_key');
+    expect(channelHealthFailureCopy('claude', 'missing_api_key')).toEqual({
+      summary: '未配置密钥',
+      guidance: '在设置中填入 API Key，或不使用此通道可忽略',
+    });
+  });
+
+  it('RED: keeps disabled extension rows visible without sending a health request', async () => {
+    const enabled = channels[0];
+    const disabledExtension = {
+      id: 'gemini-fixture',
+      displayName: 'Gemini',
+      transport: 'streaming',
+      enabled: false,
+    } as ChannelHealthChannel;
+    const runChannel = vi.fn(async () => ({ responseText: 'pong', completionMs: 20 }));
+    const service = new ChannelHealthService({
+      listEnabledChannels: () => [enabled, disabledExtension],
+      runChannel,
+      isAutoCheckEnabled: () => true,
+      log: vi.fn(),
+    });
+
+    const snapshot = await service.runManually({ event: event(), workspacePath: '/fixture' });
+
+    expect(runChannel).toHaveBeenCalledTimes(1);
+    expect(snapshot.results).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'gemini-fixture',
+        state: 'disabled',
+        summary: '未启用',
+      }),
+    ]));
+  });
+
+  it('RED: surfaces an unavailable Claude auth precheck as a retryable neutral result', async () => {
+    const service = new ChannelHealthService({
+      listEnabledChannels: () => [channels[1]],
+      runChannel: async () => {
+        throw new ChannelHealthError('auth_check_timeout');
+      },
+      isAutoCheckEnabled: () => true,
+      log: vi.fn(),
+    });
+
+    const snapshot = await service.runManually({ event: event(), workspacePath: '/fixture' });
+
+    expect(snapshot.results[0]).toMatchObject({
+      state: 'unknown',
+      failureKind: 'auth_check_timeout',
+      summary: '检测超时',
+    });
+    expect(snapshot.results[0].guidance).toContain('重试');
   });
 
   it('throttles automatic checks for ten minutes but lets manual retries run', async () => {

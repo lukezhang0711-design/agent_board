@@ -1,6 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
+import { chmod, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import os from 'os';
+import path from 'path';
 import { McpConfigService } from '@nimbalyst/runtime/ai/server';
-import { ClaudeCliSessionLauncher, type ClaudeCliSessionLauncherDeps } from '../ClaudeCliSessionLauncher';
+import {
+  ClaudeCliSessionLauncher,
+  clearClaudeCliQueueAuthPrecheck,
+  getClaudeCliQueueAuthPrecheck,
+  type ClaudeCliSessionLauncherDeps,
+} from '../ClaudeCliSessionLauncher';
 import type { ClaudeCliSpawnConfig } from '../claudeCliSpawnConfig';
 
 type CreateClaudeCliTerminalArgs = [
@@ -29,6 +37,7 @@ describe('ClaudeCliSessionLauncher', () => {
     runAuthStatus?: ClaudeCliSessionLauncherDeps['runAuthStatus'];
     lstat?: ClaudeCliSessionLauncherDeps['lstat'];
     waitForPrecheckRetry?: ClaudeCliSessionLauncherDeps['waitForPrecheckRetry'];
+    resolveClaudeExecutable?: () => string;
   } = {}) {
     const writes: Array<{ file: string; data: string }> = [];
     const createClaudeCliTerminal =
@@ -43,7 +52,7 @@ describe('ClaudeCliSessionLauncher', () => {
 
     const launcher = new ClaudeCliSessionLauncher({
       getMcpServersConfig,
-      resolveClaudeExecutable: () => '/usr/local/bin/claude',
+      resolveClaudeExecutable: opts.resolveClaudeExecutable ?? (() => '/usr/local/bin/claude'),
       getEnhancedPath: () => '/opt/bin:/usr/bin',
       terminalManager: { createClaudeCliTerminal },
       baseEnv: { ANTHROPIC_API_KEY: 'sk-ant-leak', HOME: '/Users/me' },
@@ -125,6 +134,94 @@ describe('ClaudeCliSessionLauncher', () => {
     // The terminal remains available for the user to run `claude /login`, but
     // queue injection is blocked by the receipt registered before this spawn.
     expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
+  });
+
+  it('RED: blocks only an explicit loggedIn:false receipt', async () => {
+    const sessionId = 'explicitly-logged-out';
+    const { launcher, createClaudeCliTerminal } = makeHarness({
+      runAuthStatus: async () => '{"loggedIn":false,"authMethod":"none"}',
+    });
+
+    try {
+      await launcher.launch({ ...baseInput, sessionId });
+
+      expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
+      expect(getClaudeCliQueueAuthPrecheck(sessionId)).toMatchObject({
+        status: 'not_logged_in',
+        raw: '{"loggedIn":false,"authMethod":"none"}',
+      });
+    } finally {
+      clearClaudeCliQueueAuthPrecheck(sessionId);
+    }
+  });
+
+  it('RED: does not block a logged-in status merely because its auth method is not OAuth', async () => {
+    const sessionId = 'logged-in-non-oauth';
+    const { launcher, createClaudeCliTerminal } = makeHarness({
+      runAuthStatus: async () => '{"loggedIn":true,"authMethod":"api_key"}',
+    });
+
+    try {
+      await launcher.launch({ ...baseInput, sessionId });
+
+      expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
+      expect(getClaudeCliQueueAuthPrecheck(sessionId)).toBeUndefined();
+    } finally {
+      clearClaudeCliQueueAuthPrecheck(sessionId);
+    }
+  });
+
+  it('RED: records process failures as retryable unknowns rather than login blocks', async () => {
+    const sessionId = 'unavailable-auth-status';
+    const unavailable = Object.assign(new Error('spawn claude ENOENT'), { code: 'ENOENT' });
+    const { launcher, createClaudeCliTerminal } = makeHarness({
+      runAuthStatus: vi.fn().mockRejectedValue(unavailable),
+      waitForPrecheckRetry: async () => undefined,
+    });
+
+    try {
+      await launcher.launch({ ...baseInput, sessionId });
+
+      expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
+      expect(getClaudeCliQueueAuthPrecheck(sessionId)).toMatchObject({
+        status: 'unknown',
+        reason: 'process_error',
+      });
+    } finally {
+      clearClaudeCliQueueAuthPrecheck(sessionId);
+    }
+  });
+
+  it('RED: lets a 1.2-second logged-in auth fixture finish without a second precheck attempt', async () => {
+    const fixtureDir = await mkdtemp(path.join(os.tmpdir(), 'claude-auth-status-'));
+    const executable = path.join(fixtureDir, 'claude');
+    const invocationFile = path.join(fixtureDir, 'invocations.txt');
+    const sessionId = 'slow-auth-status';
+    await writeFile(
+      executable,
+      `#!${process.execPath}\nconst fs = require('fs');\nfs.appendFileSync(${JSON.stringify(invocationFile)}, '1\\n');\nsetTimeout(() => process.stdout.write('{"loggedIn":true,"authMethod":"oauth"}'), 1200);\n`,
+      'utf8',
+    );
+    await chmod(executable, 0o755);
+    const { launcher, createClaudeCliTerminal } = makeHarness({
+      resolveClaudeExecutable: () => executable,
+    });
+
+    try {
+      await launcher.launch({
+        ...baseInput,
+        sessionId,
+        workspacePath: fixtureDir,
+        cwd: fixtureDir,
+      });
+
+      expect(createClaudeCliTerminal).toHaveBeenCalledOnce();
+      expect((await readFile(invocationFile, 'utf8')).trim().split('\n')).toHaveLength(1);
+      expect(getClaudeCliQueueAuthPrecheck(sessionId)).toBeUndefined();
+    } finally {
+      clearClaudeCliQueueAuthPrecheck(sessionId);
+      await rm(fixtureDir, { recursive: true, force: true });
+    }
   });
 
   it('retries an unavailable auth precheck once after 500ms and preserves the launch when it succeeds', async () => {

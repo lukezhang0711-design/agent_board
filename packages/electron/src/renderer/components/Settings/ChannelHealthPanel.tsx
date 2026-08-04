@@ -4,8 +4,15 @@ import { MaterialSymbol } from '@nimbalyst/runtime';
 import { settingAtom } from '../../store/atoms/settingAtomFamily';
 import { SettingsToggle } from '../GlobalSettings/SettingsToggle';
 
-type ChannelHealthState = 'never' | 'healthy' | 'slow' | 'failed';
-type ChannelHealthFailureKind = 'not_logged_in' | 'missing_binary' | 'timeout' | 'engine_error';
+type ChannelHealthState = 'never' | 'healthy' | 'slow' | 'failed' | 'unknown' | 'disabled';
+type ChannelHealthFailureKind =
+  | 'not_logged_in'
+  | 'missing_binary'
+  | 'timeout'
+  | 'missing_api_key'
+  | 'auth_check_timeout'
+  | 'auth_check_unknown'
+  | 'engine_error';
 
 export interface ChannelHealthResultView {
   id: string;
@@ -46,13 +53,18 @@ export function ChannelHealthRow({
   running: boolean;
   onRerun: (channelId: string) => void;
 }) {
-  const status = result.state === 'healthy'
-    ? { icon: 'check_circle', className: 'text-[var(--nim-success)]', text: `通畅 · ${formatMs(result.completionMs)}` }
-    : result.state === 'slow'
-      ? { icon: 'warning', className: 'text-[var(--nim-warning)]', text: `较慢 · ${formatMs(result.completionMs)}` }
-      : result.state === 'failed'
-        ? { icon: 'error', className: 'text-[var(--nim-error)]', text: `失败 · ${result.summary || '引擎错误'}` }
-        : { icon: 'help', className: 'text-[var(--nim-text-faint)]', text: '尚未体检' };
+  const status = result.state === 'disabled'
+    ? { icon: 'pause_circle', className: 'text-[var(--nim-text-faint)]', text: '未启用' }
+    : result.state === 'healthy'
+      ? { icon: 'check_circle', className: 'text-[var(--nim-success)]', text: `通畅 · ${formatMs(result.completionMs)}` }
+      : result.state === 'slow'
+        ? { icon: 'warning', className: 'text-[var(--nim-warning)]', text: `较慢 · ${formatMs(result.completionMs)}` }
+        : result.state === 'failed'
+          ? { icon: 'error', className: 'text-[var(--nim-error)]', text: `失败 · ${result.summary || '引擎错误'}` }
+          : result.state === 'unknown'
+            ? { icon: 'help', className: 'text-[var(--nim-text-faint)]', text: result.summary || '检测状态未知' }
+            : { icon: 'help', className: 'text-[var(--nim-text-faint)]', text: '尚未体检' };
+  const canRerun = result.state !== 'disabled';
 
   return (
     <section
@@ -72,11 +84,11 @@ export function ChannelHealthRow({
             </span>
           </div>
           <p className="mt-1 mb-0 text-xs text-[var(--nim-text-muted)]">
-            {formatCheckedAt(result.checkedAt)}
+            {result.state === 'disabled' ? '未启用，不发送请求' : formatCheckedAt(result.checkedAt)}
             {typeof result.firstResponseMs === 'number' && ` · 首响 ${formatMs(result.firstResponseMs)}`}
           </p>
-          {result.state === 'failed' && result.guidance && (
-            <p className="mt-2 mb-0 text-xs text-[var(--nim-error)]" data-testid={`channel-health-guidance-${result.id}`}>
+          {(result.state === 'failed' || result.state === 'unknown') && result.guidance && (
+            <p className={`mt-2 mb-0 text-xs ${result.state === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`} data-testid={`channel-health-guidance-${result.id}`}>
               {result.guidance}
             </p>
           )}
@@ -85,10 +97,10 @@ export function ChannelHealthRow({
           type="button"
           className="shrink-0 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] px-2.5 py-1.5 text-xs text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onRerun(result.id)}
-          disabled={running}
+          disabled={running || !canRerun}
           data-testid={`channel-health-rerun-${result.id}`}
         >
-          {running ? '体检中…' : '重新体检'}
+          {!canRerun ? '请先启用' : running ? '体检中…' : '重新体检'}
         </button>
       </div>
     </section>
