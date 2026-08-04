@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   ipcHandlers: new Map<string, (...args: any[]) => any>(),
   settingsSet: vi.fn(),
+  settingsGet: vi.fn(),
   logWarn: vi.fn(),
 }));
 
@@ -19,7 +20,7 @@ vi.mock('../../../utils/ipcRegistry', async (importOriginal) => {
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
   SessionManager: class {},
   ProviderFactory: { getProvider: vi.fn(), createProvider: vi.fn(), destroyProvider: vi.fn() },
-  ModelRegistry: { clearCache: vi.fn() },
+  ModelRegistry: { clearCache: vi.fn(), getAllModels: vi.fn() },
   isAskUserQuestionProvider: () => false,
   isAgentProvider: () => false,
   isSlashCommandCatalogProvider: () => false,
@@ -61,7 +62,7 @@ vi.mock('../../analytics/AnalyticsService.ts', () => ({
   AnalyticsService: { getInstance: () => ({ sendEvent: vi.fn() }) },
 }));
 vi.mock('../../SettingsService', () => ({
-  getSettingsService: () => ({ set: mocks.settingsSet }),
+  getSettingsService: () => ({ set: mocks.settingsSet, get: mocks.settingsGet }),
 }));
 vi.mock('../../../utils/logger', () => ({
   logger: { main: { info: vi.fn(), warn: mocks.logWarn, error: vi.fn(), debug: vi.fn() } },
@@ -202,6 +203,67 @@ describe('AIService ai:saveSettings', () => {
         id: 'antigravity-gemini-agent',
         enabled: false,
       }),
+    ]));
+  });
+
+  it('GREEN: hides the Claude CLI and API rows by default when the API key is absent', () => {
+    const channels = listChannelHealthChannels({
+      'claude-code': { enabled: true },
+      'claude-code-cli': { enabled: true },
+      claude: { enabled: true },
+    }, []);
+
+    expect(channels.some((channel) => channel.id === 'claude-code-cli')).toBe(false);
+    expect(channels.some((channel) => channel.id === 'claude')).toBe(false);
+  });
+
+  it('GREEN: restores the CLI row when advanced visibility is enabled and shows Claude API only with a key', () => {
+    const channels = listChannelHealthChannels({
+      'claude-code': { enabled: true },
+      'claude-code-cli': { enabled: true },
+      claude: { enabled: true },
+    }, [], {
+      showClaudeCliChannel: true,
+      anthropicApiKey: 'sk-ant-fixture',
+    });
+
+    expect(channels).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'claude-code-cli', transport: 'claude-cli' }),
+      expect.objectContaining({ id: 'claude', displayName: 'Claude API' }),
+    ]));
+  });
+
+  it('GREEN: filters CLI models in the main new-session enumeration and restores them with the switch', async () => {
+    const { ModelRegistry } = await import('@nimbalyst/runtime/ai/server');
+    vi.mocked(ModelRegistry.getAllModels).mockResolvedValue([
+      { id: 'claude-code:sonnet', name: 'Claude Agent · Sonnet', provider: 'claude-code' },
+      { id: 'claude-code-cli:sonnet', name: 'Claude Code CLI · Sonnet', provider: 'claude-code-cli' },
+    ] as any);
+    mocks.settingsGet.mockReturnValue(false);
+
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, {
+      getNormalizedProviderSettings: () => ({
+        'claude-code': { enabled: true },
+        'claude-code-cli': { enabled: true },
+      }),
+      getSettingsStore: () => ({ get: (key: string) => key === 'apiKeys' ? {} : {} }),
+      startCodexModelRefreshIfEnabled: vi.fn(),
+      streamingHandler: { handle: vi.fn() },
+    });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:getModels');
+
+    const hidden = await handler?.({} as Electron.IpcMainInvokeEvent);
+    expect(hidden?.models).toEqual([
+      expect.objectContaining({ id: 'claude-code:sonnet' }),
+    ]);
+
+    mocks.settingsGet.mockReturnValue(true);
+    const visible = await handler?.({} as Electron.IpcMainInvokeEvent);
+    expect(visible?.models).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'claude-code:sonnet' }),
+      expect.objectContaining({ id: 'claude-code-cli:sonnet' }),
     ]));
   });
 });

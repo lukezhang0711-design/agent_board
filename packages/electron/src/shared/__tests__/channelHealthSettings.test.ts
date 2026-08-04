@@ -13,4 +13,16 @@ describe('channel health startup setting', () => {
       path: 'channelHealth.autoCheckOnStartup',
     });
   });
+
+  it('persists the default-off Claude CLI visibility switch independently', () => {
+    const key = 'ai.showClaudeCliChannel';
+    expect(isSettingKey(key)).toBe(true);
+
+    const descriptor = getDescriptor(key);
+    expect(descriptor.defaultValue).toBe(false);
+    expect(descriptor.storage).toEqual({
+      store: 'ai-settings',
+      path: 'showClaudeCliChannel',
+    });
+  });
 });

@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
+import { useAtomValue } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { getClaudeCodeModelLabel } from '../../utils/modelUtils';
+import { settingAtom } from '../../store/atoms/settingAtomFamily';
+import { isNewSessionProviderVisible } from '../../../shared/claudeChannelVisibility';
 
 export interface AgentModelOption {
   id: string;
@@ -17,7 +20,7 @@ interface AgentModelPickerProps {
 }
 
 const providerLabels: Record<string, string> = {
-  'claude-code': 'Claude Agent',
+  'claude-code': 'Claude',
   'claude-code-cli': 'Claude Code CLI',
   'openai-codex': 'OpenAI Codex',
   'openai-codex-acp': 'OpenAI Codex (ACP)',
@@ -37,9 +40,13 @@ export function AgentModelPicker({
   isLoading = false,
   disabled = false,
 }: AgentModelPickerProps) {
+  const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
   const selectableModels = useMemo(
-    () => models.filter((model) => model.provider !== 'openai-codex-acp'),
-    [models],
+    () => models.filter((model) => (
+      model.provider !== 'openai-codex-acp'
+      && isNewSessionProviderVisible(model.provider, showClaudeCliChannel)
+    )),
+    [models, showClaudeCliChannel],
   );
 
   const groupedModels = useMemo(() => {

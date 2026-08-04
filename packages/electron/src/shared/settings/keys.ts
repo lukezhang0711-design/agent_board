@@ -231,6 +231,11 @@ export const SETTINGS_REGISTRY = {
     { store: 'ai-settings', path: 'channelHealth.autoCheckOnStartup' },
     true,
   ),
+  'ai.showClaudeCliChannel': setting(
+    z.boolean(),
+    { store: 'ai-settings', path: 'showClaudeCliChannel' },
+    false,
+  ),
 } as const;
 
 type StaticSettingKey = keyof typeof SETTINGS_REGISTRY;

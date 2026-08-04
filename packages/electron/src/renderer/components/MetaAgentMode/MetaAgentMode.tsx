@@ -4,6 +4,7 @@ import { useAtomValue } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { store } from '@nimbalyst/runtime/store';
 import { defaultAgentModelAtom } from '../../store/atoms/appSettings';
+import { settingAtom } from '../../store/atoms/settingAtomFamily';
 import { sessionRegistryAtom } from '../../store';
 import { sessionTokenUsageAtom } from '../../store/atoms/sessions';
 import { getRelativeTimeString } from '../../utils/dateFormatting';
@@ -189,6 +190,7 @@ export function MetaAgentMode({
   onOpenSessionInAgent,
 }: MetaAgentModeProps) {
   const defaultModel = useAtomValue(defaultAgentModelAtom);
+  const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
   const [metaSessionId, setMetaSessionId] = useState<string | null>(externalSessionId ?? null);
   const [planAutoApproveEnabled, setPlanAutoApproveEnabled] = useState(false);
   const [loadingSession, setLoadingSession] = useState(!externalSessionId);
@@ -198,10 +200,10 @@ export function MetaAgentMode({
 
   const createMetaSession = useCallback(
     async (): Promise<string | null> => {
-      const result = await createMetaAgentSession(workspacePath, defaultModel);
+      const result = await createMetaAgentSession(workspacePath, defaultModel, showClaudeCliChannel);
       return result?.id ?? null;
     },
-    [defaultModel, workspacePath]
+    [defaultModel, showClaudeCliChannel, workspacePath]
   );
 
   const ensureMetaSession = useCallback(async () => {

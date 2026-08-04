@@ -1,8 +1,17 @@
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
+import { resolveNewSessionModel } from '../../shared/claudeChannelVisibility';
 
 export interface MetaAgentSessionResult {
   id: string;
   provider: string;
+}
+
+export function resolveMetaAgentModel(
+  defaultModel: string | null,
+  showClaudeCliChannel = false,
+): string | null {
+  if (defaultModel === null) return null;
+  return resolveNewSessionModel(defaultModel, showClaudeCliChannel) ?? null;
 }
 
 /**
@@ -11,10 +20,12 @@ export interface MetaAgentSessionResult {
  */
 export async function createMetaAgentSession(
   workspacePath: string,
-  defaultModel: string | null
+  defaultModel: string | null,
+  showClaudeCliChannel = false,
 ): Promise<MetaAgentSessionResult | null> {
   const sessionId = crypto.randomUUID();
-  const parsedModel = defaultModel ? ModelIdentifier.tryParse(defaultModel) : null;
+  const resolvedModel = resolveMetaAgentModel(defaultModel, showClaudeCliChannel);
+  const parsedModel = resolvedModel ? ModelIdentifier.tryParse(resolvedModel) : null;
   const provider = parsedModel?.provider || 'claude-code';
 
   try {
@@ -22,7 +33,7 @@ export async function createMetaAgentSession(
       session: {
         id: sessionId,
         provider,
-        model: defaultModel,
+        model: resolvedModel,
         title: 'Meta Agent',
         agentRole: 'meta-agent',
       },
