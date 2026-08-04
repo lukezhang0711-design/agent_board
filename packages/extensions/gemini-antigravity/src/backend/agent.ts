@@ -261,7 +261,13 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
 
   function buildSessionState(input: CreateSessionInput | ResumeSessionInput): SessionState {
     const modelKey = extractModelKey(input.model);
-    const toolLoop = new AntigravityToolLoopProtocol({ modelKey });
+    const server = AntigravityServerManager.shared();
+    const toolLoop = new AntigravityToolLoopProtocol({
+      modelKey,
+      server,
+      conversationKey: input.sessionId,
+      workspacePath: input.workspacePath,
+    });
     return {
       sessionId: input.sessionId,
       workspacePath: input.workspacePath,
@@ -285,6 +291,7 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
         existing.abortController?.abort();
         existing.toolLoop.abort();
       }
+      AntigravityServerManager.shared().resetConversation(input.sessionId);
       const session = buildSessionState(input);
       session.toolLoop.reset();
       sessions.set(input.sessionId, session);
@@ -296,6 +303,7 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
         existing.abortController?.abort();
         existing.toolLoop.abort();
       }
+      AntigravityServerManager.shared().resetConversation(input.sessionId);
       const session = buildSessionState(input);
       const history = input.history ?? [];
       if (history.length > 0) {
@@ -467,6 +475,7 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
       if (!session) return;
       session.abortController?.abort();
       session.toolLoop.abort();
+      AntigravityServerManager.shared().resetConversation(sessionId);
       sessions.delete(sessionId);
     },
 

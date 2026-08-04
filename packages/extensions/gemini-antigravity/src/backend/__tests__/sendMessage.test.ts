@@ -5,7 +5,7 @@
  * Drives the REAL agent.ts activate() -> createSession -> sendMessage and the
  * REAL AntigravityToolLoopProtocol.run() tool loop. The ONLY mocked boundary is
  * AntigravityServerManager.prototype.getModelResponse (Seam A): mocking it means
- * the language_server.exe spawn, the ~/.gemini OAuth check, and the HTTPS
+ * the language_server.exe/agy spawn, the ~/.gemini OAuth check, and the HTTPS
  * Connect-RPC never run, while every line of agent.ts's event-shaping and
  * logRaw audit path executes for real.
  *
@@ -45,7 +45,8 @@ describe('gemini-antigravity backend sendMessage', () => {
   // Use vi.MockInstance with the explicit method signature. The
   // unparameterized `ReturnType<typeof vi.spyOn>` widens to a no-arg fallback
   // under vitest's overload set, which breaks assignability against the real
-  // 3-arg AntigravityServerManager.getModelResponse signature.
+  // AntigravityServerManager.getModelResponse signature, including the
+  // session conversation key and optional workspace path.
   let getModelResponse: import('vitest').MockInstance<
     AntigravityServerManager['getModelResponse']
   >;
@@ -96,6 +97,13 @@ describe('gemini-antigravity backend sendMessage', () => {
 
     // Model called exactly once -> single no-tool round -> no spawn occurred.
     expect(getModelResponse).toHaveBeenCalledTimes(1);
+    expect(getModelResponse).toHaveBeenCalledWith(
+      expect.any(String),
+      'gemini-3-flash-agent',
+      expect.any(Number),
+      's1',
+      undefined,
+    );
     expect(toolExecutor).not.toHaveBeenCalled();
 
     // logRaw audited both the inbound user turn and the outbound assistant turn.

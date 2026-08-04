@@ -9,19 +9,21 @@
  * push fresh values from manifest/user settings without requiring an
  * extension rebuild when Antigravity bumps its supported-build floor.
  *
- * Two modes (auto-selected by ensureRunning):
- *   A. Attach to a running Antigravity "hub" language server (IDE open).
- *   B. Spawn and manage our own standalone hub server.
+ * Engine selection:
+ *   A. Prefer the desktop language server (attach/spawn through the existing
+ *      HTTPS JSON/Connect-RPC implementation).
+ *   B. Fall back to the installed `agy -p` command-line engine. Its buffered
+ *      JSON result carries the conversation id used for later turns.
  *
- * Auth is the user's existing ~/.gemini OAuth credential; the server refreshes
- * it itself. nimbalyst stores no API key and triggers no browser flow (per the
- * project's no-env-key rule).
+ * Desktop auth remains the user's existing ~/.gemini OAuth credential. CLI
+ * auth remains agy's own OAuth/keyring flow; this module only performs a
+ * read-only credential probe and launches agy without passing secrets.
  *
  * Singleton-per-process: use AntigravityServerManager.shared(). The backend
  * module's activate() calls .configure() on the shared instance once at
  * activation time.
  */
-import { spawn, ChildProcess, execFile } from 'child_process';
+import { spawn, ChildProcess, execFile, type SpawnOptions } from 'child_process';
 import * as https from 'https';
 import * as os from 'os';
 import * as path from 'path';
@@ -62,6 +64,17 @@ export interface AntigravityServerConfig {
   spawnPortCandidates?: readonly number[];
 }
 
+/**
+ * Stable extension model keys mapped to the model ids printed by `agy models`.
+ * The extension ids stay stable so existing sessions/settings keep working;
+ * only the command-line id sent to agy changes.
+ */
+export const AGY_MODEL_MAP: Readonly<Record<string, string>> = Object.freeze({
+  'gemini-3-flash-agent': 'gemini-3.6-flash-high',
+  'gemini-3.5-flash-low': 'gemini-3.6-flash-medium',
+  'gemini-3.5-flash-extra-low': 'gemini-3.6-flash-low',
+});
+
 export class AntigravityVersionGateError extends Error {
   constructor(message: string) {
     super(message);
@@ -69,8 +82,87 @@ export class AntigravityVersionGateError extends Error {
   }
 }
 
+export class AntigravityAgyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AntigravityAgyError';
+  }
+}
+
+export class AntigravityAgyModelError extends AntigravityAgyError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AntigravityAgyModelError';
+  }
+}
+
+export class AntigravityAgyNotInstalledError extends AntigravityAgyError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AntigravityAgyNotInstalledError';
+  }
+}
+
+export class AntigravityAgyNotLoggedInError extends AntigravityAgyError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AntigravityAgyNotLoggedInError';
+  }
+}
+
+export class AntigravityAgyTimeoutError extends AntigravityAgyError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AntigravityAgyTimeoutError';
+  }
+}
+
+export class AntigravityAgyProtocolError extends AntigravityAgyError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AntigravityAgyProtocolError';
+  }
+}
+
+/** Resolve an extension model key to a real agy model id. */
+export function mapAgyModel(modelKey: string): string {
+  const key = modelKey.includes(':') ? modelKey.split(':').slice(1).join(':') : modelKey;
+  const mapped = AGY_MODEL_MAP[key];
+  if (!mapped) {
+    throw new AntigravityAgyModelError(
+      `agy model ${key} is not mapped; supported extension models: ` +
+      `${Object.keys(AGY_MODEL_MAP).join(', ')}`,
+    );
+  }
+  return mapped;
+}
+
+interface ResolvedEngine {
+  kind: 'desktop' | 'agy';
+  binary: string;
+}
+
+class AgyProcessFailure extends Error {
+  constructor(
+    message: string,
+    readonly stdout: string,
+    readonly stderr: string,
+    readonly exitCode: number | null,
+  ) {
+    super(message);
+    this.name = 'AgyProcessFailure';
+  }
+}
+
+export interface AgyParsedResponse {
+  text: string;
+  conversationId?: string;
+}
+
 export class AntigravityServerManager {
   private static instance: AntigravityServerManager | null = null;
+
+  constructor(private readonly agySpawn: typeof spawn = spawn) {}
 
   // Cross-process lock so sibling backend module processes (one per workspace/
   // worktree) share ONE language server instead of each spawning their own and
@@ -86,6 +178,8 @@ export class AntigravityServerManager {
   private startPromise: Promise<AntigravityEndpoint> | null = null;
   /** Cache of key -> enum, valid for the current endpoint only. */
   private enumCache = new Map<string, string>();
+  /** Session key -> agy conversation id, owned only by this backend process. */
+  private agyConversationIds = new Map<string, string>();
 
   // Injected configuration. Falls back to the hardcoded defaults when the
   // host hasn't called configure() (dev harness, unit tests).
@@ -114,8 +208,8 @@ export class AntigravityServerManager {
     }
   }
 
-  /** Resolve the language_server.exe path for the current platform. */
-  static binaryPath(): string {
+  /** Resolve the existing desktop language_server path for the current platform. */
+  static desktopBinaryPath(): string {
     if (process.platform === 'win32') {
       const local = process.env.LOCALAPPDATA
         || path.join(os.homedir(), 'AppData', 'Local');
@@ -129,13 +223,42 @@ export class AntigravityServerManager {
       'language_server');
   }
 
-  /** True if the Antigravity install (the language server binary) is present. */
+  /** Candidate agy paths: the documented per-user install first, then PATH. */
+  static agyPathCandidates(): string[] {
+    const preferred = path.join(os.homedir(), '.local', 'bin', 'agy');
+    const pathCandidates = (process.env.PATH ?? '')
+      .split(path.delimiter)
+      .filter((entry) => entry.length > 0)
+      .map((entry) => path.join(entry, 'agy'));
+    return [...new Set([preferred, ...pathCandidates])];
+  }
+
+  /** All supported engine binaries in priority order. */
+  static binaryCandidates(): string[] {
+    return [this.desktopBinaryPath(), ...this.agyPathCandidates()];
+  }
+
+  /** Resolve the first installed desktop/CLI binary, preserving desktop priority. */
+  static binaryPath(): string {
+    const found = this.binaryCandidates().find((candidate) => {
+      try {
+        return fs.existsSync(candidate);
+      } catch {
+        return false;
+      }
+    });
+    return found ?? this.desktopBinaryPath();
+  }
+
+  /** True if either the desktop language server or agy CLI is present. */
   static isInstalled(): boolean {
-    try {
-      return fs.existsSync(this.binaryPath());
-    } catch {
-      return false;
-    }
+    return this.binaryCandidates().some((candidate) => {
+      try {
+        return fs.existsSync(candidate);
+      } catch {
+        return false;
+      }
+    });
   }
 
   /** True if ~/.gemini has an OAuth credential with a refresh token. */
@@ -145,6 +268,49 @@ export class AntigravityServerManager {
       if (!fs.existsSync(p)) return false;
       const creds = JSON.parse(fs.readFileSync(p, 'utf8'));
       return Boolean(creds && creds.refresh_token);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Read-only agy OAuth probe. This is deliberately advisory: the command is
+   * still launched and its actual auth result remains authoritative because
+   * agy can refresh an expired credential itself.
+   */
+  static hasAgyAuth(): boolean {
+    try {
+      const tokenPath = path.join(
+        os.homedir(), '.gemini', 'antigravity-cli', 'antigravity-oauth-token',
+      );
+      if (!fs.existsSync(tokenPath)) return false;
+      const raw = fs.readFileSync(tokenPath, 'utf8').trim();
+      if (!raw) return false;
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw) as unknown;
+      } catch {
+        // An opaque, non-empty token file is still a present credential. agy
+        // remains the authority on whether it is usable.
+        return true;
+      }
+
+      const root = asRecord(parsed);
+      const token = asRecord(root?.token) ?? root;
+      const accessToken = firstString(token, ['access_token', 'accessToken', 'token']);
+      const refreshToken = firstString(token, ['refresh_token', 'refreshToken']);
+      if (!accessToken && !refreshToken) return false;
+
+      const expiry = firstString(token, ['expiry', 'expires_at', 'expiresAt', 'expiry_date']);
+      if (expiry) {
+        const expiryMs = Date.parse(expiry) || Number(expiry);
+        if (Number.isFinite(expiryMs)) {
+          const normalizedMs = expiryMs < 1_000_000_000_000 ? expiryMs * 1000 : expiryMs;
+          if (normalizedMs <= Date.now() && !refreshToken) return false;
+        }
+      }
+      return true;
     } catch {
       return false;
     }
@@ -206,6 +372,12 @@ export class AntigravityServerManager {
     this.child = null;
     this.endpoint = null;
     this.enumCache.clear();
+    this.agyConversationIds.clear();
+  }
+
+  /** Drop a CLI conversation id when the host creates or cleans up a session. */
+  resetConversation(conversationKey = 'default'): void {
+    this.agyConversationIds.delete(conversationKey);
   }
 
   // ---- RPC ---------------------------------------------------------------
@@ -288,10 +460,11 @@ export class AntigravityServerManager {
   }
 
   /**
-   * Send a one-shot prompt to a model identified by its stable KEY (preferred)
-   * or enum. Returns the model's text response.
+   * Send a prompt to a model identified by its stable KEY (preferred) or enum.
+   * Desktop mode returns the language-server response; CLI mode returns agy's
+   * buffered print-mode response and keeps its conversation id per session.
    *
-   * Retries the GetModelResponse RPC ONCE on a transport TIMEOUT only. The
+   * Desktop GetModelResponse RPC is retried ONCE on a transport TIMEOUT only. The
    * observed timeout cause is an intermittent RUNAWAY generation: the model
    * emits its answer then keeps generating a hallucinated tail past the limit
    * (GetModelResponse is buffered, so a runaway is only visible as the whole
@@ -303,6 +476,28 @@ export class AntigravityServerManager {
    * case latency is ~2x timeoutMs plus one backoff and one respawn cycle.
    */
   async getModelResponse(prompt: string, modelKeyOrEnum: string,
+    timeoutMs = 120_000, conversationKey = 'default', workspacePath?: string): Promise<string> {
+    // MODEL_* is an explicit language-server enum, so keep the legacy desktop
+    // path for callers that already resolved a server enum (and for old tests).
+    if (modelKeyOrEnum.startsWith('MODEL_')) {
+      return this.getDesktopModelResponse(prompt, modelKeyOrEnum, timeoutMs);
+    }
+
+    const engine = this.resolveEngine();
+    if (engine.kind === 'agy') {
+      return this.getAgyModelResponse(
+        prompt,
+        modelKeyOrEnum,
+        timeoutMs,
+        conversationKey,
+        workspacePath,
+        engine.binary,
+      );
+    }
+    return this.getDesktopModelResponse(prompt, modelKeyOrEnum, timeoutMs);
+  }
+
+  private async getDesktopModelResponse(prompt: string, modelKeyOrEnum: string,
     timeoutMs = 120_000): Promise<string> {
     const MAX_ATTEMPTS = 2;
     const RETRY_BACKOFF_MS = 1_000;
@@ -344,6 +539,181 @@ export class AntigravityServerManager {
     }
     // Unreachable: the loop either returns or throws on every path.
     throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  }
+
+  private resolveEngine(): ResolvedEngine {
+    const desktop = AntigravityServerManager.desktopBinaryPath();
+    if (safeExists(desktop)) return { kind: 'desktop', binary: desktop };
+
+    const agy = AntigravityServerManager.agyPathCandidates().find(safeExists);
+    if (agy) return { kind: 'agy', binary: agy };
+
+    throw new AntigravityAgyNotInstalledError(
+      `Antigravity CLI agy not installed（未安装）；已检查 ` +
+      `${AntigravityServerManager.agyPathCandidates().join(', ')}。` +
+      `请安装 agy 命令行后重试。`,
+    );
+  }
+
+  private async getAgyModelResponse(
+    prompt: string,
+    modelKey: string,
+    timeoutMs: number,
+    conversationKey: string,
+    workspacePath: string | undefined,
+    binary: string,
+  ): Promise<string> {
+    const agyModel = mapAgyModel(modelKey);
+    const key = conversationKey || 'default';
+    const conversationId = this.agyConversationIds.get(key);
+    const args = ['-p', prompt];
+    if (conversationId) {
+      args.push('--conversation', conversationId);
+    } else {
+      args.push('--model', agyModel);
+    }
+    // JSON output keeps the response one-shot while also carrying the
+    // conversation id needed for the next turn. No token or auth env is passed.
+    args.push(
+      '--output-format', 'json',
+      '--print-timeout', formatAgyTimeout(timeoutMs),
+    );
+
+    try {
+      const stdout = await this.runAgy(binary, args, timeoutMs, workspacePath);
+      const parsed = parseAgyOutput(stdout);
+      if (!parsed.text) {
+        throw new AntigravityAgyProtocolError(
+          `agy returned no response text. Raw output: ${truncate(stdout)}`,
+        );
+      }
+      if (!conversationId) {
+        if (!parsed.conversationId) {
+          throw new AntigravityAgyProtocolError(
+            `agy returned a response without a conversation id; cannot continue the session. ` +
+            `Raw output: ${truncate(stdout)}`,
+          );
+        }
+        this.agyConversationIds.set(key, parsed.conversationId);
+      }
+      return parsed.text;
+    } catch (err) {
+      throw this.normalizeAgyError(err);
+    }
+  }
+
+  private runAgy(
+    binary: string,
+    args: string[],
+    timeoutMs: number,
+    workspacePath?: string,
+  ): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      let stdout = '';
+      let stderr = '';
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const outputCap = 256 * 1024;
+      const append = (current: string, chunk: Buffer): string =>
+        current.length >= outputCap
+          ? current
+          : current + chunk.toString('utf8').slice(0, outputCap - current.length);
+      const finish = (err: Error | null, value?: string): void => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        if (err) reject(err);
+        else resolve(value ?? '');
+      };
+
+      try {
+        const spawnOptions: SpawnOptions = {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          detached: false,
+          windowsHide: true,
+          env: sanitizedAgyEnvironment(),
+          ...(workspacePath && safeExists(workspacePath) ? { cwd: workspacePath } : {}),
+        };
+        const child = this.agySpawn(binary, args, spawnOptions);
+        child.stdout?.on('data', (chunk: Buffer) => {
+          stdout = append(stdout, chunk);
+        });
+        child.stderr?.on('data', (chunk: Buffer) => {
+          stderr = append(stderr, chunk);
+        });
+        child.on('error', (err) => {
+          finish(new AgyProcessFailure(
+            `agy spawn failed: ${err instanceof Error ? err.message : String(err)}`,
+            stdout,
+            stderr,
+            null,
+          ));
+        });
+        child.on('close', (code) => {
+          if (code === 0) {
+            finish(null, stdout);
+            return;
+          }
+          const details = [stderr.trim(), stdout.trim()].filter(Boolean).join('\n');
+          finish(new AgyProcessFailure(
+            `agy exited with code ${code ?? 'unknown'}${details ? `: ${details}` : ''}`,
+            stdout,
+            stderr,
+            code,
+          ));
+        });
+        timer = setTimeout(() => {
+          try {
+            child.kill('SIGTERM');
+          } catch {
+            /* best effort; the timeout is already terminal */
+          }
+          finish(new AntigravityAgyTimeoutError(
+            `agy print mode timed out after ${Math.ceil(timeoutMs / 1000)}s`,
+          ));
+        }, Math.max(1, timeoutMs));
+      } catch (err) {
+        finish(new AgyProcessFailure(
+          `agy spawn failed: ${err instanceof Error ? err.message : String(err)}`,
+          stdout,
+          stderr,
+          null,
+        ));
+      }
+    });
+  }
+
+  private normalizeAgyError(err: unknown): Error {
+    if (err instanceof AntigravityAgyError) return err;
+    if (err instanceof AgyProcessFailure) {
+      const raw = [err.message, err.stderr.trim(), err.stdout.trim()]
+        .filter(Boolean)
+        .join('\n');
+      if (/invalid --model|model .*not recognized|available models/i.test(raw)) {
+        return new AntigravityAgyModelError(
+          `agy rejected the model. The model list is not a response. Raw output: ${truncate(raw)}`,
+        );
+      }
+      if (/not.?logged.?in|not authenticated|unauthenticated|oauth|login|401/i.test(raw)) {
+        const credentialState = AntigravityServerManager.hasAgyAuth()
+          ? 'agy rejected the existing OAuth credential'
+          : 'no usable agy OAuth credential was found';
+        return new AntigravityAgyNotLoggedInError(
+          `Antigravity CLI not logged in (${credentialState}); ` +
+          `请在终端登录 antigravity 命令行后重试。Raw output: ${truncate(raw)}`,
+        );
+      }
+      if (/timed out|timeout/i.test(raw)) {
+        return new AntigravityAgyTimeoutError(`agy timed out: ${truncate(raw)}`);
+      }
+      if (/enoent|not found|command not found|executable/i.test(raw)) {
+        return new AntigravityAgyNotInstalledError(
+          `Antigravity CLI agy 未安装或不可执行。Raw output: ${truncate(raw)}`,
+        );
+      }
+      return new AntigravityAgyError(`agy failed: ${truncate(raw)}`);
+    }
+    return err instanceof Error ? err : new Error(String(err));
   }
 
   /** Full model catalog as {key -> info}. */
@@ -428,11 +798,13 @@ export class AntigravityServerManager {
   // ---- mode B: spawn our own --------------------------------------------
 
   private async spawnStandalone(): Promise<AntigravityEndpoint> {
-    const binary = AntigravityServerManager.binaryPath();
+    // This method is the preserved desktop language-server implementation.
+    // agy is a one-shot CLI and must never be started with these server flags.
+    const binary = AntigravityServerManager.desktopBinaryPath();
     if (!fs.existsSync(binary)) {
       throw new Error(
-        `Antigravity language server not found at ${binary}. Install Antigravity or ` +
-        `open the Antigravity IDE.`);
+        `Antigravity desktop language server not found at ${binary}. ` +
+        `Install Antigravity or open the Antigravity IDE.`);
     }
     if (!AntigravityServerManager.hasGeminiAuth()) {
       throw new Error(
@@ -581,6 +953,166 @@ export class AntigravityServerManager {
       );
     });
   }
+}
+
+export function parseAgyOutput(raw: string): AgyParsedResponse {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new AntigravityAgyProtocolError('agy returned empty output');
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed) as unknown;
+  } catch {
+    // Keep the parser tolerant of a CLI that prefixes one JSON object per line.
+    const lines = trimmed.split(/\r?\n/).reverse();
+    for (const line of lines) {
+      try {
+        parsed = JSON.parse(line) as unknown;
+        break;
+      } catch {
+        /* inspect the next line */
+      }
+    }
+  }
+
+  if (parsed === undefined) {
+    if (/available models:/i.test(trimmed)) {
+      throw new AntigravityAgyModelError(
+        `agy returned a model list instead of a response. Raw output: ${truncate(trimmed)}`,
+      );
+    }
+    // Text output is still useful for a one-shot response. A missing
+    // conversation id is rejected by getAgyModelResponse before a follow-up.
+    return { text: trimmed };
+  }
+
+  const errorText = findDeepString(parsed, [
+    'error', 'error_message', 'errorMessage', 'failure',
+  ]);
+  const isError = findDeepBoolean(parsed, ['is_error', 'isError', 'failed']);
+  if (errorText || isError) {
+    const message = errorText ?? 'agy reported an unsuccessful response';
+    if (/invalid --model|model .*not recognized|available models/i.test(message + trimmed)) {
+      throw new AntigravityAgyModelError(
+        `agy rejected the model. The model list is not a response. Raw output: ${truncate(trimmed)}`,
+      );
+    }
+    throw new AntigravityAgyProtocolError(
+      `agy returned an error response: ${truncate(message)}`,
+    );
+  }
+
+  const text = findResponseText(parsed);
+  if (!text && /available models:/i.test(trimmed)) {
+    throw new AntigravityAgyModelError(
+      `agy returned a model list instead of a response. Raw output: ${truncate(trimmed)}`,
+    );
+  }
+  return {
+    text: text ?? '',
+    conversationId: findDeepString(parsed, [
+      'conversation_id', 'conversationId', 'conversationID',
+      'session_id', 'sessionId',
+    ]),
+  };
+}
+
+function findResponseText(value: unknown, depth = 0): string | undefined {
+  if (depth > 8 || value === null || value === undefined) return undefined;
+  if (typeof value === 'string') return value.trim() || undefined;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findResponseText(item, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  const record = asRecord(value);
+  if (!record) return undefined;
+  for (const key of [
+    'result', 'response', 'response_text', 'responseText',
+    'text', 'content', 'output', 'answer', 'message',
+  ]) {
+    const candidate = record[key];
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+    const nested = findResponseText(candidate, depth + 1);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
+function findDeepString(value: unknown, keys: string[], depth = 0): string | undefined {
+  if (depth > 8 || value === null || value === undefined) return undefined;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findDeepString(item, keys, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  const record = asRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+  }
+  for (const child of Object.values(record)) {
+    const found = findDeepString(child, keys, depth + 1);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function findDeepBoolean(value: unknown, keys: string[], depth = 0): boolean {
+  if (depth > 8 || value === null || value === undefined) return false;
+  if (Array.isArray(value)) return value.some((item) => findDeepBoolean(item, keys, depth + 1));
+  const record = asRecord(value);
+  if (!record) return false;
+  if (keys.some((key) => record[key] === true)) return true;
+  return Object.values(record).some((child) => findDeepBoolean(child, keys, depth + 1));
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function firstString(record: Record<string, unknown> | null, keys: string[]): string | undefined {
+  if (!record) return undefined;
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function safeExists(candidate: string): boolean {
+  try {
+    return fs.existsSync(candidate);
+  } catch {
+    return false;
+  }
+}
+
+function formatAgyTimeout(timeoutMs: number): string {
+  return `${Math.max(1, Math.ceil(timeoutMs / 1000))}s`;
+}
+
+function sanitizedAgyEnvironment(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (/(?:api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|private[_-]?key|credential)/i.test(key)) {
+      delete env[key];
+    }
+  }
+  return env;
+}
+
+function truncate(value: string, max = 4_000): string {
+  return value.length <= max ? value : `${value.slice(0, max)}…`;
 }
 
 function delay(ms: number): Promise<void> {
