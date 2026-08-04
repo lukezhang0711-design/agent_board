@@ -117,6 +117,9 @@ export function channelHealthFailureCopy(
 ): { summary: string; guidance: string } {
   switch (failureKind) {
     case 'not_logged_in':
+      if (channelId === 'antigravity-gemini-agent') {
+        return { summary: '未登录', guidance: '请在终端登录 antigravity 命令行后重试' };
+      }
       if (channelId === 'claude-code-cli') {
         return { summary: '未登录', guidance: '请运行 claude /login 后重试' };
       }
@@ -125,6 +128,9 @@ export function channelHealthFailureCopy(
       }
       return { summary: '未登录', guidance: '请完成该引擎登录后重试' };
     case 'missing_binary':
+      if (channelId === 'antigravity-gemini-agent') {
+        return { summary: '未找到 Antigravity CLI', guidance: '请安装 agy 命令行后重试' };
+      }
       if (channelId === 'claude-code-cli') {
         return { summary: '未找到 Claude CLI', guidance: '请安装 Claude CLI 后重试' };
       }

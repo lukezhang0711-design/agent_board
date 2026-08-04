@@ -103,6 +103,8 @@ export class AntigravityToolLoopProtocol {
   private modelKey: string;
   private readonly maxIterations: number;
   private readonly server: AntigravityServerManager;
+  private readonly conversationKey: string;
+  private readonly workspacePath?: string;
   private history: ProtocolMessage[] = [];
   private aborted = false;
   // Compact record of the tool calls already made THIS turn, surfaced back to
@@ -118,10 +120,14 @@ export class AntigravityToolLoopProtocol {
     modelKey: string;
     maxIterations?: number;
     server?: AntigravityServerManager;
+    conversationKey?: string;
+    workspacePath?: string;
   }) {
     this.modelKey = opts.modelKey;
     this.maxIterations = opts.maxIterations ?? 40;
     this.server = opts.server ?? AntigravityServerManager.shared();
+    this.conversationKey = opts.conversationKey ?? 'default';
+    this.workspacePath = opts.workspacePath;
   }
 
   setModelKey(modelKey: string): void {
@@ -223,7 +229,13 @@ export class AntigravityToolLoopProtocol {
       if (this.aborted) return;
 
       const prompt = this.renderPrompt(fullSystemPrompt);
-      const response = await this.server.getModelResponse(prompt, this.modelKey, timeoutMs);
+      const response = await this.server.getModelResponse(
+        prompt,
+        this.modelKey,
+        timeoutMs,
+        this.conversationKey,
+        this.workspacePath,
+      );
 
       if (this.aborted) return;
 
@@ -481,6 +493,8 @@ export class AntigravityToolLoopProtocol {
           finalPrompt,
           this.modelKey,
           timeoutMs,
+          this.conversationKey,
+          this.workspacePath,
         );
         const finalText = this.sanitizeFinalText(this.stripToolCallJson(finalResp));
         if (!this.aborted && finalText) {
@@ -987,7 +1001,13 @@ export class AntigravityToolLoopProtocol {
       'Corrected answer:',
     ].join('\n');
     try {
-      const resp = await this.server.getModelResponse(verifyPrompt, this.modelKey, timeoutMs);
+      const resp = await this.server.getModelResponse(
+        verifyPrompt,
+        this.modelKey,
+        timeoutMs,
+        this.conversationKey,
+        this.workspacePath,
+      );
       if (this.aborted) return draft;
       const verified = this.sanitizeFinalText(this.stripToolCallJson(resp));
       return verified.trim().length > 0 ? verified : draft;
