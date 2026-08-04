@@ -167,6 +167,88 @@ import {
 
 const execFileAsync = promisify(execFile);
 
+type ChannelHealthExtensionProvider = {
+  status: string;
+  contributionId: string;
+  contribution: { displayName?: string };
+};
+
+/**
+ * Keep the visible channel list independent from whether an extension row is
+ * requestable. Active extension providers are always shown; only a provider
+ * explicitly enabled in settings is allowed to enter the real send path.
+ */
+export function listChannelHealthChannels(
+  providerSettings: Record<string, { enabled?: boolean } | undefined>,
+  extensionProviders: readonly ChannelHealthExtensionProvider[],
+): ChannelHealthChannel[] {
+  const builtIns: Array<ChannelHealthChannel & { enabled: boolean }> = [
+    {
+      id: 'claude-code',
+      displayName: 'Claude（嵌入式）',
+      transport: 'streaming',
+      enabled: providerSettings['claude-code']?.enabled !== false,
+    },
+    {
+      id: 'claude-code-cli',
+      displayName: 'Claude CLI',
+      transport: 'claude-cli',
+      enabled: providerSettings['claude-code-cli']?.enabled !== false,
+    },
+    {
+      id: 'openai-codex',
+      displayName: 'Codex',
+      transport: 'streaming',
+      enabled: providerSettings['openai-codex']?.enabled === true,
+    },
+    {
+      id: 'opencode',
+      displayName: 'OpenCode',
+      transport: 'streaming',
+      enabled: providerSettings['opencode']?.enabled === true,
+    },
+    {
+      id: 'copilot-cli',
+      displayName: 'GitHub Copilot',
+      transport: 'streaming',
+      enabled: providerSettings['copilot-cli']?.enabled === true,
+    },
+    {
+      id: 'claude',
+      displayName: 'Claude API',
+      transport: 'streaming',
+      enabled: providerSettings['claude']?.enabled === true,
+    },
+    {
+      id: 'openai',
+      displayName: 'OpenAI',
+      transport: 'streaming',
+      enabled: providerSettings['openai']?.enabled === true,
+    },
+    {
+      id: 'lmstudio',
+      displayName: 'LM Studio',
+      transport: 'streaming',
+      enabled: providerSettings['lmstudio']?.enabled === true,
+    },
+  ];
+  const extensions: ChannelHealthChannel[] = extensionProviders
+    .filter((entry) => entry.status === 'active')
+    .map((entry) => ({
+      id: entry.contributionId,
+      displayName: entry.contribution.displayName || entry.contributionId,
+      transport: 'streaming',
+      // Dynamic provider settings default to false. A disabled active extension
+      // remains visible as a gray row, but ChannelHealthService will not send it.
+      enabled: providerSettings[entry.contributionId]?.enabled === true,
+    }));
+
+  return [
+    ...builtIns.filter((channel) => channel.enabled).map(({ enabled: _enabled, ...channel }) => channel),
+    ...extensions,
+  ];
+}
+
 function cancelErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -482,70 +564,10 @@ export class AIService {
   }
 
   private listEnabledChannelHealthChannels(): ChannelHealthChannel[] {
-    const providerSettings = this.getNormalizedProviderSettings();
-    const builtIns: Array<ChannelHealthChannel & { enabled: boolean }> = [
-      {
-        id: 'claude-code',
-        displayName: 'Claude（嵌入式）',
-        transport: 'streaming',
-        enabled: providerSettings['claude-code']?.enabled !== false,
-      },
-      {
-        id: 'claude-code-cli',
-        displayName: 'Claude CLI',
-        transport: 'claude-cli',
-        enabled: providerSettings['claude-code-cli']?.enabled !== false,
-      },
-      {
-        id: 'openai-codex',
-        displayName: 'Codex',
-        transport: 'streaming',
-        enabled: providerSettings['openai-codex']?.enabled === true,
-      },
-      {
-        id: 'opencode',
-        displayName: 'OpenCode',
-        transport: 'streaming',
-        enabled: providerSettings['opencode']?.enabled === true,
-      },
-      {
-        id: 'copilot-cli',
-        displayName: 'GitHub Copilot',
-        transport: 'streaming',
-        enabled: providerSettings['copilot-cli']?.enabled === true,
-      },
-      {
-        id: 'claude',
-        displayName: 'Claude API',
-        transport: 'streaming',
-        enabled: providerSettings['claude']?.enabled === true,
-      },
-      {
-        id: 'openai',
-        displayName: 'OpenAI',
-        transport: 'streaming',
-        enabled: providerSettings['openai']?.enabled === true,
-      },
-      {
-        id: 'lmstudio',
-        displayName: 'LM Studio',
-        transport: 'streaming',
-        enabled: providerSettings['lmstudio']?.enabled === true,
-      },
-    ];
-    const extensionProviders: ChannelHealthChannel[] = getAgentProviderRegistry()
-      .list()
-      .filter((entry) => entry.status === 'active' && providerSettings[entry.contributionId]?.enabled !== false)
-      .map((entry) => ({
-        id: entry.contributionId,
-        displayName: entry.contribution.displayName || entry.contributionId,
-        transport: 'streaming',
-      }));
-
-    return [
-      ...builtIns.filter((channel) => channel.enabled).map(({ enabled: _enabled, ...channel }) => channel),
-      ...extensionProviders,
-    ];
+    return listChannelHealthChannels(
+      this.getNormalizedProviderSettings(),
+      getAgentProviderRegistry().list(),
+    );
   }
 
   private async runChannelHealthPrompt(input: {
@@ -657,8 +679,15 @@ export class AIService {
           launch.error,
         );
       }
-      if (getClaudeCliQueueAuthPrecheck(session.id)) {
+      const authPrecheck = getClaudeCliQueueAuthPrecheck(session.id);
+      if (authPrecheck?.status === 'not_logged_in') {
         throw new ChannelHealthError('not_logged_in');
+      }
+      if (authPrecheck?.status === 'unknown') {
+        throw new ChannelHealthError(
+          authPrecheck.reason === 'timeout' ? 'auth_check_timeout' : 'auth_check_unknown',
+          'Claude CLI auth precheck is unavailable',
+        );
       }
 
       const submitResult = await submitClaudeCliPromptProduction({
