@@ -175,8 +175,9 @@ type ChannelHealthExtensionProvider = {
 
 /**
  * Keep the visible channel list independent from whether an extension row is
- * requestable. Active extension providers are always shown; only a provider
- * explicitly enabled in settings is allowed to enter the real send path.
+ * requestable. Runtime-registered and active extension providers are shown;
+ * only a provider explicitly enabled in settings is allowed to enter the real
+ * send path.
  */
 export function listChannelHealthChannels(
   providerSettings: Record<string, { enabled?: boolean } | undefined>,
@@ -233,12 +234,15 @@ export function listChannelHealthChannels(
     },
   ];
   const extensions: ChannelHealthChannel[] = extensionProviders
-    .filter((entry) => entry.status === 'active')
+    // ExtensionHandlers registers a provider before its first real session
+    // marks it active. Read the registry at health-check time so late
+    // registrations are visible, while a denied provider remains hidden.
+    .filter((entry) => entry.status === 'registered' || entry.status === 'active')
     .map((entry) => ({
       id: entry.contributionId,
       displayName: entry.contribution.displayName || entry.contributionId,
       transport: 'streaming',
-      // Dynamic provider settings default to false. A disabled active extension
+      // Dynamic provider settings default to false. A disabled runtime extension
       // remains visible as a gray row, but ChannelHealthService will not send it.
       enabled: providerSettings[entry.contributionId]?.enabled === true,
     }));
@@ -668,10 +672,17 @@ export class AIService {
     try {
       // The CT login preflight is part of ensureClaudeCliSession. We consume
       // its cached receipt below instead of spawning a second auth-status probe.
+      let exitCode: number | undefined;
       const launch = await ensureClaudeCliSession({
         sessionId: session.id,
         workspacePath: input.workspacePath,
         model: session.model ?? undefined,
+        // This is health-only observation wiring. It preserves the real CLI
+        // launch/injection chain while giving the health result a safe exit
+        // code if the PTY dies before it can accept the fixed prompt.
+        onExit: (code) => {
+          exitCode = code;
+        },
       });
       if (!launch.success) {
         throw new ChannelHealthError(
@@ -690,6 +701,17 @@ export class AIService {
         );
       }
 
+      // A normal terminal session is mounted first and is prompted only after
+      // the CLI reaches its idle input boundary. Health used to inject the
+      // prompt immediately after spawning, which can make the real CLI exit
+      // before it has initialized. Wait for the same boundary without changing
+      // the production prompt-composition/injection implementation.
+      await this.waitForClaudeCliHealthReady({
+        sessionId: session.id,
+        startedAt,
+        getExitCode: () => exitCode,
+      });
+
       const submitResult = await submitClaudeCliPromptProduction({
         sessionId: session.id,
         workspacePath: input.workspacePath,
@@ -705,6 +727,7 @@ export class AIService {
       return this.waitForClaudeCliHealthResponse({
         sessionId: session.id,
         startedAt,
+        getExitCode: () => exitCode,
       });
     } finally {
       clearClaudeCliQueueAuthPrecheck(session.id);
@@ -715,14 +738,36 @@ export class AIService {
     }
   }
 
+  private async waitForClaudeCliHealthReady(input: {
+    sessionId: string;
+    startedAt: number;
+    getExitCode: () => number | undefined;
+  }): Promise<void> {
+    const terminalManager = getTerminalSessionManager();
+    const deadline = input.startedAt + CHANNEL_HEALTH_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      if (!terminalManager.isTerminalActive(input.sessionId)) {
+        throw this.claudeCliHealthExitError('before accepting the health prompt', input.getExitCode());
+      }
+      const liveState = await terminalManager.getClaudeCliLiveTurnState(input.sessionId);
+      if (liveState === 'idle') return;
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    }
+    throw new ChannelHealthError('timeout', 'Claude CLI did not become ready for the health prompt');
+  }
+
   private async waitForClaudeCliHealthResponse(input: {
     sessionId: string;
     startedAt: number;
+    getExitCode: () => number | undefined;
   }): Promise<ChannelHealthTransportResult> {
     const terminalManager = getTerminalSessionManager();
     const deadline = input.startedAt + CHANNEL_HEALTH_TIMEOUT_MS;
     let firstResponseMs: number | undefined;
     while (Date.now() < deadline) {
+      if (!terminalManager.isTerminalActive(input.sessionId)) {
+        throw this.claudeCliHealthExitError('before responding', input.getExitCode());
+      }
       // PTY scrollback includes the user's typed prompt, so it cannot prove an
       // engine response. The existing CLI observation chain records only an
       // assembled assistant turn; consume that safe receipt without retaining
@@ -751,12 +796,21 @@ export class AIService {
           responseText: 'observed-cli-response',
         };
       }
-      if (!terminalManager.isTerminalActive(input.sessionId)) {
-        throw new ChannelHealthError('engine_error', 'Claude CLI terminal exited before responding');
-      }
       await new Promise<void>((resolve) => setTimeout(resolve, 100));
     }
     throw new ChannelHealthError('timeout', 'Claude CLI health check timed out');
+  }
+
+  private claudeCliHealthExitError(
+    phase: string,
+    exitCode: number | undefined,
+  ): ChannelHealthError {
+    const suffix = typeof exitCode === 'number' ? ` (exit code ${exitCode})` : '';
+    return new ChannelHealthError(
+      'engine_error',
+      `Claude CLI terminal exited ${phase}${suffix}`,
+      exitCode,
+    );
   }
 
   private async disposeChannelHealthSession(

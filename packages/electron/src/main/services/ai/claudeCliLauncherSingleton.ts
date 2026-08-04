@@ -243,6 +243,8 @@ export interface EnsureClaudeCliSessionInput {
   resumeSessionId?: string;
   cols?: number;
   rows?: number;
+  /** Health-only callers can observe a real PTY exit without changing launch behavior. */
+  onExit?: (exitCode: number) => void;
 }
 
 export interface EnsureClaudeCliSessionResult {
@@ -366,6 +368,7 @@ export async function ensureClaudeCliSession(
         },
         onExit: (exitCode) => {
           console.log(`[ClaudeCliLauncher] Claude CLI exited for ${input.sessionId} with code ${exitCode}; ending AI session state`);
+          input.onExit?.(exitCode);
           void cliFileWatcher.stopForSession(input.sessionId).catch(() => {});
           void stateManager.endSession(input.sessionId).catch((err) => {
             console.warn('[ClaudeCliLauncher] Failed to end session after CLI exit:', err);

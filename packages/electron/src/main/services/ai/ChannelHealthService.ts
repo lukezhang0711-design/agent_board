@@ -47,6 +47,8 @@ export interface ChannelHealthResult extends ChannelHealthChannel {
   firstResponseMs?: number;
   completionMs?: number;
   failureKind?: ChannelHealthFailureKind;
+  /** Present only for a locally observed CLI process exit. */
+  exitCode?: number;
   summary?: string;
   guidance?: string;
 }
@@ -83,6 +85,7 @@ export class ChannelHealthError extends Error {
   constructor(
     readonly failureKind: ChannelHealthFailureKind,
     message?: string,
+    readonly exitCode?: number,
   ) {
     super(message ?? failureKind);
     this.name = 'ChannelHealthError';
@@ -110,6 +113,7 @@ export function classifyChannelHealthError(error: unknown): ChannelHealthFailure
 export function channelHealthFailureCopy(
   channelId: string,
   failureKind: ChannelHealthFailureKind,
+  exitCode?: number,
 ): { summary: string; guidance: string } {
   switch (failureKind) {
     case 'not_logged_in':
@@ -134,7 +138,12 @@ export function channelHealthFailureCopy(
     case 'auth_check_unknown':
       return { summary: '检测状态未知', guidance: '请稍后重试；若持续出现，请检查 Claude CLI 状态' };
     case 'engine_error':
-      return { summary: '引擎错误', guidance: '请检查引擎配置后重试' };
+      return {
+        summary: '引擎错误',
+        guidance: typeof exitCode === 'number'
+          ? `引擎异常退出（退出码 ${exitCode}），请检查引擎配置后重试`
+          : '请检查引擎配置后重试',
+      };
   }
 }
 
@@ -278,7 +287,8 @@ export class ChannelHealthService {
       this.logResult(result);
     } catch (error) {
       const failureKind = classifyChannelHealthError(error);
-      const copy = channelHealthFailureCopy(channel.id, failureKind);
+      const exitCode = error instanceof ChannelHealthError ? error.exitCode : undefined;
+      const copy = channelHealthFailureCopy(channel.id, failureKind, exitCode);
       const state: ChannelHealthState = failureKind === 'auth_check_timeout' || failureKind === 'auth_check_unknown'
         ? 'unknown'
         : 'failed';
@@ -289,6 +299,7 @@ export class ChannelHealthService {
         trigger,
         completionMs: Math.max(0, this.now() - startedAt),
         failureKind,
+        ...(typeof exitCode === 'number' ? { exitCode } : {}),
         ...copy,
       };
       this.results.set(channel.id, result);
@@ -320,6 +331,7 @@ export class ChannelHealthService {
       firstResponseMs: result.firstResponseMs,
       completionMs: result.completionMs,
       failureClass: result.failureKind,
+      exitCode: result.exitCode,
       trigger: result.trigger,
     })}`);
   }

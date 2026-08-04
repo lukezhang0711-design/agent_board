@@ -184,6 +184,31 @@ describe('ChannelHealthService', () => {
     expect(snapshot.results[0].guidance).toContain('重试');
   });
 
+  it('GREEN: preserves a real Claude CLI exit code as safe engine-error guidance', async () => {
+    const service = new ChannelHealthService({
+      listEnabledChannels: () => [channels[1]],
+      runChannel: async () => {
+        throw new ChannelHealthError(
+          'engine_error',
+          'Claude CLI terminal exited before accepting the health prompt (exit code 0)',
+          0,
+        );
+      },
+      isAutoCheckEnabled: () => true,
+      log: vi.fn(),
+    });
+
+    const snapshot = await service.runManually({ event: event(), workspacePath: '/fixture' });
+
+    expect(snapshot.results[0]).toMatchObject({
+      state: 'failed',
+      failureKind: 'engine_error',
+      summary: '引擎错误',
+      exitCode: 0,
+    });
+    expect(snapshot.results[0].guidance).toContain('退出码 0');
+  });
+
   it('throttles automatic checks for ten minutes but lets manual retries run', async () => {
     let now = 1_000;
     const runChannel = vi.fn(async () => ({ responseText: 'pong', completionMs: 20 }));

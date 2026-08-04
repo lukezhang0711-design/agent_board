@@ -143,6 +143,25 @@ describe('claudeCliLauncherSingleton', () => {
     expect(h.stateManager.endSession).toHaveBeenCalledWith('session-1');
   }, 20000);
 
+  it('forwards the real PTY exit code to a health-only observer without changing launch input', async () => {
+    const h = await loadHarness();
+    let terminalOnExit: ((exitCode: number) => void) | undefined;
+    const healthOnExit = vi.fn();
+    h.launch.mockImplementationOnce(async (input: { onExit?: (exitCode: number) => void }) => {
+      terminalOnExit = input.onExit;
+    });
+
+    await h.ensureClaudeCliSession({
+      sessionId: 'health-session',
+      workspacePath: '/work',
+      onExit: healthOnExit,
+    });
+    terminalOnExit?.(0);
+
+    expect(healthOnExit).toHaveBeenCalledWith(0);
+    expect(h.stateManager.endSession).toHaveBeenCalledWith('health-session');
+  }, 20000);
+
   it('short-circuits without launching when claude is not installed (NIM-852)', async () => {
     const h = await loadHarness({ claudeInstalled: false });
 
