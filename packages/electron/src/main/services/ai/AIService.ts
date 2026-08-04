@@ -164,6 +164,10 @@ import {
   formatAISettingsKeysForLog,
   quarantineUnrecognizedAIProviderSettings,
 } from './aiSettingsCompatibility';
+import {
+  isClaudeCliChannelVisible,
+  isNewSessionProviderVisible,
+} from '../../../shared/claudeChannelVisibility';
 
 const execFileAsync = promisify(execFile);
 
@@ -182,7 +186,14 @@ type ChannelHealthExtensionProvider = {
 export function listChannelHealthChannels(
   providerSettings: Record<string, { enabled?: boolean } | undefined>,
   extensionProviders: readonly ChannelHealthExtensionProvider[],
+  options: {
+    showClaudeCliChannel?: boolean;
+    anthropicApiKey?: string;
+  } = {},
 ): ChannelHealthChannel[] {
+  const showClaudeCliChannel = isClaudeCliChannelVisible(options.showClaudeCliChannel);
+  const hasAnthropicApiKey = typeof options.anthropicApiKey === 'string'
+    && options.anthropicApiKey.trim().length > 0;
   const builtIns: Array<ChannelHealthChannel & { enabled: boolean }> = [
     {
       id: 'claude-code',
@@ -194,7 +205,8 @@ export function listChannelHealthChannels(
       id: 'claude-code-cli',
       displayName: 'Claude CLI',
       transport: 'claude-cli',
-      enabled: providerSettings['claude-code-cli']?.enabled !== false,
+      enabled: showClaudeCliChannel
+        && providerSettings['claude-code-cli']?.enabled !== false,
     },
     {
       id: 'openai-codex',
@@ -218,7 +230,7 @@ export function listChannelHealthChannels(
       id: 'claude',
       displayName: 'Claude API',
       transport: 'streaming',
-      enabled: providerSettings['claude']?.enabled === true,
+      enabled: providerSettings['claude']?.enabled === true && hasAnthropicApiKey,
     },
     {
       id: 'openai',
@@ -568,9 +580,14 @@ export class AIService {
   }
 
   private listEnabledChannelHealthChannels(): ChannelHealthChannel[] {
+    const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
     return listChannelHealthChannels(
       this.getNormalizedProviderSettings(),
       getAgentProviderRegistry().list(),
+      {
+        showClaudeCliChannel: getSettingsService().get('ai.showClaudeCliChannel') === true,
+        anthropicApiKey: apiKeys.anthropic,
+      },
     );
   }
 
@@ -4273,6 +4290,7 @@ export class AIService {
       this.startCodexModelRefreshIfEnabled(providerSettings);
       const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
       const claudeCodeSettings = providerSettings['claude-code'] || {};
+      const showClaudeCliChannel = getSettingsService().get('ai.showClaudeCliChannel') === true;
 
       // console.log('[AIService] ai:getModels - claude-code settings:', {
       //   enabled: claudeCodeSettings.enabled,
@@ -4291,9 +4309,11 @@ export class AIService {
           models: claudeCodeSettings.models
         },
         'claude-code-cli': {
-          // Genuine `claude` CLI on the user's subscription. On by default (like
-          // `claude-code`); no API key required — the CLI uses its own login.
-          enabled: providerSettings['claude-code-cli']?.enabled !== false,
+          // Genuine `claude` CLI on the user's subscription. It remains in the
+          // provider registry, but is opt-in for new sessions; no API key is
+          // required because the CLI uses its own login.
+          enabled: isNewSessionProviderVisible('claude-code-cli', showClaudeCliChannel)
+            && providerSettings['claude-code-cli']?.enabled !== false,
           models: providerSettings['claude-code-cli']?.models
         },
         'openai': {

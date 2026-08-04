@@ -85,4 +85,34 @@ describe('ModelSelector', () => {
     expect(screen.queryByText('Codex ACP')).toBeNull();
     expect(screen.queryByTestId('model-picker-provider-openai-codex-acp')).toBeNull();
   });
+
+  it('GREEN: shows only the embedded Claude entry when the advanced CLI switch is at its default', async () => {
+    (window as any).electronAPI.aiGetModels.mockResolvedValue({
+      success: true,
+      grouped: {
+        'claude-code': [{
+          id: 'claude-code:sonnet',
+          name: 'Claude Agent · Sonnet',
+          provider: 'claude-code',
+        }],
+        'claude-code-cli': [{
+          id: 'claude-code-cli:sonnet',
+          name: 'Claude Code CLI · Sonnet',
+          provider: 'claude-code-cli',
+        }],
+      },
+    });
+
+    render(
+      <ModelSelector
+        currentModel="openai-codex:gpt-5.5"
+        onModelChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('model-picker'));
+
+    await waitFor(() => expect(screen.getByTestId('model-picker-provider-claude-code')).toBeTruthy());
+    expect(screen.queryByTestId('model-picker-provider-claude-code-cli')).toBeNull();
+  });
 });

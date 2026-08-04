@@ -232,8 +232,8 @@ export const HelpContent: Record<string, HelpEntry> = {
     body: 'Choose which AI model to use. Different models have different capabilities and speeds.',
   },
   'model-picker-provider-claude-code': {
-    title: 'Claude Agent (Claude Code Based)',
-    body: 'The in-app agent built on Claude Code with full Nimbalyst integration: it sees your active document and selection, renders the rich inline transcript, and tracks every file it edits. Uses your configured Anthropic API key.',
+    title: 'Claude',
+    body: 'The embedded Claude engine with full Nimbalyst integration: it sees your active document and selection, renders the rich inline transcript, and tracks every file it edits. Uses your configured Anthropic API key or Claude subscription login.',
   },
   'model-picker-provider-claude-code-cli': {
     title: 'Claude Code CLI (Terminal Mode)',

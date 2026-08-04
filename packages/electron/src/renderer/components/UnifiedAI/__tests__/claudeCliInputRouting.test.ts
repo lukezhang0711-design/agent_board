@@ -3,6 +3,7 @@ import {
   CLAUDE_CLI_PROVIDER_ID,
   isClaudeCliTerminalSession,
 } from '../claudeCliInputRouting';
+import { filterVisibleNewSessionModels } from '../../../../shared/claudeChannelVisibility';
 
 // NIM-806 Phase 1: for the genuine `claude` CLI session, the chat input box must
 // route to the terminal PTY instead of ai:sendMessage (which throws for this
@@ -23,6 +24,13 @@ describe('claudeCliInputRouting', () => {
     it('is false for null/undefined provider', () => {
       expect(isClaudeCliTerminalSession(null)).toBe(false);
       expect(isClaudeCliTerminalSession(undefined)).toBe(false);
+    });
+
+    it('keeps the historical CLI terminal route while hiding CLI from new-session choices', () => {
+      expect(filterVisibleNewSessionModels([
+        { provider: CLAUDE_CLI_PROVIDER_ID, id: 'claude-code-cli:sonnet' },
+      ], false)).toEqual([]);
+      expect(isClaudeCliTerminalSession(CLAUDE_CLI_PROVIDER_ID)).toBe(true);
     });
   });
 

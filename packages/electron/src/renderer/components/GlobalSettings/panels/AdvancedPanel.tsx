@@ -3,6 +3,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { usePostHog } from 'posthog-js/react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { SettingsToggle } from '../SettingsToggle';
+import { ClaudeCliChannelToggle } from './ClaudeCliChannelToggle';
 import { HelpTooltip } from '../../../help';
 import {
   advancedSettingsAtom,
@@ -456,6 +457,8 @@ export function AdvancedPanel() {
       {/* ── Tools & Environment ── */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <h4 className="provider-panel-section-title text-base font-semibold mb-2 text-[var(--nim-text)]">Tools & Environment</h4>
+
+        <ClaudeCliChannelToggle />
 
         <DropdownRow
           value={externalEditorType}

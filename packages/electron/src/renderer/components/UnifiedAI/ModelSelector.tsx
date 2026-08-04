@@ -13,13 +13,17 @@ import {
 import { useAtomValue, useSetAtom } from 'jotai';
 import { MaterialSymbol, getProviderIcon } from '@nimbalyst/runtime';
 import { isAgentProvider, shouldBlockStartedSessionProviderSwitch } from '@nimbalyst/runtime/ai/server/types';
-import { getClaudeCodeModelLabel } from '../../utils/modelUtils';
-import { providersAtom } from '../../store/atoms/appSettings';
+import { getClaudeCodeModelLabel, getClaudeCodeModelShortLabel } from '../../utils/modelUtils';
+import { apiKeysAtom, providersAtom } from '../../store/atoms/appSettings';
+import { claudeAuthStateAtom } from '../../store/atoms/claudeAuthAtoms';
+import { settingAtom } from '../../store/atoms/settingAtomFamily';
+import { filterVisibleNewSessionModels } from '../../../shared/claudeChannelVisibility';
 import { setWindowModeAtom } from '../../store/atoms/windowMode';
 import { navigateToSettingsAtom } from '../../store/atoms/settingsNavigation';
 import type { SettingsCategory } from '../Settings/SettingsSidebar';
 import { AlphaBadge } from '../common/AlphaBadge';
 import { HelpTooltip } from '../../help';
+import { ClaudeIdentityBadge } from './ClaudeIdentityBadge';
 
 const ALPHA_PROVIDERS = new Set(['opencode', 'copilot-cli']);
 
@@ -60,6 +64,9 @@ export function ModelSelector({
   const [providerIcons, setProviderIcons] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const providers = useAtomValue(providersAtom);
+  const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
+  const claudeAuthState = useAtomValue(claudeAuthStateAtom);
+  const apiKeys = useAtomValue(apiKeysAtom);
   const setWindowMode = useSetAtom(setWindowModeAtom);
   const navigateToSettings = useSetAtom(navigateToSettingsAtom);
   const { refs, floatingStyles, context } = useFloating({
@@ -84,14 +91,16 @@ export function ModelSelector({
   // Clear cached models when provider settings change so next dropdown open fetches fresh data
   useEffect(() => {
     setModels({});
-  }, [providers]);
+  }, [providers, showClaudeCliChannel]);
 
-  // Load models when dropdown opens
+  // Reload when the dropdown opens or when visibility/provider settings change.
+  // The main process applies the same filter; this renderer pass also prevents
+  // a stale response from leaking a hidden CLI row.
   useEffect(() => {
-    if (isOpen && Object.keys(models).length === 0) {
-      loadModels();
-    }
-  }, [isOpen]);
+    if (isOpen) void loadModels();
+    // loadModels is intentionally kept as the local IPC boundary below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, providers, showClaudeCliChannel]);
 
   const loadModels = async () => {
     setLoading(true);
@@ -100,7 +109,13 @@ export function ModelSelector({
       if (response.success && response.grouped) {
         setModels(
           Object.fromEntries(
-            Object.entries(response.grouped).filter(([provider]) => provider !== 'openai-codex-acp'),
+            Object.entries(response.grouped)
+              .filter(([provider]) => provider !== 'openai-codex-acp')
+              .map(([provider, providerModels]) => [
+                provider,
+                filterVisibleNewSessionModels(providerModels as Model[], showClaudeCliChannel),
+              ])
+              .filter(([, providerModels]) => providerModels.length > 0),
           ),
         );
         const meta = response as {
@@ -160,6 +175,9 @@ export function ModelSelector({
     }
 
     // Fallback - strip provider prefix for display
+    if (currentModel.startsWith('claude-code:') && !showClaudeCliChannel) {
+      return `Claude · ${getClaudeCodeModelShortLabel(currentModel)}`;
+    }
     if (currentModel.startsWith('claude-code')) {
       return getClaudeCodeModelLabel(currentModel);
     }
@@ -173,7 +191,7 @@ export function ModelSelector({
     if (providerLabels[provider]) return providerLabels[provider];
     switch (provider) {
       case 'claude': return 'Claude Chat';
-      case 'claude-code': return 'Claude Agent (Claude Code Based)';
+      case 'claude-code': return 'Claude';
       case 'claude-code-cli': return 'Claude Code CLI (Subscription)';
       case 'openai': return 'OpenAI';
       case 'openai-codex': return 'OpenAI Codex';
@@ -291,8 +309,8 @@ export function ModelSelector({
                     <div key={provider} className="model-selector-provider-group mb-1">
                       {/* Hover help (NIM-825): providers with a
                           model-picker-provider-<id> HelpContent entry get a
-                          tooltip explaining what they are (e.g. Claude Agent
-                          vs Claude Code CLI); others render unchanged. */}
+                          tooltip explaining the provider; others render
+                          unchanged. */}
                       <HelpTooltip testId={`model-picker-provider-${provider}`} placement="right">
                         <div
                           className="model-selector-provider-header flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-[var(--nim-text-muted)]"
@@ -300,6 +318,12 @@ export function ModelSelector({
                         >
                           {renderProviderIcon(provider, 12)}
                           <span>{getProviderLabel(provider)}</span>
+                          {provider === 'claude-code' && (
+                            <ClaudeIdentityBadge
+                              authState={claudeAuthState}
+                              apiKeys={apiKeys}
+                            />
+                          )}
                           {ALPHA_PROVIDERS.has(provider) && <AlphaBadge size="xs" />}
                         </div>
                       </HelpTooltip>
@@ -315,7 +339,7 @@ export function ModelSelector({
                             title={isDisabled ? disabledTooltip : undefined}
                             aria-disabled={isDisabled}
                           >
-                            <span className={`model-selector-option-name flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isDisabled ? 'text-[var(--nim-text-faint)]' : ''}`}>{model.name}</span>
+                            <span className={`model-selector-option-name flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isDisabled ? 'text-[var(--nim-text-faint)]' : ''}`}>{provider === 'claude-code' && !showClaudeCliChannel ? getClaudeCodeModelShortLabel(model.id) : model.name}</span>
                             {isDisabled ? (
                               <MaterialSymbol icon="block" size={14} className="disabled-icon text-[var(--nim-text-faint)]" />
                             ) : isCurrent ? (

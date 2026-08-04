@@ -8,15 +8,38 @@ vi.mock('@nimbalyst/runtime', () => ({
 }));
 vi.mock('../../../store/atoms/settingAtomFamily', () => ({
   settingAtom: vi.fn(),
+  onSettingChanged: vi.fn(),
 }));
 
-import { ChannelHealthRow, type ChannelHealthResultView } from '../ChannelHealthPanel';
+import {
+  ChannelHealthRow,
+  filterVisibleChannelHealthResults,
+  type ChannelHealthResultView,
+} from '../ChannelHealthPanel';
 
 function renderRow(result: ChannelHealthResultView) {
   render(<ChannelHealthRow result={result} running={false} onRerun={vi.fn()} />);
 }
 
 describe('ChannelHealthPanel rows', () => {
+  it('GREEN: hides CLI when advanced visibility is off and hides Claude API without an API key', () => {
+    const results: ChannelHealthResultView[] = [
+      { id: 'claude-code', displayName: 'Claude（嵌入式）', transport: 'streaming', state: 'never' },
+      { id: 'claude-code-cli', displayName: 'Claude CLI', transport: 'claude-cli', state: 'never' },
+      { id: 'claude', displayName: 'Claude API', transport: 'streaming', state: 'never' },
+    ];
+
+    expect(filterVisibleChannelHealthResults(results, {
+      showClaudeCliChannel: false,
+      hasAnthropicApiKey: false,
+    }).map((result) => result.id)).toEqual(['claude-code']);
+
+    expect(filterVisibleChannelHealthResults(results, {
+      showClaudeCliChannel: true,
+      hasAnthropicApiKey: true,
+    }).map((result) => result.id)).toEqual(['claude-code', 'claude-code-cli', 'claude']);
+  });
+
   it('renders green, yellow, and actionable red health states', () => {
     renderRow({
       id: 'claude-code',

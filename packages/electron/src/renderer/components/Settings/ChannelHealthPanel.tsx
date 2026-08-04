@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { settingAtom } from '../../store/atoms/settingAtomFamily';
+import { apiKeysAtom } from '../../store/atoms/appSettings';
+import { filterVisibleChannelHealthResults } from '../../../shared/claudeChannelVisibility';
 import { SettingsToggle } from '../GlobalSettings/SettingsToggle';
+
+export { filterVisibleChannelHealthResults } from '../../../shared/claudeChannelVisibility';
 
 type ChannelHealthState = 'never' | 'healthy' | 'slow' | 'failed' | 'unknown' | 'disabled';
 type ChannelHealthFailureKind =
@@ -117,6 +121,8 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
   const [autoCheckOnStartup, setAutoCheckOnStartup] = useAtom(
     settingAtom('ai.channelHealth.autoCheckOnStartup'),
   );
+  const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
+  const apiKeys = useAtomValue(apiKeysAtom);
   const [snapshot, setSnapshot] = useState<ChannelHealthSnapshotView>(EMPTY_SNAPSHOT);
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -138,7 +144,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh, showClaudeCliChannel, apiKeys?.anthropic]);
 
   useEffect(() => {
     if (!snapshot.running) return;
@@ -147,6 +153,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
   }, [refresh, snapshot.running]);
 
   const run = useCallback(async (channelId?: string) => {
+    if (channelId === 'claude-code-cli' && showClaudeCliChannel !== true) return;
     if (!workspacePath) {
       setRequestError('请先打开项目，再运行通道体检。');
       return;
@@ -167,7 +174,12 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
       setRequestError('体检启动失败，请检查项目和引擎配置后重试。');
       await refresh();
     }
-  }, [refresh, workspacePath]);
+  }, [refresh, showClaudeCliChannel, workspacePath]);
+
+  const visibleResults = filterVisibleChannelHealthResults(snapshot.results, {
+    showClaudeCliChannel,
+    hasAnthropicApiKey: typeof apiKeys?.anthropic === 'string' && apiKeys.anthropic.trim().length > 0,
+  });
 
   return (
     <div className="channel-health-panel provider-panel flex flex-col" data-testid="channel-health-panel">
@@ -209,11 +221,11 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
 
       {loading ? (
         <p className="text-sm text-[var(--nim-text-muted)]">正在读取体检结果…</p>
-      ) : snapshot.results.length === 0 ? (
+      ) : visibleResults.length === 0 ? (
         <p className="text-sm text-[var(--nim-text-muted)]">当前没有已启用的引擎通道。</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {snapshot.results.map((result) => (
+          {visibleResults.map((result) => (
             <ChannelHealthRow
               key={result.id}
               result={result}

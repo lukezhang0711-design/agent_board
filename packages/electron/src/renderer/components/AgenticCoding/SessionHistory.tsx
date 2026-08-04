@@ -67,6 +67,7 @@ import { createMetaAgentSession } from '../../utils/metaAgentUtils';
 import { HelpTooltip } from '../../help';
 import { AlphaBadge } from '../common/AlphaBadge';
 import { defaultAgentModelAtom } from '../../store/atoms/appSettings';
+import { settingAtom } from '../../store/atoms/settingAtomFamily';
 import { usePostHog } from 'posthog-js/react';
 import { WorkspaceSummaryHeader, generateWorkspaceAccentColor } from '../WorkspaceSummaryHeader';
 import { errorNotificationService } from '../../services/ErrorNotificationService';
@@ -328,11 +329,12 @@ const SessionHistoryComponent: React.FC = () => {
 
   // === Meta-agent session creation ===
   const defaultAgentModel = useAtomValue(defaultAgentModelAtom);
+  const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
   const addSession = useSetAtom(addSessionFullAtom);
 
   const handleNewMetaAgent = useCallback(async () => {
     try {
-      const result = await createMetaAgentSession(workspacePath, defaultAgentModel);
+      const result = await createMetaAgentSession(workspacePath, defaultAgentModel, showClaudeCliChannel);
       if (result) {
         const now = Date.now();
         addSession({
@@ -358,7 +360,7 @@ const SessionHistoryComponent: React.FC = () => {
     } catch (error) {
       console.error('[SessionHistory] Failed to create meta-agent session:', error);
     }
-  }, [defaultAgentModel, workspacePath, onSessionSelect, addSession]);
+  }, [defaultAgentModel, showClaudeCliChannel, workspacePath, onSessionSelect, addSession]);
 
   // Get the session registry to look up parent session IDs
   const sessionRegistry = useAtomValue(sessionRegistryAtom);

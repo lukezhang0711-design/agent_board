@@ -24,7 +24,8 @@ import { AlphaFeatureTag, getDefaultAlphaFeatures } from '../../../shared/alphaF
 import { BetaFeatureTag } from '../../../shared/betaFeatures';
 import { DeveloperFeatureTag, DEVELOPER_FEATURES, getDefaultDeveloperFeatures, enableAllDeveloperFeatures, disableAllDeveloperFeatures, areAllDeveloperFeaturesEnabled } from '../../../shared/developerFeatures';
 import { normalizeCodexProviderConfig, stripTransientProviderFields } from '@nimbalyst/runtime/ai/server/utils/modelConfigUtils';
-import { onSettingChanged } from './settingAtomFamily';
+import { onSettingChanged, settingAtom } from './settingAtomFamily';
+import { resolveNewSessionModel } from '../../../shared/claudeChannelVisibility';
 
 // Voice type - all available OpenAI Realtime voices
 export type VoiceId = 'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse' | 'marin' | 'cedar';
@@ -1014,7 +1015,10 @@ function scheduleAgentModePersist(settings: AgentModeSettings): void {
 /**
  * Default model for new agent sessions.
  */
-export const defaultAgentModelAtom = atom((get) => get(agentModeSettingsAtom).defaultModel);
+export const defaultAgentModelAtom = atom((get) => resolveNewSessionModel(
+  get(agentModeSettingsAtom).defaultModel,
+  get(settingAtom('ai.showClaudeCliChannel')),
+));
 
 /**
  * Default effort level for Opus 4.6 adaptive reasoning.

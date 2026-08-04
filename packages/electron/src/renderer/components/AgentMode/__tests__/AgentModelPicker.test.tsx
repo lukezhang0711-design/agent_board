@@ -36,4 +36,21 @@ describe('AgentModelPicker', () => {
     expect(container.querySelector('optgroup[label="OpenAI Codex (ACP)"]')).toBeNull();
     expect(container.querySelector('optgroup[label="OpenAI Codex"]')).toBeTruthy();
   });
+
+  it('hides the Claude CLI provider while advanced channel visibility is off', () => {
+    const { container } = render(
+      <AgentModelPicker
+        models={[
+          { id: 'claude-code:sonnet', name: 'Claude Agent', provider: 'claude-code' },
+          { id: 'claude-code-cli:sonnet', name: 'Claude CLI', provider: 'claude-code-cli' },
+        ]}
+        selectedModel="claude-code:sonnet"
+        onModelChange={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector('optgroup[label="Claude"]')).toBeTruthy();
+    expect(container.querySelector('optgroup[label="Claude Code CLI"]')).toBeNull();
+    expect(container.querySelector('option[value="claude-code-cli:sonnet"]')).toBeNull();
+  });
 });
