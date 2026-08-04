@@ -8,7 +8,7 @@ import * as path from 'path';
 import { join } from 'path';
 import * as fs from 'fs';
 import { appendFileSync, existsSync, renameSync, unlinkSync, writeFileSync } from 'fs';
-import { createWindow, findWindowByFilePath, findWindowByWorkspace, getMostRecentlyFocusedWorkspaceWindow } from './window/WindowManager';
+import { createWindow, findWindowByFilePath, findWindowByWorkspace, getMostRecentlyFocusedWorkspaceWindow, getWindowId } from './window/WindowManager';
 import { loadFileIntoWindow } from './file/FileOperations';
 import { createApplicationMenu } from './menu/ApplicationMenu';
 import { updateNativeTheme, updateWindowTitleBars } from './theme/ThemeManager';
@@ -2468,6 +2468,26 @@ app.whenReady().then(async () => {
 
     // Mark boot as complete - all critical initialization is done
     markBootComplete();
+
+    // One silent, throttled channel pass after a restored workspace window is
+    // available. AIService owns the setting gate and retries briefly if window
+    // restoration is still in flight, so boot never waits on a model response.
+    aiService?.scheduleStartupChannelHealthCheck(() => {
+        const workspaceWindow = getMostRecentlyFocusedWorkspaceWindow();
+        if (!workspaceWindow || workspaceWindow.isDestroyed()) return null;
+        const windowId = getWindowId(workspaceWindow);
+        const workspacePath = resolveActiveWorkspacePath(
+            windowId === null ? undefined : windowStates.get(windowId),
+        );
+        if (!workspacePath) return null;
+        return {
+            event: {
+                sender: workspaceWindow.webContents,
+                senderFrame: workspaceWindow.webContents.mainFrame,
+            } as Electron.IpcMainInvokeEvent,
+            workspacePath,
+        };
+    });
 
     // Auto-update marketplace extensions (fire-and-forget, don't block startup)
     runExtensionAutoUpdate();

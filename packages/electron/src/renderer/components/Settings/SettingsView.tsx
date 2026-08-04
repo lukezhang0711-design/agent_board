@@ -35,6 +35,7 @@ import { OrgPanel } from './panels/OrgPanel';
 import { TrackerConfigPanel } from './panels/TrackerConfigPanel';
 import { GitHubAccountPanel } from './panels/GitHubAccountPanel';
 import { ExtensionMarketplacePanel } from './panels/ExtensionMarketplacePanel';
+import { ChannelHealthPanel } from './ChannelHealthPanel';
 import { walkthroughs } from '../../walkthroughs';
 import {
   aiProviderSettingsAtom,
@@ -756,6 +757,8 @@ export function SettingsView({
     };
 
     switch (selectedCategory) {
+      case 'channel-health':
+        return <ChannelHealthPanel workspacePath={workspacePath ?? undefined} />;
       case 'claude':
         return wrapWithOverride('claude', 'Claude', <ClaudePanel {...commonProps} />);
       case 'claude-code':

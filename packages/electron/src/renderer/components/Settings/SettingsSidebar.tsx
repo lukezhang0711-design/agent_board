@@ -9,6 +9,7 @@ import { developerModeAtom } from '../../store/atoms/appSettings';
 export type SettingsCategory =
   | 'agent-permissions'
   | 'claude-code'
+  | 'channel-health'
   | 'claude'
   | 'openai'
   | 'openai-codex'
@@ -180,6 +181,11 @@ The have full MCP support with file system access, multi-file operations, and se
 
 Best for complex coding tasks.`,
       items: [
+        {
+          id: 'channel-health',
+          name: '通道体检',
+          icon: <MaterialSymbol icon="health_and_safety" size={16} />,
+        },
         {
           id: 'claude-code',
           name: 'Claude Agent',
