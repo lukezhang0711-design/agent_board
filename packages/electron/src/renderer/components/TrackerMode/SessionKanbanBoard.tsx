@@ -43,6 +43,7 @@ import {
   sessionDispatchQueuedAtom,
   sessionInterruptedAtom,
   sessionWorkOrderStatusAtom,
+  sessionWorkOrderAttemptNumberAtom,
   sessionWorkOrderFailedAtom,
   getCardType,
   SESSION_PHASE_COLUMNS,
@@ -518,6 +519,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
   const cardType = useMemo(() => getCardType(session), [session]);
   const cardState = useCardState(session.id, cardType);
   const workOrderStatus = useAtomValue(sessionWorkOrderStatusAtom(session.id));
+  const workOrderAttemptNumber = useAtomValue(sessionWorkOrderAttemptNumberAtom(session.id));
   const workOrderFailed = useAtomValue(sessionWorkOrderFailedAtom(session.id));
   const stateStyle = CARD_STATE_STYLES[cardState.state];
   const tags = session.tags || [];
@@ -663,6 +665,16 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
           </div>
           <CardStatusBadge info={cardState} />
         </div>
+
+        {workOrderAttemptNumber !== undefined && (
+          <div
+            className="text-[10px] text-nim-faint mb-1.5"
+            data-testid="work-order-attempt-summary"
+          >
+            第 {workOrderAttemptNumber} 次尝试
+            {workOrderStatus ? ` · 最近状态：${workOrderStatus}` : ''}
+          </div>
+        )}
 
         {/* Child session count (workstream/worktree only) */}
         {cardType !== 'session' && session.childCount > 0 && (

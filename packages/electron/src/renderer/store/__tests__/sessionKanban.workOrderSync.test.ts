@@ -6,6 +6,7 @@ import { trackerItemsMapAtom } from '@nimbalyst/runtime/plugins/TrackerPlugin/tr
 import {
   sessionKanbanFilterAtom,
   sessionsByPhaseAtom,
+  sessionWorkOrderAttemptNumberAtom,
   sessionWorkOrderFailedAtom,
 } from '../atoms/sessionKanban';
 import { sessionRegistryAtom } from '../atoms/sessions';
@@ -126,5 +127,46 @@ describe('session kanban work-order phase projection (FB-082)', () => {
 
     expect(store.get(sessionsByPhaseAtom).get('complete')).toEqual([session]);
     expect(store.get(sessionsByPhaseAtom).get('unphased')).toEqual([]);
+  });
+
+  it('shows only the current session when a reused card retains the old session link', () => {
+    const oldSession = makeSession({ id: 'session-old', title: 'Module 1 old run', phase: 'planning' });
+    const currentSession = makeSession({ id: 'session-current', title: 'Module 1 retry', phase: 'planning' });
+    const workOrder = makeWorkOrder('completed', currentSession.id, {
+      system: {
+        workspace: '/workspace',
+        createdAt: '2026-08-04T00:00:00.000Z',
+        updatedAt: '2026-08-04T00:00:02.000Z',
+        linkedSessions: [oldSession.id, currentSession.id],
+      },
+    });
+    store.set(sessionRegistryAtom, new Map([
+      [oldSession.id, oldSession],
+      [currentSession.id, currentSession],
+    ]));
+    store.set(trackerItemsMapAtom, new Map([[workOrder.id, workOrder]]));
+
+    expect(store.get(sessionsByPhaseAtom).get('planning')).toEqual([]);
+    expect(store.get(sessionsByPhaseAtom).get('complete')).toEqual([currentSession]);
+  });
+
+  it('derives the visible attempt number from attempts and the latest status', () => {
+    const session = makeSession();
+    store.set(sessionRegistryAtom, new Map([[session.id, session]]));
+    store.set(trackerItemsMapAtom, new Map([
+      ['work-order-session-1', makeWorkOrder('completed', session.id, {
+        fields: {
+          title: 'Work order',
+          status: 'completed',
+          childSessionId: session.id,
+          attempts: [
+            { attempt: 1, engine: 'claude-code', model: 'haiku', startedAt: '2026-08-04T00:00:00.000Z', endedAt: '2026-08-04T00:00:01.000Z', outcome: 'failure' },
+            { attempt: 2, engine: 'claude-code', model: 'claude-code:haiku', startedAt: '2026-08-04T00:00:02.000Z', endedAt: '2026-08-04T00:00:03.000Z', outcome: 'success' },
+          ],
+        },
+      })],
+    ]));
+
+    expect(store.get(sessionWorkOrderAttemptNumberAtom(session.id))).toBe(2);
   });
 });

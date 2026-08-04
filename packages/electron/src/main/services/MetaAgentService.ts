@@ -147,6 +147,12 @@ interface WorkOrderReceipt {
   outcome: WorkOrderReceiptOutcome;
 }
 
+interface WorkOrderAttempt extends WorkOrderReceipt {
+  attempt: number;
+  failureReason?: string;
+  sessionId?: string;
+}
+
 interface WorkOrderSettlement {
   failureReason?: string;
   receipt?: WorkOrderReceipt;
@@ -179,14 +185,86 @@ function normalizeReceiptTimestamp(value: unknown, fallback: string): string {
   return fallback;
 }
 
-function isSuccessfulWorkOrderReceipt(value: unknown): value is WorkOrderReceipt {
+function isWorkOrderReceipt(value: unknown): value is WorkOrderReceipt {
   if (!value || typeof value !== 'object') return false;
   const receipt = value as Partial<WorkOrderReceipt>;
-  return receipt.outcome === 'success'
+  return (receipt.outcome === 'success' || receipt.outcome === 'failure')
     && typeof receipt.engine === 'string'
     && receipt.engine.trim().length > 0
     && typeof receipt.startedAt === 'string'
     && typeof receipt.endedAt === 'string';
+}
+
+function isSuccessfulWorkOrderReceipt(value: unknown): value is WorkOrderReceipt {
+  return isWorkOrderReceipt(value) && value.outcome === 'success';
+}
+
+function parseWorkOrderData(value: unknown): Record<string, unknown> {
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function readWorkOrderAttempts(data: Record<string, unknown>): WorkOrderAttempt[] {
+  const attempts = Array.isArray(data.attempts)
+    ? data.attempts.flatMap((candidate, index) => {
+        if (!isWorkOrderReceipt(candidate)) return [];
+        const rawAttempt = candidate as Partial<WorkOrderAttempt>;
+        const rawAttemptNumber = rawAttempt.attempt;
+        const attempt = typeof rawAttemptNumber === 'number'
+          && Number.isSafeInteger(rawAttemptNumber)
+          && rawAttemptNumber > 0
+          ? rawAttemptNumber
+          : index + 1;
+        return [{ ...candidate, attempt } as WorkOrderAttempt];
+      })
+    : [];
+
+  // Backfill the first attempt for cards written before the attempts field
+  // existed. This keeps the original receipt visible during the migration.
+  if (attempts.length === 0 && isWorkOrderReceipt(data.receipt)) {
+    return [{
+      ...data.receipt,
+      attempt: 1,
+      ...(typeof data.failureReason === 'string' ? { failureReason: data.failureReason } : {}),
+    }];
+  }
+  return attempts;
+}
+
+function appendWorkOrderAttempt(
+  data: Record<string, unknown>,
+  receipt: WorkOrderReceipt,
+  failureReason: string | undefined,
+  sessionId: string | undefined,
+): void {
+  const attempts = readWorkOrderAttempts(data);
+  const existingIndex = sessionId
+    ? attempts.findIndex((attempt) => attempt.sessionId === sessionId)
+    : -1;
+  const attemptNumber = existingIndex >= 0
+    ? attempts[existingIndex].attempt
+    : attempts.length + 1;
+  const attempt: WorkOrderAttempt = {
+    ...receipt,
+    attempt: attemptNumber,
+    ...(sessionId ? { sessionId } : {}),
+    ...(failureReason ? { failureReason } : {}),
+  };
+  if (existingIndex >= 0) {
+    attempts[existingIndex] = attempt;
+  } else {
+    attempts.push(attempt);
+  }
+  data.attempts = attempts;
 }
 
 interface CreateChildSessionArgs {
@@ -425,6 +503,7 @@ export class MetaAgentService {
   private ipcHandlersRegistered = false;
   private readonly dispatchQueueStore = createPGLiteDispatchQueueStore();
   private readonly dispatchLocks = new Map<string, Promise<void>>();
+  private readonly workOrderIdentityLocks = new Map<string, Promise<void>>();
 
   private constructor() {}
 
@@ -1170,6 +1249,32 @@ export class MetaAgentService {
     }
   }
 
+  private async withWorkOrderIdentityLock<T>(
+    workspaceId: string,
+    planId: string | undefined,
+    moduleTitle: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    if (!planId?.trim()) {
+      return operation();
+    }
+    const key = `${workspaceId}\u0000${planId.trim()}\u0000${moduleTitle}`;
+    const previous = this.workOrderIdentityLocks.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const current = previous.catch(() => undefined).then(() => gate);
+    this.workOrderIdentityLocks.set(key, current);
+    await previous.catch(() => undefined);
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.workOrderIdentityLocks.get(key) === current) {
+        this.workOrderIdentityLocks.delete(key);
+      }
+    }
+  }
+
   private async dispatchOrQueueChildSession(
     metaSessionId: string,
     workspaceId: string,
@@ -1387,9 +1492,7 @@ export class MetaAgentService {
     );
     const row = rows[0];
     if (!row) return;
-    const data = typeof row.data === 'string'
-      ? JSON.parse(row.data)
-      : ((row.data as Record<string, unknown> | null) ?? {});
+    const data = parseWorkOrderData(row.data);
     data.childSessionId = sessionId;
     await databaseWorker.query(
       `UPDATE tracker_items SET data = $1, updated = NOW() WHERE id = $2`,
@@ -3253,6 +3356,31 @@ export class MetaAgentService {
     }
   }
 
+  private async findReusableWorkOrder(
+    workspaceId: string,
+    planId: string | undefined,
+    moduleTitle: string,
+  ): Promise<{ id: string; data: Record<string, unknown> } | null> {
+    if (!planId?.trim()) {
+      return null;
+    }
+    const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
+      `SELECT id, data
+       FROM tracker_items
+       WHERE type = 'work-order'
+         AND workspace = $1
+         AND (archived = FALSE OR archived IS NULL)`,
+      [workspaceId],
+    );
+    const matchingRow = rows.find((row) => {
+      const data = parseWorkOrderData(row.data);
+      return data.planId === planId.trim() && data.title === moduleTitle;
+    });
+    return matchingRow
+      ? { id: matchingRow.id, data: parseWorkOrderData(matchingRow.data) }
+      : null;
+  }
+
   private async createWorkOrderTrackerItem(
     workspaceId: string,
     sessionId: string,
@@ -3269,55 +3397,94 @@ export class MetaAgentService {
       receipt?: WorkOrderReceipt;
     } = {},
   ): Promise<string> {
-    const trackerId = randomUUID();
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
     const taskSummary = this.deriveTitleFromPrompt(prompt) || title;
     const dispatchedAt = options.dispatchedAt ?? new Date().toISOString();
     const sourceRef = options.sourceRef ?? `meta-agent-work-order:${sessionId}`;
-    const data = {
-      title,
-      status: options.status ?? 'dispatched',
-      childSessionId: sessionId,
-      taskSummary,
-      dispatchedAt,
-      intent,
-      ...(planId ? { planId } : {}),
-      ...(options.failureReason ? { failureReason: options.failureReason } : {}),
-      ...(options.receipt ? { receipt: options.receipt } : {}),
-    };
+    return this.withWorkOrderIdentityLock(workspaceId, planId, title, async () => {
+      const reusable = await this.findReusableWorkOrder(workspaceId, planId, title);
+      if (reusable) {
+        const data = reusable.data;
+        data.attempts = readWorkOrderAttempts(data);
+        data.title = title;
+        data.status = options.status ?? 'dispatched';
+        data.childSessionId = sessionId;
+        data.taskSummary = taskSummary;
+        data.dispatchedAt = dispatchedAt;
+        data.intent = intent;
+        if (planId) {
+          data.planId = planId;
+        }
+        // A retry starts a clean current state. Its previous failure remains in
+        // `attempts`; only the current top-level receipt/failure is replaced.
+        delete data.failureReason;
+        delete data.receipt;
+        if (options.receipt) {
+          data.receipt = options.receipt;
+          if (options.failureReason) {
+            data.failureReason = options.failureReason;
+          }
+          appendWorkOrderAttempt(data, options.receipt, options.failureReason, sessionId);
+        }
 
-    await databaseWorker.query(
-      `INSERT INTO tracker_items (
-        id, type, type_tags, data, workspace, document_path, line_number,
-        created, updated, last_indexed, sync_status,
-        content, archived, source, source_ref
-      ) VALUES ($1, $2, $3, $4, $5, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, $6, $7)`,
-      [
-        trackerId,
-        'work-order',
-        ['work-order'],
-        JSON.stringify(data),
-        workspaceId,
-        'meta-agent',
-        sourceRef,
-      ],
-    );
-
-    if (options.linkSession !== false) {
-      await createBidirectionalLink(trackerId, sessionId);
-    }
-
-    for (const window of BrowserWindow.getAllWindows()) {
-      if (!window.isDestroyed()) {
-        window.webContents.send('document-service:tracker-items-changed', {
-          added: [],
-          updated: [],
-          removed: [],
-          timestamp: new Date(),
-        });
+        await databaseWorker.query(
+          `UPDATE tracker_items
+           SET data = $1, source_ref = $2, updated = NOW()
+           WHERE id = $3`,
+          [JSON.stringify(data), sourceRef, reusable.id],
+        );
+        if (options.linkSession !== false) {
+          await createBidirectionalLink(reusable.id, sessionId);
+        }
+        this.emitTrackerItemsChanged();
+        return reusable.id;
       }
-    }
-    return trackerId;
+
+      const trackerId = randomUUID();
+      const data: Record<string, unknown> = {
+        title,
+        status: options.status ?? 'dispatched',
+        childSessionId: sessionId,
+        taskSummary,
+        dispatchedAt,
+        intent,
+        attempts: options.receipt
+          ? [{
+              ...options.receipt,
+              attempt: 1,
+              sessionId,
+              ...(options.failureReason ? { failureReason: options.failureReason } : {}),
+            } satisfies WorkOrderAttempt]
+          : [],
+        ...(planId ? { planId } : {}),
+        ...(options.failureReason ? { failureReason: options.failureReason } : {}),
+        ...(options.receipt ? { receipt: options.receipt } : {}),
+      };
+
+      await databaseWorker.query(
+        `INSERT INTO tracker_items (
+          id, type, type_tags, data, workspace, document_path, line_number,
+          created, updated, last_indexed, sync_status,
+          content, archived, source, source_ref
+        ) VALUES ($1, $2, $3, $4, $5, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, $6, $7)`,
+        [
+          trackerId,
+          'work-order',
+          ['work-order'],
+          JSON.stringify(data),
+          workspaceId,
+          'meta-agent',
+          sourceRef,
+        ],
+      );
+
+      if (options.linkSession !== false) {
+        await createBidirectionalLink(trackerId, sessionId);
+      }
+
+      this.emitTrackerItemsChanged();
+      return trackerId;
+    });
   }
 
   private async applyChildSessionMetadata(
@@ -3361,9 +3528,7 @@ export class MetaAgentService {
     if (!row) {
       throw new Error(`Queued work-order ${sourceRef} not found`);
     }
-    const data = typeof row.data === 'string'
-      ? JSON.parse(row.data)
-      : ((row.data as Record<string, unknown> | null) ?? {});
+    const data = parseWorkOrderData(row.data);
     data.status = 'dispatched';
     data.childSessionId = sessionId;
     data.dispatchedAt = new Date().toISOString();
@@ -3425,9 +3590,7 @@ export class MetaAgentService {
       return;
     }
 
-    const data = typeof row.data === 'string'
-      ? JSON.parse(row.data)
-      : ((row.data as Record<string, unknown> | null) ?? {});
+    const data = parseWorkOrderData(row.data);
     const existingFailureReason = typeof data.failureReason === 'string' && data.failureReason.trim().length > 0;
     const hasSuccessfulReceipt = isSuccessfulWorkOrderReceipt(data.receipt)
       || isSuccessfulWorkOrderReceipt(settlement?.receipt);
@@ -3445,7 +3608,16 @@ export class MetaAgentService {
       data.failureReason = settlement.failureReason;
     }
     if (settlement?.receipt) {
+      appendWorkOrderAttempt(
+        data,
+        settlement.receipt,
+        settlement.failureReason,
+        typeof data.childSessionId === 'string' ? data.childSessionId : undefined,
+      );
       data.receipt = settlement.receipt;
+      if (settlement.receipt.outcome === 'success' && !settlement.failureReason) {
+        delete data.failureReason;
+      }
     }
     await databaseWorker.query(
       `UPDATE tracker_items SET data = $1, updated = NOW() WHERE id = $2`,

@@ -556,6 +556,8 @@ describe('MetaAgentService work-order persistence', () => {
         outcome: 'failure',
       },
     });
+    expect(data.attempts).toHaveLength(1);
+    expect(data.attempts[0]).toMatchObject({ attempt: 1, failureReason: rawRoutingError, outcome: 'failure' });
     expect(rows[0].source_ref).toMatch(/^meta-agent-work-order:/);
     expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
       'head-session',
@@ -564,6 +566,137 @@ describe('MetaAgentService work-order persistence', () => {
       undefined,
       'child_session_event',
     );
+  });
+
+  it('RED FB-085: creates duplicate cards when the same plan module is retried', async () => {
+    const planId = 'plan-fb-085';
+    const moduleTitle = 'Module 1';
+    const firstAttemptError = await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: moduleTitle,
+        prompt: 'Run Module 1 with the initial engine configuration',
+        provider: 'claude-code',
+        model: 'haiku',
+        intent: 'investigation',
+        planId,
+      },
+    ).then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+    expect(firstAttemptError).toBeInstanceOf(Error);
+    const rawFailureReason = firstAttemptError instanceof Error
+      ? firstAttemptError.message
+      : String(firstAttemptError);
+    expect(rawFailureReason).toContain('provider:model');
+
+    const retry = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: moduleTitle,
+        prompt: 'Run Module 1 with the corrected engine configuration',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'investigation',
+        planId,
+      },
+    ));
+    await (service as any).handleChildSessionEvent(retry.sessionId, 'session:completed');
+
+    const { rows } = await db.query<any>(
+      `SELECT data, source_ref
+       FROM tracker_items
+       WHERE type = 'work-order'
+       ORDER BY created`,
+    );
+    expect(rows).toHaveLength(1);
+    const data = parseStoredJson<any>(rows[0].data);
+    expect(data.status).toBe('completed');
+    expect(data.attempts).toHaveLength(2);
+    expect(data.attempts[0]).toMatchObject({
+      attempt: 1,
+      engine: 'claude-code',
+      model: 'haiku',
+      outcome: 'failure',
+      failureReason: rawFailureReason,
+    });
+    expect(data.attempts[1]).toMatchObject({
+      attempt: 2,
+      engine: 'claude-code',
+      model: 'claude-code:haiku',
+      outcome: 'success',
+    });
+    expect(rows[0].source_ref).toBe(`meta-agent-work-order:${retry.sessionId}`);
+  });
+
+  it('keeps a failed retry on one Failed card with both failure receipts', async () => {
+    const planId = 'plan-fb-085-failed';
+    const args = {
+      title: 'Module 1',
+      prompt: 'Retry Module 1 but keep the engine error',
+      provider: 'claude-code',
+      model: 'haiku',
+      intent: 'investigation',
+      planId,
+    } as const;
+    const firstError = await (service as any).createChildSession('head-session', workspacePath, args)
+      .then(() => null, (error: unknown) => error);
+    const secondError = await (service as any).createChildSession('head-session', workspacePath, args)
+      .then(() => null, (error: unknown) => error);
+
+    expect(firstError).toBeInstanceOf(Error);
+    expect(secondError).toBeInstanceOf(Error);
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE type = 'work-order' AND workspace = $1`,
+      [workspacePath],
+    );
+    expect(rows).toHaveLength(1);
+    const data = parseStoredJson<any>(rows[0].data);
+    expect(data.status).toBe('failed');
+    expect(data.attempts).toHaveLength(2);
+    expect(data.attempts.every((attempt: any) => attempt.outcome === 'failure')).toBe(true);
+    expect(data.attempts[0].failureReason).toBe((firstError as Error).message);
+    expect(data.attempts[1].failureReason).toBe((secondError as Error).message);
+  });
+
+  it('does not reuse a work-order across modules or plans', async () => {
+    const dispatches = [
+      { title: 'Module 1', planId: 'plan-a' },
+      { title: 'Module 2', planId: 'plan-a' },
+      { title: 'Module 1', planId: 'plan-b' },
+    ];
+    const children = [] as Array<{ sessionId: string }>;
+    for (const dispatch of dispatches) {
+      children.push(JSON.parse(await (service as any).createChildSession(
+        'head-session',
+        workspacePath,
+        {
+          ...dispatch,
+          prompt: `Run ${dispatch.title}`,
+          provider: 'claude-code',
+          model: 'claude-code:haiku',
+          intent: 'investigation',
+        },
+      )));
+    }
+    for (const child of children) {
+      await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
+    }
+
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE type = 'work-order' AND workspace = $1`,
+      [workspacePath],
+    );
+    expect(rows).toHaveLength(3);
+    expect(rows.map((row) => parseStoredJson<any>(row.data).attempts)).toEqual([
+      [expect.objectContaining({ attempt: 1, outcome: 'success' })],
+      [expect.objectContaining({ attempt: 1, outcome: 'success' })],
+      [expect.objectContaining({ attempt: 1, outcome: 'success' })],
+    ]);
   });
 
   it('keeps no-override dispatch behavior: persists the over-limit request and returns its queue position', async () => {
@@ -2291,6 +2424,9 @@ describe('MetaAgentService work-order persistence', () => {
         endedAt: expect.any(String),
         outcome: 'success',
       });
+      expect(data.attempts).toEqual([
+        expect.objectContaining({ attempt: 1, outcome: 'success' }),
+      ]);
     }
     if (eventType === 'session:interrupted') {
       expect(data.interruptionReason).toBe('Session interrupted');
@@ -2330,6 +2466,9 @@ describe('MetaAgentService work-order persistence', () => {
         outcome: 'failure',
       },
     });
+    expect(parseStoredJson<any>(failedRows[0].data).attempts).toEqual([
+      expect.objectContaining({ attempt: 1, failureReason: rawEngineError, outcome: 'failure' }),
+    ]);
 
     const guardLog = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
