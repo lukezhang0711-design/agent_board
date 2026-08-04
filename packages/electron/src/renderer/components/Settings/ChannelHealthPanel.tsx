@@ -23,6 +23,7 @@ export interface ChannelHealthResultView {
   firstResponseMs?: number;
   completionMs?: number;
   failureKind?: ChannelHealthFailureKind;
+  exitCode?: number;
   summary?: string;
   guidance?: string;
 }
@@ -64,6 +65,11 @@ export function ChannelHealthRow({
           : result.state === 'unknown'
             ? { icon: 'help', className: 'text-[var(--nim-text-faint)]', text: result.summary || '检测状态未知' }
             : { icon: 'help', className: 'text-[var(--nim-text-faint)]', text: '尚未体检' };
+  const failureGuidance = result.guidance ?? (
+    typeof result.exitCode === 'number'
+      ? `引擎异常退出（退出码 ${result.exitCode}），请检查引擎配置后重试`
+      : undefined
+  );
   const canRerun = result.state !== 'disabled';
 
   return (
@@ -87,9 +93,9 @@ export function ChannelHealthRow({
             {result.state === 'disabled' ? '未启用，不发送请求' : formatCheckedAt(result.checkedAt)}
             {typeof result.firstResponseMs === 'number' && ` · 首响 ${formatMs(result.firstResponseMs)}`}
           </p>
-          {(result.state === 'failed' || result.state === 'unknown') && result.guidance && (
+          {(result.state === 'failed' || result.state === 'unknown') && failureGuidance && (
             <p className={`mt-2 mb-0 text-xs ${result.state === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`} data-testid={`channel-health-guidance-${result.id}`}>
-              {result.guidance}
+              {failureGuidance}
             </p>
           )}
         </div>

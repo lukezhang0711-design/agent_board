@@ -164,20 +164,29 @@ describe('AIService ai:saveSettings', () => {
     expect(mocks.logWarn).not.toHaveBeenCalled();
   });
 
-  it('RED: includes every active extension provider, with disabled ones retained as non-requestable rows', () => {
+  it('RED: includes a runtime-registered extension provider at the health-check moment, including late registration', () => {
     const gemini = {
-      status: 'active',
+      status: 'registered',
       contributionId: 'antigravity-gemini-agent',
       contribution: { displayName: 'Gemini' },
     };
+    const runtimeProviders: typeof gemini[] = [];
+
+    expect(listChannelHealthChannels(
+      { 'antigravity-gemini-agent': { enabled: true } },
+      runtimeProviders,
+    )).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'antigravity-gemini-agent' }),
+    ]));
+    runtimeProviders.push(gemini);
 
     const enabled = listChannelHealthChannels(
       { 'antigravity-gemini-agent': { enabled: true } },
-      [gemini],
+      runtimeProviders,
     );
     const disabled = listChannelHealthChannels(
       { 'antigravity-gemini-agent': { enabled: false } },
-      [gemini],
+      runtimeProviders,
     );
 
     expect(enabled).toEqual(expect.arrayContaining([

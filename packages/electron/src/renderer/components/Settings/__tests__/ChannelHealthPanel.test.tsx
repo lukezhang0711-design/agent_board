@@ -77,6 +77,22 @@ describe('ChannelHealthPanel rows', () => {
       .toContain('请稍后重试。');
   });
 
+  it('GREEN: renders a real CLI exit as an engine error with its exit code', () => {
+    renderRow({
+      id: 'claude-code-cli-exit',
+      displayName: 'Claude CLI',
+      transport: 'claude-cli',
+      state: 'failed',
+      summary: '引擎错误',
+      exitCode: 0,
+    });
+
+    expect(screen.getByTestId('channel-health-status-claude-code-cli-exit').textContent)
+      .toContain('失败 · 引擎错误');
+    expect(screen.getByTestId('channel-health-guidance-claude-code-cli-exit').textContent)
+      .toContain('退出码 0');
+  });
+
   it('RED: renders a disabled extension as gray and prevents a health request from this row', () => {
     const onRerun = vi.fn();
     render(

@@ -1458,9 +1458,11 @@ export class MessageStreamingHandler {
           }
         }
         if (isChannelHealthCheck && chunk.type !== 'text' && chunk.type !== 'complete' && chunk.type !== 'error') {
-          // A fixed one-word smoke check must never be allowed to execute a
-          // tool or mutate the workspace simply because an engine ignored it.
-          throw new Error(`Channel health check received unexpected ${chunk.type} chunk`);
+          // Keep the fixed smoke turn side-effect free even when an engine
+          // emits tool-call/tool-result intermediary chunks. The first chunk
+          // above still records first response; only a non-empty completed
+          // text receipt below can make this health check succeed.
+          continue;
         }
         switch (chunk.type) {
           case 'text':

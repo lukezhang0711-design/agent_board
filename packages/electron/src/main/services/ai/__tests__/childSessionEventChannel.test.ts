@@ -683,6 +683,90 @@ describe('child session event hidden delivery channel', () => {
     expect(handlerTestState.stateManager.startSession).toHaveBeenCalledTimes(1);
   });
 
+  it('RED: ignores tool chunks in a channel-health stream, then accepts a non-empty completed text receipt', async () => {
+    const healthSessionId = 'health-tool-chunks';
+    const healthPrompt = 'Reply with one word: pong';
+    await AISessionsRepository.create({
+      id: healthSessionId,
+      provider: 'openai-codex',
+      workspaceId: '/workspace',
+      title: 'Health check',
+    });
+
+    const modelInputs: string[] = [];
+    const provider = {
+      initialize: vi.fn().mockResolvedValue(undefined),
+      registerToolHandler: vi.fn(),
+      async *sendMessage(message: string) {
+        modelInputs.push(message);
+        yield { type: 'tool_call', toolCall: { name: 'Read', arguments: { path: 'ignored' } } };
+        yield { type: 'tool_call', toolCall: { name: 'Read', arguments: { path: 'ignored' }, result: 'ignored' } };
+        yield { type: 'text', content: 'pong' };
+        yield { type: 'complete', content: 'pong' };
+      },
+    };
+    handlerTestState.provider = provider;
+
+    const addMessage = vi.fn().mockResolvedValue(undefined);
+    const firstResponse = vi.fn();
+    const handler = new MessageStreamingHandler({
+      sessionManager: {
+        loadSession: vi.fn().mockResolvedValue({
+          id: healthSessionId,
+          provider: 'openai-codex',
+          workspacePath: '/workspace',
+          title: 'Health check',
+          messages: [],
+          metadata: {},
+          providerConfig: {},
+        }),
+        addMessage,
+        updateSessionTitle: vi.fn().mockResolvedValue(undefined),
+        updateProviderSessionData: vi.fn().mockResolvedValue(undefined),
+      },
+      analytics: { sendEvent: vi.fn() },
+      sendMessageHandler: null,
+      processingQueuedPromptIds: new Set<string>(),
+      matchDebounceTimers: new Map(),
+      sessionsProcessingQueue: new Set<string>(),
+      documentContextService: {
+        prepareContext: () => ({ documentContext: {}, userMessageAdditions: {} }),
+      },
+      hooklessWatcher: {
+        ensureForSession: vi.fn().mockResolvedValue(undefined),
+        stopForSession: vi.fn().mockResolvedValue(undefined),
+        scheduleStop: vi.fn(),
+      },
+      getSettingsStore: () => ({ get: vi.fn() }),
+      getApiKeyForProvider: () => undefined,
+      buildClaudeCodeRuntimeConfig: vi.fn(),
+      continueQueuedPromptChain: vi.fn(),
+      tryDispatchNextQueuedPrompt: vi.fn(),
+      isSessionQueuePaused: vi.fn().mockResolvedValue(false),
+      runAutoContextCommand: vi.fn(),
+      createToolHandler: () => ({}),
+      inferWorktreePathFromFilePath: () => null,
+      inferWorktreePathFromCommand: () => null,
+      adoptWorktreeForSession: vi.fn(),
+    } as any);
+
+    try {
+      await expect(handler.handle(
+        { sender: { id: 1 } } as any,
+        healthPrompt,
+        { channelHealthCheck: { onFirstResponse: firstResponse } } as any,
+        healthSessionId,
+        '/workspace',
+      )).resolves.toEqual({ content: 'pong' });
+    } finally {
+      handler.destroy();
+    }
+
+    expect(modelInputs).toEqual([healthPrompt]);
+    expect(firstResponse).toHaveBeenCalledTimes(1);
+    expect(addMessage).not.toHaveBeenCalled();
+  });
+
   it('preserves a dispatch-sourced title and named flag through the first user message', async () => {
     const result = await runFirstMessageTitleCase({
       sessionId: 'dispatch-title-session',
