@@ -167,4 +167,56 @@ describe('SessionKanbanBoard interrupted and Inbox states', () => {
     expect(badge.className).toContain('bg-red-500/10');
     expect(within(card).getByText('error')).toBeTruthy();
   });
+
+  it('shows the current attempt and latest work-order status on the card', () => {
+    const session = makeMeta({
+      id: 'retry-card',
+      title: 'Module 1',
+      phase: 'planning',
+    });
+    const workOrder: TrackerRecord = {
+      id: 'work-order-retry-card',
+      primaryType: 'work-order',
+      typeTags: ['work-order'],
+      source: 'native',
+      archived: false,
+      syncStatus: 'local',
+      system: {
+        workspace: '/workspace',
+        createdAt: '2026-08-04T00:00:00.000Z',
+        updatedAt: '2026-08-04T00:00:01.000Z',
+        linkedSessions: [session.id],
+      },
+      fields: {
+        status: 'completed',
+        childSessionId: session.id,
+        attempts: [
+          {
+            attempt: 1,
+            engine: 'claude-code',
+            model: 'haiku',
+            startedAt: '2026-08-04T00:00:00.000Z',
+            endedAt: '2026-08-04T00:00:01.000Z',
+            outcome: 'failure',
+            failureReason: 'Model identifier must be in "provider:model" format: haiku',
+          },
+          {
+            attempt: 2,
+            engine: 'claude-code',
+            model: 'claude-code:haiku',
+            startedAt: '2026-08-04T00:00:02.000Z',
+            endedAt: '2026-08-04T00:00:03.000Z',
+            outcome: 'success',
+          },
+        ],
+      },
+    };
+
+    renderBoard([session], [workOrder]);
+
+    const card = screen.getByTestId('session-kanban-card');
+    expect(within(card).getByTestId('work-order-attempt-summary').textContent).toBe(
+      '第 2 次尝试 · 最近状态：completed',
+    );
+  });
 });

@@ -104,10 +104,15 @@ export function findWorkOrderForSession(
     if (!isWorkOrder(record)) continue;
     const childSessionId = record.fields.childSessionId;
     const linkedSessions = record.system.linkedSessions ?? [];
+    const hasDirectChildSession = typeof childSessionId === 'string' && childSessionId.trim().length > 0;
     if (
       childSessionId === sessionId
-      || linkedSessions.includes(sessionId)
-      || linkedIds.has(record.id)
+      // Once a card has a current direct child, older linked sessions must not
+      // project the same reused card back onto the board as a second run.
+      || (!hasDirectChildSession && (
+        linkedSessions.includes(sessionId)
+        || linkedIds.has(record.id)
+      ))
     ) {
       candidates.push(record);
     }
@@ -118,6 +123,27 @@ export function findWorkOrderForSession(
     return updatedDifference !== 0 ? updatedDifference : b.id.localeCompare(a.id);
   });
   return candidates[0];
+}
+
+/** True when a session is an older run retained in a reused work-order link. */
+export function isSupersededWorkOrderSession(
+  sessionId: string,
+  records: Iterable<TrackerRecord>,
+  linkedTrackerItemIds: readonly string[] = [],
+): boolean {
+  const linkedIds = new Set(linkedTrackerItemIds);
+  for (const record of records) {
+    if (!isWorkOrder(record)) continue;
+    const childSessionId = record.fields.childSessionId;
+    if (typeof childSessionId !== 'string' || childSessionId.trim().length === 0 || childSessionId === sessionId) {
+      continue;
+    }
+    const linkedSessions = record.system.linkedSessions ?? [];
+    if (linkedSessions.includes(sessionId) || linkedIds.has(record.id)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function normalizedWorkOrderStatus(status: unknown): WorkOrderStatus | undefined {
@@ -260,6 +286,9 @@ export const sessionsByPhaseAtom = atom((get) => {
   for (const [_id, meta] of registry) {
     // Only show root sessions (not children of workstreams)
     if (meta.parentSessionId) continue;
+    // A retry reuses the card but keeps historical session links for audit. The
+    // old session must not remain as a second unlinked-looking board card.
+    if (isSupersededWorkOrderSession(meta.id, trackerRecords, meta.linkedTrackerItemIds)) continue;
 
     // For workstream parents without an explicit phase, derive from children
     const phase = effectiveSessionPhase(meta, trackerRecords)
@@ -357,6 +386,20 @@ export const sessionWorkOrderStatusAtom = atomFamily((sessionId: string) =>
     const records = get(trackerItemsMapAtom).values();
     const workOrder = findWorkOrderForSession(sessionId, records, meta?.linkedTrackerItemIds);
     return typeof workOrder?.fields.status === 'string' ? workOrder.fields.status : undefined;
+  })
+);
+
+/** Current attempt number for the card shown on a session's kanban card. */
+export const sessionWorkOrderAttemptNumberAtom = atomFamily((sessionId: string) =>
+  atom((get): number | undefined => {
+    const meta = get(sessionRegistryAtom).get(sessionId);
+    const records = get(trackerItemsMapAtom).values();
+    const workOrder = findWorkOrderForSession(sessionId, records, meta?.linkedTrackerItemIds);
+    if (!workOrder) return undefined;
+    const attempts = Array.isArray(workOrder.fields.attempts) ? workOrder.fields.attempts : [];
+    const status = normalizedWorkOrderStatus(workOrder.fields.status);
+    const isTerminal = status === 'completed' || status === 'failed';
+    return Math.max(1, attempts.length + (isTerminal ? 0 : 1));
   })
 );
 
