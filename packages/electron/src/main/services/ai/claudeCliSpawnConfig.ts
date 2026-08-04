@@ -202,8 +202,15 @@ const FORBIDDEN_ENV_KEYS: readonly string[] = [
  */
 const CLAUDE_CLI_DISALLOWED_TOOLS: readonly string[] = ['AskUserQuestion'];
 
-/** Head-only: force delegation through Nimbalyst's create_session MCP tool. */
-const CLAUDE_CLI_META_AGENT_DISALLOWED_TOOLS: readonly string[] = ['Agent', 'Task'];
+/** Head-only: force delegation and product file writes through child sessions. */
+const CLAUDE_CLI_META_AGENT_DISALLOWED_TOOLS: readonly string[] = [
+  'Agent',
+  'Task',
+  'Write',
+  'Edit',
+  'MultiEdit',
+  'NotebookEdit',
+];
 
 /** RFC-4122 UUID matcher — the only `--session-id` value the CLI accepts. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

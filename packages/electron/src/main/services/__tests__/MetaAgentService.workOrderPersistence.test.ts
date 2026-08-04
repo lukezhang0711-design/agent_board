@@ -522,6 +522,50 @@ describe('MetaAgentService work-order persistence', () => {
     }
   });
 
+  it('records a direct routing failure before rethrowing the engine/model error', async () => {
+    const rawRoutingError = 'Model identifier must be in "provider:model" format: gemini-2.5-pro';
+
+    await expect((service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Gemini routing failure',
+        prompt: 'Do not hide the unmapped child model error',
+        provider: 'claude-code',
+        model: 'gemini-2.5-pro',
+        intent: 'investigation',
+      },
+    )).rejects.toThrow(rawRoutingError);
+
+    const { rows } = await db.query<any>(
+      `SELECT data, source_ref
+       FROM tracker_items
+       WHERE type = 'work-order'
+       ORDER BY created DESC
+       LIMIT 1`,
+    );
+    const data = parseStoredJson<any>(rows[0].data);
+    expect(data).toMatchObject({
+      status: 'failed',
+      failureReason: rawRoutingError,
+      receipt: {
+        engine: 'claude-code',
+        model: 'gemini-2.5-pro',
+        startedAt: expect.any(String),
+        endedAt: expect.any(String),
+        outcome: 'failure',
+      },
+    });
+    expect(rows[0].source_ref).toMatch(/^meta-agent-work-order:/);
+    expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
+      'head-session',
+      expect.stringContaining(`Failure reason: ${rawRoutingError}`),
+      undefined,
+      undefined,
+      'child_session_event',
+    );
+  });
+
   it('keeps no-override dispatch behavior: persists the over-limit request and returns its queue position', async () => {
     testState.maxParallel = 1;
     await createRunningChildren(1);
@@ -1126,7 +1170,17 @@ describe('MetaAgentService work-order persistence', () => {
       `SELECT data FROM tracker_items WHERE source_ref = $1`,
       [`meta-agent-work-order:${broken.sessionId}`],
     );
-    expect(parseStoredJson<any>(failedCardRows[0].data).status).toBe('failed');
+    expect(parseStoredJson<any>(failedCardRows[0].data)).toMatchObject({
+      status: 'failed',
+      failureReason: expect.stringContaining('Worktree'),
+      receipt: {
+        engine: expect.any(String),
+        model: expect.anything(),
+        startedAt: expect.any(String),
+        endedAt: expect.any(String),
+        outcome: 'failure',
+      },
+    });
     expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
       'head-session',
       expect.stringContaining(`Dispatch queue item ${broken.queueId} failed`),
@@ -2229,9 +2283,64 @@ describe('MetaAgentService work-order persistence', () => {
     );
     const data = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
     expect(data.status).toBe(expectedStatus);
+    if (eventType === 'session:completed') {
+      expect(data.receipt).toMatchObject({
+        engine: 'claude-code',
+        model: 'claude-code:opus',
+        startedAt: expect.any(String),
+        endedAt: expect.any(String),
+        outcome: 'success',
+      });
+    }
     if (eventType === 'session:interrupted') {
       expect(data.interruptionReason).toBe('Session interrupted');
     }
+  });
+
+  it('records the raw child failure receipt and rejects a forged completed settlement', async () => {
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      { prompt: 'Preserve the engine failure as a failed work order' },
+    );
+    const rawEngineError = 'Model "gemini-2.5-pro" is not supported. Supported models: gemini-2.5-flash';
+    await AgentMessagesRepository.create({
+      sessionId: child.sessionId,
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({ type: 'error', error: rawEngineError, is_error: true }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:error');
+
+    const { rows: failedRows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE source_ref = $1`,
+      [`meta-agent-work-order:${child.sessionId}`],
+    );
+    expect(parseStoredJson<any>(failedRows[0].data)).toMatchObject({
+      status: 'failed',
+      failureReason: rawEngineError,
+      receipt: {
+        engine: 'claude-code',
+        model: 'claude-code:opus',
+        startedAt: expect.any(String),
+        endedAt: expect.any(String),
+        outcome: 'failure',
+      },
+    });
+
+    const guardLog = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
+
+    const { rows: guardedRows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE source_ref = $1`,
+      [`meta-agent-work-order:${child.sessionId}`],
+    );
+    expect(parseStoredJson<any>(guardedRows[0].data).status).toBe('failed');
+    expect(guardLog).toHaveBeenCalledWith(expect.stringContaining('[WorkOrderGuard]'));
+    guardLog.mockRestore();
   });
 
   it('records the Head Agent interrupt reason on the persisted card', async () => {

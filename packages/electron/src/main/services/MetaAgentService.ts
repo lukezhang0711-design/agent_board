@@ -137,6 +137,58 @@ interface SessionResultData {
   toolScope?: string | null;
 }
 
+type WorkOrderReceiptOutcome = 'success' | 'failure';
+
+interface WorkOrderReceipt {
+  engine: string;
+  model: string | null;
+  startedAt: string;
+  endedAt: string;
+  outcome: WorkOrderReceiptOutcome;
+}
+
+interface WorkOrderSettlement {
+  failureReason?: string;
+  receipt?: WorkOrderReceipt;
+}
+
+interface DispatchFailureNotification {
+  id: string;
+  headSessionId: string;
+  workspaceId: string;
+  reservedSessionId: string;
+  title: string;
+  provider: string;
+  model: string | null;
+  requestedAt: string;
+}
+
+function normalizeReceiptTimestamp(value: unknown, fallback: string): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return new Date(value).toISOString();
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) {
+      return new Date(parsed).toISOString();
+    }
+  }
+  return fallback;
+}
+
+function isSuccessfulWorkOrderReceipt(value: unknown): value is WorkOrderReceipt {
+  if (!value || typeof value !== 'object') return false;
+  const receipt = value as Partial<WorkOrderReceipt>;
+  return receipt.outcome === 'success'
+    && typeof receipt.engine === 'string'
+    && receipt.engine.trim().length > 0
+    && typeof receipt.startedAt === 'string'
+    && typeof receipt.endedAt === 'string';
+}
+
 interface CreateChildSessionArgs {
   title?: string;
   provider?: string;
@@ -1125,8 +1177,23 @@ export class MetaAgentService {
     requestKind: DispatchRequestKind,
   ): Promise<ChildDispatchResult> {
     this.validateChildDispatchArgs(args);
-    const routing = await this.resolveChildRouting(metaSessionId, args);
     const reservedSessionId = randomUUID();
+    const requestedAt = new Date().toISOString();
+    const title = (args.title || this.deriveTitleFromPrompt(args.prompt) || 'Meta Task').trim();
+    let routing: { provider: AIProviderType; model: string };
+    try {
+      routing = await this.resolveChildRouting(metaSessionId, args);
+    } catch (error) {
+      await this.recordDispatchFailure(
+        metaSessionId,
+        workspaceId,
+        { ...args, sessionIdOverride: reservedSessionId },
+        error,
+        requestedAt,
+        title,
+      );
+      throw error;
+    }
     const preparedArgs: InternalCreateChildSessionArgs = {
       ...args,
       provider: routing.provider,
@@ -1140,6 +1207,14 @@ export class MetaAgentService {
           return await this.createChildSessionInternal(metaSessionId, workspaceId, preparedArgs);
         } catch (error) {
           if (!(error instanceof DispatchCapacityError)) {
+            await this.recordDispatchFailure(
+              metaSessionId,
+              workspaceId,
+              preparedArgs,
+              error,
+              requestedAt,
+              title,
+            );
             throw error;
           }
         }
@@ -1165,7 +1240,7 @@ export class MetaAgentService {
     const requestedAt = new Date().toISOString();
     const title = (args.title || this.deriveTitleFromPrompt(args.prompt) || 'Meta Task').trim();
     const sourceRef = `meta-agent-work-order:${sessionId}`;
-    const workOrderId = await this.createWorkOrderTrackerItem(
+    await this.createWorkOrderTrackerItem(
       workspaceId,
       sessionId,
       title,
@@ -1216,8 +1291,35 @@ export class MetaAgentService {
         message: `Dispatch queued at position ${position}; it will start automatically when a Head Agent slot opens.`,
       };
     } catch (error) {
-      await databaseWorker.query(`DELETE FROM tracker_items WHERE id = $1`, [workOrderId]).catch(() => undefined);
-      this.emitTrackerItemsChanged();
+      const message = error instanceof Error ? error.message : String(error);
+      const receipt = this.buildWorkOrderReceipt(
+        typeof args.provider === 'string' ? args.provider : 'unknown',
+        typeof args.model === 'string' ? args.model : null,
+        requestedAt,
+        'failure',
+      );
+      await this.updateWorkOrderStatusBySourceRef(
+        sourceRef,
+        'failed',
+        undefined,
+        { failureReason: message, receipt },
+      ).catch((cardError) => {
+        console.error(`[MetaAgentService] Failed to record queue creation failure ${sourceRef}:`, cardError);
+      });
+      await this.notifyHeadOfDispatchFailure(
+        {
+          id: queueId,
+          headSessionId: metaSessionId,
+          workspaceId,
+          reservedSessionId: sessionId,
+          title,
+          provider: receipt.engine,
+          model: receipt.model,
+          requestedAt,
+        },
+        message,
+        receipt,
+      );
       throw error;
     }
   }
@@ -1359,12 +1461,39 @@ export class MetaAgentService {
             return;
           }
           const message = error instanceof Error ? error.message : String(error);
+          const args = item.requestSnapshot.args as InternalCreateChildSessionArgs;
+          const receipt = this.buildWorkOrderReceipt(
+            typeof args.provider === 'string' ? args.provider : 'unknown',
+            typeof args.model === 'string' ? args.model : null,
+            item.requestedAt,
+            'failure',
+          );
           await this.dispatchQueueStore.markFailed(item.id, message);
-          await this.updateWorkOrderStatusBySourceRef(item.sourceRef, 'failed').catch((cardError) => {
+          await this.updateWorkOrderStatusBySourceRef(
+            item.sourceRef,
+            'failed',
+            undefined,
+            { failureReason: message, receipt },
+          ).catch((cardError) => {
             console.error(`[MetaAgentService] Failed to mark queued work-order ${item.sourceRef} failed:`, cardError);
           });
           await this.markPlaceholderSessionFailed(item.reservedSessionId);
-          await this.notifyHeadOfDispatchFailure(item, message);
+          await this.notifyHeadOfDispatchFailure(
+            {
+              id: item.id,
+              headSessionId: item.headSessionId,
+              workspaceId: item.workspaceId,
+              reservedSessionId: item.reservedSessionId,
+              title: typeof args.title === 'string'
+                ? args.title
+                : this.deriveTitleFromPrompt(typeof args.prompt === 'string' ? args.prompt : undefined) || 'Queued child session',
+              provider: receipt.engine,
+              model: receipt.model,
+              requestedAt: item.requestedAt,
+            },
+            message,
+            receipt,
+          );
         }
       }
     });
@@ -1440,20 +1569,110 @@ export class MetaAgentService {
     await this.aiService.triggerQueuedPromptProcessingForSession(item.reservedSessionId, executionPath);
   }
 
+  private buildWorkOrderReceipt(
+    provider: string | null | undefined,
+    model: string | null | undefined,
+    startedAt: unknown,
+    outcome: WorkOrderReceiptOutcome,
+  ): WorkOrderReceipt {
+    const endedAt = new Date().toISOString();
+    return {
+      engine: provider?.trim() || 'unknown',
+      model: model?.trim() || null,
+      startedAt: normalizeReceiptTimestamp(startedAt, endedAt),
+      endedAt,
+      outcome,
+    };
+  }
+
+  private async recordDispatchFailure(
+    metaSessionId: string,
+    workspaceId: string,
+    args: InternalCreateChildSessionArgs,
+    error: unknown,
+    requestedAt: string,
+    title: string,
+  ): Promise<void> {
+    const failureReason = error instanceof Error ? error.message : String(error);
+    const sessionId = args.sessionIdOverride ?? randomUUID();
+    const sourceRef = args.workOrderSourceRef ?? `meta-agent-work-order:${sessionId}`;
+    const receipt = this.buildWorkOrderReceipt(
+      typeof args.provider === 'string' ? args.provider : 'unknown',
+      typeof args.model === 'string' ? args.model : null,
+      requestedAt,
+      'failure',
+    );
+
+    try {
+      const { rows } = await databaseWorker.query<{ id: string }>(
+        `SELECT id
+         FROM tracker_items
+         WHERE type = 'work-order' AND source_ref = $1
+         LIMIT 1`,
+        [sourceRef],
+      );
+      if (rows[0]) {
+        await this.updateWorkOrderStatusBySourceRef(
+          sourceRef,
+          'failed',
+          undefined,
+          { failureReason, receipt },
+        );
+      } else {
+        await this.createWorkOrderTrackerItem(
+          workspaceId,
+          sessionId,
+          title,
+          args.prompt?.trim(),
+          args.intent ?? 'implementation',
+          args.planId,
+          {
+            status: 'failed',
+            sourceRef,
+            dispatchedAt: requestedAt,
+            linkSession: false,
+            failureReason,
+            receipt,
+          },
+        );
+      }
+    } catch (cardError) {
+      console.error(`[MetaAgentService] Failed to record dispatch failure ${sourceRef}:`, cardError);
+    }
+
+    await this.notifyHeadOfDispatchFailure(
+      {
+        id: `direct-${sessionId}`,
+        headSessionId: metaSessionId,
+        workspaceId,
+        reservedSessionId: sessionId,
+        title,
+        provider: receipt.engine,
+        model: receipt.model,
+        requestedAt,
+      },
+      failureReason,
+      receipt,
+    );
+  }
+
   private async notifyHeadOfDispatchFailure(
-    item: DispatchQueueItem,
+    item: DispatchFailureNotification,
     errorMessage: string,
+    receipt: WorkOrderReceipt,
   ): Promise<void> {
     if (!this.aiService) return;
-    const title = typeof item.requestSnapshot.args.title === 'string'
-      ? item.requestSnapshot.args.title
-      : 'Queued child session';
     const notification = [
       '[Dispatch Queue Update]',
       `Dispatch queue item ${item.id} failed.`,
-      `Task: ${title}`,
+      `Task: ${item.title}`,
       `Reserved session: ${item.reservedSessionId}`,
+      `Engine: ${receipt.engine}`,
+      `Model: ${receipt.model ?? '(none)'}`,
       `Error: ${errorMessage}`,
+      `Failure reason: ${errorMessage}`,
+      `Receipt: startedAt=${receipt.startedAt} endedAt=${receipt.endedAt}`,
+      'Report this exact failure to the user; do not mark it completed or write the child deliverable. Wait for user instruction before retrying or switching models.',
       'The next queued item will still be attempted automatically.',
     ].join('\n');
     try {
@@ -2527,6 +2746,31 @@ export class MetaAgentService {
       releasedHeadSessionId = session.createdBySessionId;
       slotReleased = eventType !== 'session:completed';
 
+      let terminalResult: SessionResultData | null = null;
+      if (eventType === 'session:completed' || eventType === 'session:error') {
+        try {
+          terminalResult = await this.buildSessionResultData(sessionId, session.workspacePath, undefined, false);
+        } catch (error) {
+          console.error(`[MetaAgentService] Failed to build failure receipt for child ${sessionId}:`, error);
+        }
+      }
+      const failureReason = terminalResult?.errorMessage?.trim()
+        || (eventType === 'session:error'
+          ? 'Child session ended with an engine error but did not record an error message.'
+          : undefined);
+      const settlement: WorkOrderSettlement | undefined =
+        eventType === 'session:completed' || eventType === 'session:error'
+          ? {
+              ...(failureReason ? { failureReason } : {}),
+              receipt: this.buildWorkOrderReceipt(
+                session.provider,
+                session.model,
+                session.createdAt,
+                failureReason ? 'failure' : 'success',
+              ),
+            }
+          : undefined;
+
       const workOrderStatusByEvent: Record<typeof eventType, WorkOrderStatus> = {
         'session:completed': 'completed',
         'session:error': 'failed',
@@ -2538,6 +2782,7 @@ export class MetaAgentService {
           sessionId,
           workOrderStatusByEvent[eventType],
           eventType === 'session:interrupted' ? 'Session interrupted' : undefined,
+          settlement,
         );
       } catch (error) {
         // Tracker state is secondary to the existing Head notification path.
@@ -2593,7 +2838,8 @@ export class MetaAgentService {
       const metaStatusRow = await this.getSessionStatusRow(metaSession.id, metaSession.workspacePath);
       const metaStatus = (metaStatusRow?.status || 'idle') as SessionStatusValue;
 
-      const result = await this.buildSessionResultData(sessionId, session.workspacePath, undefined, false);
+      const result = terminalResult
+        ?? await this.buildSessionResultData(sessionId, session.workspacePath, undefined, false);
 
       // NIM-6: real dedup gate. Drop notifications whose semantic content is
       // identical to the last one delivered for this child. The previous code
@@ -2611,7 +2857,7 @@ export class MetaAgentService {
         await this.ensurePlanTrackerItem(session.workspacePath, sessionId, result);
       }
 
-      const notification = this.buildNotificationMessage(eventType, result);
+      const notification = this.buildNotificationMessage(eventType, result, settlement);
       await this.aiService.queuePromptForSession(
         session.createdBySessionId,
         notification,
@@ -2638,7 +2884,8 @@ export class MetaAgentService {
 
   private buildNotificationMessage(
     eventType: 'session:completed' | 'session:error' | 'session:waiting' | 'session:interrupted',
-    result: SessionResultData
+    result: SessionResultData,
+    settlement?: WorkOrderSettlement,
   ): string {
     const lines = [
       '[Child Session Update]',
@@ -2705,6 +2952,18 @@ export class MetaAgentService {
         }
         lines.push(`  response: { "approved": true }`);
       }
+    }
+    const failureReason = settlement?.failureReason
+      ?? ((eventType === 'session:error' && result.errorMessage) ? result.errorMessage : undefined);
+    if (failureReason) {
+      const receipt = settlement?.receipt;
+      lines.push(`Engine: ${receipt?.engine ?? result.provider}`);
+      lines.push(`Model: ${receipt?.model ?? result.model ?? '(none)'}`);
+      lines.push(`Failure reason: ${failureReason}`);
+      if (receipt) {
+        lines.push(`Receipt: startedAt=${receipt.startedAt} endedAt=${receipt.endedAt}`);
+      }
+      lines.push('Head action required: report this exact failure to the user; do not mark the work-order completed or write the child deliverable. Wait for user instruction before retrying or switching models.');
     }
     if (result.errorMessage) {
       lines.push(`Error: ${result.errorMessage}`);
@@ -3006,6 +3265,8 @@ export class MetaAgentService {
       sourceRef?: string;
       dispatchedAt?: string;
       linkSession?: boolean;
+      failureReason?: string;
+      receipt?: WorkOrderReceipt;
     } = {},
   ): Promise<string> {
     const trackerId = randomUUID();
@@ -3021,6 +3282,8 @@ export class MetaAgentService {
       dispatchedAt,
       intent,
       ...(planId ? { planId } : {}),
+      ...(options.failureReason ? { failureReason: options.failureReason } : {}),
+      ...(options.receipt ? { receipt: options.receipt } : {}),
     };
 
     await databaseWorker.query(
@@ -3138,15 +3401,17 @@ export class MetaAgentService {
     sessionId: string,
     status: WorkOrderStatus,
     interruptionReason?: string,
+    settlement?: WorkOrderSettlement,
   ): Promise<void> {
     const sourceRef = `meta-agent-work-order:${sessionId}`;
-    await this.updateWorkOrderStatusBySourceRef(sourceRef, status, interruptionReason);
+    await this.updateWorkOrderStatusBySourceRef(sourceRef, status, interruptionReason, settlement);
   }
 
   private async updateWorkOrderStatusBySourceRef(
     sourceRef: string,
     status: WorkOrderStatus,
     interruptionReason?: string,
+    settlement?: WorkOrderSettlement,
   ): Promise<void> {
     const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
       `SELECT id, data
@@ -3163,9 +3428,24 @@ export class MetaAgentService {
     const data = typeof row.data === 'string'
       ? JSON.parse(row.data)
       : ((row.data as Record<string, unknown> | null) ?? {});
-    data.status = status;
+    const existingFailureReason = typeof data.failureReason === 'string' && data.failureReason.trim().length > 0;
+    const hasSuccessfulReceipt = isSuccessfulWorkOrderReceipt(data.receipt)
+      || isSuccessfulWorkOrderReceipt(settlement?.receipt);
+    if (status === 'completed' && existingFailureReason && !hasSuccessfulReceipt) {
+      console.warn(
+        `[WorkOrderGuard] Refused completed settlement for ${sourceRef}: failureReason exists without a successful child receipt.`,
+      );
+      return;
+    }
+    data.status = settlement?.failureReason && status === 'completed' ? 'failed' : status;
     if (interruptionReason && !data.interruptionReason) {
       data.interruptionReason = interruptionReason;
+    }
+    if (settlement?.failureReason) {
+      data.failureReason = settlement.failureReason;
+    }
+    if (settlement?.receipt) {
+      data.receipt = settlement.receipt;
     }
     await databaseWorker.query(
       `UPDATE tracker_items SET data = $1, updated = NOW() WHERE id = $2`,
@@ -3249,6 +3529,11 @@ export class MetaAgentService {
   private extractErrorMessage(messages: Array<{ direction: string; content: string }>): string | null {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index];
+      // A retry starts with a new input message. Do not let an old turn's
+      // engine error block a later successful child receipt.
+      if (message.direction === 'input') {
+        return null;
+      }
       try {
         const parsed = JSON.parse(message.content);
         if (typeof parsed.error === 'string' && parsed.error.trim()) {
