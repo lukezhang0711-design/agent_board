@@ -16,7 +16,9 @@
         "backendModuleId": "antigravity-server",
         "supportsResume": true,
         "supportsForking": false,
-        "supportsAttachments": ["image"],
+        "supportsAttachments": [
+          "image"
+        ],
         "modelDiscovery": "static",
         "models": [
           {
@@ -42,11 +44,14 @@
         "id": "antigravity-server",
         "entry": "dist/agent.js",
         "runtime": "utility-process",
-        "permissions": ["nimbalyst-database-write", "workspace-files"],
+        "permissions": [
+          "nimbalyst-database-write",
+          "workspace-files"
+        ],
         "enablement": {
           "default": "disabled",
           "promptOn": "firstUse",
-          "purpose": "Runs Google's Gemini Flash through the local Antigravity engine (desktop language server when present, otherwise agy print mode), and gives the agent workspace tools to read, list, and search files, write files, and run shell commands (git, build, test) in the workspace so it can investigate and modify the codebase."
+          "purpose": "Runs Google's Gemini through the local Antigravity engine (desktop server when present, otherwise the agy CLI) with workspace tools to read, search, and write files and run shell commands (git, build, test) so the agent can investigate and modify the codebase."
         }
       }
     ],
