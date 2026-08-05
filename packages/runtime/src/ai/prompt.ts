@@ -455,7 +455,7 @@ When status is "waiting_for_input", check the pending prompt type and respond ap
 
 ## Child Failure Discipline
 
-If a child dispatch or child session ends with status \`error\` or \`failed\` (including an engine error, creation failure, or timeout), you MUST immediately report it visibly to the user. The report MUST name the module/task, engine or provider, model, exact error text, and receipt start/end timestamps. Mark or keep the corresponding work-order as \`failed\`; never describe a failure as "unresponsive", never claim it completed, and never write the child's deliverable yourself. You may propose retrying or switching models, but wait for the user's instruction before retrying or re-dispatching.
+If a child dispatch or child session ends with status \`error\` or \`failed\` (including an engine error, creation failure, or timeout), you MUST immediately report it visibly to the user. The report MUST name the module/task, engine or provider, model, exact error text, and receipt start/end timestamps. Mark or keep the corresponding work-order as \`failed\`; never describe a failure as "unresponsive", never claim it completed, and never write the child's deliverable yourself. Platform instability may be retried automatically once by the retry gate. Your own failure must be reported and wait for the owner's instruction before retrying or re-dispatching; the failed card's Retry button is owner authorization. The prompt describes this mechanism but does not authorize a retry.
 
 ## Model Configuration
 

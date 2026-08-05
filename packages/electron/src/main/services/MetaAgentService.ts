@@ -35,6 +35,11 @@ import { computeNotificationSignature } from './metaAgentNotificationSignature';
 import { extractMessageText, extractUserPrompts } from './metaAgentMessageText';
 import { shouldShowTextApprovalGuard, TEXT_APPROVAL_CORRECTION } from './metaAgentTextApprovalGuard';
 import { ClaudeCliLauncherConfig } from './ai/claudeCliLauncherSingleton';
+import {
+  classifyFailureReason,
+  isFailureClass,
+  type FailureClass,
+} from './metaAgentFailureClassifier';
 import type {
   QueueCancelAction,
   QueueCancelResult,
@@ -150,12 +155,22 @@ interface WorkOrderReceipt {
 interface WorkOrderAttempt extends WorkOrderReceipt {
   attempt: number;
   failureReason?: string;
+  failureClass?: FailureClass;
+  retryReason?: string;
   sessionId?: string;
 }
 
 interface WorkOrderSettlement {
   failureReason?: string;
+  failureClass?: FailureClass;
   receipt?: WorkOrderReceipt;
+}
+
+class RetryGateDeniedError extends Error {
+  constructor(reason: string) {
+    super(`此类失败需老板指示后才能重试。${reason}`);
+    this.name = 'RetryGateDeniedError';
+  }
 }
 
 interface DispatchFailureNotification {
@@ -224,7 +239,12 @@ function readWorkOrderAttempts(data: Record<string, unknown>): WorkOrderAttempt[
           && rawAttemptNumber > 0
           ? rawAttemptNumber
           : index + 1;
-        return [{ ...candidate, attempt } as WorkOrderAttempt];
+        return [{
+          ...candidate,
+          attempt,
+          ...(isFailureClass(rawAttempt.failureClass) ? { failureClass: rawAttempt.failureClass } : {}),
+          ...(typeof rawAttempt.retryReason === 'string' ? { retryReason: rawAttempt.retryReason } : {}),
+        } as WorkOrderAttempt];
       })
     : [];
 
@@ -235,6 +255,8 @@ function readWorkOrderAttempts(data: Record<string, unknown>): WorkOrderAttempt[
       ...data.receipt,
       attempt: 1,
       ...(typeof data.failureReason === 'string' ? { failureReason: data.failureReason } : {}),
+      ...(isFailureClass(data.failureClass) ? { failureClass: data.failureClass } : {}),
+      ...(typeof data.retryReason === 'string' ? { retryReason: data.retryReason } : {}),
     }];
   }
   return attempts;
@@ -244,7 +266,9 @@ function appendWorkOrderAttempt(
   data: Record<string, unknown>,
   receipt: WorkOrderReceipt,
   failureReason: string | undefined,
+  failureClass: FailureClass | undefined,
   sessionId: string | undefined,
+  retryReason?: string,
 ): void {
   const attempts = readWorkOrderAttempts(data);
   const existingIndex = sessionId
@@ -258,6 +282,8 @@ function appendWorkOrderAttempt(
     attempt: attemptNumber,
     ...(sessionId ? { sessionId } : {}),
     ...(failureReason ? { failureReason } : {}),
+    ...(failureClass ? { failureClass } : {}),
+    ...(retryReason ? { retryReason } : {}),
   };
   if (existingIndex >= 0) {
     attempts[existingIndex] = attempt;
@@ -455,6 +481,8 @@ type InternalCreateChildSessionArgs = CreateChildSessionArgs & {
   parentSessionIdOverride?: string | null;
   sessionIdOverride?: string;
   workOrderSourceRef?: string;
+  workOrderTrackerIdOverride?: string;
+  retryReason?: string;
   notifyParent?: boolean;
 };
 
@@ -956,6 +984,88 @@ export class MetaAgentService {
     };
   }
 
+  /**
+   * Owner-facing retry entry point for a failed work-order card. The card ID is
+   * the authority here, so retries without a plan ID still reuse the same card
+   * and preserve its `attempts` history. This path intentionally bypasses only
+   * RetryGate; normal capacity, lifetime, routing, and persistence checks still
+   * apply.
+   */
+  public async retryWorkOrder(
+    workspaceId: string,
+    trackerItemId: string,
+  ): Promise<ChildDispatchResult> {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
+    if (!workspaceId?.trim() || !trackerItemId?.trim()) {
+      throw new Error('workspaceId and trackerItemId are required');
+    }
+
+    const workOrder = await this.findWorkOrderById(workspaceId, trackerItemId);
+    if (!workOrder) {
+      throw new Error(`Failed work-order ${trackerItemId} not found`);
+    }
+    if (workOrder.data.status !== 'failed') {
+      throw new Error('Only a failed work-order can be retried');
+    }
+
+    const previousSessionId = typeof workOrder.data.childSessionId === 'string'
+      ? workOrder.data.childSessionId
+      : null;
+    const previousSession = previousSessionId
+      ? await AISessionsRepository.get(previousSessionId)
+      : null;
+    if (previousSession && previousSession.workspacePath !== workspaceId) {
+      throw new Error(`Failed work-order ${trackerItemId} belongs to another workspace`);
+    }
+
+    const receipt = isWorkOrderReceipt(workOrder.data.receipt)
+      ? workOrder.data.receipt
+      : null;
+    const headSessionId = (typeof workOrder.data.headSessionId === 'string' && workOrder.data.headSessionId.trim())
+      || previousSession?.createdBySessionId
+      || null;
+    if (!headSessionId) {
+      throw new Error(`Failed work-order ${trackerItemId} has no Head session owner`);
+    }
+
+    const rawIntent = workOrder.data.intent;
+    const intent: SessionIntent = rawIntent === 'investigation' ? 'investigation' : 'implementation';
+    const rawPlanId = workOrder.data.planId;
+    const planId = typeof rawPlanId === 'string' && rawPlanId.trim() ? rawPlanId : undefined;
+    const title = typeof workOrder.data.title === 'string' && workOrder.data.title.trim()
+      ? workOrder.data.title.trim()
+      : 'Meta Task';
+    const prompt = typeof workOrder.data.taskSummary === 'string' && workOrder.data.taskSummary.trim()
+      ? workOrder.data.taskSummary.trim()
+      : title;
+    const provider = previousSession?.provider
+      || (receipt?.engine && receipt.engine !== 'unknown' ? receipt.engine : undefined);
+    const model = previousSession?.model || receipt?.model || undefined;
+    const notifyParent = previousSession?.metadata?.notifyParent;
+
+    return this.dispatchOrQueueChildSession(
+      headSessionId,
+      workspaceId,
+      {
+        title,
+        prompt,
+        provider,
+        model,
+        intent,
+        planId,
+        worktreeId: previousSession?.worktreeId ?? undefined,
+        parentSessionIdOverride: previousSession?.parentSessionId ?? null,
+        workOrderTrackerIdOverride: trackerItemId,
+        retryReason: '老板手动重试',
+        ...(typeof notifyParent === 'boolean' ? { notifyParent } : {}),
+      },
+      'create_session',
+      { manualRetry: true },
+    );
+  }
+
   private registerIpcHandlers(): void {
     if (this.ipcHandlersRegistered) {
       return;
@@ -973,6 +1083,15 @@ export class MetaAgentService {
     safeHandle('meta-agent:stop-and-clear', async (_event, metaSessionId: string, workspaceId: string) => {
       try {
         return await this.stopAndClearHeadSession(metaSessionId, workspaceId);
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    safeHandle('meta-agent:retry-work-order', async (_event, payload: { trackerItemId: string; workspaceId: string }) => {
+      try {
+        const result = await this.retryWorkOrder(payload?.workspaceId, payload?.trackerItemId);
+        return { success: true, result };
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : String(error) };
       }
@@ -1280,8 +1399,10 @@ export class MetaAgentService {
     workspaceId: string,
     args: InternalCreateChildSessionArgs,
     requestKind: DispatchRequestKind,
+    options: { manualRetry?: boolean } = {},
   ): Promise<ChildDispatchResult> {
     this.validateChildDispatchArgs(args);
+    await this.assertRetryGate(metaSessionId, workspaceId, args, options);
     const reservedSessionId = randomUUID();
     const requestedAt = new Date().toISOString();
     const title = (args.title || this.deriveTitleFromPrompt(args.prompt) || 'Meta Task').trim();
@@ -1357,6 +1478,9 @@ export class MetaAgentService {
         sourceRef,
         dispatchedAt: requestedAt,
         linkSession: false,
+        trackerItemId: args.workOrderTrackerIdOverride,
+        headSessionId: metaSessionId,
+        retryReason: args.retryReason,
       },
     );
 
@@ -1736,6 +1860,9 @@ export class MetaAgentService {
             linkSession: false,
             failureReason,
             receipt,
+            trackerItemId: args.workOrderTrackerIdOverride,
+            headSessionId: metaSessionId,
+            retryReason: args.retryReason,
           },
         );
       }
@@ -1775,7 +1902,7 @@ export class MetaAgentService {
       `Error: ${errorMessage}`,
       `Failure reason: ${errorMessage}`,
       `Receipt: startedAt=${receipt.startedAt} endedAt=${receipt.endedAt}`,
-      'Report this exact failure to the user; do not mark it completed or write the child deliverable. Wait for user instruction before retrying or switching models.',
+      'Report this exact failure to the user; do not mark it completed or write the child deliverable. Platform instability may be retried automatically once; an agent-side failure must be reported and wait for the owner\'s instruction before retrying. The failed card\'s Retry button is owner authorization.',
       'The next queued item will still be attempted automatically.',
     ].join('\n');
     try {
@@ -2396,6 +2523,11 @@ export class MetaAgentService {
           initialPrompt,
           args.intent ?? 'implementation',
           args.planId,
+          {
+            trackerItemId: args.workOrderTrackerIdOverride,
+            headSessionId: metaSessionId,
+            retryReason: args.retryReason,
+          },
         );
       }
     } catch (error) {
@@ -3066,7 +3198,7 @@ export class MetaAgentService {
       if (receipt) {
         lines.push(`Receipt: startedAt=${receipt.startedAt} endedAt=${receipt.endedAt}`);
       }
-      lines.push('Head action required: report this exact failure to the user; do not mark the work-order completed or write the child deliverable. Wait for user instruction before retrying or switching models.');
+      lines.push('Head action required: report this exact failure to the user; do not mark the work-order completed or write the child deliverable. Platform instability may be retried automatically once; your own failure must be reported and wait for the owner\'s instruction before retrying. The failed card\'s Retry button is owner authorization.');
     }
     if (result.errorMessage) {
       lines.push(`Error: ${result.errorMessage}`);
@@ -3381,6 +3513,121 @@ export class MetaAgentService {
       : null;
   }
 
+  private async findWorkOrderById(
+    workspaceId: string,
+    trackerItemId: string,
+  ): Promise<{ id: string; data: Record<string, unknown> } | null> {
+    const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
+      `SELECT id, data
+       FROM tracker_items
+       WHERE id = $1
+         AND workspace = $2
+         AND type = 'work-order'
+         AND (archived = FALSE OR archived IS NULL)
+       LIMIT 1`,
+      [trackerItemId, workspaceId],
+    );
+    const row = rows[0];
+    return row ? { id: row.id, data: parseWorkOrderData(row.data) } : null;
+  }
+
+  private latestFailedWorkOrderAttempt(data: Record<string, unknown>): WorkOrderAttempt | null {
+    const attempts = readWorkOrderAttempts(data);
+    for (let index = attempts.length - 1; index >= 0; index -= 1) {
+      if (attempts[index].outcome === 'failure') {
+        return attempts[index];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Only a real user message after the persisted failure can authorize an
+   * agent-side retry. `message_kind` is populated by the canonical write path;
+   * internal Head notifications and system reminders therefore cannot satisfy
+   * this check merely by being input-direction rows.
+   */
+  private async hasNewHeadUserMessageAfter(
+    headSessionId: string,
+    failureEndedAt: string,
+  ): Promise<boolean> {
+    const failureTime = Date.parse(failureEndedAt);
+    if (!Number.isFinite(failureTime)) {
+      return false;
+    }
+    try {
+      const { rows } = await databaseWorker.query<{ id: string }>(
+        `SELECT id
+         FROM ai_agent_messages
+         WHERE session_id = $1
+           AND direction = 'input'
+           AND message_kind = 'user'
+           AND created_at > $2
+         ORDER BY created_at ASC, id ASC
+         LIMIT 1`,
+        [headSessionId, new Date(failureTime)],
+      );
+      return rows.length > 0;
+    } catch (error) {
+      // A missing/old message index must not open the retry gate. The safe
+      // failure mode is the same as an absent user instruction: deny.
+      console.warn('[RetryGate] user-message check unavailable; denying retry', error);
+      return false;
+    }
+  }
+
+  private async assertRetryGate(
+    metaSessionId: string,
+    workspaceId: string,
+    args: InternalCreateChildSessionArgs,
+    options: { manualRetry?: boolean },
+  ): Promise<void> {
+    if (options.manualRetry) {
+      console.info(`[RetryGate] allowed manual retry for Head ${metaSessionId}`);
+      return;
+    }
+
+    const moduleTitle = (args.title || this.deriveTitleFromPrompt(args.prompt) || 'Meta Task').trim();
+    const reusable = await this.findReusableWorkOrder(workspaceId, args.planId, moduleTitle);
+    if (!reusable || reusable.data.status !== 'failed') {
+      return;
+    }
+
+    const attempts = readWorkOrderAttempts(reusable.data);
+    const latestFailure = this.latestFailedWorkOrderAttempt(reusable.data);
+    const failureClass = latestFailure && isFailureClass(latestFailure.failureClass)
+      ? latestFailure.failureClass
+      : isFailureClass(reusable.data.failureClass)
+        ? reusable.data.failureClass
+        : 'agent';
+    const attemptCount = attempts.length;
+
+    if (attemptCount >= 2) {
+      console.warn(
+        `[RetryGate] denied module=${moduleTitle} class=${failureClass} attempts=${attemptCount}: retry limit reached`,
+      );
+      throw new RetryGateDeniedError('自动重派次数已用尽');
+    }
+
+    if (failureClass === 'infra') {
+      console.info(`[RetryGate] allowed infra retry module=${moduleTitle} attempts=${attemptCount + 1}`);
+      return;
+    }
+
+    const failureEndedAt = latestFailure?.endedAt
+      || (isWorkOrderReceipt(reusable.data.receipt) ? reusable.data.receipt.endedAt : '');
+    const userSpoke = await this.hasNewHeadUserMessageAfter(metaSessionId, failureEndedAt);
+    if (userSpoke) {
+      console.info(`[RetryGate] allowed after new user message module=${moduleTitle} attempts=${attemptCount + 1}`);
+      return;
+    }
+
+    console.warn(
+      `[RetryGate] denied module=${moduleTitle} class=${failureClass} attempts=${attemptCount}: owner instruction missing`,
+    );
+    throw new RetryGateDeniedError(`failureClass=${failureClass}`);
+  }
+
   private async createWorkOrderTrackerItem(
     workspaceId: string,
     sessionId: string,
@@ -3395,14 +3642,24 @@ export class MetaAgentService {
       linkSession?: boolean;
       failureReason?: string;
       receipt?: WorkOrderReceipt;
+      trackerItemId?: string;
+      headSessionId?: string;
+      retryReason?: string;
     } = {},
   ): Promise<string> {
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
     const taskSummary = this.deriveTitleFromPrompt(prompt) || title;
     const dispatchedAt = options.dispatchedAt ?? new Date().toISOString();
     const sourceRef = options.sourceRef ?? `meta-agent-work-order:${sessionId}`;
+    // This is the single write-time classification point for dispatch/queue
+    // failures. RetryGate only trusts the value persisted below.
+    const failureClass = options.failureReason
+      ? classifyFailureReason(options.failureReason)
+      : undefined;
     return this.withWorkOrderIdentityLock(workspaceId, planId, title, async () => {
-      const reusable = await this.findReusableWorkOrder(workspaceId, planId, title);
+      const reusable = options.trackerItemId
+        ? await this.findWorkOrderById(workspaceId, options.trackerItemId)
+        : await this.findReusableWorkOrder(workspaceId, planId, title);
       if (reusable) {
         const data = reusable.data;
         data.attempts = readWorkOrderAttempts(data);
@@ -3412,19 +3669,28 @@ export class MetaAgentService {
         data.taskSummary = taskSummary;
         data.dispatchedAt = dispatchedAt;
         data.intent = intent;
+        if (options.headSessionId) {
+          data.headSessionId = options.headSessionId;
+        }
         if (planId) {
           data.planId = planId;
         }
         // A retry starts a clean current state. Its previous failure remains in
         // `attempts`; only the current top-level receipt/failure is replaced.
         delete data.failureReason;
+        delete data.failureClass;
         delete data.receipt;
+        delete data.retryReason;
+        if (options.retryReason) {
+          data.retryReason = options.retryReason;
+        }
         if (options.receipt) {
           data.receipt = options.receipt;
           if (options.failureReason) {
             data.failureReason = options.failureReason;
+            data.failureClass = failureClass;
           }
-          appendWorkOrderAttempt(data, options.receipt, options.failureReason, sessionId);
+          appendWorkOrderAttempt(data, options.receipt, options.failureReason, failureClass, sessionId);
         }
 
         await databaseWorker.query(
@@ -3448,16 +3714,21 @@ export class MetaAgentService {
         taskSummary,
         dispatchedAt,
         intent,
+        ...(options.headSessionId ? { headSessionId: options.headSessionId } : {}),
         attempts: options.receipt
           ? [{
               ...options.receipt,
               attempt: 1,
               sessionId,
               ...(options.failureReason ? { failureReason: options.failureReason } : {}),
+              ...(failureClass ? { failureClass } : {}),
+              ...(options.retryReason ? { retryReason: options.retryReason } : {}),
             } satisfies WorkOrderAttempt]
           : [],
         ...(planId ? { planId } : {}),
         ...(options.failureReason ? { failureReason: options.failureReason } : {}),
+        ...(failureClass ? { failureClass } : {}),
+        ...(options.retryReason ? { retryReason: options.retryReason } : {}),
         ...(options.receipt ? { receipt: options.receipt } : {}),
       };
 
@@ -3591,6 +3862,11 @@ export class MetaAgentService {
     }
 
     const data = parseWorkOrderData(row.data);
+    // Classify only while the failure is being persisted. The retry gate never
+    // re-parses `failureReason`, so an old/unknown record remains conservative.
+    const failureClass = settlement?.failureReason
+      ? classifyFailureReason(settlement.failureReason)
+      : undefined;
     const existingFailureReason = typeof data.failureReason === 'string' && data.failureReason.trim().length > 0;
     const hasSuccessfulReceipt = isSuccessfulWorkOrderReceipt(data.receipt)
       || isSuccessfulWorkOrderReceipt(settlement?.receipt);
@@ -3606,17 +3882,21 @@ export class MetaAgentService {
     }
     if (settlement?.failureReason) {
       data.failureReason = settlement.failureReason;
+      data.failureClass = failureClass;
     }
     if (settlement?.receipt) {
       appendWorkOrderAttempt(
         data,
         settlement.receipt,
         settlement.failureReason,
+        failureClass,
         typeof data.childSessionId === 'string' ? data.childSessionId : undefined,
+        typeof data.retryReason === 'string' ? data.retryReason : undefined,
       );
       data.receipt = settlement.receipt;
       if (settlement.receipt.outcome === 'success' && !settlement.failureReason) {
         delete data.failureReason;
+        delete data.failureClass;
       }
     }
     await databaseWorker.query(

@@ -199,7 +199,8 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     expect(prompt).toContain('mcp__nimbalyst-meta-agent__create_session');
     expect(prompt).toContain('Child Failure Discipline');
     expect(prompt).toContain('exact error text');
-    expect(prompt).toContain('wait for the user\'s instruction before retrying or re-dispatching');
+    expect(prompt).toContain('wait for the owner\'s instruction before retrying or re-dispatching');
+    expect(prompt).toContain('The prompt describes this mechanism but does not authorize a retry');
   });
 
   it('retains the orchestration MCP allow-list without amputating native tools', () => {
