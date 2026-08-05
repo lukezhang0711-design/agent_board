@@ -11,6 +11,7 @@ const testState = vi.hoisted(() => ({
   nativeHeadPlanApprovalHandler: null as any,
   maxParallel: 4,
   planAutoApprove: false,
+  ipcHandlers: new Map<string, (...args: any[]) => any>(),
   /** Every `webContents.send` the service makes, so tests can assert IPC signals. */
   sentIpc: [] as { channel: string; args: unknown[] }[],
 }));
@@ -53,7 +54,11 @@ vi.mock('electron', () => ({
   },
 }));
 vi.mock('../SyncManager', () => ({ getSyncProvider: () => null }));
-vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
+vi.mock('../../utils/ipcRegistry', () => ({
+  safeHandle: vi.fn((channel: string, handler: (...args: any[]) => any) => {
+    testState.ipcHandlers.set(channel, handler);
+  }),
+}));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
   getWorkspaceState: () => ({ issueKeyPrefix: 'NIM' }),
@@ -801,6 +806,182 @@ describe('MetaAgentService work-order persistence', () => {
       retryReason: '老板手动重试',
     });
     expect(completedRows[0].source_ref).toBe(`meta-agent-work-order:${retry.sessionId}`);
+  });
+
+  it('FB-090 RED→GREEN: retries a legacy card by resolving its plan owner and backfills it', async () => {
+    const planId = 'legacy-plan-fb-090';
+    const trackerItemId = 'legacy-work-order-fb-090';
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'local', $5, FALSE, 'meta-agent', $6)`,
+      [
+        planId,
+        ['plan'],
+        JSON.stringify({
+          title: 'Legacy approved plan',
+          status: 'ready-for-development',
+          submittedBySessionId: 'head-session',
+          approvalPromptId: 'legacy-approval-fb-090',
+        }),
+        workspacePath,
+        JSON.stringify({ planItems: ['Retry the legacy work order'] }),
+        'meta-agent-submitted-plan:head-session',
+      ],
+    );
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, 'work-order', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, 'meta-agent', $5)`,
+      [
+        trackerItemId,
+        ['work-order'],
+        JSON.stringify({
+          title: 'Legacy work order',
+          taskSummary: 'Retry the legacy work order',
+          status: 'failed',
+          childSessionId: 'deleted-child-fb-090',
+          intent: 'investigation',
+          planId,
+          failureReason: 'legacy failure text',
+        }),
+        workspacePath,
+        `meta-agent-work-order:${'deleted-child-fb-090'}`,
+      ],
+    );
+
+    const retry = await service.retryWorkOrder(workspacePath, trackerItemId);
+    expect(retry).toMatchObject({ sessionId: expect.any(String) });
+
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE id = $1`,
+      [trackerItemId],
+    );
+    expect(parseStoredJson<any>(rows[0].data)).toMatchObject({
+      status: 'dispatched',
+      planId,
+      headSessionId: 'head-session',
+      childSessionId: retry.sessionId,
+      retryReason: '老板手动重试',
+    });
+  });
+
+  it('FB-090 RED→GREEN: reports an unresolvable legacy owner as not retryable', async () => {
+    const trackerItemId = 'unresolvable-work-order-fb-090';
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, 'work-order', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, 'meta-agent', $5)`,
+      [
+        trackerItemId,
+        ['work-order'],
+        JSON.stringify({
+          title: 'Unresolvable legacy work order',
+          taskSummary: 'Do not retry without a Head owner',
+          status: 'failed',
+          planId: 'missing-plan-fb-090',
+          failureReason: 'legacy failure text',
+        }),
+        workspacePath,
+        `meta-agent-work-order:${trackerItemId}`,
+      ],
+    );
+
+    await expect(
+      (service as any).canRetryWorkOrder(workspacePath, trackerItemId),
+    ).resolves.toEqual({
+      canRetry: false,
+      reason: '原指挥官会话已不存在，无法重派',
+    });
+  });
+
+  it.each([
+    { label: 'deleted', submittedBySessionId: 'deleted-head-fb-090', createSession: false },
+    { label: 'standard-role', submittedBySessionId: 'standard-head-fb-090', createSession: true },
+  ])('rejects a $label plan owner that is not a live meta-agent', async ({ submittedBySessionId, createSession }) => {
+    if (createSession) {
+      await AISessionsRepository.create({
+        id: submittedBySessionId,
+        provider: 'claude-code',
+        model: 'claude-code:opus',
+        workspaceId: workspacePath,
+        title: 'Standard session must not own retries',
+        agentRole: 'standard',
+      } as any);
+    }
+    const planId = `plan-owner-role-fb-090-${submittedBySessionId}`;
+    const trackerItemId = `work-order-owner-role-fb-090-${submittedBySessionId}`;
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, 'meta-agent', $5)`,
+      [
+        planId,
+        ['plan'],
+        JSON.stringify({ submittedBySessionId }),
+        workspacePath,
+        `meta-agent-submitted-plan:${submittedBySessionId}`,
+      ],
+    );
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, 'work-order', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, 'meta-agent', $5)`,
+      [
+        trackerItemId,
+        ['work-order'],
+        JSON.stringify({
+          title: 'Owner validation work order',
+          taskSummary: 'Owner validation',
+          status: 'failed',
+          planId,
+        }),
+        workspacePath,
+        `meta-agent-work-order:${trackerItemId}`,
+      ],
+    );
+
+    await expect(service.canRetryWorkOrder(workspacePath, trackerItemId)).resolves.toEqual({
+      canRetry: false,
+      reason: '原指挥官会话已不存在，无法重派',
+    });
+  });
+
+  it('serves the same retryability decision through the owner-retry IPC query', async () => {
+    const trackerItemId = 'ipc-unresolvable-work-order-fb-090';
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, 'work-order', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, 'meta-agent', $5)`,
+      [
+        trackerItemId,
+        ['work-order'],
+        JSON.stringify({ status: 'failed', planId: 'missing-plan-ipc-fb-090' }),
+        workspacePath,
+        `meta-agent-work-order:${trackerItemId}`,
+      ],
+    );
+    await service.start((service as any).aiService);
+
+    const handler = testState.ipcHandlers.get('meta-agent:can-retry-work-order');
+    expect(handler).toBeTypeOf('function');
+    await expect(handler?.({}, { workspaceId: workspacePath, trackerItemId })).resolves.toEqual({
+      success: true,
+      canRetry: false,
+      reason: '原指挥官会话已不存在，无法重派',
+    });
   });
 
   it('does not reuse a work-order across modules or plans', async () => {
