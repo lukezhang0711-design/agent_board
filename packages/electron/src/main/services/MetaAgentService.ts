@@ -69,6 +69,7 @@ const PLAN_APPROVAL_SLOW_POLL_INTERVAL_MS = 2_000;
 const LIFETIME_BACKSTOP = 50;
 const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max']);
 const TEXT_APPROVAL_REMINDER = 'Head 正在用文字征求批准——请让它提交正式方案，或点此发送标准指令';
+const WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON = '原指挥官会话已不存在，无法重派';
 
 class DispatchCapacityError extends Error {
   constructor(
@@ -226,6 +227,10 @@ function parseWorkOrderData(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+function readNonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 function readWorkOrderAttempts(data: Record<string, unknown>): WorkOrderAttempt[] {
@@ -1023,11 +1028,13 @@ export class MetaAgentService {
     const receipt = isWorkOrderReceipt(workOrder.data.receipt)
       ? workOrder.data.receipt
       : null;
-    const headSessionId = (typeof workOrder.data.headSessionId === 'string' && workOrder.data.headSessionId.trim())
-      || previousSession?.createdBySessionId
-      || null;
-    if (!headSessionId) {
-      throw new Error(`Failed work-order ${trackerItemId} has no Head session owner`);
+    const retryOwner = await this.resolveRetryHeadSession(workspaceId, workOrder);
+    if (!retryOwner) {
+      throw new Error(WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON);
+    }
+    const headSessionId = retryOwner.headSessionId;
+    if (retryOwner.recoveredFromPlan) {
+      await this.backfillWorkOrderHeadSession(workOrder.id, workOrder.data, headSessionId);
     }
 
     const rawIntent = workOrder.data.intent;
@@ -1066,6 +1073,25 @@ export class MetaAgentService {
     );
   }
 
+  public async canRetryWorkOrder(
+    workspaceId: string,
+    trackerItemId: string,
+  ): Promise<{ canRetry: boolean; reason?: string }> {
+    if (!workspaceId?.trim() || !trackerItemId?.trim()) {
+      return { canRetry: false, reason: WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON };
+    }
+
+    const workOrder = await this.findWorkOrderById(workspaceId, trackerItemId);
+    if (!workOrder || workOrder.data.status !== 'failed') {
+      return { canRetry: false, reason: WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON };
+    }
+
+    const retryOwner = await this.resolveRetryHeadSession(workspaceId, workOrder);
+    return retryOwner
+      ? { canRetry: true }
+      : { canRetry: false, reason: WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON };
+  }
+
   private registerIpcHandlers(): void {
     if (this.ipcHandlersRegistered) {
       return;
@@ -1094,6 +1120,21 @@ export class MetaAgentService {
         return { success: true, result };
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    safeHandle('meta-agent:can-retry-work-order', async (_event, payload: { trackerItemId: string; workspaceId: string }) => {
+      try {
+        return {
+          success: true,
+          ...(await this.canRetryWorkOrder(payload?.workspaceId, payload?.trackerItemId)),
+        };
+      } catch (error) {
+        return {
+          success: false,
+          canRetry: false,
+          reason: error instanceof Error ? error.message : String(error),
+        };
       }
     });
 
@@ -3529,6 +3570,76 @@ export class MetaAgentService {
     );
     const row = rows[0];
     return row ? { id: row.id, data: parseWorkOrderData(row.data) } : null;
+  }
+
+  private async resolveRetryHeadSession(
+    workspaceId: string,
+    workOrder: { id: string; data: Record<string, unknown> },
+  ): Promise<{ headSessionId: string; recoveredFromPlan: boolean } | null> {
+    const directHeadSessionId = readNonEmptyString(workOrder.data.headSessionId);
+    const planHeadSessionId = directHeadSessionId
+      ? undefined
+      : await this.findPlanApprovalHeadSessionId(
+        workspaceId,
+        readNonEmptyString(workOrder.data.planId),
+      );
+    const headSessionId = directHeadSessionId ?? planHeadSessionId;
+    if (!headSessionId) return null;
+
+    const headSession = await AISessionsRepository.get(headSessionId);
+    if (
+      !headSession
+      || headSession.workspacePath !== workspaceId
+      || headSession.agentRole !== 'meta-agent'
+    ) {
+      return null;
+    }
+
+    return {
+      headSessionId,
+      recoveredFromPlan: !directHeadSessionId,
+    };
+  }
+
+  private async findPlanApprovalHeadSessionId(
+    workspaceId: string,
+    planId: string | undefined,
+  ): Promise<string | undefined> {
+    if (!planId) return undefined;
+
+    const { rows } = await databaseWorker.query<{ data: unknown; source_ref: string | null }>(
+      `SELECT data, source_ref
+       FROM tracker_items
+       WHERE id = $1
+         AND workspace = $2
+         AND type = 'plan'
+       LIMIT 1`,
+      [planId, workspaceId],
+    );
+    const row = rows[0];
+    if (!row) return undefined;
+
+    const planData = parseWorkOrderData(row.data);
+    const submittedBySessionId = readNonEmptyString(planData.submittedBySessionId);
+    if (submittedBySessionId) return submittedBySessionId;
+
+    const sourceRef = readNonEmptyString(row.source_ref);
+    const sourceMatch = sourceRef?.match(/^meta-agent-submitted-plan:(.+)$/);
+    return readNonEmptyString(sourceMatch?.[1]);
+  }
+
+  private async backfillWorkOrderHeadSession(
+    trackerItemId: string,
+    data: Record<string, unknown>,
+    headSessionId: string,
+  ): Promise<void> {
+    await databaseWorker.query(
+      `UPDATE tracker_items
+       SET data = $1, updated = NOW()
+       WHERE id = $2`,
+      [JSON.stringify({ ...data, headSessionId }), trackerItemId],
+    );
+    this.emitTrackerItemsChanged();
   }
 
   private latestFailedWorkOrderAttempt(data: Record<string, unknown>): WorkOrderAttempt | null {
