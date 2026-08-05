@@ -548,6 +548,7 @@ describe('MetaAgentService work-order persistence', () => {
     expect(data).toMatchObject({
       status: 'failed',
       failureReason: rawRoutingError,
+      failureClass: 'agent',
       receipt: {
         engine: 'claude-code',
         model: 'gemini-2.5-pro',
@@ -557,7 +558,12 @@ describe('MetaAgentService work-order persistence', () => {
       },
     });
     expect(data.attempts).toHaveLength(1);
-    expect(data.attempts[0]).toMatchObject({ attempt: 1, failureReason: rawRoutingError, outcome: 'failure' });
+    expect(data.attempts[0]).toMatchObject({
+      attempt: 1,
+      failureReason: rawRoutingError,
+      failureClass: 'agent',
+      outcome: 'failure',
+    });
     expect(rows[0].source_ref).toMatch(/^meta-agent-work-order:/);
     expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
       'head-session',
@@ -568,7 +574,7 @@ describe('MetaAgentService work-order persistence', () => {
     );
   });
 
-  it('RED FB-085: creates duplicate cards when the same plan module is retried', async () => {
+  it('RED FB-085: denies an agent retry until a new Head user message arrives', async () => {
     const planId = 'plan-fb-085';
     const moduleTitle = 'Module 1';
     const firstAttemptError = await (service as any).createChildSession(
@@ -592,6 +598,47 @@ describe('MetaAgentService work-order persistence', () => {
       ? firstAttemptError.message
       : String(firstAttemptError);
     expect(rawFailureReason).toContain('provider:model');
+
+    const deniedLog = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await expect((service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: moduleTitle,
+        prompt: 'Run Module 1 with the corrected engine configuration',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'investigation',
+        planId,
+      },
+    )).rejects.toThrow('此类失败需老板指示后才能重试');
+    expect(deniedLog).toHaveBeenCalledWith(expect.stringContaining('[RetryGate] denied'));
+    deniedLog.mockRestore();
+
+    const { rows: failedRows } = await db.query<any>(
+      `SELECT data, source_ref
+       FROM tracker_items
+       WHERE type = 'work-order'
+       ORDER BY created`,
+    );
+    expect(failedRows).toHaveLength(1);
+    const failedData = parseStoredJson<any>(failedRows[0].data);
+    expect(failedData).toMatchObject({
+      status: 'failed',
+      failureClass: 'agent',
+      attempts: [expect.objectContaining({ attempt: 1, failureClass: 'agent' })],
+    });
+
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'input',
+      content: JSON.stringify({ prompt: '老板允许重试 Module 1' }),
+      createdAt: new Date(Date.parse(failedData.receipt.endedAt) + 1_000),
+      hidden: false,
+      searchable: true,
+      messageKind: 'user',
+    });
 
     const retry = JSON.parse(await (service as any).createChildSession(
       'head-session',
@@ -623,6 +670,7 @@ describe('MetaAgentService work-order persistence', () => {
       model: 'haiku',
       outcome: 'failure',
       failureReason: rawFailureReason,
+      failureClass: 'agent',
     });
     expect(data.attempts[1]).toMatchObject({
       attempt: 2,
@@ -633,23 +681,45 @@ describe('MetaAgentService work-order persistence', () => {
     expect(rows[0].source_ref).toBe(`meta-agent-work-order:${retry.sessionId}`);
   });
 
-  it('keeps a failed retry on one Failed card with both failure receipts', async () => {
+  it('allows one infra retry, then sends the next retry to the owner', async () => {
     const planId = 'plan-fb-085-failed';
     const args = {
       title: 'Module 1',
       prompt: 'Retry Module 1 but keep the engine error',
       provider: 'claude-code',
-      model: 'haiku',
+      model: 'claude-code:haiku',
       intent: 'investigation',
       planId,
     } as const;
-    const firstError = await (service as any).createChildSession('head-session', workspacePath, args)
-      .then(() => null, (error: unknown) => error);
-    const secondError = await (service as any).createChildSession('head-session', workspacePath, args)
-      .then(() => null, (error: unknown) => error);
+    const dispatchFailure = async (prompt: string) => {
+      const child = JSON.parse(await (service as any).createChildSession(
+        'head-session',
+        workspacePath,
+        { ...args, prompt },
+      ));
+      await AgentMessagesRepository.create({
+        sessionId: child.sessionId,
+        source: 'claude-code',
+        direction: 'output',
+        content: JSON.stringify({ type: 'error', error: 'request timed out after 30s', is_error: true }),
+        createdAt: new Date(),
+        hidden: false,
+      });
+      await (service as any).handleChildSessionEvent(child.sessionId, 'session:error');
+      return child;
+    };
 
-    expect(firstError).toBeInstanceOf(Error);
-    expect(secondError).toBeInstanceOf(Error);
+    await dispatchFailure('First infra failure');
+    await dispatchFailure('Second infra failure');
+
+    const deniedLog = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await expect((service as any).createChildSession('head-session', workspacePath, {
+      ...args,
+      prompt: 'Third retry must wait for owner',
+    })).rejects.toThrow('此类失败需老板指示后才能重试');
+    expect(deniedLog).toHaveBeenCalledWith(expect.stringContaining('[RetryGate] denied'));
+    deniedLog.mockRestore();
+
     const { rows } = await db.query<any>(
       `SELECT data FROM tracker_items WHERE type = 'work-order' AND workspace = $1`,
       [workspacePath],
@@ -659,8 +729,78 @@ describe('MetaAgentService work-order persistence', () => {
     expect(data.status).toBe('failed');
     expect(data.attempts).toHaveLength(2);
     expect(data.attempts.every((attempt: any) => attempt.outcome === 'failure')).toBe(true);
-    expect(data.attempts[0].failureReason).toBe((firstError as Error).message);
-    expect(data.attempts[1].failureReason).toBe((secondError as Error).message);
+    expect(data.failureClass).toBe('infra');
+    expect(data.attempts[0]).toMatchObject({ failureClass: 'infra', failureReason: 'request timed out after 30s' });
+    expect(data.attempts[1]).toMatchObject({ failureClass: 'infra', failureReason: 'request timed out after 30s' });
+  });
+
+  it('lets the failed-card owner retry once and records the manual authorization', async () => {
+    const child = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Manual retry module',
+        prompt: 'Create a failed card for manual retry',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'investigation',
+        planId: 'plan-manual-retry',
+      },
+    ));
+    await AgentMessagesRepository.create({
+      sessionId: child.sessionId,
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({
+        type: 'error',
+        error: 'Model "missing-model" is not supported',
+        is_error: true,
+      }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:error');
+
+    const { rows: failedRows } = await db.query<any>(
+      `SELECT id, data FROM tracker_items WHERE type = 'work-order' AND workspace = $1`,
+      [workspacePath],
+    );
+    expect(failedRows).toHaveLength(1);
+    const trackerItemId = failedRows[0].id as string;
+
+    const retry = await (service as any).retryWorkOrder(workspacePath, trackerItemId);
+    expect(retry).toMatchObject({ sessionId: expect.any(String) });
+    expect(retry.sessionId).not.toBe(child.sessionId);
+
+    const { rows: retriedRows } = await db.query<any>(
+      `SELECT id, data, source_ref FROM tracker_items WHERE type = 'work-order' AND workspace = $1`,
+      [workspacePath],
+    );
+    expect(retriedRows).toHaveLength(1);
+    const retriedData = parseStoredJson<any>(retriedRows[0].data);
+    expect(retriedData).toMatchObject({
+      status: 'dispatched',
+      retryReason: '老板手动重试',
+      attempts: [expect.objectContaining({ attempt: 1, failureClass: 'agent' })],
+    });
+
+    await (service as any).handleChildSessionEvent(retry.sessionId, 'session:completed');
+    const { rows: completedRows } = await db.query<any>(
+      `SELECT data, source_ref FROM tracker_items WHERE type = 'work-order' AND workspace = $1`,
+      [workspacePath],
+    );
+    const completedData = parseStoredJson<any>(completedRows[0].data);
+    expect(completedData).toMatchObject({
+      status: 'completed',
+      retryReason: '老板手动重试',
+    });
+    expect(completedData.attempts).toHaveLength(2);
+    expect(completedData.attempts[1]).toMatchObject({
+      attempt: 2,
+      outcome: 'success',
+      retryReason: '老板手动重试',
+    });
+    expect(completedRows[0].source_ref).toBe(`meta-agent-work-order:${retry.sessionId}`);
   });
 
   it('does not reuse a work-order across modules or plans', async () => {

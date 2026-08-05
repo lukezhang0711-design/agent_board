@@ -28,6 +28,7 @@ import { errorNotificationService } from '../../services/ErrorNotificationServic
 import { getRelativeTimeString } from '../../utils/dateFormatting';
 import { useTrackerContentCollab } from '../../hooks/useTrackerContentCollab';
 import { reconcileExternalFieldChanges } from './trackerDetailFieldSync';
+import { WorkOrderRetryButton } from './WorkOrderRetryButton';
 
 interface TrackerItemDetailProps {
   itemId: string;
@@ -36,6 +37,8 @@ interface TrackerItemDetailProps {
   onSwitchToFilesMode?: () => void;
   onSwitchToAgentMode?: (sessionId: string) => void;
   onLaunchSession?: (trackerItemId: string) => void;
+  onRetryWorkOrder?: (trackerItemId: string) => void;
+  retryingWorkOrder?: boolean;
   onArchive?: (itemId: string, archive: boolean) => void;
   onDelete?: (itemId: string) => void;
 }
@@ -97,6 +100,7 @@ interface WorkOrderAttemptView {
   endedAt: string;
   outcome: 'success' | 'failure';
   failureReason?: string;
+  retryReason?: string;
 }
 
 function readWorkOrderAttemptViews(value: unknown): WorkOrderAttemptView[] {
@@ -125,6 +129,7 @@ function readWorkOrderAttemptViews(value: unknown): WorkOrderAttemptView[] {
       endedAt: raw.endedAt,
       outcome: raw.outcome,
       ...(typeof raw.failureReason === 'string' ? { failureReason: raw.failureReason } : {}),
+      ...(typeof raw.retryReason === 'string' ? { retryReason: raw.retryReason } : {}),
     }];
   });
 }
@@ -161,6 +166,11 @@ const WorkOrderAttempts: React.FC<{ attempts: unknown }> = ({ attempts: rawAttem
             {attempt.failureReason && (
               <div className="text-[10px] text-red-300 whitespace-pre-wrap break-words" data-testid="work-order-attempt-failure">
                 {attempt.failureReason}
+              </div>
+            )}
+            {attempt.retryReason && (
+              <div className="text-[10px] text-nim-accent" data-testid="work-order-attempt-retry-reason">
+                {attempt.retryReason}
               </div>
             )}
           </div>
@@ -261,6 +271,8 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
   onSwitchToFilesMode,
   onSwitchToAgentMode,
   onLaunchSession,
+  onRetryWorkOrder,
+  retryingWorkOrder = false,
   onArchive,
   onDelete,
 }) => {
@@ -1219,6 +1231,14 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               <MaterialSymbol icon="link" size={18} />
             </button>
           )}
+          {item.primaryType === 'work-order'
+            && getRecordStatus(item) === 'failed'
+            && onRetryWorkOrder && (
+              <WorkOrderRetryButton
+                onRetry={() => onRetryWorkOrder(item.id)}
+                retrying={retryingWorkOrder}
+              />
+            )}
           {onArchive && (
             <button
               className="p-1 rounded hover:bg-nim-tertiary text-nim-muted"

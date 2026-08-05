@@ -94,6 +94,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [tagQuery, setTagQuery] = useState('');
   const [highlightedTagIndex, setHighlightedTagIndex] = useState(0);
+  const [retryingWorkOrderId, setRetryingWorkOrderId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // User's selected default model. Used by handleLaunchSession so the new
@@ -276,6 +277,29 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
       console.error('[TrackerMainView] Failed to launch session:', err);
     }
   }, [workspacePath, refreshSessionList, setSelectedWorkstream, setWindowMode, defaultModel]);
+
+  /** Owner-only retry for a failed meta-agent work-order card. */
+  const handleRetryWorkOrder = useCallback(async (trackerItemId: string) => {
+    if (!workspacePath || retryingWorkOrderId) return;
+    setRetryingWorkOrderId(trackerItemId);
+    try {
+      const result = await window.electronAPI.invoke('meta-agent:retry-work-order', {
+        trackerItemId,
+        workspaceId: workspacePath,
+      });
+      if (!result?.success) {
+        throw new Error(result?.error || '重试失败');
+      }
+      await refreshSessionList();
+    } catch (error) {
+      errorNotificationService.showError(
+        '重试失败',
+        error instanceof Error ? error.message : String(error),
+      );
+    } finally {
+      setRetryingWorkOrderId(null);
+    }
+  }, [workspacePath, refreshSessionList, retryingWorkOrderId]);
 
   // Base item sets from atoms
   const activeItems = useAtomValue(trackerItemsByTypeAtom(filterType));
@@ -994,6 +1018,8 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
               onSwitchToFilesMode={onSwitchToFilesMode}
               onSwitchToAgentMode={handleSwitchToAgentMode}
               onLaunchSession={handleLaunchSession}
+              onRetryWorkOrder={handleRetryWorkOrder}
+              retryingWorkOrder={retryingWorkOrderId === selectedItemId}
               onArchive={handleArchiveItem}
               onDelete={handleDeleteItem}
             />
