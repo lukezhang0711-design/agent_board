@@ -6,6 +6,7 @@ import type { ChatAttachment } from '@nimbalyst/runtime';
 import { AttachmentPreviewList } from './AttachmentPreviewList';
 import {
   IME_EVENT_TRACE_ENABLED,
+  isImeCompositionActive,
   traceImeBeforeInput,
   traceImeCompositionEvent,
   traceImeInput,
@@ -54,6 +55,7 @@ export function AgenticInput({
   onAttachmentRemove
 }: AgenticInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isComposingRef = useRef(false);
   const lastSlashValueRef = useRef<string | null>(null);
   const [typeaheadMatch, setTypeaheadMatch] = useState<TriggerMatch | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -221,7 +223,7 @@ export function AgenticInput({
   }, [typeaheadMatch, value, onChange, onFileMentionSelect]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) {
+    if (isImeCompositionActive(e.nativeEvent, isComposingRef.current)) {
       if (IME_EVENT_TRACE_ENABLED) {
         traceImeKeyDown('AgenticInput', e.nativeEvent, value, 'ime-composition-guard');
       }
@@ -451,15 +453,21 @@ export function AgenticInput({
           className="ai-chat-input-field nim-scrollbar-hidden flex-1 min-h-9 max-h-[200px] py-2 px-3 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md text-[var(--nim-text)] text-[13px] font-[inherit] resize-none outline-none transition-colors duration-200 focus:border-[var(--nim-primary)] disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-[var(--nim-text-faint)]"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          onCompositionStart={IME_EVENT_TRACE_ENABLED ? (e) => {
-            traceImeCompositionEvent('AgenticInput', e.nativeEvent, e.currentTarget.value);
-          } : undefined}
+          onCompositionStart={(e) => {
+            isComposingRef.current = true;
+            if (IME_EVENT_TRACE_ENABLED) {
+              traceImeCompositionEvent('AgenticInput', e.nativeEvent, e.currentTarget.value);
+            }
+          }}
           onCompositionUpdate={IME_EVENT_TRACE_ENABLED ? (e) => {
             traceImeCompositionEvent('AgenticInput', e.nativeEvent, e.currentTarget.value);
           } : undefined}
-          onCompositionEnd={IME_EVENT_TRACE_ENABLED ? (e) => {
-            traceImeCompositionEvent('AgenticInput', e.nativeEvent, e.currentTarget.value);
-          } : undefined}
+          onCompositionEnd={(e) => {
+            isComposingRef.current = false;
+            if (IME_EVENT_TRACE_ENABLED) {
+              traceImeCompositionEvent('AgenticInput', e.nativeEvent, e.currentTarget.value);
+            }
+          }}
           onKeyDown={handleKeyDown}
           onBeforeInput={IME_EVENT_TRACE_ENABLED ? (e) => {
             traceImeBeforeInput('AgenticInput', e.nativeEvent as InputEvent, e.currentTarget.value);

@@ -25,6 +25,18 @@ export const IME_EVENT_TRACE_ENABLED =
   && process.env.IS_DEV_MODE === 'true'
   && process.env.NIMBALYST_IME_EVENT_TRACE === 'true';
 
+/**
+ * Browsers do not consistently expose the native IME markers on every keydown
+ * in a composition. Keep the component's composition lifecycle state as the
+ * source of truth, with the native markers as compatibility fallbacks.
+ */
+export function isImeCompositionActive(
+  event: Pick<KeyboardEvent, 'isComposing' | 'keyCode'>,
+  compositionActive: boolean,
+): boolean {
+  return compositionActive || event.isComposing || event.keyCode === 229;
+}
+
 function writeImeTrace(record: ImeTraceRecord): void {
   if (!IME_EVENT_TRACE_ENABLED) return;
   console.info(`[IME_TRACE] ${JSON.stringify(record)}`);

@@ -221,6 +221,37 @@ describe('PlanApprovalWidget', () => {
     });
   });
 
+  it('keeps IME feedback from submitting on the composition commit key', async () => {
+    const exitPlanModeDeny = vi.fn().mockResolvedValue(undefined);
+    renderWidget(planArguments, { exitPlanModeDeny });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
+    const feedback = screen.getByLabelText('Requested changes') as HTMLTextAreaElement;
+    fireEvent.compositionStart(feedback, { data: '' });
+    fireEvent.compositionUpdate(feedback, { data: 'zhongwen' });
+    fireEvent.change(feedback, { target: { value: 'zhongwen' } });
+
+    const compositionCommit = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperty(compositionCommit, 'isComposing', { value: false });
+    Object.defineProperty(compositionCommit, 'keyCode', { value: 0 });
+    fireEvent(feedback, compositionCommit);
+
+    expect(compositionCommit.defaultPrevented).toBe(false);
+    expect(exitPlanModeDeny).not.toHaveBeenCalled();
+
+    fireEvent.compositionEnd(feedback, { data: '中文反馈' });
+    fireEvent.change(feedback, { target: { value: '中文反馈' } });
+    fireEvent.keyDown(feedback, { key: 'Enter', bubbles: true, cancelable: true });
+
+    await waitFor(() => {
+      expect(exitPlanModeDeny).toHaveBeenCalledWith(compositeRequestId, '中文反馈');
+    });
+  });
+
   it('dismisses a submitted plan through the durable denial route', async () => {
     const exitPlanModeDeny = vi.fn().mockResolvedValue(undefined);
     renderWidget(planArguments, { exitPlanModeDeny });

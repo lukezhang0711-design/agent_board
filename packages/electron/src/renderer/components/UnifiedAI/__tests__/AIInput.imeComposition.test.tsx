@@ -126,6 +126,21 @@ function dispatchCompositionEnter(
   return event;
 }
 
+function dispatchCompositionCommitKey(textarea: HTMLTextAreaElement): KeyboardEvent {
+  // Some Chromium/IME combinations send the commit key without either the
+  // native isComposing flag or the 229 keyCode. The component must still use
+  // compositionstart/end state to keep this key out of the send path.
+  const event = new KeyboardEvent('keydown', {
+    key: 'Enter',
+    bubbles: true,
+    cancelable: true,
+  });
+  Object.defineProperty(event, 'isComposing', { value: false });
+  Object.defineProperty(event, 'keyCode', { value: 0 });
+  fireEvent(textarea, event);
+  return event;
+}
+
 describe('AIInput IME composition guard', () => {
   beforeEach(() => {
     // The prompt-height read is unrelated to this keydown test; leave it
@@ -162,6 +177,34 @@ describe('AIInput IME composition guard', () => {
     // Before the guard, Typeahead's Enter handler called preventDefault here.
     expect(event.defaultPrevented).toBe(false);
     expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('keeps the full composed Head prompt when the commit key has no native IME flags', () => {
+    const onSend = vi.fn();
+    render(<Harness onSend={onSend} />);
+
+    const textarea = screen.getByTestId('ai-input') as HTMLTextAreaElement;
+    const prefix = 'notes,1:DP-.md, provider claude-code claude-codehaiku.';
+    const composingValue = `${prefix} zhongwen`;
+    const committedValue = `${prefix} 中文任务`;
+
+    fireEvent.change(textarea, { target: { value: prefix } });
+    fireEvent.compositionStart(textarea, { data: '' });
+    fireEvent.compositionUpdate(textarea, { data: 'zhongwen' });
+    fireEvent.change(textarea, { target: { value: composingValue } });
+
+    dispatchCompositionCommitKey(textarea);
+
+    // The commit key is still part of the composition even though Chromium
+    // omitted both native markers. Sending here would drop the final Chinese
+    // text when the Head clears its draft after submit.
+    expect(onSend).not.toHaveBeenCalled();
+
+    fireEvent.compositionEnd(textarea, { data: '中文任务' });
+    fireEvent.change(textarea, { target: { value: committedValue } });
+    fireEvent.keyDown(textarea, { key: 'Enter', bubbles: true, cancelable: true });
+
+    expect(onSend).toHaveBeenCalledWith(committedValue);
   });
 });
 

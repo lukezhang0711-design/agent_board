@@ -97,4 +97,13 @@ describe('IME event trace switch', () => {
       }),
     ]);
   });
+
+  it('treats component composition state as an IME guard when native flags are absent', async () => {
+    vi.stubEnv('IS_DEV_MODE', 'false');
+    const { isImeCompositionActive } = await import('../imeEventTrace');
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+
+    expect(isImeCompositionActive(event, true)).toBe(true);
+    expect(isImeCompositionActive(event, false)).toBe(false);
+  });
 });
