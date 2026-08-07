@@ -2105,6 +2105,158 @@ export class MetaAgentService {
     ].join('\n');
   }
 
+  private async finalizePlanApproval(
+    workspaceId: string,
+    planId: string,
+    requestId: string,
+    response: PlanApprovalResponse,
+    submittedPlanData?: Record<string, unknown>,
+  ): Promise<string> {
+    let planData: Record<string, unknown>;
+    if (submittedPlanData) {
+      planData = submittedPlanData;
+    } else {
+      const { rows } = await databaseWorker.query<{ data: unknown }>(
+        `SELECT data
+         FROM tracker_items
+         WHERE id = $1 AND workspace = $2 AND type = 'plan'
+         LIMIT 1`,
+        [planId, workspaceId],
+      );
+      if (!rows[0]) {
+        throw new Error(`Plan ${planId} not found for approval ${requestId}`);
+      }
+      planData = parseWorkOrderData(rows[0].data);
+    }
+
+    const finalStatus = response.approved ? 'ready-for-development' : 'in-review';
+    const finalData: Record<string, unknown> = {
+      ...planData,
+      status: finalStatus,
+    };
+    if (response.approved) {
+      finalData.approvedAt = new Date(response.respondedAt ?? Date.now()).toISOString();
+      delete finalData.lastReviewFeedback;
+    } else if (response.feedback) {
+      finalData.lastReviewFeedback = response.feedback;
+    }
+
+    const { rows: finalizedRows } = await databaseWorker.query<{ id: string }>(
+      `UPDATE tracker_items
+       SET data = $1, updated = NOW(), last_indexed = NOW()
+       WHERE id = $2
+         AND data->>'approvalPromptId' = $3
+       RETURNING id`,
+      [JSON.stringify(finalData), planId, requestId],
+    );
+    if (finalizedRows.length === 0) {
+      console.warn(
+        `[MetaAgentService] Ignored stale plan approval response for plan ${planId}; request ${requestId} no longer matches approvalPromptId.`,
+      );
+      throw new PlanApprovalSupersededError(planId, requestId);
+    }
+    this.notifyTrackerItemsChanged();
+    return finalStatus;
+  }
+
+  public async reviveRespondedPlanApprovalsOnBoot(): Promise<void> {
+    if (!this.aiService) {
+      return;
+    }
+
+    let rows: Array<{ session_id: string; content: unknown }>;
+    try {
+      const result = await databaseWorker.query<{ session_id: string; content: unknown }>(
+        `SELECT session_id, content
+         FROM ai_agent_messages
+         WHERE content LIKE '%"type":"exit_plan_mode_response"%'
+         ORDER BY id ASC`,
+      );
+      rows = result.rows;
+    } catch (error) {
+      console.error('[PlanRevive] Boot sweep failed before scanning approvals:', error);
+      return;
+    }
+    const candidates = new Map<string, { sessionId: string; requestId: string }>();
+    for (const row of rows) {
+      const content = parseWorkOrderData(row.content);
+      if (
+        content.type !== 'exit_plan_mode_response'
+        || typeof content.requestId !== 'string'
+        || typeof content.approved !== 'boolean'
+      ) {
+        continue;
+      }
+      const key = `${row.session_id}\u0000${content.requestId}`;
+      candidates.set(key, { sessionId: row.session_id, requestId: content.requestId });
+    }
+
+    let respondedCount = 0;
+    let revivedCount = 0;
+    let failedCount = 0;
+    for (const candidate of candidates.values()) {
+      let planId = 'unknown';
+      try {
+        const session = await AISessionsRepository.get(candidate.sessionId);
+        if (!session || session.agentRole !== 'meta-agent' || !session.workspacePath) {
+          continue;
+        }
+
+        const state = await this.aiService.getPlanApprovalState(
+          candidate.sessionId,
+          candidate.requestId,
+        );
+        if (
+          !state
+          || state.status !== 'responded'
+          || !state.decision
+          || !state.planId?.trim()
+        ) {
+          continue;
+        }
+
+        planId = state.planId;
+        respondedCount += 1;
+        const response: PlanApprovalResponse = {
+          approved: state.decision === 'approved',
+          decision: state.decision,
+          feedback: state.feedback,
+          respondedAt: state.respondedAt,
+          respondedBy: state.respondedBy,
+        };
+        await this.assertCurrentPlanApprovalRequest(state.planId, state.requestId);
+        await this.finalizePlanApproval(
+          session.workspacePath,
+          state.planId,
+          state.requestId,
+          response,
+        );
+        const method = await this.deliverPlanApprovalResponse(
+          candidate.sessionId,
+          session.workspacePath,
+          state.planId,
+          state.requestId,
+          response,
+          'revive',
+        );
+        revivedCount += 1;
+        console.info(
+          `[PlanRevive] Replayed approval: sessionId=${candidate.sessionId}, requestId=${state.requestId}, planId=${state.planId}, decision=${state.decision}, status=closed, method=${method}`,
+        );
+      } catch (error) {
+        failedCount += 1;
+        console.error(
+          `[PlanRevive] Failed to replay approval: sessionId=${candidate.sessionId}, requestId=${candidate.requestId}, planId=${planId}`,
+          error,
+        );
+      }
+    }
+
+    console.info(
+      `[PlanRevive] Boot sweep complete: responded=${respondedCount}, revived=${revivedCount}, failed=${failedCount}`,
+    );
+  }
+
   private async deliverPlanApprovalResponse(
     metaSessionId: string,
     workspaceId: string,
@@ -2355,33 +2507,13 @@ export class MetaAgentService {
     }
 
     const response = await this.waitForPlanApprovalResponse(metaSessionId, requestId, planId);
-    const finalStatus = response.approved ? 'ready-for-development' : 'in-review';
-    const finalData: Record<string, unknown> = {
-      ...planData,
-      status: finalStatus,
-      ...(autoApproved ? { autoApproved: true } : {}),
-    };
-    if (response.approved) {
-      finalData.approvedAt = new Date(response.respondedAt ?? Date.now()).toISOString();
-      delete finalData.lastReviewFeedback;
-    } else if (response.feedback) {
-      finalData.lastReviewFeedback = response.feedback;
-    }
-    const { rows: finalizedRows } = await databaseWorker.query<{ id: string }>(
-      `UPDATE tracker_items
-       SET data = $1, updated = NOW(), last_indexed = NOW()
-       WHERE id = $2
-         AND data->>'approvalPromptId' = $3
-       RETURNING id`,
-      [JSON.stringify(finalData), planId, requestId],
+    const finalStatus = await this.finalizePlanApproval(
+      workspaceId,
+      planId,
+      requestId,
+      response,
+      autoApproved ? { ...planData, autoApproved: true } : planData,
     );
-    if (finalizedRows.length === 0) {
-      console.warn(
-        `[MetaAgentService] Ignored stale plan approval response for plan ${planId}; request ${requestId} no longer matches approvalPromptId.`,
-      );
-      throw new PlanApprovalSupersededError(planId, requestId);
-    }
-    this.notifyTrackerItemsChanged();
 
     const resolveClaudeOriginalMcpCall = (
       metaSession.provider === 'claude-code' || metaSession.provider === 'claude-code-cli'

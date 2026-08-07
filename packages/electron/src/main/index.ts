@@ -2416,6 +2416,15 @@ app.whenReady().then(async () => {
         await openFileWithWorkspaceDetection(fileToOpen);
     }
 
+    // A plan approval can be responded to after the previous process has died.
+    // Run the revive sweep after session restoration has created workspace
+    // windows, so delivery can reach the Head's current engine transport.
+    try {
+        await MetaAgentService.getInstance().reviveRespondedPlanApprovalsOnBoot();
+    } catch (error) {
+        logger.mcp.error('[PlanRevive] Startup sweep wiring failed:', error);
+    }
+
     // Handle pending deep link URL (e.g., auth callback)
     if (pendingDeepLinkUrl) {
         const urlToHandle = pendingDeepLinkUrl;

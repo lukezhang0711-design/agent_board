@@ -176,10 +176,12 @@ describe('MetaAgentService work-order persistence', () => {
     let response: any = null;
     let delivery: any = null;
     let closed = false;
+    let planId: string | undefined;
     for (const row of rows) {
       const content = parseStoredJson<any>(row.content);
       if (content.type === 'nimbalyst_tool_use' && content.name === 'ExitPlanMode' && matches(content.id)) {
         submitted = true;
+        planId = typeof content.input?.planId === 'string' ? content.input.planId : undefined;
       } else if (content.type === 'exit_plan_mode_response' && matches(content.requestId)) {
         response = content;
       } else if (content.type === 'plan_approval_delivery' && matches(content.requestId)) {
@@ -202,6 +204,7 @@ describe('MetaAgentService work-order persistence', () => {
       respondedAt: response?.respondedAt,
       respondedBy: response?.respondedBy,
       deliveryMethod: delivery?.method,
+      planId,
     };
   }
 
@@ -255,6 +258,64 @@ describe('MetaAgentService work-order persistence', () => {
       createdAt: new Date(),
       hidden: false,
     });
+  }
+
+  async function seedRespondedPlanApproval(args: {
+    requestId: string;
+    planId: string;
+    approved: boolean;
+    feedback?: string;
+  }): Promise<void> {
+    const planData = {
+      title: 'Approval stranded across restart',
+      status: 'in-review',
+      planItems: ['Recover the approval after restart'],
+      workOrderCount: 1,
+      risks: 'The original submit_plan call is gone.',
+      submittedBySessionId: 'head-session',
+      approvalPromptId: args.requestId,
+      submittedAt: new Date().toISOString(),
+      tags: ['meta-agent', 'user-approval'],
+    };
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'pending', $5, FALSE, 'meta-agent', $6)`,
+      [
+        args.planId,
+        ['plan'],
+        JSON.stringify(planData),
+        workspacePath,
+        JSON.stringify({
+          planItems: planData.planItems,
+          workOrderCount: planData.workOrderCount,
+          risks: planData.risks,
+        }),
+        `meta-agent-submitted-plan:head-session`,
+      ],
+    );
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({
+        type: 'nimbalyst_tool_use',
+        id: args.requestId,
+        name: 'ExitPlanMode',
+        input: {
+          planId: args.planId,
+          title: planData.title,
+          planItems: planData.planItems,
+          workOrderCount: planData.workOrderCount,
+          risks: planData.risks,
+        },
+      }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+    await persistPlanApprovalResponse(args.requestId, args.approved, args.feedback);
   }
 
   async function getSubmitPlanTool(): Promise<(
@@ -2294,6 +2355,91 @@ describe('MetaAgentService work-order persistence', () => {
         method: 'revive',
       }),
     );
+  });
+
+  it('revives a responded approval left behind when the app restarts', async () => {
+    const infoSpy = vi.spyOn(console, 'info');
+    try {
+      await seedRespondedPlanApproval({
+        requestId: 'restart-stranded-approval',
+        planId: 'restart-stranded-plan',
+        approved: true,
+      });
+      // The durable rows are the only surviving state: the original
+      // submit_plan MCP call and its in-memory waiter are intentionally absent.
+      await service.start((service as any).aiService);
+      await service.reviveRespondedPlanApprovalsOnBoot();
+
+      await expect(readTestPlanApprovalState(
+        'head-session',
+        'restart-stranded-approval',
+      )).resolves.toMatchObject({
+        status: 'closed',
+        decision: 'approved',
+        deliveryMethod: 'revive',
+      });
+      const { rows: planRows } = await db.query<{ data: unknown }>(
+        `SELECT data FROM tracker_items WHERE id = $1`,
+        ['restart-stranded-plan'],
+      );
+      expect(parseStoredJson<any>(planRows[0].data)).toMatchObject({
+        status: 'ready-for-development',
+        approvedAt: expect.any(String),
+      });
+      expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
+        'head-session',
+        expect.stringContaining('The user approved plan restart-stranded-plan'),
+        undefined,
+        undefined,
+        'child_session_event',
+        expect.stringContaining('restart-stranded-approval'),
+      );
+      expect((service as any).aiService.triggerQueuedPromptProcessingForSession)
+        .toHaveBeenCalledWith('head-session', workspacePath, true);
+      expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('[PlanRevive]'));
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it('revives a rejected approval with feedback left behind when the app restarts', async () => {
+    await seedRespondedPlanApproval({
+      requestId: 'restart-stranded-rejection',
+      planId: 'restart-stranded-rejection-plan',
+      approved: false,
+      feedback: 'Split the dispatch work before approval.',
+    });
+
+    await service.start((service as any).aiService);
+    await service.reviveRespondedPlanApprovalsOnBoot();
+
+    await expect(readTestPlanApprovalState(
+      'head-session',
+      'restart-stranded-rejection',
+    )).resolves.toMatchObject({
+      status: 'closed',
+      decision: 'rejected',
+      feedback: 'Split the dispatch work before approval.',
+      deliveryMethod: 'revive',
+    });
+    const { rows: planRows } = await db.query<{ data: unknown }>(
+      `SELECT data FROM tracker_items WHERE id = $1`,
+      ['restart-stranded-rejection-plan'],
+    );
+    expect(parseStoredJson<any>(planRows[0].data)).toMatchObject({
+      status: 'in-review',
+      lastReviewFeedback: 'Split the dispatch work before approval.',
+    });
+    expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
+      'head-session',
+      expect.stringContaining('Split the dispatch work before approval.'),
+      undefined,
+      undefined,
+      'child_session_event',
+      expect.stringContaining('restart-stranded-rejection'),
+    );
+    expect((service as any).aiService.triggerQueuedPromptProcessingForSession)
+      .toHaveBeenCalledWith('head-session', workspacePath, true);
   });
 
   it.each([
