@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { Provider, createStore } from 'jotai';
 import { MetaAgentMode } from '../MetaAgentMode';
 
@@ -44,12 +44,24 @@ function makeSpawnedSession(status: string, sessionId: string) {
 
 beforeEach(() => {
   invoke.mockReset();
-  invoke.mockResolvedValue({
-    success: true,
-    sessions: [
-      makeSpawnedSession('running', 'running-1'),
-      makeSpawnedSession('queued', 'queued-1'),
-    ],
+  invoke.mockImplementation((channel: string) => {
+    if (channel === 'sessions:get') {
+      return Promise.resolve({
+        success: true,
+        session: {
+          id: 'meta-1',
+          agentRole: 'meta-agent',
+          isArchived: false,
+        },
+      });
+    }
+    return Promise.resolve({
+      success: true,
+      sessions: [
+        makeSpawnedSession('running', 'running-1'),
+        makeSpawnedSession('queued', 'queued-1'),
+      ],
+    });
   });
   Object.defineProperty(window, 'electronAPI', {
     configurable: true,
@@ -70,6 +82,43 @@ afterEach(() => {
 });
 
 describe('MetaAgentMode queued summary', () => {
+  it('does not expose delegated sessions or a meta-agent badge for a standard session', async () => {
+    invoke.mockImplementation((channel: string) => {
+      if (channel === 'sessions:get') {
+        return Promise.resolve({
+          success: true,
+          session: {
+            id: 'standard-1',
+            agentRole: 'standard',
+            isArchived: false,
+          },
+        });
+      }
+      return Promise.resolve({ success: true, sessions: [] });
+    });
+
+    render(
+      <Provider store={createStore()}>
+        <MetaAgentMode workspacePath="/workspace" sessionId="standard-1" />
+      </Provider>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Unable to initialize meta-agent mode.')).toBeTruthy());
+    expect(screen.queryByTestId('meta-agent-dashboard')).toBeNull();
+    expect(screen.queryByTestId('meta-agent-identity-badge')).toBeNull();
+  });
+
+  it('shows the delegated panel and identity badge only for a verified meta-agent session', async () => {
+    render(
+      <Provider store={createStore()}>
+        <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
+      </Provider>,
+    );
+
+    expect(await screen.findByTestId('meta-agent-dashboard')).toBeTruthy();
+    expect(screen.getByTestId('meta-agent-identity-badge').textContent).toBe('META AGENT');
+  });
+
   it('shows queued delegated sessions in the summary', async () => {
     render(
       <Provider store={createStore()}>
@@ -83,9 +132,21 @@ describe('MetaAgentMode queued summary', () => {
   });
 
   it('hides the queued summary when no delegated session is queued', async () => {
-    invoke.mockResolvedValueOnce({
-      success: true,
-      sessions: [makeSpawnedSession('running', 'running-only')],
+    invoke.mockImplementation((channel: string) => {
+      if (channel === 'sessions:get') {
+        return Promise.resolve({
+          success: true,
+          session: {
+            id: 'meta-1',
+            agentRole: 'meta-agent',
+            isArchived: false,
+          },
+        });
+      }
+      return Promise.resolve({
+        success: true,
+        sessions: [makeSpawnedSession('running', 'running-only')],
+      });
     });
 
     render(
@@ -99,9 +160,21 @@ describe('MetaAgentMode queued summary', () => {
   });
 
   it('renders interrupted delegated sessions with the warning tone', async () => {
-    invoke.mockResolvedValueOnce({
-      success: true,
-      sessions: [makeSpawnedSession('interrupted', 'interrupted-1')],
+    invoke.mockImplementation((channel: string) => {
+      if (channel === 'sessions:get') {
+        return Promise.resolve({
+          success: true,
+          session: {
+            id: 'meta-1',
+            agentRole: 'meta-agent',
+            isArchived: false,
+          },
+        });
+      }
+      return Promise.resolve({
+        success: true,
+        sessions: [makeSpawnedSession('interrupted', 'interrupted-1')],
+      });
     });
 
     render(

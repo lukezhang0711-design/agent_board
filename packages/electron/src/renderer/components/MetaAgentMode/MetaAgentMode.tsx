@@ -191,9 +191,9 @@ export function MetaAgentMode({
 }: MetaAgentModeProps) {
   const defaultModel = useAtomValue(defaultAgentModelAtom);
   const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
-  const [metaSessionId, setMetaSessionId] = useState<string | null>(externalSessionId ?? null);
+  const [metaSessionId, setMetaSessionId] = useState<string | null>(null);
   const [planAutoApproveEnabled, setPlanAutoApproveEnabled] = useState(false);
-  const [loadingSession, setLoadingSession] = useState(!externalSessionId);
+  const [loadingSession, setLoadingSession] = useState(true);
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [childSessions, setChildSessions] = useState<SpawnedSessionSummary[]>([]);
   const [showTimeline, setShowTimeline] = useState(false);
@@ -207,6 +207,7 @@ export function MetaAgentMode({
   );
 
   const ensureMetaSession = useCallback(async () => {
+    setMetaSessionId(null);
     setLoadingSession(true);
     try {
       const existing = await window.electronAPI.invoke('sessions:list', workspacePath, { includeArchived: false });
@@ -283,23 +284,48 @@ export function MetaAgentMode({
     }
   }, [metaSessionId, refreshSpawnedSessions, workspacePath]);
 
-  // When an external sessionId is provided, sync it; otherwise find/create one
+  // When an external sessionId is provided, verify it against the durable
+  // session row before exposing the meta-agent surface. The parent normally
+  // routes by the registry role, but this boundary check prevents a stale or
+  // optimistic renderer entry from granting a standard session commander UI.
   useEffect(() => {
     if (externalSessionId) {
-      setMetaSessionId(externalSessionId);
-      setLoadingSession(false);
-      return;
+      let disposed = false;
+      setMetaSessionId(null);
+      setLoadingSession(true);
+
+      void window.electronAPI.invoke('sessions:get', externalSessionId)
+        .then((result) => {
+          if (disposed) return;
+          const session = result?.success ? result.session : null;
+          const isMetaAgent = session?.agentRole === 'meta-agent' && session?.isArchived !== true;
+          setMetaSessionId(isMetaAgent ? externalSessionId : null);
+        })
+        .catch((error) => {
+          if (!disposed) {
+            console.error('[MetaAgentMode] Failed to verify session role:', error);
+            setMetaSessionId(null);
+          }
+        })
+        .finally(() => {
+          if (!disposed) setLoadingSession(false);
+        });
+
+      return () => {
+        disposed = true;
+      };
     }
     void ensureMetaSession();
+    return undefined;
   }, [externalSessionId, ensureMetaSession]);
 
   useEffect(() => {
-    if (!metaSessionId) {
+    if (!metaSessionId || loadingSession) {
       setChildSessions([]);
       return;
     }
     void refreshSpawnedSessions(metaSessionId);
-  }, [metaSessionId, refreshSpawnedSessions]);
+  }, [loadingSession, metaSessionId, refreshSpawnedSessions]);
 
   useEffect(() => {
     let disposed = false;
@@ -464,6 +490,13 @@ export function MetaAgentMode({
   return (
     <div className="meta-agent-mode relative flex-1 flex min-h-0" data-testid="meta-agent-mode">
       <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden border-r border-nim">
+        <div
+          className="meta-agent-identity-badge shrink-0 self-start m-3 rounded-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-2.5 py-1 text-[11px] font-bold tracking-[0.12em] text-[var(--nim-primary)]"
+          data-testid="meta-agent-identity-badge"
+          aria-label="META AGENT"
+        >
+          META AGENT
+        </div>
         {planAutoApproveEnabled && (
           <div data-testid="meta-agent-test-mode-badge" className="shrink-0 bg-amber-500 px-3 py-1 text-center text-xs font-semibold text-amber-950">
             测试模式：方案将自动批准
