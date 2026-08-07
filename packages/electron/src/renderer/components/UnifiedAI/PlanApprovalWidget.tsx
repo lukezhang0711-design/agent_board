@@ -14,6 +14,7 @@ import {
   planApprovalStateAtom,
   refreshPlanApprovalStateAtom,
 } from '../../store/atoms/sessions';
+import { isImeCompositionActive } from '../../utils/imeEventTrace';
 
 interface SubmittedPlanArgs {
   planId: string;
@@ -97,6 +98,7 @@ const SubmittedPlanApprovalCard: React.FC<{
     feedback?: string;
   } | null>(null);
   const feedbackInputRef = useRef<HTMLTextAreaElement>(null);
+  const feedbackCompositionRef = useRef(false);
   const stateReadErrorLoggedRef = useRef(false);
 
   useEffect(() => {
@@ -302,7 +304,16 @@ const SubmittedPlanApprovalCard: React.FC<{
                   data-testid="plan-approval-feedback-input"
                   value={feedback}
                   onChange={(event) => setFeedback(event.target.value)}
+                  onCompositionStart={() => {
+                    feedbackCompositionRef.current = true;
+                  }}
+                  onCompositionEnd={() => {
+                    feedbackCompositionRef.current = false;
+                  }}
                   onKeyDown={(event) => {
+                    if (isImeCompositionActive(event.nativeEvent, feedbackCompositionRef.current)) {
+                      return;
+                    }
                     if (event.key === 'Enter' && !event.shiftKey) {
                       event.preventDefault();
                       void handleRequestChanges();

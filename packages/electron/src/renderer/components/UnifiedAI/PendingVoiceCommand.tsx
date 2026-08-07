@@ -9,6 +9,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAtom } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { pendingVoiceCommandAtom } from '../../store/atoms/voiceModeState';
+import { isImeCompositionActive } from '../../utils/imeEventTrace';
 
 // Global set of submitted command IDs to prevent duplicate submissions across component instances
 const globalSubmittedCommands = new Set<string>();
@@ -24,6 +25,7 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
   const [editedPrompt, setEditedPrompt] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isComposingRef = useRef(false);
 
   // Initialize edited prompt when pending command changes
   useEffect(() => {
@@ -110,6 +112,9 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
 
   // Handle keyboard shortcuts in textarea
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (isImeCompositionActive(e.nativeEvent, isComposingRef.current)) {
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -160,6 +165,12 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
           onChange={(e) => setEditedPrompt(e.target.value)}
           onFocus={() => setIsEditing(true)}
           onBlur={handleTextareaBlur}
+          onCompositionStart={() => {
+            isComposingRef.current = true;
+          }}
+          onCompositionEnd={() => {
+            isComposingRef.current = false;
+          }}
           onKeyDown={handleKeyDown}
           className="w-full min-h-[60px] py-2.5 px-3 border border-nim rounded-md bg-nim-secondary text-nim font-inherit text-sm leading-normal resize-none transition-[border-color] duration-150"
           placeholder="Voice command..."

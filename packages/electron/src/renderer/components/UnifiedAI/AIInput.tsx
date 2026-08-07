@@ -39,6 +39,7 @@ import type { AIInputSnapshot } from '../../store/atoms/aiInputUndo';
 import { STOP_KEEP_QUEUE_ARIA_LABEL, STOP_KEEP_QUEUE_TITLE } from './stopCopy';
 import {
   IME_EVENT_TRACE_ENABLED,
+  isImeCompositionActive,
   traceImeBeforeInput,
   traceImeCompositionEvent,
   traceImeInput,
@@ -718,7 +719,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
     }, [typeaheadMatch, value, onChange, pushSnapshot, captureSnapshot]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) {
+      if (isImeCompositionActive(e.nativeEvent, isComposingRef.current)) {
         if (IME_EVENT_TRACE_ENABLED) {
           traceImeKeyDown('AIInput', e.nativeEvent, value, 'ime-composition-guard');
         }
