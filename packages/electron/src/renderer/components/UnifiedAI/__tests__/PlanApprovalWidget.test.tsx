@@ -105,6 +105,47 @@ describe('PlanApprovalWidget', () => {
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
   });
 
+  it('marks a submitted plan as a commander approval only for a meta-agent session', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      success: true,
+      session: {
+        id: sessionId,
+        agentRole: 'meta-agent',
+        isArchived: false,
+      },
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { invoke },
+    });
+
+    renderWidget(planArguments);
+
+    expect(await screen.findByTestId('meta-agent-plan-marker')).toBeTruthy();
+  });
+
+  it('does not attach the commander marker to a standard submitted plan', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      success: true,
+      session: {
+        id: sessionId,
+        agentRole: 'standard',
+        isArchived: false,
+      },
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { invoke },
+    });
+
+    renderWidget(planArguments);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('plan-approval-widget').getAttribute('data-agent-role')).toBe('standard');
+    });
+    expect(screen.queryByTestId('meta-agent-plan-marker')).toBeNull();
+  });
+
   it('renders a native Claude Head plan summary in the existing approval card', () => {
     renderWidget({
       ...planArguments,
@@ -318,5 +359,6 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getByText('Ready to exit planning mode?')).toBeTruthy();
     expect(screen.getByText('Would you like to proceed?')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Approve plan' })).toBeNull();
+    expect(screen.queryByTestId('meta-agent-plan-marker')).toBeNull();
   });
 });

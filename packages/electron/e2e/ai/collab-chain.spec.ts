@@ -411,6 +411,7 @@ async function waitForPendingApprovalCard(sessionId: string): Promise<Locator> {
     card = page.locator('[data-testid="plan-approval-widget"][data-state="pending"]').last();
   }
   await expect(card).toBeVisible({ timeout: 10_000 });
+  await expect(card.getByTestId('meta-agent-plan-marker')).toBeVisible({ timeout: 10_000 });
   return card;
 }
 
@@ -495,7 +496,8 @@ async function getWorkOrderStatus(sessionId: string): Promise<string | null> {
   return typeof data?.status === 'string' ? data.status : null;
 }
 
-test.beforeAll(async () => {
+test.beforeAll(async ({}, testInfo) => {
+  testInfo.setTimeout(120_000);
   scriptedProvider = new ScriptedCollaborationProvider();
   await scriptedProvider.start();
 
@@ -544,6 +546,47 @@ test.afterAll(async () => {
   if (workspacePath) {
     await fs.rm(workspacePath, { recursive: true, force: true }).catch(() => undefined);
   }
+});
+
+test('creates a real meta-agent session from the New Meta Agent renderer entry point', async () => {
+  const beforeRows = await queryDb<{ count: string | number }>(
+    page,
+    `SELECT COUNT(*) AS count
+       FROM ai_sessions
+      WHERE workspace_id = $1`,
+    [workspacePath],
+  );
+  const beforeCount = Number(beforeRows[0]?.count ?? 0);
+
+  await page.getByTestId('new-dropdown-button').click();
+  const newMetaAgentButton = page.getByTestId('new-meta-agent-button');
+  await expect(newMetaAgentButton).toBeVisible();
+  await newMetaAgentButton.click();
+
+  await expect.poll(
+    async () => {
+      const rows = await queryDb<{ count: string | number }>(
+        page,
+        `SELECT COUNT(*) AS count
+           FROM ai_sessions
+          WHERE workspace_id = $1`,
+        [workspacePath],
+      );
+      return Number(rows[0]?.count ?? 0);
+    },
+    { timeout: 10_000 },
+  ).toBe(beforeCount + 1);
+
+  const createdRows = await queryDb<{ id: string; agent_role: string }>(
+    page,
+    `SELECT id, agent_role
+       FROM ai_sessions
+      WHERE workspace_id = $1
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [workspacePath],
+  );
+  expect(createdRows[0]).toMatchObject({ agent_role: 'meta-agent' });
 });
 
 test('replays the approved collaboration chain through real IPC, durable state, dispatch gates, and renderer events', async () => {

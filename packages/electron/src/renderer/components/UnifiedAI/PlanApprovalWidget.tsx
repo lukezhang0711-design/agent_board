@@ -30,6 +30,7 @@ const PLAN_APPROVAL_WIDGET_SOURCE = 'nimbalyst:electron-plan-approval';
 // is not a confirmation that the waiting Head turn consumed it.
 const DURABLE_CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
 const DURABLE_STATE_POLL_INTERVAL_MS = 500;
+type SessionAgentRole = 'standard' | 'meta-agent' | null;
 
 function getSubmittedPlanArgs(value: unknown): SubmittedPlanArgs | null {
   if (!value || typeof value !== 'object') return null;
@@ -60,6 +61,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   const toolCall = message.toolCall!;
 
   const host = useAtomValue(interactiveWidgetHostAtom(sessionId));
+  const [agentRole, setAgentRole] = useState<SessionAgentRole>(null);
   const requestId = toolCall.providerToolCallId?.trim() || null;
   const title = typeof args.title === 'string' && args.title.trim()
     ? args.title.trim()
@@ -100,6 +102,28 @@ const SubmittedPlanApprovalCard: React.FC<{
   const feedbackInputRef = useRef<HTMLTextAreaElement>(null);
   const feedbackCompositionRef = useRef(false);
   const stateReadErrorLoggedRef = useRef(false);
+
+  useEffect(() => {
+    let disposed = false;
+    const invoke = window.electronAPI?.invoke;
+    if (!invoke) return undefined;
+
+    void invoke('sessions:get', sessionId)
+      .then((result) => {
+        if (disposed) return;
+        const role = result?.success && result.session?.agentRole === 'meta-agent'
+          ? 'meta-agent'
+          : 'standard';
+        setAgentRole(role);
+      })
+      .catch(() => {
+        if (!disposed) setAgentRole(null);
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [sessionId]);
 
   useEffect(() => {
     if (showFeedbackInput) feedbackInputRef.current?.focus();
@@ -212,11 +236,23 @@ const SubmittedPlanApprovalCard: React.FC<{
     <div
       data-testid="plan-approval-widget"
       data-state={displayResult ?? (isPending ? 'pending' : 'completed')}
+      data-agent-role={agentRole ?? 'unverified'}
       className="plan-approval-widget rounded-lg overflow-hidden border border-nim-primary bg-nim-secondary"
     >
       <div className="flex items-start gap-3 px-4 py-3 border-b border-nim bg-nim-tertiary">
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-nim mb-1">Plan approval</div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="text-xs font-medium text-nim">Plan approval</div>
+            {agentRole === 'meta-agent' && (
+              <span
+                className="meta-agent-plan-marker rounded-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-[var(--nim-primary)]"
+                data-testid="meta-agent-plan-marker"
+                aria-label="META AGENT"
+              >
+                META AGENT
+              </span>
+            )}
+          </div>
           <div className="text-sm font-semibold text-nim">{title}</div>
         </div>
         <span className="text-xs text-nim-muted shrink-0">
