@@ -28,6 +28,7 @@ vi.mock('@nimbalyst/runtime/ai/server/SessionStateManager', () => ({
 
 vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] },
+  app: { on: vi.fn(), getAppPath: () => '/', isPackaged: false },
 }));
 
 const mockPushChange = vi.fn();
@@ -35,7 +36,7 @@ vi.mock('../SyncManager', () => ({
   getSyncProvider: () => ({ pushChange: mockPushChange }),
 }));
 
-vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
+vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn(), safeOn: vi.fn() }));
 vi.mock('../../utils/store', () => ({ getDefaultAIModel: () => null }));
 vi.mock('../../utils/timestampUtils', () => ({ toMillis: (v: unknown) => v }));
 vi.mock('../WorktreeStore', () => ({ createWorktreeStore: vi.fn() }));
@@ -43,7 +44,10 @@ vi.mock('../GitWorktreeService', () => ({ GitWorktreeService: class {} }));
 vi.mock('../../database/PGLiteDatabaseWorker', () => ({ database: { query: vi.fn() } }));
 vi.mock('../../database/initialize', () => ({ getDatabase: () => null }));
 vi.mock('../../file/GitRefWatcher', () => ({ gitRefWatcher: {} }));
-vi.mock('./ai/AIService', () => ({ AIService: class {} }));
+vi.mock('../ai/AIService', () => ({
+  AIService: class {},
+  normalizePlanApprovalRequestId: (requestId: string) => requestId,
+}));
 vi.mock('../../mcp/metaAgentServer', () => ({
   startMetaAgentServer: vi.fn(),
   setMetaAgentToolFns: vi.fn(),

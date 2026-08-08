@@ -77,10 +77,11 @@ vi.mock('../ai/providerResolution', () => ({
 
 vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] },
+  app: { on: vi.fn(), getAppPath: () => '/', isPackaged: false },
 }));
 
 vi.mock('../SyncManager', () => ({ getSyncProvider: () => ({ pushChange: vi.fn() }) }));
-vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn() }));
+vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn(), safeOn: vi.fn() }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
   store: { get: appStoreMock.get },
@@ -96,7 +97,10 @@ vi.mock('../../database/PGLiteDatabaseWorker', () => ({
 }));
 vi.mock('../../database/initialize', () => ({ getDatabase: () => null }));
 vi.mock('../../file/GitRefWatcher', () => ({ gitRefWatcher: {} }));
-vi.mock('./ai/AIService', () => ({ AIService: class {} }));
+vi.mock('../ai/AIService', () => ({
+  AIService: class {},
+  normalizePlanApprovalRequestId: (requestId: string) => requestId,
+}));
 vi.mock('../../mcp/metaAgentServer', () => ({
   startMetaAgentServer: vi.fn(),
   setMetaAgentToolFns: vi.fn(),

@@ -52,12 +52,14 @@ vi.mock('electron', () => ({
       },
     }],
   },
+  app: { on: vi.fn(), getAppPath: () => '/', isPackaged: false },
 }));
 vi.mock('../SyncManager', () => ({ getSyncProvider: () => null }));
 vi.mock('../../utils/ipcRegistry', () => ({
   safeHandle: vi.fn((channel: string, handler: (...args: any[]) => any) => {
     testState.ipcHandlers.set(channel, handler);
   }),
+  safeOn: vi.fn(),
 }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
@@ -76,7 +78,10 @@ vi.mock('../../database/PGLiteDatabaseWorker', () => ({
 }));
 vi.mock('../../database/initialize', () => ({ getDatabase: () => testState.db }));
 vi.mock('../../file/GitRefWatcher', () => ({ gitRefWatcher: {} }));
-vi.mock('../ai/AIService', () => ({ AIService: class {} }));
+vi.mock('../ai/AIService', () => ({
+  AIService: class {},
+  normalizePlanApprovalRequestId: (requestId: string) => requestId,
+}));
 vi.mock('../../mcp/metaAgentServer', () => ({
   startMetaAgentServer: vi.fn().mockResolvedValue({ port: 49152 }),
   setMetaAgentToolFns: vi.fn((toolFns: unknown) => {
@@ -135,6 +140,7 @@ describe('MetaAgentService work-order persistence', () => {
   const service = MetaAgentService.getInstance();
   let dbDir: string;
   let db: SQLiteDatabase;
+  let replacementServices: MetaAgentService[] = [];
 
   const parseStoredJson = <T = Record<string, unknown>>(value: unknown): T =>
     (typeof value === 'string' ? JSON.parse(value) : value) as T;
@@ -389,6 +395,7 @@ describe('MetaAgentService work-order persistence', () => {
     testState.nativeHeadPlanApprovalHandler = null;
     testState.maxParallel = 4;
     testState.sentIpc = [];
+    replacementServices = [];
     AISessionsRepository.setStore(createPGLiteSessionStore(db));
     AgentMessagesRepository.setStore(createPGLiteAgentMessagesStore(db));
     (service as any).notificationSignatures.clear();
@@ -438,6 +445,11 @@ describe('MetaAgentService work-order persistence', () => {
   });
 
   afterEach(async () => {
+    for (const replacementService of replacementServices) {
+      if ((replacementService as any).started) {
+        await replacementService.shutdown();
+      }
+    }
     if ((service as any).started) {
       await service.shutdown();
     }
@@ -2400,6 +2412,118 @@ describe('MetaAgentService work-order persistence', () => {
     } finally {
       infoSpy.mockRestore();
     }
+  });
+
+  it.each([
+    { approved: true, decision: 'approved', feedback: undefined },
+    { approved: false, decision: 'rejected', feedback: 'Split the dispatch work before approval.' },
+  ])('revives at the live settlement seam after the original waiter is replaced ($decision)', async ({
+    approved,
+    decision,
+    feedback,
+  }) => {
+    const submitPlan = await getSubmitPlanTool();
+    const requestId = '33292f31-5381-41a3-b5ce-d60e6e5ba87e';
+    const abandonedSubmission = submitPlan('head-session', workspacePath, {
+      title: 'Reproduce live restart settlement',
+      planItems: ['Persist the submitted plan', 'Approve after the process is replaced'],
+      workOrderCount: 1,
+      risks: 'The old process no longer owns the approval waiter.',
+    }, undefined, { requestId, resolveOriginalMcpCall: () => false });
+    const prompt = await waitForPlanApprovalPrompt();
+
+    // Reproduce DP3: the old process dies with only durable submitted state
+    // surviving. The old promise must not be allowed to settle this test's
+    // response after the replacement process takes over.
+    await service.shutdown();
+    (service as any).aiService = null;
+    await expect(abandonedSubmission).rejects.toThrow();
+    await expect(readTestPlanApprovalState('head-session', prompt.requestId)).resolves.toMatchObject({
+      status: 'submitted',
+    });
+
+    const replacementAiService = {
+      queuePromptForSession: vi.fn(async (_sessionId: string, promptText: string) => ({
+        id: 'restarted-live-revive',
+        prompt: promptText,
+        createdAt: Date.now(),
+      })),
+      triggerQueuedPromptProcessingForSession: vi.fn().mockResolvedValue(true),
+      getPlanApprovalState: vi.fn(readTestPlanApprovalState),
+      markPlanApprovalDelivered: vi.fn(async (
+        sessionId: string,
+        requestId: string,
+        method: 'direct' | 'revive',
+      ) => {
+        const current = await readTestPlanApprovalState(sessionId, requestId);
+        if (current?.status === 'responded') {
+          await AgentMessagesRepository.create({
+            sessionId,
+            source: 'nimbalyst',
+            direction: 'output',
+            content: JSON.stringify({
+              type: 'plan_approval_delivery',
+              requestId,
+              method,
+              deliveredAt: Date.now(),
+            }),
+            createdAt: new Date(),
+            hidden: true,
+          });
+        }
+        return readTestPlanApprovalState(sessionId, requestId);
+      }),
+      respondToInteractivePrompt: vi.fn(async ({ promptId, response }: any) => {
+        await persistPlanApprovalResponse(promptId, response.approved, response.feedback);
+        // The replacement process has no valid in-memory provider waiter. The
+        // durable response is written, but the base settlement reports the
+        // same miss that the real restarted process can report.
+        return {
+          success: false,
+          error: 'ExitPlanMode approval is no longer active; retry the response',
+        };
+      }),
+    };
+    const replacementService = new (MetaAgentService as any)() as MetaAgentService;
+    replacementServices.push(replacementService);
+    await replacementService.start(replacementAiService as any);
+
+    const settlement = await replacementAiService.respondToInteractivePrompt({
+      sessionId: 'head-session',
+      promptId: prompt.requestId,
+      promptType: 'exit_plan_mode_request',
+      response: { approved, feedback },
+      respondedBy: 'desktop',
+    });
+
+    expect(settlement).toMatchObject({
+      success: true,
+      planApprovalState: { status: 'closed', deliveryMethod: 'revive' },
+    });
+    await expect(readTestPlanApprovalState('head-session', prompt.requestId)).resolves.toMatchObject({
+      status: 'closed',
+      decision,
+      deliveryMethod: 'revive',
+      ...(feedback ? { feedback } : {}),
+    });
+    expect(replacementAiService.queuePromptForSession).toHaveBeenCalledWith(
+      'head-session',
+      expect.stringContaining(approved ? 'The user approved plan' : 'The user requested changes to plan'),
+      undefined,
+      undefined,
+      'child_session_event',
+      expect.stringContaining(prompt.requestId),
+    );
+    expect(replacementAiService.triggerQueuedPromptProcessingForSession)
+      .toHaveBeenCalledWith('head-session', workspacePath, true);
+    const { rows: planRows } = await db.query<{ data: unknown }>(
+      `SELECT data FROM tracker_items WHERE id = $1`,
+      [prompt.input.planId],
+    );
+    expect(parseStoredJson<any>(planRows[0].data)).toMatchObject({
+      status: approved ? 'ready-for-development' : 'in-review',
+      ...(feedback ? { lastReviewFeedback: feedback } : {}),
+    });
   });
 
   it('revives a rejected approval with feedback left behind when the app restarts', async () => {
