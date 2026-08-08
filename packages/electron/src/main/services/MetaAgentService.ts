@@ -17,6 +17,7 @@ import { getDatabase } from '../database/initialize';
 import { gitRefWatcher } from '../file/GitRefWatcher';
 import {
   AIService,
+  normalizePlanApprovalRequestId,
   type DurablePlanApprovalState,
   type PlanApprovalDeliveryMethod,
 } from './ai/AIService';
@@ -530,6 +531,9 @@ export class MetaAgentService {
   private unsubscribeStateListener: (() => void) | null = null;
   private notificationSignatures = new Map<string, string>();
   private interruptedChildSessionIds = new Set<string>();
+  private activePlanApprovalWaiters = new Set<string>();
+  private planApprovalRevivePromises = new Map<string, Promise<DurablePlanApprovalState | null>>();
+  private planApprovalSettlementRestore: (() => void) | null = null;
   // A completion event arrives before its queued prompt leaves `executing`.
   // Remember that exact prompt so its stale row cannot reclaim a released slot.
   private releasedDispatchPromptIdsByHead = new Map<string, Map<string, Set<string>>>();
@@ -801,6 +805,7 @@ export class MetaAgentService {
 
     this.starting = (async () => {
       this.aiService = aiService;
+      this.installPlanApprovalSettlementBridge(aiService);
       this.sessionManager = new SessionManager();
       await this.sessionManager.initialize();
 
@@ -893,6 +898,10 @@ export class MetaAgentService {
     this.unsubscribeStateListener = null;
     this.notificationSignatures.clear();
     this.interruptedChildSessionIds.clear();
+    this.activePlanApprovalWaiters.clear();
+    this.planApprovalRevivePromises.clear();
+    this.planApprovalSettlementRestore?.();
+    this.planApprovalSettlementRestore = null;
     this.releasedDispatchPromptIdsByHead.clear();
     await shutdownMetaAgentServer();
     ClaudeCodeProvider.setNativeHeadPlanApprovalHandler(null);
@@ -2044,6 +2053,125 @@ export class MetaAgentService {
     throw new Error('Timed out waiting for plan approval response');
   }
 
+  private planApprovalWaiterKey(sessionId: string, requestId: string): string {
+    return `${sessionId}\u0000${normalizePlanApprovalRequestId(requestId)}`;
+  }
+
+  private installPlanApprovalSettlementBridge(aiService: AIService): void {
+    this.planApprovalSettlementRestore?.();
+    this.planApprovalSettlementRestore = null;
+
+    const originalRespondToInteractivePrompt = aiService.respondToInteractivePrompt;
+    if (typeof originalRespondToInteractivePrompt !== 'function') {
+      return;
+    }
+
+    const boundRespondToInteractivePrompt = originalRespondToInteractivePrompt.bind(aiService);
+    const bridgedRespondToInteractivePrompt: AIService['respondToInteractivePrompt'] = async (params) => {
+      const result = await boundRespondToInteractivePrompt(params);
+      if (params.promptType !== 'exit_plan_mode_request') {
+        return result;
+      }
+
+      const waiterKey = this.planApprovalWaiterKey(params.sessionId, params.promptId);
+      if (this.activePlanApprovalWaiters.has(waiterKey)) {
+        return result;
+      }
+
+      const state = result.planApprovalState?.status === 'responded'
+        ? result.planApprovalState
+        : await aiService.getPlanApprovalState(params.sessionId, params.promptId);
+      if (
+        !state
+        || state.status !== 'responded'
+        || !state.decision
+        || !state.planId?.trim()
+      ) {
+        return result;
+      }
+
+      const closedState = await this.reviveRespondedPlanApproval(params.sessionId, state);
+      return closedState
+        ? {
+            ...result,
+            success: true,
+            error: undefined,
+            planApprovalState: closedState,
+          }
+        : result;
+    };
+
+    aiService.respondToInteractivePrompt = bridgedRespondToInteractivePrompt;
+    this.planApprovalSettlementRestore = () => {
+      if (aiService.respondToInteractivePrompt === bridgedRespondToInteractivePrompt) {
+        aiService.respondToInteractivePrompt = originalRespondToInteractivePrompt;
+      }
+    };
+  }
+
+  private async reviveRespondedPlanApproval(
+    sessionId: string,
+    state: DurablePlanApprovalState,
+  ): Promise<DurablePlanApprovalState | null> {
+    const planId = state.planId?.trim();
+    if (!this.aiService || !state.decision || !planId || state.status !== 'responded') {
+      return null;
+    }
+
+    const key = this.planApprovalWaiterKey(sessionId, state.requestId);
+    const existing = this.planApprovalRevivePromises.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const aiService = this.aiService;
+    const revivePromise = (async (): Promise<DurablePlanApprovalState | null> => {
+      const session = await AISessionsRepository.get(sessionId);
+      if (!session || session.agentRole !== 'meta-agent' || !session.workspacePath) {
+        return null;
+      }
+
+      const response: PlanApprovalResponse = {
+        approved: state.decision === 'approved',
+        decision: state.decision,
+        feedback: state.feedback,
+        respondedAt: state.respondedAt,
+        respondedBy: state.respondedBy,
+      };
+      await this.assertCurrentPlanApprovalRequest(planId, state.requestId);
+      await this.finalizePlanApproval(
+        session.workspacePath,
+        planId,
+        state.requestId,
+        response,
+      );
+      const method = await this.deliverPlanApprovalResponse(
+        sessionId,
+        session.workspacePath,
+        planId,
+        state.requestId,
+        response,
+        'revive',
+      );
+      const closedState = await aiService.getPlanApprovalState(sessionId, state.requestId);
+      if (!closedState || closedState.status !== 'closed') {
+        throw new Error(`Failed to close plan approval ${state.requestId} after revive`);
+      }
+      console.info(
+        `[PlanRevive] Live settlement replayed: sessionId=${sessionId}, requestId=${state.requestId}, planId=${planId}, decision=${state.decision}, status=closed, method=${method}`,
+      );
+      return closedState;
+    })();
+    this.planApprovalRevivePromises.set(key, revivePromise);
+    try {
+      return await revivePromise;
+    } finally {
+      if (this.planApprovalRevivePromises.get(key) === revivePromise) {
+        this.planApprovalRevivePromises.delete(key);
+      }
+    }
+  }
+
   private async assertCurrentPlanApprovalRequest(planId: string, requestId: string): Promise<void> {
     const { rows } = await databaseWorker.query<{ data: unknown }>(
       `SELECT data
@@ -2197,11 +2325,6 @@ export class MetaAgentService {
     for (const candidate of candidates.values()) {
       let planId = 'unknown';
       try {
-        const session = await AISessionsRepository.get(candidate.sessionId);
-        if (!session || session.agentRole !== 'meta-agent' || !session.workspacePath) {
-          continue;
-        }
-
         const state = await this.aiService.getPlanApprovalState(
           candidate.sessionId,
           candidate.requestId,
@@ -2217,32 +2340,13 @@ export class MetaAgentService {
 
         planId = state.planId;
         respondedCount += 1;
-        const response: PlanApprovalResponse = {
-          approved: state.decision === 'approved',
-          decision: state.decision,
-          feedback: state.feedback,
-          respondedAt: state.respondedAt,
-          respondedBy: state.respondedBy,
-        };
-        await this.assertCurrentPlanApprovalRequest(state.planId, state.requestId);
-        await this.finalizePlanApproval(
-          session.workspacePath,
-          state.planId,
-          state.requestId,
-          response,
-        );
-        const method = await this.deliverPlanApprovalResponse(
-          candidate.sessionId,
-          session.workspacePath,
-          state.planId,
-          state.requestId,
-          response,
-          'revive',
-        );
-        revivedCount += 1;
-        console.info(
-          `[PlanRevive] Replayed approval: sessionId=${candidate.sessionId}, requestId=${state.requestId}, planId=${state.planId}, decision=${state.decision}, status=closed, method=${method}`,
-        );
+        const closedState = await this.reviveRespondedPlanApproval(candidate.sessionId, state);
+        if (closedState?.status === 'closed') {
+          revivedCount += 1;
+          console.info(
+            `[PlanRevive] Replayed approval: sessionId=${candidate.sessionId}, requestId=${state.requestId}, planId=${state.planId}, decision=${state.decision}, status=closed, method=${closedState.deliveryMethod ?? 'revive'}`,
+          );
+        }
       } catch (error) {
         failedCount += 1;
         console.error(
@@ -2490,23 +2594,31 @@ export class MetaAgentService {
     );
 
     const autoApproved = store.get('metaAgentPlanAutoApprove') === true;
-    if (autoApproved) {
-      const aiService = this.aiService;
-      if (!aiService) throw new Error('AI service not initialized');
-      const delivery = await aiService.respondToInteractivePrompt({
-        sessionId: metaSessionId,
-        promptId: requestId,
-        promptType: 'exit_plan_mode_request',
-        response: { approved: true },
-        respondedBy: 'desktop',
-      });
-      if (!delivery.success) throw new Error(delivery.error ?? 'Failed to auto-approve plan');
-      console.info(
-        `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=submitted, to=responded, autoApproved=true`,
-      );
+    const waiterKey = this.planApprovalWaiterKey(metaSessionId, requestId);
+    this.activePlanApprovalWaiters.add(waiterKey);
+    let response: PlanApprovalResponse;
+    try {
+      if (autoApproved) {
+        const aiService = this.aiService;
+        if (!aiService) throw new Error('AI service not initialized');
+        const delivery = await aiService.respondToInteractivePrompt({
+          sessionId: metaSessionId,
+          promptId: requestId,
+          promptType: 'exit_plan_mode_request',
+          response: { approved: true },
+          respondedBy: 'desktop',
+        });
+        if (!delivery.success) throw new Error(delivery.error ?? 'Failed to auto-approve plan');
+        console.info(
+          `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=submitted, to=responded, autoApproved=true`,
+        );
+      }
+
+      response = await this.waitForPlanApprovalResponse(metaSessionId, requestId, planId);
+    } finally {
+      this.activePlanApprovalWaiters.delete(waiterKey);
     }
 
-    const response = await this.waitForPlanApprovalResponse(metaSessionId, requestId, planId);
     const finalStatus = await this.finalizePlanApproval(
       workspaceId,
       planId,
