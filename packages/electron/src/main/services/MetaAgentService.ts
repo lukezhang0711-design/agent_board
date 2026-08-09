@@ -1873,6 +1873,48 @@ export class MetaAgentService {
     await this.dispatchQueueStore.markDispatched(item.id, child.sessionId);
   }
 
+  /**
+   * A child is not dispatched until its initial prompt has a live delivery
+   * path. `triggerQueuedPromptProcessingForSession` returns false when the
+   * queue cannot be claimed (for example, the workspace window is gone), so
+   * callers must not turn that result into a falsely-dispatched work order.
+   */
+  private async sendChildKickoff(
+    sessionId: string,
+    executionPath: string,
+    promptId?: string,
+  ): Promise<void> {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
+
+    try {
+      const triggered = await this.aiService.triggerQueuedPromptProcessingForSession(
+        sessionId,
+        executionPath,
+      );
+      if (!triggered) {
+        throw new Error(`Dispatch kickoff was not sent for child ${sessionId}: queue trigger returned false`);
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      const failureReason = reason.startsWith('Dispatch kickoff')
+        ? reason
+        : `Dispatch kickoff failed for child ${sessionId}: ${reason}`;
+      if (promptId) {
+        try {
+          const { getQueuedPromptsStore } = await import('./RepositoryManager');
+          await getQueuedPromptsStore().fail(promptId, failureReason);
+        } catch (markFailedError) {
+          console.error(`[Dispatch] failed to mark kickoff prompt ${promptId} failed:`, markFailedError);
+        }
+      }
+      throw new Error(failureReason);
+    }
+
+    console.info(`[Dispatch] kickoff sent sessionId=${sessionId}${promptId ? ` promptId=${promptId}` : ''}`);
+  }
+
   private async ensureRecoveredInitialPrompt(
     item: DispatchQueueItem,
     args: InternalCreateChildSessionArgs,
@@ -1894,14 +1936,16 @@ export class MetaAgentService {
       return;
     }
 
-    const { rows } = await databaseWorker.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count
+    const { rows } = await databaseWorker.query<{ id: string }>(
+      `SELECT id
        FROM queued_prompts
        WHERE session_id = $1 AND prompt = $2`,
       [item.reservedSessionId, initialPrompt],
     );
-    if (Number(rows[0]?.count ?? '0') === 0) {
-      await this.aiService.queuePromptForSession(item.reservedSessionId, initialPrompt);
+    let promptId = rows[0]?.id;
+    if (!promptId) {
+      const queued = await this.aiService.queuePromptForSession(item.reservedSessionId, initialPrompt);
+      promptId = queued.id;
     }
     let executionPath = item.workspaceId;
     const db = getDatabase();
@@ -1909,7 +1953,7 @@ export class MetaAgentService {
       const worktree = await createWorktreeStore(db).get(worktreeId);
       if (worktree?.path) executionPath = worktree.path;
     }
-    await this.aiService.triggerQueuedPromptProcessingForSession(item.reservedSessionId, executionPath);
+    await this.sendChildKickoff(item.reservedSessionId, executionPath, promptId);
   }
 
   private buildWorkOrderReceipt(
@@ -2888,11 +2932,13 @@ export class MetaAgentService {
     }
     const shouldBypassExecution = this.shouldBypassChildAgentExecutionForTests();
 
+    let kickoffPromptId: string | undefined;
     if (initialPrompt) {
       if (shouldBypassExecution) {
         await this.persistSyntheticInputMessage(sessionId, initialPrompt);
       } else {
-        await aiService.queuePromptForSession(sessionId, initialPrompt);
+        const queued = await aiService.queuePromptForSession(sessionId, initialPrompt);
+        kickoffPromptId = queued.id;
       }
     }
 
@@ -2922,7 +2968,7 @@ export class MetaAgentService {
     }
 
     if (initialPrompt && !shouldBypassExecution) {
-      await aiService.triggerQueuedPromptProcessingForSession(sessionId, worktreePath || workspaceId);
+      await this.sendChildKickoff(sessionId, worktreePath || workspaceId, kickoffPromptId);
     }
 
     return {
