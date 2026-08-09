@@ -329,6 +329,91 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     expect(options.systemPrompt).toContain('## Core Behavior');
   });
 
+  it('hard-stops a running SDK turn without late output or a normal completion', async () => {
+    let releaseLateChunk!: () => void;
+    const lateChunkGate = new Promise<void>((resolve) => {
+      releaseLateChunk = resolve;
+    });
+    const query = Object.assign((async function* () {
+      yield {
+        type: 'assistant',
+        uuid: 'before-stop',
+        message: { content: [{ type: 'text', text: 'before stop' }] },
+      };
+      await lateChunkGate;
+      yield {
+        type: 'assistant',
+        uuid: 'after-stop',
+        message: { content: [{ type: 'text', text: 'after stop must not escape' }] },
+      };
+      yield { type: 'result', subtype: 'success' };
+    })(), {
+      interrupt: vi.fn(async () => {}),
+      setPermissionMode: vi.fn(async () => {}),
+      setModel: vi.fn(async () => {}),
+      streamInput: vi.fn(async () => {}),
+      mcpServerStatus: vi.fn(async () => []),
+      reconnectMcpServer: vi.fn(async () => {}),
+    });
+    claudeQueryMock.mockReturnValue(query);
+
+    const provider = await createClaudeProviderProbe('standard');
+    const outputWrites = vi.fn();
+    (provider as any).logAgentMessageNonBlocking = outputWrites;
+    const turn = provider.sendMessage('stop fixture', undefined, 'stop-session', [], '/workspace');
+
+    await expect(turn.next()).resolves.toMatchObject({
+      value: { type: 'text', content: 'before stop' },
+      done: false,
+    });
+    await expect(provider.abortCurrentTurn()).resolves.toEqual({ method: 'interrupt' });
+
+    const postStopChunks: unknown[] = [];
+    let next = await turn.next();
+    while (!next.done) {
+      postStopChunks.push(next.value);
+      next = await turn.next();
+    }
+
+    expect(postStopChunks).toEqual([]);
+    expect(outputWrites).toHaveBeenCalledTimes(1);
+    expect(query.interrupt).toHaveBeenCalledTimes(1);
+    // Resolve the fixture's abandoned SDK iterator after the assertion so the
+    // test models the SDK producing a late chunk without letting it escape.
+    releaseLateChunk();
+  });
+
+  it('keeps the natural completion when it wins before a stop request', async () => {
+    const query = Object.assign((async function* () {
+      yield {
+        type: 'assistant',
+        uuid: 'natural-assistant',
+        message: { content: [{ type: 'text', text: 'naturally complete' }] },
+      };
+      yield { type: 'result', subtype: 'success' };
+    })(), {
+      interrupt: vi.fn(async () => {}),
+      setPermissionMode: vi.fn(async () => {}),
+      setModel: vi.fn(async () => {}),
+      streamInput: vi.fn(async () => {}),
+      mcpServerStatus: vi.fn(async () => []),
+      reconnectMcpServer: vi.fn(async () => {}),
+    });
+    claudeQueryMock.mockReturnValue(query);
+
+    const provider = await createClaudeProviderProbe('standard');
+    const chunks: unknown[] = [];
+    for await (const chunk of provider.sendMessage('natural fixture', undefined, 'natural-session', [], '/workspace')) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'complete', isComplete: true }),
+    ]));
+    await expect(provider.abortCurrentTurn()).resolves.toEqual({ method: 'abort' });
+    expect(query.interrupt).not.toHaveBeenCalled();
+  });
+
   it('shows that Codex app-server drops the provider tool allow/deny fields', () => {
     // Unchanged by Wave 2: Codex has native capability sandboxed to the workspace, and
     // the app-server transport never enforced allow/deny — so nothing to unlock here.

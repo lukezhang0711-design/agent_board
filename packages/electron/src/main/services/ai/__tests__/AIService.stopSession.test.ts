@@ -5,7 +5,9 @@ const mocks = vi.hoisted(() => ({
   getProvider: vi.fn(),
   getQueuedPromptsStore: vi.fn(),
   getSession: vi.fn(),
+  updateSessionMetadata: vi.fn(),
   interruptSession: vi.fn(),
+  getSessionState: vi.fn(),
   isTerminalActive: vi.fn(),
   interruptClaudeCliTurn: vi.fn(),
   writeToTerminal: vi.fn(),
@@ -39,7 +41,10 @@ vi.mock('@nimbalyst/runtime/ai/server', () => ({
 }));
 
 vi.mock('@nimbalyst/runtime', () => ({
-  AISessionsRepository: { get: mocks.getSession },
+  AISessionsRepository: {
+    get: mocks.getSession,
+    updateMetadata: mocks.updateSessionMetadata,
+  },
   DocumentContextService: class {},
   SessionFilesRepository: {},
 }));
@@ -74,6 +79,7 @@ vi.mock('electron', () => ({
 vi.mock('@nimbalyst/runtime/ai/server/SessionStateManager', () => ({
   getSessionStateManager: () => ({
     interruptSession: mocks.interruptSession,
+    getSessionState: mocks.getSessionState,
   }),
 }));
 
@@ -332,6 +338,10 @@ describe('AIService.stopSession', () => {
     const state = { running: true, visibleStatus: 'running' };
     mocks.getProvider.mockReturnValue({
       providerType: 'claude-code',
+      abortCurrentTurn: async () => {
+        state.running = false;
+        return { method: 'interrupt' as const };
+      },
       abort: () => {
         state.running = false;
       },
@@ -458,6 +468,72 @@ describe('AIService.stopSession', () => {
     expect(result).toEqual({ success: true, queue: 'paused', paused: 1 });
     expect(abort).toHaveBeenCalledTimes(1);
     expect(interruptCurrentTurn).not.toHaveBeenCalled();
+  }, 30_000);
+
+  it('uses the Claude SDK query abort path instead of the generic provider abort', async () => {
+    const store = createPGLiteQueuedPromptsStore(db);
+    await store.create({ id: 'claude-abort-queued', sessionId: 'claude-abort-1', prompt: 'next task' });
+    mocks.getQueuedPromptsStore.mockReturnValue(store);
+    mocks.getSession.mockResolvedValue({ id: 'claude-abort-1', provider: 'claude-code' });
+    const abort = vi.fn();
+    const callOrder: string[] = [];
+    const abortCurrentTurn = vi.fn(async () => {
+      callOrder.push('abortCurrentTurn');
+      return { method: 'interrupt' as const };
+    });
+    mocks.updateSessionMetadata.mockImplementationOnce(async () => {
+      callOrder.push('manual-stop-marker');
+    });
+    mocks.getProvider.mockReturnValue({
+      providerType: 'claude-code',
+      abort,
+      abortCurrentTurn,
+    });
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, {
+      analytics: { sendEvent: vi.fn() },
+      sessionsProcessingQueue: new Set(['claude-abort-1']),
+    });
+
+    const result = await service.stopSession('claude-abort-1', 'pause');
+
+    expect(result).toEqual({ success: true, queue: 'paused', paused: 1 });
+    expect(abortCurrentTurn).toHaveBeenCalledTimes(1);
+    expect(abort).not.toHaveBeenCalled();
+    expect(callOrder).toEqual(['manual-stop-marker', 'abortCurrentTurn']);
+  }, 30_000);
+
+  it('keeps a natural Claude completion when it wins the stop race', async () => {
+    const store = createPGLiteQueuedPromptsStore(db);
+    await store.create({ id: 'claude-race-queued', sessionId: 'claude-race-1', prompt: 'next task' });
+    mocks.getQueuedPromptsStore.mockReturnValue(store);
+    mocks.getSession.mockResolvedValue({ id: 'claude-race-1', provider: 'claude-code' });
+    mocks.getSessionState
+      .mockReturnValueOnce({ status: 'running' })
+      .mockReturnValueOnce(null);
+    const abortCurrentTurn = vi.fn(async () => ({ method: 'abort' as const }));
+    const abort = vi.fn();
+    mocks.getProvider.mockReturnValue({
+      providerType: 'claude-code',
+      abort,
+      abortCurrentTurn,
+    });
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, {
+      analytics: { sendEvent: vi.fn() },
+      sessionsProcessingQueue: new Set(['claude-race-1']),
+    });
+
+    await expect(service.stopSession('claude-race-1', 'pause')).resolves.toMatchObject({
+      success: true,
+      queue: 'paused',
+    });
+
+    expect(abortCurrentTurn).toHaveBeenCalledTimes(1);
+    expect(mocks.interruptSession).not.toHaveBeenCalled();
+    expect(mocks.updateSessionMetadata).toHaveBeenLastCalledWith('claude-race-1', {
+      metadata: { manualStopAt: null, interruptionReason: null },
+    });
   }, 30_000);
 
   it('waits for OpenCode server confirmation before reporting stop success', async () => {

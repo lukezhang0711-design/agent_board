@@ -3091,7 +3091,12 @@ describe('MetaAgentService work-order persistence', () => {
     await service.interruptSession('head-session', workspacePath, {
       sessionId: child.sessionId,
     });
-    expect((service as any).aiService.stopSession).toHaveBeenCalledWith(child.sessionId, 'pause');
+    expect((service as any).aiService.stopSession).toHaveBeenCalledWith(
+      child.sessionId,
+      'pause',
+      0,
+      'Interrupted by Head Agent',
+    );
     expect((service as any).aiService.stopSession).not.toHaveBeenCalledWith('head-session', expect.anything());
 
     const { rows } = await db.query<any>(
@@ -3149,6 +3154,107 @@ describe('MetaAgentService work-order persistence', () => {
       undefined,
       'child_session_event',
     );
+  });
+
+  it('records a manual owner stop without a failure receipt and reports it to Head', async () => {
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      { title: 'Manual stop history', prompt: 'Keep the partial files', planId: 'du-manual-stop-plan' },
+    );
+    const stoppedAt = '2026-08-07T12:34:56.000Z';
+    await AISessionsRepository.updateMetadata(child.sessionId, {
+      metadata: {
+        manualStopAt: stoppedAt,
+        interruptionReason: '老板手动停止',
+      },
+    });
+    const queuePromptForSession = (service as any).aiService.queuePromptForSession as ReturnType<typeof vi.fn>;
+
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:interrupted');
+    // The state event can be delivered twice; the ledger and Head notification
+    // must remain one interruption rather than becoming two attempts.
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:interrupted');
+
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE source_ref = $1`,
+      [`meta-agent-work-order:${child.sessionId}`],
+    );
+    const data = parseStoredJson<any>(rows[0].data);
+    expect(data).toMatchObject({
+      status: 'interrupted',
+      interruptionReason: '老板手动停止',
+      interruptedAt: stoppedAt,
+      attempts: [],
+    });
+    expect(data.receipt).toBeUndefined();
+    expect(data.failureClass).toBeUndefined();
+    expect(data.interruptions).toEqual([
+      expect.objectContaining({
+        reason: '老板手动停止',
+        interruptedAt: stoppedAt,
+        sessionId: child.sessionId,
+      }),
+    ]);
+    expect(queuePromptForSession).toHaveBeenCalledTimes(1);
+    expect(queuePromptForSession.mock.calls[0][1]).toEqual(expect.stringContaining('老板手动停止'));
+    expect(queuePromptForSession.mock.calls[0][1]).toEqual(expect.stringContaining(stoppedAt));
+    expect(queuePromptForSession.mock.calls[0][1]).toEqual(expect.stringContaining('Do not retry automatically'));
+  });
+
+  it('does not open RetryGate for a manually interrupted work-order', async () => {
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      { title: 'Manual stop retry gate', prompt: 'Stop before retry', planId: 'du-retry-gate-plan' },
+    );
+    await AISessionsRepository.updateMetadata(child.sessionId, {
+      metadata: {
+        manualStopAt: '2026-08-07T12:34:56.000Z',
+        interruptionReason: '老板手动停止',
+      },
+    });
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:interrupted');
+
+    await expect((service as any).assertRetryGate(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Manual stop retry gate',
+        prompt: 'Stop before retry',
+        planId: 'du-retry-gate-plan',
+      },
+      { manualRetry: false },
+    )).resolves.toBeUndefined();
+  });
+
+  it('keeps a completed work-order when a late interruption loses the settlement race', async () => {
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      { title: 'Completion race', prompt: 'Finish before stop', planId: 'du-completion-race-plan' },
+    );
+    const queuePromptForSession = (service as any).aiService.queuePromptForSession as ReturnType<typeof vi.fn>;
+
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
+    await AISessionsRepository.updateMetadata(child.sessionId, {
+      metadata: {
+        manualStopAt: '2026-08-07T12:34:56.000Z',
+        interruptionReason: '老板手动停止',
+      },
+    });
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:interrupted');
+
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE source_ref = $1`,
+      [`meta-agent-work-order:${child.sessionId}`],
+    );
+    const data = parseStoredJson<any>(rows[0].data);
+    expect(data.status).toBe('completed');
+    expect(data.receipt).toMatchObject({ outcome: 'success' });
+    expect(data.interruptedAt).toBeUndefined();
+    expect(data.interruptions).toBeUndefined();
+    expect(queuePromptForSession).toHaveBeenCalledTimes(1);
   });
 
   it('preserves the existing plan-exit card path', async () => {

@@ -988,6 +988,7 @@ export class AIService {
     sessionId: string,
     queueAction: QueueCancelAction = 'pause',
     chunksReceived: number = 0,
+    interruptionReason: string = '老板手动停止',
   ): Promise<QueueCancelResult> {
     if (!sessionId) {
       return { success: false, queue: 'unchanged', error: 'Session ID is required to cancel request' };
@@ -1006,6 +1007,9 @@ export class AIService {
       console.warn(`[AIService] Cancel failed - session not found: ${sessionId}`);
       return { success: false, queue: 'unchanged', error: 'Session not found' };
     }
+
+    const stateManager = getSessionStateManager();
+    const stateBeforeStop = stateManager.getSessionState?.(sessionId);
 
     let providerType: string;
     let cancelCurrent: () => Promise<void>;
@@ -1049,6 +1053,14 @@ export class AIService {
             if (!isOpenCodeAbortConfirmed(interruptResult)) {
               throw new Error('OpenCode server did not confirm session abort');
             }
+          } else if (session.provider === 'claude-code') {
+            if (typeof provider.abortCurrentTurn === 'function') {
+              await provider.abortCurrentTurn();
+            } else {
+              // Keep older or externally supplied providers compatible while
+              // the Claude provider uses its SDK-level hard-stop override.
+              provider.abort();
+            }
           } else {
             provider.abort();
           }
@@ -1064,6 +1076,36 @@ export class AIService {
       return { success: false, queue: 'unchanged', error: cancelErrorMessage(error) };
     }
 
+    const manualStopAt = new Date().toISOString();
+    const normalizedInterruptionReason = interruptionReason.trim() || '老板手动停止';
+    let interruptionMarkerWritten = false;
+    const clearInterruptionMarker = async (): Promise<void> => {
+      if (!interruptionMarkerWritten) return;
+      try {
+        await AISessionsRepository.updateMetadata(sessionId, {
+          metadata: { manualStopAt: null, interruptionReason: null },
+        });
+      } catch (error) {
+        logger.main.error(`[AIService] Failed to clear manual stop marker for session ${sessionId}:`, error);
+      }
+    };
+
+    try {
+      // Persist the intent before sending the engine interrupt. The SDK can
+      // settle its stream synchronously while the abort request is in flight;
+      // MetaAgentService must be able to distinguish this owner stop from an
+      // engine error when it consumes the resulting state event.
+      await AISessionsRepository.updateMetadata(sessionId, {
+        metadata: {
+          manualStopAt,
+          interruptionReason: normalizedInterruptionReason,
+        },
+      });
+      interruptionMarkerWritten = true;
+    } catch (error) {
+      logger.main.error(`[AIService] Failed to persist manual stop marker for session ${sessionId}:`, error);
+    }
+
     const result = await cancelRequestWithQueueSemantics({
       sessionId,
       queueAction,
@@ -1075,10 +1117,22 @@ export class AIService {
     });
 
     if (result.success) {
-      try {
-        await getSessionStateManager().interruptSession(sessionId);
-      } catch (error) {
-        logger.main.error(`[AIService] Failed to publish interrupted state for session ${sessionId}:`, error);
+      const stateAfterStop = stateManager.getSessionState?.(sessionId);
+      const wasActiveBeforeStop = stateBeforeStop?.status === 'running' || stateBeforeStop?.isStreaming === true;
+      const naturalCompletionWon = session.provider === 'claude-code'
+        && wasActiveBeforeStop
+        && stateAfterStop === null;
+      if (naturalCompletionWon) {
+        // The completion event removed the active state before the stop could
+        // publish interruption. Preserve that first settlement and remove the
+        // speculative manual-stop marker.
+        await clearInterruptionMarker();
+      } else {
+        try {
+          await stateManager.interruptSession(sessionId);
+        } catch (error) {
+          logger.main.error(`[AIService] Failed to publish interrupted state for session ${sessionId}:`, error);
+        }
       }
       if (hadActiveTransport) {
         this.analytics.sendEvent('ai_stream_interrupted', {
@@ -1089,6 +1143,7 @@ export class AIService {
         this.analytics.sendEvent('cancel_ai_request', { provider: providerType });
       }
     } else {
+      await clearInterruptionMarker();
       logger.main.error(
         `[AIService] Cancel failed for session ${sessionId}; queue=${result.queue}: ${result.error}`
       );
