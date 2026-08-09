@@ -230,6 +230,9 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
   // Flag: set when interrupt() is called on the lead query. After interrupt(),
   // the transport is dead and streamInput will always fail, so skip the while loop.
   private wasInterrupted: boolean = false;
+  // Hard-stop marker set by the renderer Stop action. A hard-stopped turn must
+  // not flush a normal completion or trigger a follow-up teammate turn.
+  private manualStopRequested: boolean = false;
   // Guard: prevents infinite continuation loops when the lead's turn keeps ending
   // with active teammates. Incremented on each continuation, reset when a real
   // teammate message arrives or teammates complete. Abandon after MAX_CONTINUATIONS.
@@ -563,6 +566,10 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     // Abort any existing request before starting a new one
     if (this.abortController) {
       this.abortController.abort();
+    }
+    if (!this.leadQuery) {
+      this.wasInterrupted = false;
+      this.manualStopRequested = false;
     }
 
     // Create abort controller for this request
@@ -908,7 +915,7 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
           const nextPromise = iterator.next();
           const raceResult = await Promise.race([nextPromise, interruptPromise]);
 
-          if (raceResult === 'interrupted') {
+          if (raceResult === 'interrupted' || this.wasInterrupted) {
             console.log('[CLAUDE-CODE] Interrupt signal received, breaking streaming loop');
             break;
           }
@@ -1451,7 +1458,7 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       // Check if this was a slash command that returned no output
       // This helps users understand when a command doesn't exist or failed silently
       // Skip this check if we received a compact_boundary (compact outputs via system message, not fullContent)
-      if (isSlashCommand && fullContent.trim().length === 0 && toolCallCount === 0 && !receivedCompactBoundary) {
+      if (!this.manualStopRequested && isSlashCommand && fullContent.trim().length === 0 && toolCallCount === 0 && !receivedCompactBoundary) {
         // Extract the command name from the message for the error message
         const commandMatch = message.trimStart().match(/^\/(\S+)/);
         const commandName = commandMatch ? commandMatch[1] : 'unknown';
@@ -1476,7 +1483,7 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       // duplicate yield. We only fall through to the legacy end-of-loop path
       // when no `result` chunk was ever seen (e.g. iterator closed early,
       // slash command produced no result).
-      if (!completeEmitted) {
+      if (!completeEmitted && !this.manualStopRequested) {
         // Flush all pending non-blocking DB writes before signaling completion.
         // Without this, the UI receives session:completed and reloads from DB
         // before the final messages (e.g. compact_boundary, continuation, result)
@@ -1595,11 +1602,17 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
         }
       }
 
+      if (this.manualStopRequested) {
+        // The owner explicitly stopped this turn. Do not flush output, emit an
+        // error, or manufacture a completion that would settle the work-order.
+        return;
+      }
+
       if (isAbort) {
         // Abort is expected - user cancelled, don't log as error
         await this.flushPendingWrites();
         if (sessionId) await this.processTranscriptMessages(sessionId);
-        if (!completeEmitted) {
+        if (!completeEmitted && !this.manualStopRequested) {
           yield {
             type: 'complete',
             isComplete: true
@@ -1643,13 +1656,14 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
         // delivered (e.g. teammate streamInput failure).
         await this.flushPendingWrites();
         if (sessionId) await this.processTranscriptMessages(sessionId);
-        if (!completeEmitted) {
+        if (!completeEmitted && !this.manualStopRequested) {
           yield {
             type: 'complete'
           };
         }
       }
     } finally {
+      const suppressPostTurnEffects = this.manualStopRequested && !completeEmitted;
       // Don't stop MCP health checks or clear mcpQuery between turns -
       // the SDK subprocess stays alive for session resume, so MCP operations
       // (health checks, reconnect) should keep working between turns.
@@ -1657,6 +1671,7 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       this.leadQuery = null;
       this.abortController = null;
       this.wasInterrupted = false;
+      this.manualStopRequested = false;
       this.interruptResolve = null;
       // End the persistent prompt stream so the SDK's streamInput generator
       // returns and closes the binary's stdin pipe cleanly. Safety net for
@@ -1674,7 +1689,9 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       }
       // Note: markMessagesAsHidden is reset at the START of sendMessage to prevent race conditions
 
-      this.handlePostLeadTurnTeammateState(sessionId, hideMessages);
+      if (!suppressPostTurnEffects) {
+        this.handlePostLeadTurnTeammateState(sessionId, hideMessages);
+      }
 
       this.transportDied = false;
     }
@@ -1717,6 +1734,39 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     this.stopMcpHealthChecks();
     this.mcpQuery = null;
     this.currentSessionId = undefined;
+  }
+
+  /**
+   * Hard-stop the active SDK turn for the renderer Stop action.
+   *
+   * Query.interrupt() is the SDK-level cancellation signal. The streaming
+   * loop observes the same interrupt latch and exits without flushing or
+   * yielding the normal `complete` chunk, so the cancelled turn cannot settle
+   * as a success.
+   */
+  async abortCurrentTurn(): Promise<{ method: 'interrupt' | 'abort' }> {
+    const leadQuery = this.leadQuery;
+    if (!leadQuery) {
+      const result = await super.abortCurrentTurn();
+      this.manualStopRequested = false;
+      return result;
+    }
+
+    console.log('[CLAUDE-CODE] abortCurrentTurn: aborting active lead query');
+    this.manualStopRequested = true;
+    this.wasInterrupted = true;
+    if (this.interruptResolve) {
+      this.interruptResolve();
+      this.interruptResolve = null;
+    }
+
+    try {
+      await leadQuery.interrupt();
+    } catch (err) {
+      console.warn('[CLAUDE-CODE] abortCurrentTurn: interrupt() failed (transport may be closed):', err);
+    }
+
+    return { method: 'interrupt' };
   }
 
   /**

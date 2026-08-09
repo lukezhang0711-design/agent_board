@@ -111,6 +111,12 @@ export interface AIProvider extends EventEmitter {
   interruptCurrentTurn(): Promise<{ method: 'interrupt' | 'abort' }>;
 
   /**
+   * Hard-stop the current turn. Unlike interruptCurrentTurn(), a hard stop
+   * must not manufacture a normal completion event for the cancelled turn.
+   */
+  abortCurrentTurn?(): Promise<{ method: 'interrupt' | 'abort' }>;
+
+  /**
    * Get the capabilities of this provider
    */
   getCapabilities(): ProviderCapabilities;
@@ -210,6 +216,11 @@ export abstract class BaseAIProvider extends EventEmitter implements AIProvider 
    * end).
    */
   async interruptCurrentTurn(): Promise<{ method: 'interrupt' | 'abort' }> {
+    this.abort();
+    return { method: 'abort' };
+  }
+
+  async abortCurrentTurn(): Promise<{ method: 'interrupt' | 'abort' }> {
     this.abort();
     return { method: 'abort' };
   }

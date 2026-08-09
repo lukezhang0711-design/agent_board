@@ -166,6 +166,10 @@ interface WorkOrderSettlement {
   failureReason?: string;
   failureClass?: FailureClass;
   receipt?: WorkOrderReceipt;
+  interruption?: {
+    reason: string;
+    interruptedAt: string;
+  };
 }
 
 class RetryGateDeniedError extends Error {
@@ -297,6 +301,33 @@ function appendWorkOrderAttempt(
     attempts.push(attempt);
   }
   data.attempts = attempts;
+}
+
+function appendWorkOrderInterruption(
+  data: Record<string, unknown>,
+  interruption: { reason: string; interruptedAt: string },
+  sessionId?: string,
+): void {
+  const interruptions = Array.isArray(data.interruptions)
+    ? data.interruptions.flatMap((candidate) => {
+        if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return [];
+        const record = candidate as Record<string, unknown>;
+        return typeof record.reason === 'string' && typeof record.interruptedAt === 'string'
+          ? [record]
+          : [];
+      })
+    : [];
+  const alreadyRecorded = sessionId
+    ? interruptions.some((candidate) => candidate.sessionId === sessionId)
+    : interruptions.some((candidate) =>
+        candidate.reason === interruption.reason && candidate.interruptedAt === interruption.interruptedAt);
+  if (!alreadyRecorded) {
+    interruptions.push({
+      ...interruption,
+      ...(sessionId ? { sessionId } : {}),
+    });
+  }
+  data.interruptions = interruptions;
 }
 
 interface CreateChildSessionArgs {
@@ -609,7 +640,12 @@ export class MetaAgentService {
         // canonical session:interrupted event reaches this service.
         this.interruptedChildSessionIds.add(sessionId);
       }
-      const stopResult = await this.aiService.stopSession(sessionId, queueAction);
+      const stopResult = await this.aiService.stopSession(
+        sessionId,
+        queueAction,
+        0,
+        'Interrupted by Head Agent',
+      );
       const inactiveTransport =
         stopResult.error === 'No active provider for session'
         || stopResult.error === 'No active terminal for session';
@@ -641,6 +677,12 @@ export class MetaAgentService {
             sessionId,
             'interrupted',
             'Interrupted by Head Agent',
+            {
+              interruption: {
+                reason: 'Interrupted by Head Agent',
+                interruptedAt: new Date().toISOString(),
+              },
+            },
           );
         } catch (error) {
           console.error(`[MetaAgentService] Failed to update interrupted work-order for child ${sessionId}:`, error);
@@ -793,6 +835,27 @@ export class MetaAgentService {
     }
   }
 
+  private async clearManualStopMarker(
+    sessionId: string,
+    workspacePath?: string,
+  ): Promise<void> {
+    const session = await AISessionsRepository.get(sessionId);
+    const metadata = session?.metadata;
+    if (!metadata || (
+      typeof metadata.manualStopAt !== 'string'
+      && typeof metadata.interruptionReason !== 'string'
+    )) {
+      return;
+    }
+    await AISessionsRepository.updateMetadata(sessionId, {
+      metadata: { manualStopAt: null, interruptionReason: null },
+    });
+    const refreshWorkspacePath = workspacePath ?? session.workspacePath;
+    if (refreshWorkspacePath) {
+      this.broadcastSessionListRefresh(refreshWorkspacePath, sessionId);
+    }
+  }
+
   public async start(aiService: AIService): Promise<void> {
     if (this.started) {
       return;
@@ -860,6 +923,9 @@ export class MetaAgentService {
           // interrupted in the session list or Kanban board.
           void this.clearInterruptedByHeadMarker(event.sessionId, event.workspacePath).catch((error) => {
             console.error(`[MetaAgentService] Failed to clear interrupted marker for child ${event.sessionId}:`, error);
+          });
+          void this.clearManualStopMarker(event.sessionId, event.workspacePath).catch((error) => {
+            console.error(`[MetaAgentService] Failed to clear manual stop marker for child ${event.sessionId}:`, error);
           });
           this.clearReleasedDispatchPromptsForSession(event.sessionId);
           void this.updateWorkOrderStatusForSession(event.sessionId, 'running').catch((error) => {
@@ -3266,6 +3332,20 @@ export class MetaAgentService {
       releasedHeadSessionId = session.createdBySessionId;
       slotReleased = eventType !== 'session:completed';
 
+      const sessionMetadata = (session.metadata as Record<string, unknown> | undefined) ?? {};
+      const interruption = eventType === 'session:interrupted'
+        ? {
+            reason: typeof sessionMetadata.interruptionReason === 'string'
+              && sessionMetadata.interruptionReason.trim()
+              ? sessionMetadata.interruptionReason.trim()
+              : 'Session interrupted',
+            interruptedAt: normalizeReceiptTimestamp(
+              sessionMetadata.manualStopAt,
+              new Date().toISOString(),
+            ),
+          }
+        : undefined;
+
       let terminalResult: SessionResultData | null = null;
       if (eventType === 'session:completed' || eventType === 'session:error') {
         try {
@@ -3289,7 +3369,9 @@ export class MetaAgentService {
                 failureReason ? 'failure' : 'success',
               ),
             }
-          : undefined;
+          : interruption
+            ? { interruption }
+            : undefined;
 
       const workOrderStatusByEvent: Record<typeof eventType, WorkOrderStatus> = {
         'session:completed': 'completed',
@@ -3297,16 +3379,22 @@ export class MetaAgentService {
         'session:waiting': 'waiting',
         'session:interrupted': 'interrupted',
       };
+      let workOrderUpdated = true;
       try {
-        await this.updateWorkOrderStatusForSession(
+        workOrderUpdated = await this.updateWorkOrderStatusForSession(
           sessionId,
           workOrderStatusByEvent[eventType],
-          eventType === 'session:interrupted' ? 'Session interrupted' : undefined,
+          interruption?.reason,
           settlement,
         );
       } catch (error) {
         // Tracker state is secondary to the existing Head notification path.
         console.error(`[MetaAgentService] Failed to update work-order for child ${sessionId}:`, error);
+      }
+      if (eventType === 'session:interrupted' && !workOrderUpdated) {
+        // A natural completion/error that won the race owns the terminal card
+        // and its Head notification. Do not append a later manual-stop event.
+        return;
       }
 
       const metaSession = await AISessionsRepository.get(session.createdBySessionId);
@@ -3484,6 +3572,11 @@ export class MetaAgentService {
         lines.push(`Receipt: startedAt=${receipt.startedAt} endedAt=${receipt.endedAt}`);
       }
       lines.push('Head action required: report this exact failure to the user; do not mark the work-order completed or write the child deliverable. Platform instability may be retried automatically once; your own failure must be reported and wait for the owner\'s instruction before retrying. The failed card\'s Retry button is owner authorization.');
+    }
+    if (eventType === 'session:interrupted' && settlement?.interruption) {
+      lines.push(`Interruption reason: ${settlement.interruption.reason}`);
+      lines.push(`Interrupted at: ${settlement.interruption.interruptedAt}`);
+      lines.push('Head action required: report this manual stop and timestamp to the owner. Do not retry automatically; continue or re-dispatch only after an owner dialogue instruction or the owner presses the Retry button.');
     }
     if (result.errorMessage) {
       lines.push(`Error: ${result.errorMessage}`);
@@ -4193,9 +4286,9 @@ export class MetaAgentService {
     status: WorkOrderStatus,
     interruptionReason?: string,
     settlement?: WorkOrderSettlement,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const sourceRef = `meta-agent-work-order:${sessionId}`;
-    await this.updateWorkOrderStatusBySourceRef(sourceRef, status, interruptionReason, settlement);
+    return this.updateWorkOrderStatusBySourceRef(sourceRef, status, interruptionReason, settlement);
   }
 
   private async updateWorkOrderStatusBySourceRef(
@@ -4203,7 +4296,7 @@ export class MetaAgentService {
     status: WorkOrderStatus,
     interruptionReason?: string,
     settlement?: WorkOrderSettlement,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
       `SELECT id, data
        FROM tracker_items
@@ -4213,7 +4306,7 @@ export class MetaAgentService {
     );
     const row = rows[0];
     if (!row) {
-      return;
+      return false;
     }
 
     const data = parseWorkOrderData(row.data);
@@ -4229,11 +4322,28 @@ export class MetaAgentService {
       console.warn(
         `[WorkOrderGuard] Refused completed settlement for ${sourceRef}: failureReason exists without a successful child receipt.`,
       );
-      return;
+      return false;
+    }
+    if (
+      status === 'interrupted'
+      && (data.status === 'completed' || data.status === 'failed')
+    ) {
+      return false;
     }
     data.status = settlement?.failureReason && status === 'completed' ? 'failed' : status;
-    if (interruptionReason && !data.interruptionReason) {
+    if (
+      interruptionReason
+      && (!data.interruptionReason || data.interruptionReason === 'Session interrupted')
+    ) {
       data.interruptionReason = interruptionReason;
+    }
+    if (settlement?.interruption) {
+      data.interruptedAt = settlement.interruption.interruptedAt;
+      appendWorkOrderInterruption(
+        data,
+        settlement.interruption,
+        typeof data.childSessionId === 'string' ? data.childSessionId : undefined,
+      );
     }
     if (settlement?.failureReason) {
       data.failureReason = settlement.failureReason;
@@ -4260,6 +4370,7 @@ export class MetaAgentService {
     );
 
     this.emitWorkOrderStatusChanged();
+    return true;
   }
 
   private extractLastAgentResponse(messages: Array<{ direction: string; content: string; metadata?: Record<string, unknown> | null }>, maxLength: number = 500): string | null {

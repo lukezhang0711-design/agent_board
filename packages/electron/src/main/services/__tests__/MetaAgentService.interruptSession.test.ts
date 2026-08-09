@@ -244,7 +244,7 @@ describe('MetaAgentService.interruptSession', () => {
       clearedDispatches: 1,
     });
 
-    expect(stopSession).toHaveBeenNthCalledWith(1, 'child', 'clear');
+    expect(stopSession).toHaveBeenNthCalledWith(1, 'child', 'clear', 0, 'Interrupted by Head Agent');
     expect(stopSession).toHaveBeenNthCalledWith(2, 'head', 'clear');
     expect(AISessionsRepository.updateMetadata).toHaveBeenCalledWith('queued-child', {
       metadata: { dispatchQueued: false },
@@ -296,8 +296,8 @@ describe('MetaAgentService.interruptSession', () => {
       clearedDispatches: 0,
     });
 
-    expect(stopSession).toHaveBeenNthCalledWith(1, 'cli-child', 'clear');
-    expect(stopSession).toHaveBeenNthCalledWith(2, 'cli-child', 'clear');
+    expect(stopSession).toHaveBeenNthCalledWith(1, 'cli-child', 'clear', 0, 'Interrupted by Head Agent');
+    expect(stopSession).toHaveBeenNthCalledWith(2, 'cli-child', 'clear', 0, 'Interrupted by Head Agent');
     expect(stopSession).toHaveBeenNthCalledWith(3, 'head', 'clear');
   });
 
