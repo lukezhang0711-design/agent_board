@@ -505,6 +505,99 @@ describe('MetaAgentService work-order persistence', () => {
     expect(metadata.linkedTrackerItemIds).toEqual([card.id]);
   });
 
+  it('RED FB-099: does not report dispatched when the child kickoff trigger is not delivered', async () => {
+    const bypassSpy = vi.spyOn(service as any, 'shouldBypassChildAgentExecutionForTests')
+      .mockReturnValue(false);
+    const aiService = (service as any).aiService;
+    aiService.queuePromptForSession.mockResolvedValue({
+      id: 'kickoff-prompt',
+      prompt: 'Start the delegated task now',
+      createdAt: Date.now(),
+    });
+    aiService.triggerQueuedPromptProcessingForSession.mockResolvedValue(false);
+
+    try {
+      await service.start(aiService);
+      expect(testState.metaAgentToolFns?.createSession).toBeTypeOf('function');
+      await expect(testState.metaAgentToolFns.createSession(
+        'head-session',
+        workspacePath,
+        {
+          title: 'FB-099 kickoff regression',
+          prompt: 'Start the delegated task now',
+          intent: 'investigation',
+        },
+      )).rejects.toThrow(/Dispatch kickoff was not sent/);
+
+      const { rows } = await db.query<any>(
+        `SELECT data
+         FROM tracker_items
+         WHERE source_ref LIKE 'meta-agent-work-order:%'
+         ORDER BY created DESC
+         LIMIT 1`,
+      );
+      const data = parseStoredJson<any>(rows[0].data);
+      expect(data).toMatchObject({
+        status: 'failed',
+        failureReason: expect.stringContaining('Dispatch kickoff was not sent'),
+      });
+      expect(aiService.queuePromptForSession).toHaveBeenCalledWith(
+        expect.any(String),
+        'Start the delegated task now',
+      );
+      expect(aiService.triggerQueuedPromptProcessingForSession).toHaveBeenCalledWith(
+        expect.any(String),
+        workspacePath,
+      );
+    } finally {
+      bypassSpy.mockRestore();
+    }
+  });
+
+  it('FB-099: logs the kickoff only after the queue trigger accepts the child prompt', async () => {
+    const bypassSpy = vi.spyOn(service as any, 'shouldBypassChildAgentExecutionForTests')
+      .mockReturnValue(false);
+    const logSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    try {
+      const aiService = (service as any).aiService;
+      await service.start(aiService);
+      expect(testState.metaAgentToolFns?.createSession).toBeTypeOf('function');
+      const result = JSON.parse(await testState.metaAgentToolFns.createSession(
+        'head-session',
+        workspacePath,
+        {
+          title: 'FB-099 successful kickoff',
+          prompt: 'Start the delegated task and report readiness',
+          intent: 'investigation',
+        },
+      ));
+
+      expect(result.queuedInitialPrompt).toBe(true);
+      const { rows } = await db.query<any>(
+        `SELECT data
+         FROM tracker_items
+         WHERE source_ref = $1`,
+        [`meta-agent-work-order:${result.sessionId}`],
+      );
+      expect(parseStoredJson<any>(rows[0].data)).toMatchObject({ status: 'dispatched' });
+      expect(aiService.queuePromptForSession).toHaveBeenCalledWith(
+        result.sessionId,
+        'Start the delegated task and report readiness',
+      );
+      expect(aiService.triggerQueuedPromptProcessingForSession).toHaveBeenCalledWith(
+        result.sessionId,
+        workspacePath,
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/^\[Dispatch\] kickoff sent sessionId=.* promptId=.*$/),
+      );
+    } finally {
+      logSpy.mockRestore();
+      bypassSpy.mockRestore();
+    }
+  });
+
   it('persists an explicit effort level on the real child session and the existing resolver consumes it', async () => {
     const child = JSON.parse(await (service as any).createChildSession(
       'head-session',
@@ -1248,7 +1341,7 @@ describe('MetaAgentService work-order persistence', () => {
       );
       return { id: promptId, prompt, createdAt: Date.now() };
     });
-    aiService.triggerQueuedPromptProcessingForSession.mockResolvedValue(false);
+    aiService.triggerQueuedPromptProcessingForSession.mockResolvedValue(true);
 
     try {
       await service.start(aiService);
