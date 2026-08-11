@@ -54,8 +54,94 @@ type SubmitPlanArgs = {
   title: string;
   planItems: string[];
   workOrderCount: number;
-  risks: string;
+  /** New calls use a list; the string form remains accepted for old callers. */
+  risks: string | string[];
 };
+
+const SUBMIT_PLAN_EXAMPLE = {
+  title: "Implement the approved plan",
+  planItems: ["Inspect the current workspace"],
+  workOrderCount: 1,
+  risks: [],
+};
+
+const SUBMIT_PLAN_DESCRIPTION = [
+  "REQUIRED before any implementation, file write, or state change. Submit the only valid user-approval card; never ask for approval in chat text (the user will not answer it). Read-only investigation is exempt. Creates or updates one durable plan card and waits for approval; resubmit revisions here.",
+  "Copy this complete minimal legal call:",
+  JSON.stringify(SUBMIT_PLAN_EXAMPLE, null, 2),
+  "title is a string and is required.",
+  "planItems is a non-empty array of non-empty strings and is required.",
+  "workOrderCount is an optional non-negative integer; omit it to use planItems.length.",
+  "risks is a required array of strings and may be empty; [] means no risks were declared.",
+].join("\n");
+
+function submitPlanValidationError(message: string, example: string): Error {
+  return new Error(`${message}. Correct example: ${example}`);
+}
+
+/**
+ * Validate and fill the submit_plan boundary once so the MCP and OpenAI-shaped
+ * provider paths give the model the same actionable response.
+ */
+export function normalizeSubmitPlanArgs(value: Record<string, unknown> | undefined): SubmitPlanArgs {
+  const args = value ?? {};
+  const title = typeof args.title === "string" ? args.title.trim() : "";
+  if (!title) {
+    throw submitPlanValidationError(
+      "title is required",
+      '"title": "Implement the approved plan"',
+    );
+  }
+
+  const rawPlanItems = args.planItems;
+  const planItems = Array.isArray(rawPlanItems)
+    ? rawPlanItems.map((item) => typeof item === "string" ? item.trim() : "")
+    : [];
+  if (
+    !Array.isArray(rawPlanItems)
+    || planItems.length === 0
+    || planItems.some((item) => item.length === 0)
+  ) {
+    throw submitPlanValidationError(
+      "planItems must be a non-empty list of non-empty strings",
+      '"planItems": ["Inspect the current workspace"]',
+    );
+  }
+
+  const workOrderCount = args.workOrderCount === undefined
+    ? planItems.length
+    : args.workOrderCount;
+  if (typeof workOrderCount !== "number" || !Number.isInteger(workOrderCount) || workOrderCount < 0) {
+    throw submitPlanValidationError(
+      "workOrderCount must be a non-negative integer",
+      '"workOrderCount": 1 (or omit it to use planItems.length)',
+    );
+  }
+
+  const rawRisks = args.risks;
+  let risks: string | string[];
+  if (Array.isArray(rawRisks)) {
+    const normalizedRisks = rawRisks.map((risk) => typeof risk === "string" ? risk.trim() : "");
+    if (normalizedRisks.some((risk) => risk.length === 0)) {
+      throw submitPlanValidationError(
+        "risks must be a list of strings (an empty list is allowed)",
+        '"risks": []',
+      );
+    }
+    risks = normalizedRisks;
+  } else if (typeof rawRisks === "string" && rawRisks.trim()) {
+    // Keep accepting the historical string shape so already-configured Heads do
+    // not regress while the advertised shape moves to a list.
+    risks = rawRisks.trim();
+  } else {
+    throw submitPlanValidationError(
+      "risks is required and must be a list of strings (an empty list is allowed)",
+      '"risks": []',
+    );
+  }
+
+  return { title, planItems, workOrderCount, risks };
+}
 
 /**
  * The original MCP call that is waiting for a plan approval result.
@@ -210,31 +296,34 @@ const META_AGENT_TOOL_DEFS: Array<{
   },
   {
     name: "submit_plan",
-    description:
-      "REQUIRED before any implementation, file write, or state change. Submit the only valid user-approval card; never ask for approval in chat text (the user will not answer it). Read-only investigation is exempt. Creates or updates one durable plan card and waits for approval; resubmit revisions here.",
+    description: SUBMIT_PLAN_DESCRIPTION,
     inputSchema: {
       type: "object",
       properties: {
         title: {
           type: "string",
-          description: "REQUIRED. Concise title for the proposed implementation plan.",
+          minLength: 1,
+          description: "REQUIRED. String title for the proposed implementation plan.",
         },
         planItems: {
           type: "array",
-          items: { type: "string" },
-          description: "REQUIRED. Ordered list of concrete plan items to present for approval.",
+          minItems: 1,
+          items: { type: "string", minLength: 1 },
+          description: "REQUIRED. Non-empty ordered list of concrete string plan items to present for approval.",
         },
         workOrderCount: {
           type: "integer",
           minimum: 0,
-          description: "REQUIRED. Number of implementation work orders expected after approval.",
+          description: "OPTIONAL. Non-negative integer number of work orders; omitted values use planItems.length.",
         },
         risks: {
-          type: "string",
-          description: "REQUIRED. The main implementation risks and tradeoffs.",
+          type: "array",
+          minItems: 0,
+          items: { type: "string", minLength: 1 },
+          description: "REQUIRED. List of string implementation risks and tradeoffs; use [] when none are declared.",
         },
       },
-      required: ["title", "planItems", "workOrderCount", "risks"],
+      required: ["title", "planItems", "risks"],
     },
   },
   {
@@ -563,12 +652,13 @@ export async function dispatchMetaAgentTool(
   switch (toolName) {
     case "list_worktrees":
       return toolFns.listWorktrees(aiSessionId, effectiveWorkspaceId);
-    case "submit_plan":
+    case "submit_plan": {
+      const submitPlanArgs = normalizeSubmitPlanArgs(args);
       if (context?.submitPlanMcpCall) {
         return toolFns.submitPlan(
           aiSessionId,
           effectiveWorkspaceId,
-          (args ?? {}) as SubmitPlanArgs,
+          submitPlanArgs,
           context.signal,
           context.submitPlanMcpCall,
         );
@@ -577,15 +667,16 @@ export async function dispatchMetaAgentTool(
         return toolFns.submitPlan(
           aiSessionId,
           effectiveWorkspaceId,
-          (args ?? {}) as SubmitPlanArgs,
+          submitPlanArgs,
           context.signal,
         );
       }
       return toolFns.submitPlan(
         aiSessionId,
         effectiveWorkspaceId,
-        (args ?? {}) as SubmitPlanArgs,
+        submitPlanArgs,
       );
+    }
     case "create_session":
       return toolFns.createSession(aiSessionId, effectiveWorkspaceId, (args ?? {}) as CreateSessionArgs);
     case "spawn_session":

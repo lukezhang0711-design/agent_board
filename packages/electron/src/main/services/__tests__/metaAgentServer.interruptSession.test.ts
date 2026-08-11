@@ -52,9 +52,9 @@ describe('interrupt_session meta-agent tool registration', () => {
         title: { type: 'string' },
         planItems: { type: 'array', items: { type: 'string' } },
         workOrderCount: { type: 'integer' },
-        risks: { type: 'string' },
+        risks: { type: 'array', items: { type: 'string' } },
       },
-      required: ['title', 'planItems', 'workOrderCount', 'risks'],
+      required: ['title', 'planItems', 'risks'],
     });
     expect(createSessionTool?.function.description).toContain('investigation');
     expect(createSessionTool?.function.description).toContain('approved plan');

@@ -105,6 +105,15 @@ describe('PlanApprovalWidget', () => {
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
   });
 
+  it('states plainly when the submitted plan declares no risks', () => {
+    renderWidget({
+      ...planArguments,
+      risks: [],
+    });
+
+    expect(screen.getByText('未申报风险')).toBeTruthy();
+  });
+
   it('marks a submitted plan as a commander approval only for a meta-agent session', async () => {
     const invoke = vi.fn().mockResolvedValue({
       success: true,

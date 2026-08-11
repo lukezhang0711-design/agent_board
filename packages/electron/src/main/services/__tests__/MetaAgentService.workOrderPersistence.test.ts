@@ -2180,6 +2180,35 @@ describe('MetaAgentService work-order persistence', () => {
     });
   });
 
+  it('infers the work-order count and preserves an empty risk list on the approval card', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const submission = submitPlan('head-session', workspacePath, {
+      title: 'Plan with no declared risks',
+      planItems: ['Persist the approval card', 'Dispatch only after approval'],
+      risks: [],
+    });
+    const prompt = await waitForPlanApprovalPrompt();
+
+    expect(prompt.input).toMatchObject({
+      title: 'Plan with no declared risks',
+      planItems: ['Persist the approval card', 'Dispatch only after approval'],
+      workOrderCount: 2,
+      risks: [],
+    });
+
+    const { rows } = await db.query<{ data: unknown }>(
+      'SELECT data FROM tracker_items WHERE id = $1 AND type = \'plan\'',
+      [prompt.input.planId],
+    );
+    expect(parseStoredJson<any>(rows[0].data)).toMatchObject({
+      workOrderCount: 2,
+      risks: [],
+    });
+
+    await persistPlanApprovalResponse(prompt.requestId, true);
+    await expect(submission).resolves.toEqual(expect.stringContaining('"approved": true'));
+  });
+
   it('returns a Claude rejection through the original MCP call before closing it direct', async () => {
     const submitPlan = await getSubmitPlanTool();
     const resolveOriginalMcpCall = vi.fn((result: string) => {
