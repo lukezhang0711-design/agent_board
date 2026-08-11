@@ -347,8 +347,8 @@ interface CreateChildSessionArgs {
 interface SubmitPlanArgs {
   title: string;
   planItems: string[];
-  workOrderCount: number;
-  risks: string;
+  workOrderCount?: number;
+  risks: string | string[];
 }
 
 interface NativeHeadPlanApprovalRequest {
@@ -2571,22 +2571,38 @@ export class MetaAgentService {
     signal?: AbortSignal,
     options: PlanSubmissionOptions = {},
   ): Promise<string> {
-    const title = args?.title?.trim();
-    const risks = args?.risks?.trim();
-    const planItems = Array.isArray(args?.planItems)
-      ? args.planItems.map((item) => typeof item === 'string' ? item.trim() : '').filter(Boolean)
+    const title = typeof args?.title === 'string' ? args.title.trim() : '';
+    const rawRisks = args?.risks as unknown;
+    const risks = Array.isArray(rawRisks)
+      ? rawRisks.map((risk) => typeof risk === 'string' ? risk.trim() : '')
+      : typeof rawRisks === 'string'
+        ? rawRisks.trim()
+        : undefined;
+    const rawPlanItems = args?.planItems;
+    const planItems = Array.isArray(rawPlanItems)
+      ? rawPlanItems.map((item) => typeof item === 'string' ? item.trim() : '')
       : [];
+    const workOrderCount = args?.workOrderCount === undefined
+      ? planItems.length
+      : args.workOrderCount;
     if (!title) {
-      throw new Error('title is required');
+      throw new Error('title is required. Correct example: "title": "Implement the approved plan"');
     }
-    if (planItems.length === 0 || planItems.length !== args.planItems.length) {
-      throw new Error('planItems must be a non-empty list of non-empty strings');
+    if (
+      !Array.isArray(rawPlanItems)
+      || planItems.length === 0
+      || planItems.some((item) => item.length === 0)
+    ) {
+      throw new Error('planItems must be a non-empty list of non-empty strings. Correct example: "planItems": ["Inspect the current workspace"]');
     }
-    if (!Number.isInteger(args.workOrderCount) || args.workOrderCount < 0) {
-      throw new Error('workOrderCount must be a non-negative integer');
+    if (typeof workOrderCount !== 'number' || !Number.isInteger(workOrderCount) || workOrderCount < 0) {
+      throw new Error('workOrderCount must be a non-negative integer. Correct example: "workOrderCount": 1 (or omit it to use planItems.length)');
     }
-    if (!risks) {
-      throw new Error('risks is required');
+    if (
+      (Array.isArray(risks) && risks.some((risk) => risk.length === 0))
+      || (!Array.isArray(risks) && !risks)
+    ) {
+      throw new Error('risks is required and must be a list of strings (an empty list is allowed). Correct example: "risks": []');
     }
 
     const metaSession = await AISessionsRepository.get(metaSessionId);
@@ -2624,7 +2640,7 @@ export class MetaAgentService {
       title,
       status: 'in-review',
       planItems,
-      workOrderCount: args.workOrderCount,
+      workOrderCount,
       risks,
       submittedBySessionId: metaSessionId,
       approvalPromptId: requestId,
@@ -2639,7 +2655,7 @@ export class MetaAgentService {
         `UPDATE tracker_items
          SET data = $1, content = $2, updated = NOW(), last_indexed = NOW()
          WHERE id = $3`,
-        [JSON.stringify(planData), JSON.stringify({ planItems, workOrderCount: args.workOrderCount, risks }), planId],
+        [JSON.stringify(planData), JSON.stringify({ planItems, workOrderCount, risks }), planId],
       );
     } else {
       await databaseWorker.query(
@@ -2653,7 +2669,7 @@ export class MetaAgentService {
           ['plan'],
           JSON.stringify(planData),
           workspaceId,
-          JSON.stringify({ planItems, workOrderCount: args.workOrderCount, risks }),
+          JSON.stringify({ planItems, workOrderCount, risks }),
           sourceRef,
         ],
       );
@@ -2670,7 +2686,7 @@ export class MetaAgentService {
         planId,
         title,
         planItems,
-        workOrderCount: args.workOrderCount,
+        workOrderCount,
         risks,
         ...(options.planSummary?.trim() ? { planSummary: options.planSummary.trim() } : {}),
       },

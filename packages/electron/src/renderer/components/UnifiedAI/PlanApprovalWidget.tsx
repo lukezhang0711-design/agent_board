@@ -21,7 +21,7 @@ interface SubmittedPlanArgs {
   title?: string;
   planItems?: unknown[];
   workOrderCount?: number;
-  risks?: string;
+  risks?: unknown;
   planSummary?: string;
 }
 
@@ -72,9 +72,15 @@ const SubmittedPlanApprovalCard: React.FC<{
   const workOrderCount = Number.isInteger(args.workOrderCount) && (args.workOrderCount ?? -1) >= 0
     ? args.workOrderCount as number
     : 0;
-  const risks = typeof args.risks === 'string' && args.risks.trim()
-    ? args.risks.trim()
-    : 'No risks provided.';
+  const declaredRisks = Array.isArray(args.risks)
+    ? args.risks
+      .filter((risk): risk is string => typeof risk === 'string' && risk.trim() !== '')
+      .map((risk) => risk.trim())
+      .join('\n')
+    : typeof args.risks === 'string' && args.risks.trim()
+      ? args.risks.trim()
+      : '';
+  const risks = declaredRisks || '未申报风险';
   const planSummary = typeof args.planSummary === 'string' && args.planSummary.trim()
     ? args.planSummary.trim()
     : null;
