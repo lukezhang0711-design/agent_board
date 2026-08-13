@@ -1,4 +1,5 @@
 import path from 'path';
+import * as fs from 'fs';
 import { BrowserWindow } from 'electron';
 import { randomUUID } from 'crypto';
 import { safeHandle } from '../utils/ipcRegistry';
@@ -172,6 +173,10 @@ interface WorkOrderSettlement {
   };
 }
 
+interface WorkOrderCompletionCriteria {
+  outputFiles?: string[];
+}
+
 class RetryGateDeniedError extends Error {
   constructor(reason: string) {
     super(`此类失败需老板指示后才能重试。${reason}`);
@@ -236,6 +241,105 @@ function parseWorkOrderData(value: unknown): Record<string, unknown> {
 
 function readNonEmptyString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function readModuleIndex(value: unknown): number | undefined {
+  return typeof value === 'number'
+    && Number.isSafeInteger(value)
+    && value > 0
+    ? value
+    : undefined;
+}
+
+function normalizeOutputFile(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value
+    .trim()
+    .replace(/^['"`]+|['"`]+$/g, '')
+    .trim();
+  return normalized || undefined;
+}
+
+function normalizeOutputFiles(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap((candidate) => {
+    const normalized = normalizeOutputFile(candidate);
+    return normalized ? [normalized] : [];
+  });
+}
+
+function parseDeclaredOutputFilesText(value: string): string[] {
+  const match = value.match(
+    /(?:output\s+files?|deliverable(?:\s+files?)?|artifact(?:\s+files?)?|产出文件|产出物|交付文件|交付物)\s*[:：]\s*(.+?)(?=\s*(?:[,;，；]\s*(?:内容|正文|至少|需|要求|验收|并|且|ensure|must|content|at\s+least|\d)|\r?\n|$))/im,
+  );
+  if (!match) return [];
+  return match[1]
+    .split(/[,;，；、]/)
+    .flatMap((candidate) => normalizeOutputFiles(candidate));
+}
+
+/**
+ * Read only explicitly named file deliverables from a module completion
+ * standard. Content requirements such as "3 lines" are intentionally ignored.
+ */
+function readDeclaredOutputFiles(value: unknown): string[] {
+  if (typeof value === 'string') {
+    return parseDeclaredOutputFilesText(value);
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((candidate) => {
+      if (typeof candidate === 'string') {
+        return parseDeclaredOutputFilesText(candidate);
+      }
+      return readDeclaredOutputFiles(candidate);
+    });
+  }
+  if (!value || typeof value !== 'object') return [];
+
+  const record = value as Record<string, unknown>;
+  const files: string[] = [];
+  for (const key of [
+    'outputFiles',
+    'outputFile',
+    'deliverables',
+    'deliverableFiles',
+    'artifacts',
+  ]) {
+    if (key in record) {
+      const raw = record[key];
+      files.push(...(
+        typeof raw === 'string' || Array.isArray(raw)
+          ? normalizeOutputFiles(raw)
+          : readDeclaredOutputFiles(raw)
+      ));
+    }
+  }
+  for (const key of [
+    'completionCriteria',
+    'completionStandard',
+    'acceptanceCriteria',
+    'acceptanceStandard',
+  ]) {
+    if (key in record) {
+      files.push(...readDeclaredOutputFiles(record[key]));
+    }
+  }
+  return [...new Set(files)];
+}
+
+function readWorkOrderModuleIndex(data: Record<string, unknown>): number | undefined {
+  for (const key of ['moduleIndex', 'planModuleIndex', 'moduleSequence', 'moduleNumber']) {
+    const value = readModuleIndex(data[key]);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function readWorkOrderOutputFiles(data: Record<string, unknown>): string[] {
+  return [...new Set([
+    ...normalizeOutputFiles(data.outputFiles),
+    ...readDeclaredOutputFiles(data.completionCriteria),
+  ])];
 }
 
 function readWorkOrderAttempts(data: Record<string, unknown>): WorkOrderAttempt[] {
@@ -341,6 +445,11 @@ interface CreateChildSessionArgs {
   toolScope?: string;
   intent?: SessionIntent;
   planId?: string;
+  /** Stable 1-based position of the module in the approved plan. */
+  moduleIndex?: number;
+  /** Files explicitly required by the module's completion standard. */
+  outputFiles?: string[];
+  completionCriteria?: WorkOrderCompletionCriteria;
   maxParallelOverride?: number;
 }
 
@@ -511,6 +620,9 @@ interface SpawnSessionArgs {
   isolated?: boolean;
   intent?: SessionIntent;
   planId?: string;
+  moduleIndex?: number;
+  outputFiles?: string[];
+  completionCriteria?: WorkOrderCompletionCriteria;
   maxParallelOverride?: number;
 }
 
@@ -1137,6 +1249,8 @@ export class MetaAgentService {
         model,
         intent,
         planId,
+        moduleIndex: readWorkOrderModuleIndex(workOrder.data),
+        outputFiles: readWorkOrderOutputFiles(workOrder.data),
         worktreeId: previousSession?.worktreeId ?? undefined,
         parentSessionIdOverride: previousSession?.parentSessionId ?? null,
         workOrderTrackerIdOverride: trackerItemId,
@@ -1487,13 +1601,17 @@ export class MetaAgentService {
   private async withWorkOrderIdentityLock<T>(
     workspaceId: string,
     planId: string | undefined,
+    moduleIndex: number | undefined,
     moduleTitle: string,
     operation: () => Promise<T>,
   ): Promise<T> {
     if (!planId?.trim()) {
       return operation();
     }
-    const key = `${workspaceId}\u0000${planId.trim()}\u0000${moduleTitle}`;
+    const identity = moduleIndex === undefined
+      ? `title:${moduleTitle}`
+      : `module:${moduleIndex}`;
+    const key = `${workspaceId}\u0000${planId.trim()}\u0000${identity}`;
     const previous = this.workOrderIdentityLocks.get(key) ?? Promise.resolve();
     let release!: () => void;
     const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -1597,6 +1715,9 @@ export class MetaAgentService {
         trackerItemId: args.workOrderTrackerIdOverride,
         headSessionId: metaSessionId,
         retryReason: args.retryReason,
+        moduleIndex: readModuleIndex(args.moduleIndex),
+        outputFiles: args.outputFiles,
+        completionCriteria: args.completionCriteria,
       },
     );
 
@@ -2023,6 +2144,9 @@ export class MetaAgentService {
             trackerItemId: args.workOrderTrackerIdOverride,
             headSessionId: metaSessionId,
             retryReason: args.retryReason,
+            moduleIndex: readModuleIndex(args.moduleIndex),
+            outputFiles: args.outputFiles,
+            completionCriteria: args.completionCriteria,
           },
         );
       }
@@ -2938,6 +3062,9 @@ export class MetaAgentService {
             trackerItemId: args.workOrderTrackerIdOverride,
             headSessionId: metaSessionId,
             retryReason: args.retryReason,
+            moduleIndex: readModuleIndex(args.moduleIndex),
+            outputFiles: args.outputFiles,
+            completionCriteria: args.completionCriteria,
           },
         );
       }
@@ -3056,6 +3183,9 @@ export class MetaAgentService {
       effortLevel: args.effortLevel,
       intent: args.intent,
       planId: args.planId,
+      moduleIndex: args.moduleIndex,
+      outputFiles: args.outputFiles,
+      completionCriteria: args.completionCriteria,
       maxParallelOverride: args.maxParallelOverride,
       parentSessionIdOverride: workstreamId,
       notifyParent: notifyOnComplete,
@@ -3931,6 +4061,7 @@ export class MetaAgentService {
   private async findReusableWorkOrder(
     workspaceId: string,
     planId: string | undefined,
+    moduleIndex: number | undefined,
     moduleTitle: string,
   ): Promise<{ id: string; data: Record<string, unknown> } | null> {
     if (!planId?.trim()) {
@@ -3946,11 +4077,57 @@ export class MetaAgentService {
     );
     const matchingRow = rows.find((row) => {
       const data = parseWorkOrderData(row.data);
-      return data.planId === planId.trim() && data.title === moduleTitle;
+      if (data.planId !== planId.trim()) return false;
+      if (moduleIndex === undefined) return data.title === moduleTitle;
+      const storedModuleIndex = readWorkOrderModuleIndex(data);
+      // Cards written before the stable key migration have no module index.
+      // A same-title match can safely backfill that legacy card; a renamed
+      // dispatch still cannot match it and therefore cannot create a split
+      // card once the caller supplies the stable module index.
+      return storedModuleIndex === moduleIndex
+        || (storedModuleIndex === undefined && data.title === moduleTitle);
     });
     return matchingRow
       ? { id: matchingRow.id, data: parseWorkOrderData(matchingRow.data) }
       : null;
+  }
+
+  private async resolvePlanModuleOutputFiles(
+    workspaceId: string,
+    planId: string | undefined,
+    moduleIndex: number | undefined,
+  ): Promise<string[]> {
+    if (!planId?.trim() || moduleIndex === undefined) return [];
+
+    const { rows } = await databaseWorker.query<{ data: unknown }>(
+      `SELECT data
+       FROM tracker_items
+       WHERE id = $1
+         AND workspace = $2
+         AND type = 'plan'
+       LIMIT 1`,
+      [planId.trim(), workspaceId],
+    );
+    const planData = parseWorkOrderData(rows[0]?.data);
+    const collections = ['modules', 'planModules', 'planItems', 'completionCriteria'];
+    for (const key of collections) {
+      const collection = planData[key];
+      if (Array.isArray(collection)) {
+        const indexed = collection.find((candidate) => {
+          if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return false;
+          return readWorkOrderModuleIndex(candidate as Record<string, unknown>) === moduleIndex;
+        });
+        const module = indexed ?? collection[moduleIndex - 1];
+        const files = readDeclaredOutputFiles(module);
+        if (files.length > 0) return files;
+      } else if (collection && typeof collection === 'object') {
+        const record = collection as Record<string, unknown>;
+        const module = record[String(moduleIndex)] ?? record[`module${moduleIndex}`];
+        const files = readDeclaredOutputFiles(module);
+        if (files.length > 0) return files;
+      }
+    }
+    return [];
   }
 
   private async findWorkOrderById(
@@ -4098,7 +4275,8 @@ export class MetaAgentService {
     }
 
     const moduleTitle = (args.title || this.deriveTitleFromPrompt(args.prompt) || 'Meta Task').trim();
-    const reusable = await this.findReusableWorkOrder(workspaceId, args.planId, moduleTitle);
+    const moduleIndex = readModuleIndex(args.moduleIndex);
+    const reusable = await this.findReusableWorkOrder(workspaceId, args.planId, moduleIndex, moduleTitle);
     if (!reusable || reusable.data.status !== 'failed') {
       return;
     }
@@ -4155,21 +4333,32 @@ export class MetaAgentService {
       trackerItemId?: string;
       headSessionId?: string;
       retryReason?: string;
+      moduleIndex?: number;
+      outputFiles?: string[];
+      completionCriteria?: WorkOrderCompletionCriteria;
     } = {},
   ): Promise<string> {
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
     const taskSummary = this.deriveTitleFromPrompt(prompt) || title;
     const dispatchedAt = options.dispatchedAt ?? new Date().toISOString();
     const sourceRef = options.sourceRef ?? `meta-agent-work-order:${sessionId}`;
+    const moduleIndex = readModuleIndex(options.moduleIndex);
+    let outputFiles = [...new Set([
+      ...normalizeOutputFiles(options.outputFiles),
+      ...readDeclaredOutputFiles(options.completionCriteria),
+    ])];
+    if (intent === 'implementation' && outputFiles.length === 0) {
+      outputFiles = await this.resolvePlanModuleOutputFiles(workspaceId, planId, moduleIndex);
+    }
     // This is the single write-time classification point for dispatch/queue
     // failures. RetryGate only trusts the value persisted below.
     const failureClass = options.failureReason
       ? classifyFailureReason(options.failureReason)
       : undefined;
-    return this.withWorkOrderIdentityLock(workspaceId, planId, title, async () => {
+    return this.withWorkOrderIdentityLock(workspaceId, planId, moduleIndex, title, async () => {
       const reusable = options.trackerItemId
         ? await this.findWorkOrderById(workspaceId, options.trackerItemId)
-        : await this.findReusableWorkOrder(workspaceId, planId, title);
+        : await this.findReusableWorkOrder(workspaceId, planId, moduleIndex, title);
       if (reusable) {
         const data = reusable.data;
         data.attempts = readWorkOrderAttempts(data);
@@ -4185,10 +4374,17 @@ export class MetaAgentService {
         if (planId) {
           data.planId = planId;
         }
+        if (moduleIndex !== undefined) {
+          data.moduleIndex = moduleIndex;
+        }
+        if (outputFiles.length > 0) {
+          data.outputFiles = outputFiles;
+        }
         // A retry starts a clean current state. Its previous failure remains in
         // `attempts`; only the current top-level receipt/failure is replaced.
         delete data.failureReason;
         delete data.failureClass;
+        delete data.acceptanceStatus;
         delete data.receipt;
         delete data.retryReason;
         if (options.retryReason) {
@@ -4225,6 +4421,8 @@ export class MetaAgentService {
         dispatchedAt,
         intent,
         ...(options.headSessionId ? { headSessionId: options.headSessionId } : {}),
+        ...(moduleIndex !== undefined ? { moduleIndex } : {}),
+        ...(outputFiles.length > 0 ? { outputFiles } : {}),
         attempts: options.receipt
           ? [{
               ...options.receipt,
@@ -4353,14 +4551,23 @@ export class MetaAgentService {
     return this.updateWorkOrderStatusBySourceRef(sourceRef, status, interruptionReason, settlement);
   }
 
+  private workOrderOutputFileExists(workspacePath: unknown, outputFile: string): boolean {
+    if (typeof workspacePath !== 'string' || !workspacePath.trim()) return false;
+    try {
+      return fs.statSync(path.resolve(workspacePath, outputFile)).isFile();
+    } catch {
+      return false;
+    }
+  }
+
   private async updateWorkOrderStatusBySourceRef(
     sourceRef: string,
     status: WorkOrderStatus,
     interruptionReason?: string,
     settlement?: WorkOrderSettlement,
   ): Promise<boolean> {
-    const { rows } = await databaseWorker.query<{ id: string; data: unknown }>(
-      `SELECT id, data
+    const { rows } = await databaseWorker.query<{ id: string; data: unknown; workspace: string | null }>(
+      `SELECT id, data, workspace
        FROM tracker_items
        WHERE type = 'work-order' AND source_ref = $1
        LIMIT 1`,
@@ -4388,6 +4595,20 @@ export class MetaAgentService {
       );
     }
 
+    let acceptanceFailureReason: string | undefined;
+    if (
+      status === 'completed'
+      && normalizedSettlement?.receipt?.outcome === 'success'
+      && data.intent === 'implementation'
+    ) {
+      const missingOutputFile = readWorkOrderOutputFiles(data).find(
+        (outputFile) => !this.workOrderOutputFileExists(row.workspace, outputFile),
+      );
+      if (missingOutputFile) {
+        acceptanceFailureReason = `完成标准要求的 ${missingOutputFile} 不存在`;
+        normalizedSettlement.failureReason = acceptanceFailureReason;
+      }
+    }
     // Classify only while the failure is being persisted. The retry gate never
     // re-parses `failureReason`, so an old/unknown record remains conservative.
     const failureClass = normalizedSettlement?.failureReason
@@ -4409,6 +4630,9 @@ export class MetaAgentService {
       return false;
     }
     data.status = normalizedSettlement?.failureReason && status === 'completed' ? 'failed' : status;
+    if (acceptanceFailureReason) {
+      data.acceptanceStatus = '验收不达标';
+    }
     if (
       interruptionReason
       && (!data.interruptionReason || data.interruptionReason === 'Session interrupted')
@@ -4440,6 +4664,7 @@ export class MetaAgentService {
       if (normalizedSettlement.receipt.outcome === 'success' && !normalizedSettlement.failureReason) {
         delete data.failureReason;
         delete data.failureClass;
+        delete data.acceptanceStatus;
       }
     }
     await databaseWorker.query(

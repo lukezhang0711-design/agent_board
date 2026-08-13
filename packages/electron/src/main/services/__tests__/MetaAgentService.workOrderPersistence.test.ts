@@ -134,7 +134,7 @@ import { createPGLiteSessionStore } from '../PGLiteSessionStore';
 import { MetaAgentService } from '../MetaAgentService';
 
 describe('MetaAgentService work-order persistence', () => {
-  const workspacePath = '/workspace/work-order-test';
+  const workspacePath = path.join(os.tmpdir(), 'nim-work-order-test-workspace');
   const implementationPlanError =
     'implementation sessions require an approved plan. Submit a plan for user approval first, or set intent to "investigation" for read-only work.';
   const service = MetaAgentService.getInstance();
@@ -381,6 +381,7 @@ describe('MetaAgentService work-order persistence', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    fs.mkdirSync(workspacePath, { recursive: true });
     testState.planAutoApprove = false;
     dbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nim-work-order-'));
     db = new SQLiteDatabase({
@@ -460,6 +461,7 @@ describe('MetaAgentService work-order persistence', () => {
     testState.stateManager = null;
     await db.close();
     fs.rmSync(dbDir, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
   });
 
   it('persists one card and both session links when a child is dispatched', async () => {
@@ -1184,6 +1186,210 @@ describe('MetaAgentService work-order persistence', () => {
       [expect.objectContaining({ attempt: 1, outcome: 'success' })],
       [expect.objectContaining({ attempt: 1, outcome: 'success' })],
     ]);
+  });
+
+  it('GREEN DZ-101: reuses one card when the same plan module is re-dispatched with a new title', async () => {
+    const planId = 'plan-dz-101';
+    const first = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      {
+        title: '模块三：终审-总清单',
+        prompt: '执行模块三的第一次尝试',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'investigation',
+        planId,
+        moduleIndex: 3,
+      },
+    );
+    await (service as any).handleChildSessionEvent(first.sessionId, 'session:completed');
+
+    const second = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      {
+        title: '模块三：终审-总清单 - 重试',
+        prompt: '执行模块三的重试',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'investigation',
+        planId,
+        moduleIndex: 3,
+      },
+    );
+    await (service as any).handleChildSessionEvent(second.sessionId, 'session:completed');
+
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE type = 'work-order' AND workspace = $1 ORDER BY created`,
+      [workspacePath],
+    );
+    expect(rows).toHaveLength(1);
+    const data = parseStoredJson<any>(rows[0].data);
+    expect(data).toMatchObject({
+      planId,
+      moduleIndex: 3,
+      title: '模块三：终审-总清单 - 重试',
+      childSessionId: second.sessionId,
+      status: 'completed',
+    });
+    expect(data.attempts).toHaveLength(2);
+  });
+
+  it('GREEN DZ-094: rejects a successful turn when its declared output file is missing', async () => {
+    const outputFile = 'reports/dz-094-missing.md';
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      {
+        title: '验收产出文件',
+        prompt: '完成模块并写出声明的报告',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'implementation',
+        planId: 'plan-dz-094',
+        moduleIndex: 1,
+        outputFiles: [outputFile],
+      },
+    );
+
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
+
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE source_ref = $1`,
+      [`meta-agent-work-order:${child.sessionId}`],
+    );
+    const data = parseStoredJson<any>(rows[0].data);
+    expect(data.status).toBe('failed');
+    expect(data.acceptanceStatus).toBe('验收不达标');
+    expect(data.failureReason).toBe(`完成标准要求的 ${outputFile} 不存在`);
+    expect((service as any).aiService.queuePromptForSession).toHaveBeenCalledWith(
+      'head-session',
+      expect.stringContaining(`完成标准要求的 ${outputFile} 不存在`),
+      undefined,
+      undefined,
+      'child_session_event',
+    );
+  });
+
+  it('GREEN DZ-094: completes an implementation module when its declared output file exists', async () => {
+    const outputFile = 'reports/dz-094-present.md';
+    const outputPath = path.join(workspacePath, outputFile);
+    fs.mkdirSync(workspacePath, { recursive: true });
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, '# present\n');
+
+    try {
+      const child = await (service as any).createChildSessionInternal(
+        'head-session',
+        workspacePath,
+        {
+          title: '验收存在的产出文件',
+          prompt: '完成模块并写出声明的报告',
+          provider: 'claude-code',
+          model: 'claude-code:haiku',
+          intent: 'implementation',
+          planId: 'plan-dz-094-present',
+          moduleIndex: 1,
+          outputFiles: [outputFile],
+        },
+      );
+
+      await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
+
+      const { rows } = await db.query<any>(
+        `SELECT data FROM tracker_items WHERE source_ref = $1`,
+        [`meta-agent-work-order:${child.sessionId}`],
+      );
+      const data = parseStoredJson<any>(rows[0].data);
+      expect(data).toMatchObject({
+        status: 'completed',
+        outputFiles: [outputFile],
+      });
+      expect(data.acceptanceStatus).toBeUndefined();
+    } finally {
+      fs.rmSync(path.join(workspacePath, 'reports'), { recursive: true, force: true });
+    }
+  });
+
+  it('GREEN DZ-094: leaves investigation work-orders unaffected by declared output files', async () => {
+    const outputFile = 'reports/dz-094-investigation.md';
+    const child = await (service as any).createChildSessionInternal(
+      'head-session',
+      workspacePath,
+      {
+        title: '调查但不交付文件',
+        prompt: '调查现状，不要求写文件',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'investigation',
+        planId: 'plan-dz-094-investigation',
+        moduleIndex: 1,
+        outputFiles: [outputFile],
+      },
+    );
+
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
+
+    const { rows } = await db.query<any>(
+      `SELECT data FROM tracker_items WHERE source_ref = $1`,
+      [`meta-agent-work-order:${child.sessionId}`],
+    );
+    const data = parseStoredJson<any>(rows[0].data);
+    expect(data.status).toBe('completed');
+    expect(data.failureReason).toBeUndefined();
+  });
+
+  it('GREEN DZ-094: resolves output files from the approved plan module standard', async () => {
+    const planId = 'plan-dz-094-module-standard';
+    const outputFile = 'reports/dz-094-from-plan.md';
+    const outputPath = path.join(workspacePath, outputFile);
+    fs.mkdirSync(workspacePath, { recursive: true });
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, '# from plan\n');
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status,
+        content, archived, source, source_ref
+      ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'local', NULL, FALSE, 'meta-agent', $5)`,
+      [
+        planId,
+        ['plan'],
+        JSON.stringify({
+          status: 'ready-for-development',
+          planItems: [`模块一：完成验收。产出文件：${outputFile}；内容至少 3 行`],
+        }),
+        workspacePath,
+        `meta-agent-submitted-plan:head-session`,
+      ],
+    );
+
+    try {
+      const child = await (service as any).createChildSessionInternal(
+        'head-session',
+        workspacePath,
+        {
+          title: '从方案读取产出标准',
+          prompt: '按方案模块完成工作',
+          provider: 'claude-code',
+          model: 'claude-code:haiku',
+          intent: 'implementation',
+          planId,
+          moduleIndex: 1,
+        },
+      );
+      await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
+
+      const { rows } = await db.query<any>(
+        `SELECT data FROM tracker_items WHERE source_ref = $1`,
+        [`meta-agent-work-order:${child.sessionId}`],
+      );
+      const data = parseStoredJson<any>(rows[0].data);
+      expect(data).toMatchObject({ status: 'completed', outputFiles: [outputFile] });
+    } finally {
+      fs.rmSync(path.join(workspacePath, 'reports'), { recursive: true, force: true });
+    }
   });
 
   it('keeps no-override dispatch behavior: persists the over-limit request and returns its queue position', async () => {

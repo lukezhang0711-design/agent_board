@@ -74,6 +74,14 @@ describe('interrupt_session meta-agent tool registration', () => {
           minimum: 1,
           description: maxParallelOverrideDescription,
         },
+        moduleIndex: { type: 'integer', minimum: 1 },
+        outputFiles: { type: 'array', items: { type: 'string', minLength: 1 } },
+        completionCriteria: {
+          type: 'object',
+          properties: {
+            outputFiles: { type: 'array', items: { type: 'string', minLength: 1 } },
+          },
+        },
       },
       required: ['intent'],
     });
@@ -112,8 +120,11 @@ describe('interrupt_session meta-agent tool registration', () => {
     );
 
     const createArgs = {
-      prompt: 'Investigate one bounded question',
-      intent: 'investigation',
+      prompt: 'Implement one approved module',
+      intent: 'implementation',
+      planId: 'plan-1',
+      moduleIndex: 3,
+      outputFiles: ['reports/module-3.md'],
       effortLevel: 'xhigh',
       maxParallelOverride: 6,
     };
@@ -129,6 +140,8 @@ describe('interrupt_session meta-agent tool registration', () => {
       prompt: 'Implement the approved plan',
       intent: 'implementation',
       planId: 'plan-1',
+      moduleIndex: 3,
+      outputFiles: ['reports/module-3.md'],
       effortLevel: 'high',
       maxParallelOverride: 6,
     };
