@@ -31,6 +31,9 @@ describe('work-order built-in tracker schema', () => {
         ],
       }),
       expect.objectContaining({ name: 'planId', type: 'string', required: false }),
+      expect.objectContaining({ name: 'moduleIndex', type: 'number', required: false }),
+      expect.objectContaining({ name: 'outputFiles', type: 'array', itemType: 'string', required: false }),
+      expect.objectContaining({ name: 'acceptanceStatus', type: 'string', required: false }),
     ]));
 
     const statusField = model.fields.find((field) => field.name === 'status');
@@ -67,6 +70,9 @@ describe('work-order built-in tracker schema', () => {
         ],
       }),
       expect.objectContaining({ name: 'planId', type: 'string', required: false }),
+      expect.objectContaining({ name: 'moduleIndex', type: 'number', required: false }),
+      expect.objectContaining({ name: 'outputFiles', type: 'array', itemType: 'string', required: false }),
+      expect.objectContaining({ name: 'acceptanceStatus', type: 'string', required: false }),
     ]));
   });
 });

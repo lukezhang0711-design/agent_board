@@ -15,6 +15,9 @@ import { resolveProjectPath } from "../utils/workspaceDetection";
 
 type SessionIntent = "investigation" | "implementation";
 type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
+type CompletionCriteria = {
+  outputFiles?: string[];
+};
 
 type CreateSessionArgs = {
   title?: string;
@@ -27,6 +30,11 @@ type CreateSessionArgs = {
   toolScope?: string;
   intent: SessionIntent;
   planId?: string;
+  /** Stable 1-based module position within the approved plan. */
+  moduleIndex?: number;
+  /** Explicit file deliverables named by the module completion standard. */
+  outputFiles?: string[];
+  completionCriteria?: CompletionCriteria;
   maxParallelOverride?: number;
 };
 
@@ -39,6 +47,11 @@ type SpawnSessionArgs = {
   notifyOnComplete?: boolean;
   intent: SessionIntent;
   planId?: string;
+  /** Stable 1-based module position within the approved plan. */
+  moduleIndex?: number;
+  /** Explicit file deliverables named by the module completion standard. */
+  outputFiles?: string[];
+  completionCriteria?: CompletionCriteria;
   maxParallelOverride?: number;
   /**
    * When true, the new session is created at the top level — no parent,
@@ -381,6 +394,29 @@ const META_AGENT_TOOL_DEFS: Array<{
           type: "string",
           description: "Required when intent is implementation. ID of the approved plan card.",
         },
+        moduleIndex: {
+          type: "integer",
+          minimum: 1,
+          description:
+            "Stable 1-based module position in the approved plan. Pass the same value on every dispatch/retry of that module; a title change must not create a second work-order card.",
+        },
+        outputFiles: {
+          type: "array",
+          items: { type: "string", minLength: 1 },
+          description:
+            "Optional file paths explicitly named as deliverables by this module's completion standard. They are resolved relative to the workspace and must exist before an implementation work-order can become completed.",
+        },
+        completionCriteria: {
+          type: "object",
+          properties: {
+            outputFiles: {
+              type: "array",
+              items: { type: "string", minLength: 1 },
+            },
+          },
+          description:
+            "Optional structured completion standard. Only explicitly named outputFiles are checked; content requirements are not auto-checked.",
+        },
         maxParallelOverride: {
           type: "integer",
           minimum: 1,
@@ -447,6 +483,29 @@ const META_AGENT_TOOL_DEFS: Array<{
         planId: {
           type: "string",
           description: "Required when intent is implementation. ID of the approved plan card.",
+        },
+        moduleIndex: {
+          type: "integer",
+          minimum: 1,
+          description:
+            "Stable 1-based module position in the approved plan. Pass the same value on every dispatch/retry of that module; a title change must not create a second work-order card.",
+        },
+        outputFiles: {
+          type: "array",
+          items: { type: "string", minLength: 1 },
+          description:
+            "Optional file paths explicitly named as deliverables by this module's completion standard. They are resolved relative to the workspace and must exist before an implementation work-order can become completed.",
+        },
+        completionCriteria: {
+          type: "object",
+          properties: {
+            outputFiles: {
+              type: "array",
+              items: { type: "string", minLength: 1 },
+            },
+          },
+          description:
+            "Optional structured completion standard. Only explicitly named outputFiles are checked; content requirements are not auto-checked.",
         },
         maxParallelOverride: {
           type: "integer",

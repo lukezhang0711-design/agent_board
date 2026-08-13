@@ -66,6 +66,19 @@ fields:
     type: string
     required: false
 
+  - name: moduleIndex
+    type: number
+    required: false
+
+  - name: outputFiles
+    type: array
+    itemType: string
+    required: false
+
+  - name: acceptanceStatus
+    type: string
+    required: false
+
   - name: taskSummary
     type: text
     required: true
