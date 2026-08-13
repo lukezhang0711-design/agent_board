@@ -690,6 +690,7 @@ export class AntigravityServerManager {
       let stderr = '';
       let settled = false;
       let timer: ReturnType<typeof setTimeout> | undefined;
+      const startedAt = Date.now();
       const outputCap = 256 * 1024;
       const append = (current: string, chunk: Buffer): string =>
         current.length >= outputCap
@@ -745,8 +746,10 @@ export class AntigravityServerManager {
           } catch {
             /* best effort; the timeout is already terminal */
           }
+          const elapsedMs = Date.now() - startedAt;
           finish(new AntigravityAgyTimeoutError(
-            `agy print mode timed out after ${Math.ceil(timeoutMs / 1000)}s`,
+            `agy print mode timed out after ${Math.ceil(elapsedMs / 1000)}s ` +
+              `(${elapsedMs}ms elapsed; limit ${Math.ceil(timeoutMs / 1000)}s)`,
           ));
         }, Math.max(1, timeoutMs));
       } catch (err) {

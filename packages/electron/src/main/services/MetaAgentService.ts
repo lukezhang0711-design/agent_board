@@ -4372,17 +4372,33 @@ export class MetaAgentService {
     }
 
     const data = parseWorkOrderData(row.data);
+    // A provider error and a success receipt are mutually exclusive. Normalize
+    // a malformed settlement before writing it so every engine channel gets the
+    // same durable outcome, even if a late completion event races the error.
+    const normalizedSettlement = settlement?.failureReason
+      && settlement.receipt?.outcome === 'success'
+      ? {
+          ...settlement,
+          receipt: { ...settlement.receipt, outcome: 'failure' as const },
+        }
+      : settlement;
+    if (normalizedSettlement !== settlement) {
+      console.warn(
+        `[WorkOrderGuard] Refused success receipt for ${sourceRef}: provider error requires a failure receipt.`,
+      );
+    }
+
     // Classify only while the failure is being persisted. The retry gate never
     // re-parses `failureReason`, so an old/unknown record remains conservative.
-    const failureClass = settlement?.failureReason
-      ? classifyFailureReason(settlement.failureReason)
+    const failureClass = normalizedSettlement?.failureReason
+      ? classifyFailureReason(normalizedSettlement.failureReason)
       : undefined;
     const existingFailureReason = typeof data.failureReason === 'string' && data.failureReason.trim().length > 0;
     const hasSuccessfulReceipt = isSuccessfulWorkOrderReceipt(data.receipt)
-      || isSuccessfulWorkOrderReceipt(settlement?.receipt);
-    if (status === 'completed' && existingFailureReason && !hasSuccessfulReceipt) {
+      || isSuccessfulWorkOrderReceipt(normalizedSettlement?.receipt);
+    if (status === 'completed' && existingFailureReason) {
       console.warn(
-        `[WorkOrderGuard] Refused completed settlement for ${sourceRef}: failureReason exists without a successful child receipt.`,
+        `[WorkOrderGuard] Refused completed settlement for ${sourceRef}: a prior provider failure cannot be overwritten by a late completion (incomingSuccess=${hasSuccessfulReceipt}).`,
       );
       return false;
     }
@@ -4392,36 +4408,36 @@ export class MetaAgentService {
     ) {
       return false;
     }
-    data.status = settlement?.failureReason && status === 'completed' ? 'failed' : status;
+    data.status = normalizedSettlement?.failureReason && status === 'completed' ? 'failed' : status;
     if (
       interruptionReason
       && (!data.interruptionReason || data.interruptionReason === 'Session interrupted')
     ) {
       data.interruptionReason = interruptionReason;
     }
-    if (settlement?.interruption) {
-      data.interruptedAt = settlement.interruption.interruptedAt;
+    if (normalizedSettlement?.interruption) {
+      data.interruptedAt = normalizedSettlement.interruption.interruptedAt;
       appendWorkOrderInterruption(
         data,
-        settlement.interruption,
+        normalizedSettlement.interruption,
         typeof data.childSessionId === 'string' ? data.childSessionId : undefined,
       );
     }
-    if (settlement?.failureReason) {
-      data.failureReason = settlement.failureReason;
+    if (normalizedSettlement?.failureReason) {
+      data.failureReason = normalizedSettlement.failureReason;
       data.failureClass = failureClass;
     }
-    if (settlement?.receipt) {
+    if (normalizedSettlement?.receipt) {
       appendWorkOrderAttempt(
         data,
-        settlement.receipt,
-        settlement.failureReason,
+        normalizedSettlement.receipt,
+        normalizedSettlement.failureReason,
         failureClass,
         typeof data.childSessionId === 'string' ? data.childSessionId : undefined,
         typeof data.retryReason === 'string' ? data.retryReason : undefined,
       );
-      data.receipt = settlement.receipt;
-      if (settlement.receipt.outcome === 'success' && !settlement.failureReason) {
+      data.receipt = normalizedSettlement.receipt;
+      if (normalizedSettlement.receipt.outcome === 'success' && !normalizedSettlement.failureReason) {
         delete data.failureReason;
         delete data.failureClass;
       }

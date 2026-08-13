@@ -301,8 +301,15 @@ describe('agy CLI process boundary', () => {
     spawnMock.mockReturnValue(child);
     const manager = freshManager();
 
-    await expect(manager.getModelResponse('one', 'gemini-3-flash-agent', 10))
-      .rejects.toBeInstanceOf(AntigravityAgyTimeoutError);
+    const error = await manager.getModelResponse('one', 'gemini-3-flash-agent', 10)
+      .catch((err) => err);
+    expect(error).toBeInstanceOf(AntigravityAgyTimeoutError);
+    expect(error).toMatchObject({
+      name: 'AntigravityAgyTimeoutError',
+      message: expect.stringMatching(
+        /^agy print mode timed out after \d+s \(\d+ms elapsed; limit 1s\)$/,
+      ),
+    });
     expect(child.kill).toHaveBeenCalledWith('SIGTERM');
   });
 });

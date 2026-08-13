@@ -38,6 +38,7 @@ import { isBedrockToolSearchError } from '@nimbalyst/runtime/ai/server/utils/err
 import { resolveEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import type { RawDocumentContext, DocumentContextService } from '@nimbalyst/runtime';
 import { AISessionsRepository } from '@nimbalyst/runtime';
+import { AgentMessagesRepository } from '@nimbalyst/runtime/storage/repositories/AgentMessagesRepository';
 import { toolRegistry } from './tools';
 import { resolveExtensionAgentRef } from './providerResolution';
 import { getAgentProviderRegistry } from '../../extensions/AgentProviderRegistry';
@@ -177,6 +178,52 @@ export function suppressChildSessionEventInputPersistence(
       delete target.logAgentMessage;
     }
   };
+}
+
+/**
+ * Persist the provider's terminal error before lifecycle events are emitted.
+ * Provider implementations do not share one error-audit path: some already
+ * write through BaseAIProvider.logError, while extension providers only yield
+ * an error chunk. This handler is the common consumer for both shapes, so the
+ * delegated-session settlement code can always recover the exact engine text.
+ */
+async function persistProviderError(
+  provider: AIProvider,
+  sessionId: string,
+  source: string,
+  errorMessage: string,
+): Promise<void> {
+  const content = JSON.stringify({
+    type: 'error',
+    error: errorMessage,
+    is_error: true,
+  });
+
+  // Providers built on BaseAIProvider may have queued their own error audit
+  // non-blockingly. Flush that queue before deduplicating the common record.
+  const flushPendingWrites = (provider as AIProvider & {
+    flushPendingWrites?: () => Promise<void>;
+  }).flushPendingWrites;
+  if (typeof flushPendingWrites === 'function') {
+    await flushPendingWrites.call(provider);
+  }
+
+  const existingMessages = await AgentMessagesRepository.list(sessionId, { limit: 100 });
+  if (existingMessages.some((message) => message.direction === 'output' && message.content === content)) {
+    return;
+  }
+
+  await AgentMessagesRepository.create({
+    sessionId,
+    source,
+    direction: 'output',
+    content,
+    metadata: { isError: true, errorType: 'provider_error' },
+    createdAt: new Date(),
+    hidden: false,
+    searchable: false,
+    messageKind: 'system',
+  });
 }
 
 /**
@@ -2125,6 +2172,20 @@ export class MessageStreamingHandler {
             const isBedrockToolError = chunk.isBedrockToolError || isBedrockToolSearchError(errorMsg);
             const isServerError = chunk.isServerError || false;
 
+            // This is the durable hand-off to delegated-intelligence settlement.
+            // It must complete before session:error/session:completed can race
+            // in the state listener; otherwise MetaAgentService cannot recover
+            // the engine's original wording and a child can be receipted as
+            // successful. Existing provider-side audit rows are deduplicated.
+            try {
+              await persistProviderError(provider, session.id, session.provider, errorMsg);
+            } catch (persistError) {
+              // Preserve the terminal state transition even if the secondary
+              // audit write fails; the failure is still visible in the normal
+              // error log and the settlement guard remains active.
+              logger.main.error('[AIService] Failed to persist provider error:', persistError);
+            }
+
             safeSend(event, 'ai:error', {
               sessionId: session.id,
               message: errorMsg,
@@ -2134,32 +2195,21 @@ export class MessageStreamingHandler {
               isCodexAuthRequired: chunk.isCodexAuthRequired || false,
             });
 
-            // An in-band 'error' chunk from an extension agent (the gemini
-            // backend's only failure-settle path) does NOT throw, so the outer
-            // catch never runs and the session would never move off 'running'.
-            // Without a terminal transition no session:error fires, a spawned
-            // child stays 'running' forever and a meta-agent waits on it
-            // indefinitely while it holds a spawn-cap slot. Settle it here,
-            // mirroring the outer catch. Scoped to extension agents; built-in
-            // providers throw or settle via their SDK terminal handling.
-            // Only DIRECT (non-queued) extension-agent sessions need settling
-            // here. A queued meta-agent child is already settled by the
-            // queued-prompt chain (onChainSettled -> endSession); adding our own
-            // terminal transition on top would emit a second, contradictory
-            // notification to the parent. A direct gemini chat that errors
-            // in-band has no other settle path (its only failure signal is this
-            // non-throwing error chunk), so without this it stays 'running'.
-            if (
-              isExtensionAgentSession
-              && session?.id
-              && !this.svc.sessionsProcessingQueue.has(session.id)
-            ) {
+            // Every provider can terminate through an in-band error chunk. The
+            // queued-child path deliberately leaves endSession to
+            // onChainSettled, but it still needs the error status now so the
+            // queued settlement captures a failure instead of success.
+            if (session?.id) {
+              const queuedChainAlreadyActive = this.svc.sessionsProcessingQueue.has(session.id);
               try {
                 await stateManager.updateActivity({ sessionId: session.id, status: 'error' });
-                await stateManager.endSession(session.id);
-                await this.svc.hooklessWatcher.stopForSession(session.id);
+                if (!queuedChainAlreadyActive) {
+                  await stateManager.endSession(session.id);
+                  await this.svc.hooklessWatcher.stopForSession(session.id);
+                  codexEditWindowRegistry.clearSession(session.id);
+                }
               } catch (settleErr) {
-                logger.main.error('[AIService] Failed to settle extension-agent error chunk:', settleErr);
+                logger.main.error('[AIService] Failed to settle provider error chunk:', settleErr);
               }
             }
             break;
@@ -2753,6 +2803,15 @@ export class MessageStreamingHandler {
         // mutate user-visible session state or emit normal error UI for the
         // ephemeral smoke-test session.
         throw error;
+      }
+
+      if (session?.id) {
+        const rawProviderError = error instanceof Error ? error.message : String(error);
+        try {
+          await persistProviderError(provider, session.id, session.provider, rawProviderError);
+        } catch (persistError) {
+          logger.main.error('[AIService] Failed to persist thrown provider error:', persistError);
+        }
       }
 
       // Track AI request failure (only if we have session info)

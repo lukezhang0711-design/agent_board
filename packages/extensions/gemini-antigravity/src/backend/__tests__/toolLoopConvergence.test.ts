@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AntigravityToolLoopProtocol } from '../ToolLoopProtocol';
+import { AGY_PRINT_TIMEOUT_MS, AntigravityToolLoopProtocol } from '../ToolLoopProtocol';
 import type { AntigravityServerManager } from '../ServerManager';
 
 // These drive the REAL run() loop with a mock server.getModelResponse so no
@@ -29,6 +29,14 @@ async function drain(gen: AsyncGenerator<unknown>): Promise<Ev[]> {
 }
 
 describe('AntigravityToolLoopProtocol convergence hardening', () => {
+  it('uses the measured cold-start agy print budget by default', async () => {
+    const { proto, spy } = makeProto(async () => 'done', 1);
+
+    await drain(proto.run('task', 'sys', LIST_TOOL, async () => 'unused'));
+
+    expect(spy.mock.calls[0][2]).toBe(AGY_PRINT_TIMEOUT_MS);
+  });
+
   it('surfaces a progress ledger of prior tool calls in the next prompt', async () => {
     const prompts: string[] = [];
     let call = 0;
