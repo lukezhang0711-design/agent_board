@@ -3146,13 +3146,13 @@ describe('MetaAgentService work-order persistence', () => {
     }
   });
 
-  it('records the raw child failure receipt and rejects a forged completed settlement', async () => {
+  it('accounts a provider error with the raw reason and rejects a late success settlement', async () => {
     const child = await (service as any).createChildSessionInternal(
       'head-session',
       workspacePath,
       { prompt: 'Preserve the engine failure as a failed work order' },
     );
-    const rawEngineError = 'Model "gemini-2.5-pro" is not supported. Supported models: gemini-2.5-flash';
+    const rawEngineError = 'Provider error: agy print mode timed out after 90s';
     await AgentMessagesRepository.create({
       sessionId: child.sessionId,
       source: 'claude-code',
@@ -3171,6 +3171,7 @@ describe('MetaAgentService work-order persistence', () => {
     expect(parseStoredJson<any>(failedRows[0].data)).toMatchObject({
       status: 'failed',
       failureReason: rawEngineError,
+      failureClass: 'infra',
       receipt: {
         engine: 'claude-code',
         model: 'claude-code:opus',
@@ -3180,8 +3181,9 @@ describe('MetaAgentService work-order persistence', () => {
       },
     });
     expect(parseStoredJson<any>(failedRows[0].data).attempts).toEqual([
-      expect.objectContaining({ attempt: 1, failureReason: rawEngineError, outcome: 'failure' }),
+      expect.objectContaining({ attempt: 1, failureReason: rawEngineError, failureClass: 'infra', outcome: 'failure' }),
     ]);
+    expect(parseStoredJson<any>(failedRows[0].data).attempts.every((attempt: any) => attempt.outcome !== 'success')).toBe(true);
 
     const guardLog = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
@@ -3190,7 +3192,12 @@ describe('MetaAgentService work-order persistence', () => {
       `SELECT data FROM tracker_items WHERE source_ref = $1`,
       [`meta-agent-work-order:${child.sessionId}`],
     );
-    expect(parseStoredJson<any>(guardedRows[0].data).status).toBe('failed');
+    expect(parseStoredJson<any>(guardedRows[0].data)).toMatchObject({
+      status: 'failed',
+      failureReason: rawEngineError,
+      receipt: { outcome: 'failure' },
+    });
+    expect(parseStoredJson<any>(guardedRows[0].data).attempts.every((attempt: any) => attempt.outcome !== 'success')).toBe(true);
     expect(guardLog).toHaveBeenCalledWith(expect.stringContaining('[WorkOrderGuard]'));
     guardLog.mockRestore();
   });

@@ -683,6 +683,89 @@ describe('child session event hidden delivery channel', () => {
     expect(handlerTestState.stateManager.startSession).toHaveBeenCalledTimes(1);
   });
 
+  it('persists provider error chunks and transitions every engine channel to error', async () => {
+    const sessionId = 'provider-error-accounting-red';
+    const rawEngineError = 'Provider error: agy print mode timed out after 90s';
+    await AISessionsRepository.create({
+      id: sessionId,
+      provider: 'openai',
+      workspaceId: '/workspace',
+      title: 'Provider error accounting',
+    });
+
+    handlerTestState.provider = {
+      initialize: vi.fn().mockResolvedValue(undefined),
+      registerToolHandler: vi.fn(),
+      async *sendMessage() {
+        yield { type: 'error', error: rawEngineError };
+      },
+    };
+    const handler = new MessageStreamingHandler({
+      sessionManager: {
+        loadSession: vi.fn().mockResolvedValue({
+          id: sessionId,
+          provider: 'openai',
+          workspacePath: '/workspace',
+          title: 'Provider error accounting',
+          messages: [],
+          metadata: {},
+          providerConfig: {},
+        }),
+        addMessage: vi.fn().mockResolvedValue(undefined),
+        updateSessionTitle: vi.fn().mockResolvedValue(undefined),
+        updateProviderSessionData: vi.fn().mockResolvedValue(undefined),
+      },
+      analytics: { sendEvent: vi.fn() },
+      sendMessageHandler: null,
+      processingQueuedPromptIds: new Set<string>(),
+      matchDebounceTimers: new Map(),
+      sessionsProcessingQueue: new Set<string>(),
+      documentContextService: {
+        prepareContext: () => ({ documentContext: {}, userMessageAdditions: {} }),
+      },
+      hooklessWatcher: {
+        ensureForSession: vi.fn().mockResolvedValue(undefined),
+        stopForSession: vi.fn().mockResolvedValue(undefined),
+        scheduleStop: vi.fn(),
+      },
+      getSettingsStore: () => ({ get: vi.fn() }),
+      getApiKeyForProvider: () => undefined,
+      buildClaudeCodeRuntimeConfig: vi.fn(),
+      continueQueuedPromptChain: vi.fn(),
+      tryDispatchNextQueuedPrompt: vi.fn(),
+      isSessionQueuePaused: vi.fn().mockResolvedValue(false),
+      runAutoContextCommand: vi.fn(),
+      createToolHandler: () => ({}),
+      inferWorktreePathFromFilePath: () => null,
+      inferWorktreePathFromCommand: () => null,
+      adoptWorktreeForSession: vi.fn(),
+    } as any);
+
+    try {
+      await handler.handle(
+        { sender: { id: 1 } } as any,
+        'trigger provider failure',
+        {} as any,
+        sessionId,
+        '/workspace',
+      );
+    } finally {
+      handler.destroy();
+    }
+
+    const messages = await AgentMessagesRepository.list(sessionId, { limit: 50 });
+    expect(messages).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        direction: 'output',
+        content: JSON.stringify({ type: 'error', error: rawEngineError, is_error: true }),
+      }),
+    ]));
+    expect(handlerTestState.stateManager.updateActivity).toHaveBeenCalledWith({
+      sessionId,
+      status: 'error',
+    });
+  });
+
   it('RED: ignores tool chunks in a channel-health stream, then accepts a non-empty completed text receipt', async () => {
     const healthSessionId = 'health-tool-chunks';
     const healthPrompt = 'Reply with one word: pong';

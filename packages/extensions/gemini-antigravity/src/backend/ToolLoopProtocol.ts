@@ -82,6 +82,11 @@ const DEDUP_READONLY_TOOLS = new Set(['read_file', 'list_files', 'search_files']
 // stuck looping; stop and force a final synthesis instead of burning the budget.
 const MAX_DUPLICATE_READS = 4;
 
+// agy print measurements: cold starts take 19–90+ seconds and warm turns take
+// 8–70 seconds. A 180s first-run budget leaves headroom for a cold process
+// without allowing a wedged process to wait indefinitely.
+export const AGY_PRINT_TIMEOUT_MS = 180_000;
+
 // Sentinel-delimited write directive. write_file's `content` argument is a whole
 // file body (markdown, code, JSON) dense with quotes, braces, and newlines. A weak
 // model reliably FAILS to escape all of that into a JSON string value: it either
@@ -193,12 +198,7 @@ export class AntigravityToolLoopProtocol {
     systemPrompt: string,
     tools: OpenAITool[],
     executeToolCall: (name: string, args: Record<string, unknown>) => Promise<unknown>,
-    // A legitimate turn finishes well under this even when verbose (a 21-46KB
-    // response measured at 27-36s). The long timeouts were an intermittent
-    // runaway generation, not a slow-but-valid turn, so a tight-but-generous cap
-    // cuts a runaway sooner; getModelResponse then retries once (a fresh
-    // generation usually does not run away), keeping ~2x90s worst case.
-    timeoutMs = 90_000
+    timeoutMs = AGY_PRINT_TIMEOUT_MS
   ): AsyncGenerator<
     | { type: 'text'; content: string }
     | { type: 'tool_call'; name: string; args: Record<string, unknown> }
