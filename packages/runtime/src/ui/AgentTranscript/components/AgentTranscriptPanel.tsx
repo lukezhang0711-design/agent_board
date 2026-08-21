@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { SessionData } from '../../../ai/server/types';
-import type { TranscriptSettings, PromptMarker, FileEditSummary } from '../types';
+import type { InteractivePromptStatusQuery, TranscriptSettings, PromptMarker, FileEditSummary } from '../types';
 import { RichTranscriptView } from './RichTranscriptView';
 import { TranscriptSidebar } from './TranscriptSidebar';
 import { FileEditsSidebar } from './FileEditsSidebar';
@@ -72,6 +72,8 @@ interface AgentTranscriptPanelProps {
   onUnarchive?: () => void;
   /** Optional: Read a file from the filesystem (for custom widgets that need to load persisted files) */
   readFile?: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>;
+  /** Query whether a native interactive prompt can still receive a response. */
+  getInteractivePromptStatus?: InteractivePromptStatusQuery;
   /** Optional: render additional content above the file edits sidebar (e.g., pending review banner) */
   renderFilesHeader?: () => React.ReactNode;
   /** Optional: Set of file paths that have pending AI edits awaiting review */
@@ -139,6 +141,7 @@ const AgentTranscriptPanelComponent = React.forwardRef<
   onCloseAndArchive,
   onUnarchive,
   readFile,
+  getInteractivePromptStatus,
   renderFilesHeader,
   pendingReviewFiles,
   groupByDirectory,
@@ -383,6 +386,7 @@ const AgentTranscriptPanelComponent = React.forwardRef<
           renderEmptyExtra={renderEmptyExtra}
           hideEmptyHelp={hideEmptyHelp}
           readFile={readFile}
+          getInteractivePromptStatus={getInteractivePromptStatus}
           onOpenFile={onFileClick}
           onOpenSession={onOpenSession}
           onCompact={onCompact}
@@ -567,6 +571,13 @@ export const AgentTranscriptPanel = React.memo(
     // Workspace path changed - must re-render
     if (prevProps.workspacePath !== nextProps.workspacePath) {
       logPanelMemoDiff(nextProps.sessionId, 'workspacePath');
+      return false;
+    }
+
+    // Interactive prompt status query changed - the widgets must see the new
+    // durable/provider liveness route instead of retaining a stale callback.
+    if (prevProps.getInteractivePromptStatus !== nextProps.getInteractivePromptStatus) {
+      logPanelMemoDiff(nextProps.sessionId, 'getInteractivePromptStatus');
       return false;
     }
 

@@ -22,6 +22,12 @@ export interface AskUserQuestionResponse {
 // ============================================================
 
 import type { RequestUserInputAnswer } from '../../../../ai/server/providers/shared/requestUserInputTypes';
+export type {
+  InteractivePromptAvailability,
+  InteractivePromptStatusQuery,
+  InteractivePromptStatusResult,
+  InteractivePromptType,
+} from '../../types';
 export type { RequestUserInputAnswer };
 
 export interface RequestUserInputResponse {

@@ -6,6 +6,7 @@ import { createStore, Provider as JotaiProvider } from 'jotai';
 import {
   noopInteractiveWidgetHost,
 } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets';
+import type { CustomToolWidgetProps } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets';
 import { interactiveWidgetHostAtom } from '@nimbalyst/runtime/store/atoms/interactiveWidgetHost';
 import type { InteractiveWidgetHost } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets/InteractiveWidgetHost';
 import type { TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/transcript/TranscriptProjector';
@@ -49,6 +50,7 @@ function renderWidget(
   arguments_: Record<string, unknown>,
   hostOverrides: Partial<InteractiveWidgetHost> = {},
   providerToolCallId: string | null = compositeRequestId,
+  widgetOverrides: Partial<CustomToolWidgetProps> = {},
 ) {
   const jotaiStore = createStore();
   jotaiStore.set(interactiveWidgetHostAtom(sessionId), {
@@ -62,6 +64,7 @@ function renderWidget(
         isExpanded={false}
         onToggle={() => {}}
         sessionId={sessionId}
+        {...widgetOverrides}
       />
     </JotaiProvider>,
   );
@@ -103,6 +106,23 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getByRole('button', { name: 'Request changes' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Dismiss plan' })).toBeTruthy();
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
+  });
+
+  it('renders an unavailable submitted plan as an explicit invalid card', async () => {
+    renderWidget(planArguments, {}, compositeRequestId, {
+      workspacePath: '/workspace',
+      getInteractivePromptStatus: vi.fn().mockResolvedValue({
+        status: 'unavailable',
+        reason: 'supplier gone',
+      }),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('plan-approval-widget').getAttribute('data-state')).toBe('invalid');
+    });
+    expect(screen.getByText('已失效')).toBeTruthy();
+    expect(screen.getByText('重新发送消息继续')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Approve plan' })).toBeNull();
   });
 
   it('states plainly when the submitted plan declares no risks', () => {

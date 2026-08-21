@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
   ExitPlanModeWidget,
+  InteractivePromptStatusCard,
+  useInteractivePromptStatus,
   type CustomToolWidgetProps,
 } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets';
 import { interactiveWidgetHostAtom } from '@nimbalyst/runtime/store/atoms/interactiveWidgetHost';
@@ -57,7 +59,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   props: CustomToolWidgetProps;
   args: SubmittedPlanArgs;
 }> = ({ props, args }) => {
-  const { message, sessionId } = props;
+  const { message, sessionId, workspacePath, getInteractivePromptStatus } = props;
   const toolCall = message.toolCall!;
 
   const host = useAtomValue(interactiveWidgetHostAtom(sessionId));
@@ -89,6 +91,14 @@ const SubmittedPlanApprovalCard: React.FC<{
     try { return JSON.parse(toolResult).autoApproved === true; } catch { return false; }
   }, [toolResult]);
   const isPending = toolResult === '';
+  const { status: promptStatus, markUnavailable } = useInteractivePromptStatus(
+    getInteractivePromptStatus,
+    requestId ?? '',
+    'exit_plan_mode',
+    isPending,
+    getInteractivePromptStatus ? 'checking' : host ? 'available' : 'checking',
+  );
+  const effectiveWorkspacePath = workspacePath || host?.workspacePath;
   const approvalStateKey = useMemo(() => ({
     sessionId,
     promptId: requestId ?? '',
@@ -136,12 +146,12 @@ const SubmittedPlanApprovalCard: React.FC<{
   }, [showFeedbackInput]);
 
   const refreshDurableState = useCallback(async () => {
-    if (!requestId || !host?.workspacePath || !window.electronAPI?.invoke) return;
+    if (!requestId || !effectiveWorkspacePath || !window.electronAPI?.invoke) return;
     try {
       await refreshPlanApprovalState({
         sessionId,
         promptId: requestId,
-        workspacePath: host.workspacePath,
+        workspacePath: effectiveWorkspacePath,
       });
       stateReadErrorLoggedRef.current = false;
     } catch (error) {
@@ -150,13 +160,15 @@ const SubmittedPlanApprovalCard: React.FC<{
         stateReadErrorLoggedRef.current = true;
       }
     }
-  }, [host?.workspacePath, refreshPlanApprovalState, requestId, sessionId]);
+  }, [effectiveWorkspacePath, refreshPlanApprovalState, requestId, sessionId]);
 
   useEffect(() => {
     if (
       !requestId
-      || !host?.workspacePath
+      || !effectiveWorkspacePath
       || !isPending
+      || promptStatus === 'unavailable'
+      || promptStatus === 'resolved'
       || (durableState !== null && durableState.status !== 'submitted')
     ) {
       return;
@@ -167,7 +179,7 @@ const SubmittedPlanApprovalCard: React.FC<{
       DURABLE_STATE_POLL_INTERVAL_MS,
     );
     return () => window.clearInterval(interval);
-  }, [durableState, host?.workspacePath, isPending, refreshDurableState, requestId]);
+  }, [durableState, effectiveWorkspacePath, isPending, promptStatus, refreshDurableState, requestId]);
 
   const completedResult = useMemo<'approved' | 'changes-requested' | null>(() => {
     if (durableState?.decision === 'approved') return 'approved';
@@ -196,7 +208,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   }, [awaitingResponse, displayResult, responseSubmitted]);
 
   const submitResponse = useCallback(async (response: { approved: boolean; feedback?: string }) => {
-    if (!host || !requestId || !awaitingResponse || isSubmitting) return;
+    if (!host || !requestId || promptStatus !== 'available' || !awaitingResponse || isSubmitting) return;
     setIsSubmitting(true);
     try {
       if (response.approved) {
@@ -210,10 +222,11 @@ const SubmittedPlanApprovalCard: React.FC<{
       setConfirmationTimedOut(false);
     } catch (error) {
       console.error('[PlanApprovalWidget] Failed to submit plan response:', error);
+      if (getInteractivePromptStatus) markUnavailable();
     } finally {
       setIsSubmitting(false);
     }
-  }, [awaitingResponse, host, isSubmitting, refreshDurableState, requestId]);
+  }, [awaitingResponse, getInteractivePromptStatus, host, isSubmitting, markUnavailable, promptStatus, refreshDurableState, requestId]);
 
   const handleApprove = useCallback(async () => {
     if (responseSubmitted) return;
@@ -241,7 +254,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   return (
     <div
       data-testid="plan-approval-widget"
-      data-state={displayResult ?? (isPending ? 'pending' : 'completed')}
+      data-state={promptStatus === 'unavailable' ? 'invalid' : displayResult ?? (isPending ? 'pending' : 'completed')}
       data-agent-role={agentRole ?? 'unverified'}
       className="plan-approval-widget rounded-lg overflow-hidden border border-nim-primary bg-nim-secondary"
     >
@@ -276,6 +289,15 @@ const SubmittedPlanApprovalCard: React.FC<{
       </div>
 
       <div className="p-4">
+        {(promptStatus === 'unavailable' || (promptStatus === 'resolved' && !displayResult)) && (
+          <InteractivePromptStatusCard
+            testId="plan-approval-status"
+            title="Plan approval"
+            status={promptStatus}
+            detail={promptStatus === 'unavailable' ? '方案审批供应端已失效。' : '方案审批响应已记录。'}
+          />
+        )}
+
         {planSummary && (
           <div data-testid="plan-approval-summary" className="mb-3 rounded-md bg-nim-tertiary p-3">
             <div className="text-xs font-semibold text-nim mb-1">Plan summary</div>
@@ -302,7 +324,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         </div>
 
-        {!displayResult && awaitingResponse && host && requestId && !responseSubmitted && (
+        {promptStatus !== 'unavailable' && !displayResult && awaitingResponse && promptStatus === 'available' && host && requestId && !responseSubmitted && (
           <div className="mt-4 flex flex-col gap-2">
             <button
               type="button"
@@ -429,7 +451,11 @@ const SubmittedPlanApprovalCard: React.FC<{
           <div className="mt-4 text-xs text-nim-muted">Waiting for a durable approval ID…</div>
         )}
 
-        {!displayResult && awaitingResponse && requestId && !host && !responseSubmitted && (
+        {!displayResult && awaitingResponse && promptStatus === 'checking' && !responseSubmitted && (
+          <div className="mt-4 text-xs text-nim-muted">Checking approval availability…</div>
+        )}
+
+        {!displayResult && awaitingResponse && promptStatus !== 'unavailable' && requestId && !host && !responseSubmitted && (
           <div className="mt-4 text-xs text-nim-muted">Waiting for an active approval surface…</div>
         )}
       </div>

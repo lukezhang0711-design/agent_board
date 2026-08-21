@@ -39,6 +39,7 @@
  */
 
 import type { TranscriptViewMessage } from '../../../../ai/server/transcript/TranscriptProjector';
+import type { InteractivePromptStatusQuery } from '../../types';
 
 // Re-export widgets
 export { EditorScreenshotWidget, MockupScreenshotWidget } from './EditorScreenshotWidget';
@@ -55,10 +56,21 @@ export { SuperLoopProgressWidget } from './SuperLoopProgressWidget';
 export { UpdateSessionMetaWidget } from './UpdateSessionMetaWidget';
 export { TrackerToolWidget } from './TrackerToolWidget';
 export { ToolWidgetErrorBoundary } from './ToolWidgetErrorBoundary';
+export {
+  InteractivePromptStatusCard,
+  useInteractivePromptStatus,
+  type InteractivePromptViewStatus,
+} from './InteractivePromptStatus';
 
 // Re-export host types (for use in SessionTranscript to set the host)
 export type { InteractiveWidgetHost, PermissionScope, ToolPermissionResponse } from './InteractiveWidgetHost';
 export { noopInteractiveWidgetHost } from './InteractiveWidgetHost';
+export type {
+  InteractivePromptAvailability,
+  InteractivePromptStatusQuery,
+  InteractivePromptStatusResult,
+  InteractivePromptType,
+} from '../../types';
 
 export type { ToolCallDiffResult } from '../../../../ai/server/transcript/TranscriptProjector';
 
@@ -78,6 +90,12 @@ export interface CustomToolWidgetProps {
   sessionId: string;
   /** Optional: Read a file from the filesystem (for loading persisted output files) */
   readFile?: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>;
+  /**
+   * Query the existing response/durable path before rendering response controls.
+   * The renderer must not infer liveness from the card's mere presence: a
+   * native supplier can disappear during a mode/model switch or app restart.
+   */
+  getInteractivePromptStatus?: InteractivePromptStatusQuery;
   // Note: Interactive widgets read their host from interactiveWidgetHostAtom(sessionId)
   // No host prop needed - avoids prop drilling through the component tree
 }

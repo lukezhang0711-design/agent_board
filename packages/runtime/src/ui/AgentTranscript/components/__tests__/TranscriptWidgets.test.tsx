@@ -22,6 +22,7 @@ import * as rtl from '@testing-library/react';
 import { createStore, Provider as JotaiProvider } from 'jotai';
 import type { TranscriptViewMessage } from '../../../../ai/server/transcript/TranscriptProjector';
 import type { CustomToolWidgetProps } from '../CustomToolWidgets/index';
+import { noopInteractiveWidgetHost } from '../CustomToolWidgets/index';
 import { interactiveWidgetHostAtom } from '../../../../store/atoms/interactiveWidgetHost';
 import { clearRequestUserInputDraft } from '../../../../store/atoms/requestUserInputDraft';
 
@@ -1417,6 +1418,66 @@ describe('ExitPlanModeWidget', () => {
     expect(widget.dataset.state).toBe('pending');
     expect(screen.getByText('Ready to exit planning mode?')).toBeDefined();
     expect(screen.getByText('Waiting...')).toBeDefined();
+  });
+
+  it('marks a native plan card invalid when its supplier cannot be revived', async () => {
+    const message = makeToolMessage('ExitPlanMode', {
+      planFilePath: 'plan.md',
+    });
+    render(
+      <Wrapper>
+        <ExitPlanModeWidget
+          message={message}
+          isExpanded={false}
+          onToggle={() => {}}
+          sessionId="stale-plan"
+          {...({
+            getInteractivePromptStatus: vi.fn().mockResolvedValue({
+              status: 'unavailable',
+              reason: 'The native supplier is gone',
+            }),
+          } as any)}
+        />
+      </Wrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('exit-plan-mode-widget').dataset.state).toBe('invalid');
+    });
+    expect(screen.getByText('已失效')).toBeDefined();
+    expect(screen.getByText('重新发送消息继续')).toBeDefined();
+    expect(screen.queryByTestId('exit-plan-mode-approve')).toBeNull();
+  });
+
+  it('revives a native plan card when the durable route is available', async () => {
+    const store = createStore_();
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    store.set(interactiveWidgetHostAtom('revived-plan'), {
+      ...noopInteractiveWidgetHost,
+      exitPlanModeApprove,
+    });
+    const getInteractivePromptStatus = vi.fn().mockResolvedValue({ status: 'available' as const });
+    const message = makeToolMessage('ExitPlanMode', { planFilePath: 'plan.md' });
+
+    render(
+      <JotaiProvider store={store}>
+        <ExitPlanModeWidget
+          message={message}
+          isExpanded={false}
+          onToggle={() => {}}
+          sessionId="revived-plan"
+          getInteractivePromptStatus={getInteractivePromptStatus}
+        />
+      </JotaiProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('exit-plan-mode-approve')).toBeDefined();
+    });
+    fireEvent.click(screen.getByTestId('exit-plan-mode-approve'));
+    await waitFor(() => {
+      expect(exitPlanModeApprove).toHaveBeenCalledWith(message.toolCall?.providerToolCallId);
+    });
   });
 
   it('renders approved state from tool result', () => {

@@ -111,6 +111,23 @@ function ResolvedModelHarness() {
   return <AIInput {...props} />;
 }
 
+function ModeToggleHarness({ disabled = false, onModeChange = vi.fn() }: { disabled?: boolean; onModeChange?: (mode: 'planning' | 'agent') => void }) {
+  const Input = AIInput as React.ComponentType<any>;
+  return (
+    <Input
+      value=""
+      onChange={() => {}}
+      onSend={() => {}}
+      provider="claude-code"
+      mode="planning"
+      onModeChange={onModeChange}
+      disableModeToggle={disabled}
+      workspacePath="/workspace"
+      testId="mode-toggle-input"
+    />
+  );
+}
+
 function dispatchCompositionEnter(
   textarea: HTMLTextAreaElement,
   overrides: { isComposing: boolean; keyCode: number },
@@ -224,5 +241,48 @@ describe('AIInput resolved model receipt', () => {
   it('shows the actual model resolved by the provider without requiring another user action', () => {
     render(<ResolvedModelHarness />);
     expect(screen.getByTestId('resolved-model-receipt').textContent).toBe('Model: claude-opus-5');
+  });
+});
+
+describe('AIInput plan toggle scope', () => {
+  beforeEach(() => {
+    (window as any).electronAPI = { invoke: vi.fn(() => new Promise(() => {})) };
+    vi.stubGlobal('requestAnimationFrame', () => 1);
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    delete (window as any).electronAPI;
+  });
+
+  it('keeps the Plan/Agent toggle available for ordinary Claude sessions', () => {
+    const onModeChange = vi.fn();
+    render(<ModeToggleHarness onModeChange={onModeChange} />);
+    const toggle = screen.getByTestId('plan-mode-toggle') as HTMLButtonElement;
+
+    expect(toggle.disabled).toBe(false);
+    fireEvent.click(toggle);
+    expect(onModeChange).toHaveBeenCalledWith('agent');
+  });
+
+  it('disables the engine mode toggle for Head sessions and blocks Shift+Tab', () => {
+    render(<ModeToggleHarness disabled />);
+    const toggle = screen.getByTestId('plan-mode-toggle') as HTMLButtonElement;
+
+    expect(toggle.disabled).toBe(true);
+    expect(toggle.title).toContain('Head');
+
+    fireEvent.click(toggle);
+    const textarea = screen.getByTestId('mode-toggle-input') as HTMLTextAreaElement;
+    const event = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(textarea, event);
+    expect(event.defaultPrevented).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { VList, type VListHandle, type CacheSnapshot } from 'virtua';
 import type { TranscriptViewMessage, SessionData } from '../../../ai/server/types';
-import type { TranscriptSettings } from '../types';
+import type { InteractivePromptStatusQuery, TranscriptSettings } from '../types';
 import { MessageSegment } from './MessageSegment';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ProviderIcon } from '../../icons/ProviderIcons';
@@ -505,6 +505,8 @@ interface RichTranscriptViewProps {
   hideEmptyHelp?: boolean;
   /** Optional: Read a file from the filesystem (for custom widgets that need to load persisted files) */
   readFile?: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>;
+  /** Query whether a native interactive prompt can still receive a response. */
+  getInteractivePromptStatus?: InteractivePromptStatusQuery;
   /** Optional: Open a file in the editor */
   onOpenFile?: (filePath: string) => void;
   /** Optional: Navigate to a session by ID (for @@session reference links) */
@@ -1105,7 +1107,7 @@ export const extractEditsFromToolMessage = (message: TranscriptViewMessage): any
 export const RichTranscriptView = React.forwardRef<
   { scrollToMessage: (index: number) => void; scrollToTop: () => void },
   RichTranscriptViewProps
->(({ sessionId, sessionStatus, isProcessing, hasPendingInteractivePrompt, messages, provider, settings: propsSettings, onSettingsChange, showSettings, documentContext, workspacePath, renderEmptyExtra, hideEmptyHelp, readFile, onOpenFile, onOpenSession, onCompact, onRetry, promptAdditions, currentTeammates, waitingForNoun, appStartTime, renderEmbeddedFile, canEmbedFile, onSearchBarVisibilityChange, persistScrollState = true }, ref) => {
+>(({ sessionId, sessionStatus, isProcessing, hasPendingInteractivePrompt, messages, provider, settings: propsSettings, onSettingsChange, showSettings, documentContext, workspacePath, renderEmptyExtra, hideEmptyHelp, readFile, getInteractivePromptStatus, onOpenFile, onOpenSession, onCompact, onRetry, promptAdditions, currentTeammates, waitingForNoun, appStartTime, renderEmbeddedFile, canEmbedFile, onSearchBarVisibilityChange, persistScrollState = true }, ref) => {
   const [collapsedMessages, setCollapsedMessages] = useState<Set<number>>(new Set());
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const scrollButtonRef = useRef<HTMLDivElement>(null);
@@ -1713,6 +1715,7 @@ export const RichTranscriptView = React.forwardRef<
               workspacePath={workspacePath}
               sessionId={sessionId}
               readFile={readFile}
+              getInteractivePromptStatus={getInteractivePromptStatus}
             />
           </ToolWidgetErrorBoundary>
         </div>

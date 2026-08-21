@@ -66,6 +66,10 @@ import {
 import type { CustomToolWidgetProps } from './index';
 import { interactiveWidgetHostAtom } from '../../../../store/atoms/interactiveWidgetHost';
 import {
+  InteractivePromptStatusCard,
+  useInteractivePromptStatus,
+} from './InteractivePromptStatus';
+import {
   clearRequestUserInputDraft,
   requestUserInputDraftAtom,
   type RequestUserInputDraft,
@@ -1124,7 +1128,11 @@ function FieldCard({
 // Main widget component
 // ============================================================
 
-export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({ message, sessionId }) => {
+export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({
+  message,
+  sessionId,
+  getInteractivePromptStatus,
+}) => {
   const toolCall = message.toolCall;
   const promptId = toolCall?.providerToolCallId || '';
 
@@ -1143,6 +1151,14 @@ export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({ messag
   const isCompleted = parsedResult !== null;
   const isCancelled = parsedResult?.cancelled === true;
   const isPending = !isCompleted;
+
+  const { status: promptStatus, markUnavailable } = useInteractivePromptStatus(
+    getInteractivePromptStatus,
+    promptId,
+    'request_user_input',
+    isPending,
+    getInteractivePromptStatus ? 'checking' : host ? 'available' : 'checking',
+  );
 
   const [draft, setDraft] = useAtom(requestUserInputDraftAtom(promptId));
 
@@ -1180,7 +1196,7 @@ export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({ messag
   }, [args, draft.fields]);
 
   const handleSubmit = useCallback(async () => {
-    if (!host || !args || hasResponded || !isPending || !allValid) return;
+    if (!host || !args || hasResponded || !isPending || !allValid || promptStatus !== 'available') return;
     const answers = draftToAnswers(args, draft);
     setIsSubmitting(true);
     setLocalResult({ answers });
@@ -1190,15 +1206,16 @@ export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({ messag
       clearRequestUserInputDraft(promptId);
     } catch (error) {
       console.error('[RequestUserInputWidget] Failed to submit:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, args, draft, promptId, hasResponded, isPending, allValid]);
+  }, [getInteractivePromptStatus, host, args, draft, markUnavailable, promptStatus, promptId, hasResponded, isPending, allValid]);
 
   const handleCancel = useCallback(async () => {
-    if (!host || hasResponded || !isPending) return;
+    if (!host || hasResponded || !isPending || promptStatus !== 'available') return;
     setIsSubmitting(true);
     setLocalResult({ answers: {}, cancelled: true });
     setHasResponded(true);
@@ -1207,10 +1224,13 @@ export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({ messag
       clearRequestUserInputDraft(promptId);
     } catch (error) {
       console.error('[RequestUserInputWidget] Failed to cancel:', error);
+      if (getInteractivePromptStatus) markUnavailable();
+      setLocalResult(null);
+      setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, promptId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, promptId, hasResponded, isPending]);
 
   if (!args) return null;
 
@@ -1263,8 +1283,18 @@ export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({ messag
     );
   }
 
+  if (promptStatus === 'unavailable' || promptStatus === 'resolved') {
+    return (
+      <InteractivePromptStatusCard
+        testId="request-user-input-widget"
+        title={args.title || 'PromptForUserInput'}
+        status={promptStatus}
+      />
+    );
+  }
+
   // ---- Pending state, no host ----
-  if (!host) {
+  if (!host || promptStatus === 'checking') {
     return (
       <div
         data-testid="request-user-input-widget"
@@ -1309,7 +1339,7 @@ export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({ messag
               field={field}
               draft={fd}
               setDraft={(next) => setFieldDraft(field.id, next)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || promptStatus !== 'available' || !host}
             />
           );
         })}
@@ -1339,7 +1369,7 @@ export const RequestUserInputWidget: React.FC<CustomToolWidgetProps> = ({ messag
               type="button"
               data-testid="request-user-input-submit"
               onClick={handleSubmit}
-              disabled={!allValid || isSubmitting}
+              disabled={!allValid || isSubmitting || promptStatus !== 'available' || !host}
               className="px-4 py-1.5 rounded-md text-[13px] font-medium cursor-pointer border-none transition-colors duration-150 hover:opacity-90 bg-nim-primary text-nim-on-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Submitting...' : args.submitLabel ?? 'Confirm'}

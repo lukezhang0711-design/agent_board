@@ -21,6 +21,10 @@ import { MaterialSymbol } from '../../../icons/MaterialSymbol';
 import type { CustomToolWidgetProps } from './index';
 import { buildCodexToolLookupId } from '../../../../ai/server/toolLookupIds';
 import { interactiveWidgetHostAtom } from '../../../../store/atoms/interactiveWidgetHost';
+import {
+  InteractivePromptStatusCard,
+  useInteractivePromptStatus,
+} from './InteractivePromptStatus';
 import { useDiffPeek } from '../../../git/useDiffPeek';
 
 // ============================================================
@@ -394,6 +398,7 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
   message,
   workspacePath,
   sessionId,
+  getInteractivePromptStatus,
 }) => {
   const posthog = usePostHog();
 
@@ -570,6 +575,14 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
 
   // Widget is interactive if the tool hasn't completed yet
   const isPending = !isCompleted;
+
+  const { status: promptStatus, markUnavailable } = useInteractivePromptStatus(
+    getInteractivePromptStatus,
+    proposalId,
+    'git_commit',
+    isPending,
+    getInteractivePromptStatus ? 'checking' : host ? 'available' : 'checking',
+  );
 
   // Local state for editing
   const [filesToStage, setFilesToStage] = useState<Set<string>>(new Set(initialFilesToStage));
@@ -845,7 +858,7 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
   };
 
   const handleConfirm = useCallback(async () => {
-    if (filesToStage.size === 0 || !commitMessage.trim() || !isPending || !host) {
+    if (filesToStage.size === 0 || !commitMessage.trim() || !isPending || !host || promptStatus !== 'available') {
       return;
     }
 
@@ -878,33 +891,34 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
         auto_commit: host.autoCommitEnabled ?? false,
       });
     } catch (error) {
+      if (getInteractivePromptStatus) markUnavailable();
       setIsCommitting(false);
-      const errorResult = {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-      setLocalResult(errorResult);
+      setLocalResult(null);
+      setHasResponded(false);
     }
-  }, [filesToStage, commitMessage, isPending, proposalId, host]);
+  }, [getInteractivePromptStatus, filesToStage, commitMessage, isPending, markUnavailable, proposalId, host, promptStatus]);
 
-  const handleCancel = useCallback(() => {
-    if (hasResponded || !isPending || !host) return; // Prevent double-response
+  const handleCancel = useCallback(async () => {
+    if (hasResponded || !isPending || !host || promptStatus !== 'available') return; // Prevent double-response
 
     setLocalResult({ success: false, error: 'Cancelled' });
     setHasResponded(true);
 
-    // Track git commit proposal response
-    const fileCountBucket = filesToStage.size <= 5 ? '1-5' : filesToStage.size <= 10 ? '6-10' : filesToStage.size <= 20 ? '11-20' : '20+';
-    host.trackEvent('git_commit_proposal_response', {
-      action: 'cancelled',
-      file_count: fileCountBucket,
-    });
-
-    // Send cancel response via host (works on both desktop and mobile)
-    host.gitCommitCancel(proposalId).catch(err => {
-      console.error('[GitCommitWidget] Failed to send cancel response:', err);
-    });
-  }, [proposalId, hasResponded, isPending, filesToStage.size, host]);
+    try {
+      // Send cancel response via host (works on both desktop and mobile).
+      await host.gitCommitCancel(proposalId);
+      const fileCountBucket = filesToStage.size <= 5 ? '1-5' : filesToStage.size <= 10 ? '6-10' : filesToStage.size <= 20 ? '11-20' : '20+';
+      host.trackEvent('git_commit_proposal_response', {
+        action: 'cancelled',
+        file_count: fileCountBucket,
+      });
+    } catch (error) {
+      console.error('[GitCommitWidget] Failed to send cancel response:', error);
+      if (getInteractivePromptStatus) markUnavailable();
+      setLocalResult(null);
+      setHasResponded(false);
+    }
+  }, [getInteractivePromptStatus, markUnavailable, proposalId, promptStatus, hasResponded, isPending, filesToStage.size, host]);
 
   // Auto-commit is handled entirely by the httpServer (main process) which commits
   // directly in the MCP tool handler before the widget renders. The widget should NOT
@@ -1030,6 +1044,16 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
     return null;
   }
 
+  if (promptStatus === 'unavailable' || promptStatus === 'resolved') {
+    return (
+      <InteractivePromptStatusCard
+        testId="git-commit-widget"
+        title="Commit Proposal"
+        status={promptStatus}
+      />
+    );
+  }
+
   // When auto-commit is enabled AND we're not currently committing, the server
   // already committed in the MCP handler before the widget rendered. Show the
   // committed success state directly. If isCommitting is true, the user just
@@ -1037,7 +1061,7 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
   // flow handle the UI (shows "Committing..." then completed state).
   // wasAutoCommitted latches once we've shown the auto-commit success UI so
   // toggling auto-commit off afterwards doesn't revert the widget to "pending".
-  if ((host?.autoCommitEnabled || wasAutoCommitted) && !isCommitting) {
+  if (promptStatus === 'available' && (host?.autoCommitEnabled || wasAutoCommitted) && !isCommitting) {
     return (
       <div
         data-testid="git-commit-widget"
@@ -1073,6 +1097,7 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
               <input
                 type="checkbox"
                 checked={host?.autoCommitEnabled ?? false}
+                disabled={promptStatus !== 'available' || isCommitting || !host}
                 onChange={(e) => {
                   host?.setAutoCommitEnabled(e.target.checked);
                   host?.trackEvent(
@@ -1140,7 +1165,8 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
           <label className="flex items-center gap-1.5 cursor-pointer flex-1 min-w-0">
             <input
               type="checkbox"
-              checked={host?.autoCommitEnabled ?? false}
+                checked={host?.autoCommitEnabled ?? false}
+                disabled={promptStatus !== 'available' || isCommitting || !host}
               onChange={(e) => {
                 host?.setAutoCommitEnabled(e.target.checked);
                 host?.trackEvent(e.target.checked ? 'auto_commit_enabled' : 'auto_commit_disabled', { source: 'commit_widget' });
@@ -1161,7 +1187,7 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
             data-testid="git-commit-cancel"
             className="git-commit-widget__cancel-btn flex items-center gap-1.5 py-1.5 px-3 text-[0.8125rem] font-medium border border-[var(--nim-border)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleCancel}
-            disabled={isCommitting}
+            disabled={isCommitting || promptStatus !== 'available' || !host}
           >
             Cancel
           </button>
@@ -1169,7 +1195,7 @@ export const GitCommitConfirmationWidget: React.FC<CustomToolWidgetProps> = ({
             data-testid="git-commit-confirm"
             className="git-commit-widget__confirm-btn flex items-center gap-1.5 py-1.5 px-3 text-[0.8125rem] font-medium border-none rounded bg-[var(--nim-primary)] text-white cursor-pointer transition-all hover:bg-[var(--nim-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleConfirm}
-            disabled={isCommitting || filesToStage.size === 0 || !commitMessage.trim()}
+            disabled={isCommitting || promptStatus !== 'available' || !host || filesToStage.size === 0 || !commitMessage.trim()}
           >
             <MaterialSymbol icon="check" size={14} />
             {isCommitting ? 'Committing...' : 'Confirm & Commit'}

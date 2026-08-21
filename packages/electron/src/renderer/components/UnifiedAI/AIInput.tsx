@@ -76,6 +76,8 @@ interface AIInputProps {
   // Mode support (plan vs agent)
   mode?: AIMode;
   onModeChange?: (mode: AIMode) => void;
+  /** Disable the engine Plan/Agent switch for product-owned Head sessions. */
+  disableModeToggle?: boolean;
 
   // Model selection support
   currentModel?: string;
@@ -166,6 +168,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
     enableSlashCommands = false,
     mode = 'planning' as AIMode,
     onModeChange,
+    disableModeToggle = false,
     currentModel,
     onModelChange,
     sessionHasMessages,
@@ -653,25 +656,25 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
     useEffect(() => {
       // Match "/plan" at start, followed by end of string or whitespace (not "/planning" or "/planify")
       const planCommandMatch = value.match(/^\/plan(?:\s|$)/);
-      if (planCommandMatch && mode !== 'planning' && onModeChange) {
+      if (planCommandMatch && !disableModeToggle && mode !== 'planning' && onModeChange) {
         // Switch to planning mode immediately
         onModeChange('planning');
         // Remove the /plan prefix, keeping any text after it
         const remainingText = value.slice(planCommandMatch[0].length);
         onChange(remainingText);
       }
-    }, [value, mode, onModeChange, onChange]);
+    }, [value, mode, onModeChange, onChange, disableModeToggle]);
 
     // Detect /implement command trigger - switch to agent mode when user types "/implement"
     // This allows the implement command to work even if user was in planning mode
     useEffect(() => {
       // Match "/implement", "/planning:implement", or the legacy "/nimbalyst-planning:implement" form
       const implementCommandMatch = value.match(/^\/(?:nimbalyst-planning:|planning:)?implement(?:\s|$)/);
-      if (implementCommandMatch && mode === 'planning' && onModeChange) {
+      if (implementCommandMatch && !disableModeToggle && mode === 'planning' && onModeChange) {
         // Switch to agent mode immediately - implementing requires coding
         onModeChange('agent');
       }
-    }, [value, mode, onModeChange]);
+    }, [value, mode, onModeChange, disableModeToggle]);
 
     // Handle typeahead option selection
     const handleTypeaheadSelect = useCallback((option: TypeaheadOption) => {
@@ -807,7 +810,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
       }
 
       // Handle Shift+Tab to toggle plan mode (only for Claude Code provider)
-      if (e.key === 'Tab' && e.shiftKey && provider === 'claude-code' && onModeChange && mode) {
+      if (e.key === 'Tab' && e.shiftKey && !disableModeToggle && provider === 'claude-code' && onModeChange && mode) {
         e.preventDefault();
         onModeChange(mode === 'planning' ? 'agent' : 'planning');
         if (IME_EVENT_TRACE_ENABLED) {
@@ -1352,7 +1355,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
             alignItems: 'center',
             gap: '8px',
           }}>
-{onModeChange && provider === 'claude-code' && mode && <ModeTag mode={mode} onModeChange={onModeChange} />}
+            {onModeChange && provider === 'claude-code' && mode && (
+              <ModeTag mode={mode} onModeChange={onModeChange} disabled={disableModeToggle} />
+            )}
 
             {(onModelChange || (readOnlyModel && currentModel)) && (
               <HelpTooltip testId="model-picker">

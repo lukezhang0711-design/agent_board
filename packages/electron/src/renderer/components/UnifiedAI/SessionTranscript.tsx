@@ -24,7 +24,11 @@ import { ClaudeCliNotInstalledNotice } from './ClaudeCliNotInstalledNotice';
 import { STOP_CLEAR_QUEUE_STATUS, getStopRequestStatusMessage } from './stopCopy';
 import { hasPendingSubmittedPlanApproval, registerPlanApprovalWidget } from './PlanApprovalWidget';
 import type { InteractiveWidgetHost, PermissionScope } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets/InteractiveWidgetHost';
-import type { TodoItem } from '@nimbalyst/runtime/ui/AgentTranscript/types';
+import type {
+  InteractivePromptStatusQuery,
+  InteractivePromptStatusResult,
+  TodoItem,
+} from '@nimbalyst/runtime/ui/AgentTranscript/types';
 import { isToolLikeMessage } from '@nimbalyst/runtime/ui/AgentTranscript/utils/messageTypeHelpers';
 import { AIInput, AIInputRef } from './AIInput';
 import { PromptQueueList } from './PromptQueueList';
@@ -327,6 +331,17 @@ function queueActionErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function assertInteractiveIpcSuccess(result: unknown, operation: string): void {
+  if (
+    result
+    && typeof result === 'object'
+    && (result as { success?: unknown }).success === false
+  ) {
+    const error = (result as { error?: unknown }).error;
+    throw new Error(typeof error === 'string' && error ? error : `${operation} was rejected`);
+  }
+}
+
 export interface SessionTranscriptRef {
   focusInput: () => void;
 }
@@ -337,6 +352,9 @@ export interface SessionTranscriptProps {
 
   // UI mode affects placeholder text and features
   mode: 'chat' | 'agent';
+
+  /** Disable the engine Plan/Agent switch for the product-owned Head session. */
+  disableModeToggle?: boolean;
 
   // Whether to hide the internal sidebar (parent may render an external one)
   hideSidebar?: boolean;
@@ -533,6 +551,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   sessionId,
   workspacePath,
   mode,
+  disableModeToggle = false,
   hideSidebar = false,
   collapseTranscript = false,
   onFileClick,
@@ -2040,12 +2059,15 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
   const stopExitPlanModeSession = useCallback(async (requestId: string, confirmSessionId: string) => {
     // Mark the prompt as cancelled in DB so it doesn't reappear
-    await respondToPrompt({
+    const success = await respondToPrompt({
       sessionId: confirmSessionId,
       promptId: requestId,
       promptType: 'exit_plan_mode_request',
       response: { approved: false, cancelled: true },
     });
+    if (!success) {
+      throw new Error('ExitPlanMode cancellation is no longer active');
+    }
 
     // Cancel the entire agent session - this will abort the waiting ExitPlanMode request
     await window.electronAPI.invoke('ai:cancelRequest', confirmSessionId);
@@ -2094,8 +2116,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       }
 
       if (!newSessionId) {
-        console.error('[SessionTranscript] Failed to create new implementation session');
-        return;
+        throw new Error('Failed to create new implementation session');
       }
 
       const basePath = sessionWorktreePath || workspacePath;
@@ -2120,6 +2141,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       console.log('[SessionTranscript] Created new session for implementation:', newSessionId, 'with draft prompt:', implementationPrompt);
     } catch (error) {
       console.error('[SessionTranscript] Failed to start new session for implementation:', error);
+      throw error;
     }
   }, [sessionChildren, sessionParentId, workspacePath, worktreeId, onCreateWorktreeSession, createChildSession, convertToWorkstream, sessionWorktreePath, posthog, defaultModel, openSessionWithDraft, stopExitPlanModeSession]);
 
@@ -2133,10 +2155,32 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       });
     } catch (error) {
       console.error('[SessionTranscript] Failed to cancel ExitPlanMode:', error);
+      throw error;
     }
   }, [stopExitPlanModeSession, posthog]);
 
   // Note: AskUserQuestion, ToolPermission handlers removed - now handled by inline widgets via InteractiveWidgetHost
+
+  const getInteractivePromptStatus = useCallback<InteractivePromptStatusQuery>(async (promptId, promptType) => {
+    const result = await window.electronAPI.invoke(
+      'ai:getInteractivePromptStatus',
+      workspacePath,
+      sessionId,
+      promptId,
+      promptType,
+    ) as {
+      success?: boolean;
+      status?: InteractivePromptStatusResult['status'];
+      reason?: string;
+      error?: string;
+    };
+
+    if (!result?.success || !result.status) {
+      throw new Error(result?.error || 'Interactive prompt status is unavailable');
+    }
+
+    return { status: result.status, reason: result.reason };
+  }, [sessionId, workspacePath]);
 
   // Set the interactive widget host in the atom - widgets read from here.
   // This provides methods for widgets to call that have access to atoms, callbacks, and analytics.
@@ -2159,25 +2203,28 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
       // AskUserQuestion operations
       askUserQuestionSubmit: async (questionId: string, answers: Record<string, string>) => {
-        await window.electronAPI.invoke('claude-code:answer-question', { questionId, answers, sessionId });
+        const result = await window.electronAPI.invoke('claude-code:answer-question', { questionId, answers, sessionId });
+        assertInteractiveIpcSuccess(result, 'AskUserQuestion answer');
         posthog?.capture('ask_user_question_answered', {
           numQuestions: Object.keys(answers).length,
         });
       },
       askUserQuestionCancel: async (questionId: string) => {
-        await window.electronAPI.invoke('claude-code:cancel-question', { questionId, sessionId });
+        const result = await window.electronAPI.invoke('claude-code:cancel-question', { questionId, sessionId });
+        assertInteractiveIpcSuccess(result, 'AskUserQuestion cancellation');
         posthog?.capture('ask_user_question_cancelled');
       },
 
       // RequestUserInput operations - durable prompt path
       requestUserInputSubmit: async (promptId: string, answers) => {
-        await window.electronAPI.invoke('messages:respond-to-prompt', {
+        const result = await window.electronAPI.invoke('messages:respond-to-prompt', {
           sessionId,
           promptId,
           promptType: 'request_user_input_request' as const,
           response: { answers, cancelled: false },
           respondedBy: 'desktop' as const,
         });
+        assertInteractiveIpcSuccess(result, 'RequestUserInput answer');
         // Counts of each field type, no PII.
         const fieldTypeCounts: Record<string, number> = {};
         for (const a of Object.values(answers)) {
@@ -2190,13 +2237,14 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         refreshPendingPrompts(sessionId);
       },
       requestUserInputCancel: async (promptId: string) => {
-        await window.electronAPI.invoke('messages:respond-to-prompt', {
+        const result = await window.electronAPI.invoke('messages:respond-to-prompt', {
           sessionId,
           promptId,
           promptType: 'request_user_input_request' as const,
           response: { answers: {}, cancelled: true },
           respondedBy: 'desktop' as const,
         });
+        assertInteractiveIpcSuccess(result, 'RequestUserInput cancellation');
         posthog?.capture('request_user_input_cancelled');
         refreshPendingPrompts(sessionId);
       },
@@ -2217,11 +2265,12 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
       // Tool permission operations
       toolPermissionSubmit: async (requestId: string, response: { decision: 'allow' | 'deny'; scope: 'once' | 'session' | 'always' | 'always-all' }) => {
-        await window.electronAPI.invoke('claude-code:answer-tool-permission', {
+        const result = await window.electronAPI.invoke('claude-code:answer-tool-permission', {
           requestId,
           sessionId,
           response,
         });
+        assertInteractiveIpcSuccess(result, 'Tool permission response');
 
         posthog?.capture('tool_permission_responded', {
           decision: response.decision,
@@ -2233,23 +2282,21 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       },
       toolPermissionCancel: async (requestId: string) => {
         // Try SDK cancel (might fail for old/inactive sessions - that's OK)
-        try {
-          await window.electronAPI.invoke('claude-code:cancel-tool-permission', {
+        const cancelResult = await window.electronAPI.invoke('claude-code:cancel-tool-permission', {
             requestId,
             sessionId,
-          });
-        } catch (error) {
-          // Debug logging - uncomment if needed
-          // console.log('[SessionTranscript] SDK cancel failed (session may be inactive):', error);
-        }
+        });
 
         // Always mark as cancelled in DB so it doesn't reappear
-        await respondToPrompt({
+        const success = await respondToPrompt({
           sessionId,
           promptId: requestId,
           promptType: 'permission_request',
           response: { decision: 'deny', scope: 'once', cancelled: true },
         });
+        if (!success && (cancelResult as { success?: unknown } | null)?.success !== true) {
+          throw new Error('Tool permission cancellation is no longer active');
+        }
 
         // Refresh pending prompts from DB
         refreshPendingPrompts(sessionId);
@@ -2279,7 +2326,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
           // not 'cancelled'. 'cancelled' is reserved for the explicit user-cancel
           // path; collapsing failures into 'cancelled' makes the widget render
           // the cancelled state instead of surfacing the error to the user.
-          await window.electronAPI.invoke('messages:respond-to-prompt', {
+          const responseResult = await window.electronAPI.invoke('messages:respond-to-prompt', {
             sessionId,
             promptId: proposalId,
             promptType: 'git_commit_proposal_request' as const,
@@ -2293,6 +2340,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             },
             respondedBy: 'desktop' as const,
           });
+          assertInteractiveIpcSuccess(responseResult, 'Git commit response');
 
           return result;
         } catch (error) {
@@ -2303,7 +2351,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
           // IPC threw outright. Surface as action='error' for the same reason
           // as above: the user needs to see the failure, not a cancelled state.
-          await window.electronAPI.invoke('messages:respond-to-prompt', {
+          const responseResult = await window.electronAPI.invoke('messages:respond-to-prompt', {
             sessionId,
             promptId: proposalId,
             promptType: 'git_commit_proposal_request' as const,
@@ -2313,13 +2361,14 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             },
             respondedBy: 'desktop' as const,
           });
+          assertInteractiveIpcSuccess(responseResult, 'Git commit error response');
 
           return errorResult;
         }
       },
       gitCommitCancel: async (proposalId: string) => {
         // Send cancel response via unified IPC
-        await window.electronAPI.invoke('messages:respond-to-prompt', {
+        const result = await window.electronAPI.invoke('messages:respond-to-prompt', {
           sessionId,
           promptId: proposalId,
           promptType: 'git_commit_proposal_request' as const,
@@ -2328,6 +2377,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
           },
           respondedBy: 'desktop' as const,
         });
+        assertInteractiveIpcSuccess(result, 'Git commit cancellation');
       },
 
       gitFileDiff: async (filePath: string) => {
@@ -2840,6 +2890,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             onCloseAndArchive={handleCloseAndArchive}
             onUnarchive={handleUnarchive}
             readFile={readFile}
+            getInteractivePromptStatus={getInteractivePromptStatus}
             renderFilesHeader={mode === 'agent' ? () => (
               <>
                 <WakeupBanner sessionId={sessionId} />
@@ -3162,6 +3213,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         }
         mode={aiMode as AIMode}
         onModeChange={handleAIModeChange}
+        disableModeToggle={disableModeToggle}
         currentModel={currentModel}
         // claude-code-cli (NIM-806): the genuine CLI supports `/model <alias>`
         // as a direct setter, so the picker now RETUNES a committed CLI session

@@ -16,6 +16,7 @@ vi.mock('../../UnifiedAI/SessionTranscript', () => ({
     <div
       data-testid="session-transcript"
       data-emergency-stop={String(props.showStopAndClearQueue)}
+      data-disable-mode-toggle={String(props.disableModeToggle)}
     />
   ),
 }));
@@ -117,6 +118,16 @@ describe('MetaAgentMode queued summary', () => {
 
     expect(await screen.findByTestId('meta-agent-dashboard')).toBeTruthy();
     expect(screen.getByTestId('meta-agent-identity-badge').textContent).toBe('META AGENT');
+  });
+
+  it('disables the engine Plan/Agent toggle in the Head transcript', async () => {
+    render(
+      <Provider store={createStore()}>
+        <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
+      </Provider>,
+    );
+
+    expect((await screen.findByTestId('session-transcript')).getAttribute('data-disable-mode-toggle')).toBe('true');
   });
 
   it('shows queued delegated sessions in the summary', async () => {

@@ -294,6 +294,80 @@ describe('AIService.stopSession', () => {
     expect(getPlanApprovalState).toHaveBeenCalledTimes(1);
   });
 
+  it('reports a durable AskUserQuestion route as revivable and a missing route as unavailable', async () => {
+    mocks.getSession.mockResolvedValue({
+      id: 'ask-session',
+      workspacePath: '/workspace',
+      provider: 'claude-code',
+    });
+    mocks.getProvider.mockReturnValue(null);
+    mocks.databaseQuery.mockResolvedValue({
+      rows: [{
+        content: JSON.stringify({
+          type: 'ask_user_question_request',
+          questionId: 'ask-1',
+        }),
+      }],
+    });
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, {
+      sendMessageHandler: vi.fn(),
+    });
+
+    await expect(service.getInteractivePromptStatus('ask-session', 'ask-1', 'ask_user_question'))
+      .resolves.toMatchObject({ status: 'available' });
+
+    mocks.databaseQuery.mockResolvedValue({ rows: [] });
+    Object.assign(service, { sendMessageHandler: null });
+    await expect(service.getInteractivePromptStatus('ask-session', 'ask-1', 'ask_user_question'))
+      .resolves.toMatchObject({ status: 'unavailable' });
+  });
+
+  it('exposes the interactive prompt status query with workspace validation', async () => {
+    mocks.getSession.mockResolvedValue({
+      id: 'prompt-session',
+      workspacePath: '/workspace',
+    });
+    const getInteractivePromptStatus = vi.fn().mockResolvedValue({
+      status: 'unavailable',
+      reason: 'supplier gone',
+    });
+    const service = Object.create(AIService.prototype) as AIService;
+    Object.assign(service, {
+      getInteractivePromptStatus,
+      streamingHandler: { handle: vi.fn() },
+    });
+    (service as any).setupIpcHandlers();
+    const handler = mocks.ipcHandlers.get('ai:getInteractivePromptStatus');
+
+    await expect(handler?.(
+      {} as any,
+      '/workspace',
+      'prompt-session',
+      'prompt-1',
+      'exit_plan_mode',
+    )).resolves.toMatchObject({
+      success: true,
+      status: 'unavailable',
+      reason: 'supplier gone',
+    });
+    await expect(handler?.(
+      {} as any,
+      '/other-workspace',
+      'prompt-session',
+      'prompt-1',
+      'exit_plan_mode',
+    )).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('not found in workspace'),
+    });
+    expect(getInteractivePromptStatus).toHaveBeenCalledWith(
+      'prompt-session',
+      'prompt-1',
+      'exit_plan_mode',
+    );
+  });
+
   it('clears the generic model cache without forcing a Codex model retry', async () => {
     const manualRetry = vi.fn(async () => ({ phase: 'normal' }));
     const modelRefreshStatus = {

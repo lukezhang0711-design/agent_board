@@ -30,6 +30,11 @@ import { isBedrockToolSearchError } from '@nimbalyst/runtime/ai/server/utils/err
 import { resolveEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
 import type { SessionStore } from '@nimbalyst/runtime';
+import type {
+  InteractivePromptStatusResult,
+  InteractivePromptType,
+} from '@nimbalyst/runtime/ui/AgentTranscript/types';
+import { resolveGitCommitProposalPromptId } from './gitCommitProposalPromptUtils';
 import {
   ModelIdentifier,
   type DocumentContext,
@@ -929,6 +934,134 @@ export class AIService {
       [sessionId, `%${requestId}%`],
     );
     return deriveDurablePlanApprovalState(rows.map((row) => row.content), requestId);
+  }
+
+  /**
+   * Read-only liveness check for renderer-side native prompt cards.
+   *
+   * This deliberately consumes the existing provider and durable-message
+   * routes. It does not create, revive, or settle a prompt; the response
+   * handlers remain the single owner of those transitions.
+   */
+  public async getInteractivePromptStatus(
+    sessionId: string,
+    promptId: string,
+    promptType: InteractivePromptType,
+  ): Promise<InteractivePromptStatusResult> {
+    const session = await AISessionsRepository.get(sessionId);
+    if (!session) {
+      return { status: 'unavailable', reason: 'Session no longer exists' };
+    }
+
+    const provider = ProviderFactory.getProvider(session.provider as AIProviderType, sessionId);
+    const canonicalPromptId = promptType === 'git_commit'
+      ? await resolveGitCommitProposalPromptId(sessionId, promptId)
+      : promptId;
+    const promptAliases = new Set([
+      ...getCodexToolLookupAliases(promptId),
+      ...getCodexToolLookupAliases(canonicalPromptId),
+      promptId,
+      canonicalPromptId,
+    ]);
+    const matchesPromptId = (value: unknown): boolean =>
+      typeof value === 'string' && promptAliases.has(value);
+    const recordContainsPromptId = (value: unknown): boolean => {
+      if (matchesPromptId(value)) return true;
+      if (Array.isArray(value)) return value.some(recordContainsPromptId);
+      if (!value || typeof value !== 'object') return false;
+      return Object.values(value).some(recordContainsPromptId);
+    };
+    const mapHasPromptId = (candidate: unknown): boolean => {
+      if (!candidate || typeof candidate !== 'object') return false;
+      const map = candidate as { has?: (key: string) => boolean };
+      if (typeof map.has !== 'function') return false;
+      return [...promptAliases].some((alias) => map.has!(alias));
+    };
+    const providerHasPendingPrompt = (keys: string[]): boolean => {
+      if (!provider) return false;
+      return keys.some((key) => mapHasPromptId((provider as any)[key]));
+    };
+
+    const contentSearchValues = [...promptAliases].filter(Boolean);
+    const contentSearchClause = contentSearchValues.length > 0
+      ? `AND (${contentSearchValues.map((_, index) => `content LIKE $${index + 2}`).join(' OR ')})`
+      : '';
+    const { rows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         ${contentSearchClause}
+       ORDER BY created_at DESC, id DESC
+       LIMIT 100`,
+      [sessionId, ...contentSearchValues.map((value) => `%${value}%`)],
+    );
+    const records = rows
+      .map((row) => parsePlanApprovalContent(row.content))
+      .filter((record): record is Record<string, any> => record !== null);
+
+    const responseTypes = new Set([
+      'permission_response',
+      'ask_user_question_response',
+      'exit_plan_mode_response',
+      'request_user_input_response',
+      'git_commit_proposal_response',
+      'nimbalyst_tool_result',
+      'tool_result',
+    ]);
+    const responseIdFields = ['requestId', 'questionId', 'promptId', 'proposalId', 'tool_use_id', 'id'];
+    const hasResponse = records.some((record) =>
+      responseTypes.has(record.type)
+      && responseIdFields.some((field) => matchesPromptId(record[field])),
+    );
+    if (hasResponse) {
+      return { status: 'resolved', reason: 'A response is already recorded' };
+    }
+
+    if (promptType === 'exit_plan_mode') {
+      const durableState = await this.getPlanApprovalState(sessionId, promptId);
+      if (durableState?.status === 'submitted') {
+        return { status: 'available', reason: 'Durable plan approval is available' };
+      }
+      if (durableState) {
+        return { status: 'resolved', reason: `Plan approval is ${durableState.status}` };
+      }
+
+      if (providerHasPendingPrompt(['pendingExitPlanModeConfirmations'])) {
+        return { status: 'available', reason: 'Provider response route is available' };
+      }
+      return { status: 'unavailable', reason: 'No ExitPlanMode supplier is available' };
+    }
+
+    const hasPromptRecord = records.some((record) =>
+      responseTypes.has(record.type) === false
+      && recordContainsPromptId(record),
+    );
+    if (promptType === 'ask_user_question') {
+      const providerHasPendingQuestion = providerHasPendingPrompt(['pendingAskUserQuestions']);
+      const mcpWaiter = ipcMain.listenerCount(`ask-user-question-response:${sessionId}:${promptId}`) > 0
+        || ipcMain.listenerCount(`ask-user-question:${sessionId}`) > 0;
+      if (providerHasPendingQuestion || mcpWaiter || (hasPromptRecord && !!this.sendMessageHandler)) {
+        return { status: 'available', reason: providerHasPendingQuestion || mcpWaiter ? 'Live question route is available' : 'AskUserQuestion durable resume is available' };
+      }
+      return { status: 'unavailable', reason: 'No AskUserQuestion supplier or durable resume route is available' };
+    }
+
+    if (promptType === 'tool_permission') {
+      const mcpWaiter = ipcMain.listenerCount(`tool-permission-response:${sessionId}:${promptId}`) > 0;
+      const providerHasPendingPermission = mapHasPromptId((provider as any)?.permissions?.pendingToolPermissions);
+      if (hasPromptRecord || providerHasPendingPermission || mcpWaiter) {
+        return { status: 'available', reason: providerHasPendingPermission || mcpWaiter ? 'Live permission route is available' : 'Durable permission response route is available' };
+      }
+      return { status: 'unavailable', reason: 'No tool-permission supplier is available' };
+    }
+
+    // RequestUserInput and git-commit prompts are durable response routes: the
+    // main IPC handler consumes the persisted request/response pair even when
+    // the original renderer host has been rebuilt.
+    if (hasPromptRecord) {
+      return { status: 'available', reason: 'Durable response route is available' };
+    }
+    return { status: 'unavailable', reason: 'No durable prompt record is available' };
   }
 
   public async markPlanApprovalDelivered(
@@ -3339,6 +3472,50 @@ export class AIService {
         return {
           success: false,
           state: null,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    });
+
+    safeHandle('ai:getInteractivePromptStatus', async (
+      _event,
+      workspacePath: string,
+      sessionId: string,
+      promptId: string,
+      promptType: InteractivePromptType,
+    ) => {
+      try {
+        if (!workspacePath?.trim()) {
+          throw new Error('ai:getInteractivePromptStatus requires workspacePath');
+        }
+        if (!sessionId?.trim()) {
+          throw new Error('ai:getInteractivePromptStatus requires sessionId');
+        }
+        if (!promptId?.trim()) {
+          throw new Error('ai:getInteractivePromptStatus requires promptId');
+        }
+        const allowedPromptTypes: InteractivePromptType[] = [
+          'ask_user_question',
+          'request_user_input',
+          'exit_plan_mode',
+          'tool_permission',
+          'git_commit',
+        ];
+        if (!allowedPromptTypes.includes(promptType)) {
+          throw new Error(`Unsupported interactive prompt type: ${String(promptType)}`);
+        }
+        const session = await AISessionsRepository.get(sessionId);
+        if (!session || session.workspacePath !== workspacePath) {
+          throw new Error(`Session ${sessionId} not found in workspace ${workspacePath}`);
+        }
+        return {
+          success: true,
+          ...(await this.getInteractivePromptStatus(sessionId, promptId, promptType)),
+        };
+      } catch (error) {
+        return {
+          success: false,
+          status: 'unavailable' as const,
           error: error instanceof Error ? error.message : String(error),
         };
       }
