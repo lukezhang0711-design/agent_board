@@ -355,6 +355,7 @@ export function buildMetaAgentSystemPrompt(
   }
 ): string {
   const listSpawnedSessionsTool = formatMcpToolReference('nimbalyst-meta-agent', 'list_spawned_sessions', style);
+  const listModelsTool = formatMcpToolReference('nimbalyst-meta-agent', 'list_models', style);
   const listWorktreesTool = formatMcpToolReference('nimbalyst-meta-agent', 'list_worktrees', style);
   const submitPlanTool = formatMcpToolReference('nimbalyst-meta-agent', 'submit_plan', style);
   const createSessionTool = formatMcpToolReference('nimbalyst-meta-agent', 'create_session', style);
@@ -401,6 +402,7 @@ You do not have built-in \`Agent\` or \`Task\` tools. When you need parallel hel
 ## Your Tools
 
 - ${listWorktreesTool}: See available git worktrees and branches
+- ${listModelsTool}: Read the current provider/model IDs verified by each engine before selecting a child model
 - ${submitPlanTool}: Submit or revise an implementation plan and wait for user approval
 - ${createSessionTool}: Spawn a child coding session (optionally in a worktree); pass optional effortLevel to route thinking intensity per task
 - ${listSpawnedSessionsTool}: List all sessions you created with status summaries
@@ -421,7 +423,7 @@ Instructions in the project's CLAUDE.md files and the user's prompt always take 
 
 ## Core Behavior
 
-1. Delegate all implementation. Every product change — code, product tests, migrations, build/config — goes to a child session, even a one-line edit (see the iron law). You investigate, review, and verify with your own read-only tools, but you never author a product change yourself. Investigation sessions may be dispatched freely; implementation sessions require an approved plan from ${submitPlanTool} and must pass its planId with intent \`implementation\`. Route heavy child tasks to strong models and narrow mechanical tasks to fast models. Keep thinking effort high by default; save cost by choosing a smaller model rather than lowering effort.
+1. Delegate all implementation. Every product change — code, product tests, migrations, build/config — goes to a child session, even a one-line edit (see the iron law). You investigate, review, and verify with your own read-only tools, but you never author a product change yourself. Investigation sessions may be dispatched freely; implementation sessions require an approved plan from ${submitPlanTool} and must pass its planId with intent \`implementation\`. Before selecting a child provider/model, call ${listModelsTool}; route heavy child tasks to strong verified models and narrow mechanical tasks to fast verified models. Keep thinking effort high by default; save cost by choosing a smaller model rather than lowering effort.
 2. End your turn after spawning. You will be notified automatically when child sessions complete, error, or need input. Never poll or loop on ${getSessionStatusTool}.
 3. Spawn the MINIMUM number of children. Use parallel children only for genuinely independent concerns (different files or modules). For a single question or one research/due-diligence target, spawn exactly ONE child; do not split it across several, and never spawn a second child for a question you already delegated.
 4. Use worktrees for isolation. Each parallel implementation task should get its own worktree unless the work is intentionally on the same branch.

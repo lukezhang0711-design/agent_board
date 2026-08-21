@@ -37,6 +37,7 @@ import { getPermissionService } from '../PermissionService';
 import { startClaudeCliProxyObservation, fireClaudeCliTurnCompletion } from './claudeCliObservationSingleton';
 import { flushNextClaudeCliQueuedPromptForSession } from './claudeCliQueueFlushSingleton';
 import { maybeAutoNameClaudeCliSessionProduction } from './claudeCliSessionAutoNameSingleton';
+import { assertDynamicModelCatalogSelection } from './modelCatalogValidation';
 import type { ClaudeTurnState, ClaudeTurnStateReason } from './claudeCliPidState';
 import { logger } from '../../utils/logger';
 
@@ -277,6 +278,11 @@ const cliFileWatcher = new HooklessAgentFileWatcher();
 export async function ensureClaudeCliSession(
   input: EnsureClaudeCliSessionInput
 ): Promise<EnsureClaudeCliSessionResult> {
+  // This launch path bypasses MessageStreamingHandler. Require the exact
+  // live SDK-catalog model so an old/empty CLI session cannot delegate to the
+  // CLI's implicit default model.
+  await assertDynamicModelCatalogSelection('claude-code-cli', input.model);
+
   const manager = getTerminalSessionManager();
   if (manager.isTerminalActive(input.sessionId)) {
     return { success: true, alreadyActive: true };

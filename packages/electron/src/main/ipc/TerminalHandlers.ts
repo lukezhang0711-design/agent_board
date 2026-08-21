@@ -7,11 +7,20 @@
 
 import { getTerminalSessionManager } from '../services/TerminalSessionManager';
 import { ensureClaudeCliSession, isClaudeCliInstalled } from '../services/ai/claudeCliLauncherSingleton';
-import { submitClaudeCliPromptProduction } from '../services/ai/claudeCliSubmitSingleton';
+import {
+  assertClaudeCliSessionModelCanSubmit,
+  submitClaudeCliPromptProduction,
+} from '../services/ai/claudeCliSubmitSingleton';
 import { switchClaudeCliModel } from '../services/ai/claudeCliModelSwitch';
+import {
+  createClaudeCliRawTerminalInputState,
+  writeGuardedClaudeCliRawTerminalInput,
+  type ClaudeCliRawTerminalInputState,
+} from '../services/ai/claudeCliRawTerminalInput';
 import { switchClaudeCliFastMode } from '../services/ai/claudeCliFastSwitch';
 import type { ClaudeCliDocumentContext } from '../services/ai/claudeCliPromptComposer';
 import type { ChatAttachment } from '@nimbalyst/runtime/ai/server/types';
+import { AISessionsRepository } from '@nimbalyst/runtime';
 import { ShellDetector } from '../services/ShellDetector';
 import { safeHandle } from '../utils/ipcRegistry';
 import { ulid } from 'ulid';
@@ -37,6 +46,12 @@ import { createWorktreeStore } from '../services/WorktreeStore';
 
 // Track if handlers are registered
 let handlersRegistered = false;
+
+// Raw terminal writes arrive one xterm chunk at a time. Hold per-session line
+// state so only the execution byte (Enter) is gated; ordinary shell terminals
+// never enter this map.
+const claudeCliRawInputStates = new Map<string, ClaudeCliRawTerminalInputState>();
+const terminalWriteChains = new Map<string, Promise<unknown>>();
 
 /**
  * Fetch worktree display name from the database
@@ -418,8 +433,39 @@ export function registerTerminalHandlers(): void {
    * Write data to a terminal (user input)
    */
   safeHandle('terminal:write', async (_event, sessionId: string, data: string) => {
-    manager.writeToTerminal(sessionId, data);
-    return { success: true };
+    if (!sessionId || typeof sessionId !== 'string' || typeof data !== 'string') {
+      throw new Error('sessionId and data are required for terminal input');
+    }
+    // Preserve byte ordering even though xterm does not await each IPC invoke.
+    const previous = terminalWriteChains.get(sessionId) ?? Promise.resolve();
+    const current = previous.catch(() => undefined).then(async () => {
+      const session = await AISessionsRepository.get(sessionId);
+      if (session?.provider !== 'claude-code-cli') {
+        manager.writeToTerminal(sessionId, data);
+        return { success: true };
+      }
+
+      const state = claudeCliRawInputStates.get(sessionId)
+        ?? createClaudeCliRawTerminalInputState();
+      claudeCliRawInputStates.set(sessionId, state);
+      const result = await writeGuardedClaudeCliRawTerminalInput(data, state, {
+        writeToTerminal: (chunk) => manager.writeToTerminal(sessionId, chunk),
+        assertCurrentModel: () => assertClaudeCliSessionModelCanSubmit(sessionId),
+      });
+      if (!result.accepted) {
+        console.warn(`[TerminalHandlers] Blocked raw Claude CLI input for ${sessionId}: ${result.error}`);
+        return { success: false, error: result.error };
+      }
+      return { success: true };
+    });
+    terminalWriteChains.set(sessionId, current);
+    try {
+      return await current;
+    } finally {
+      if (terminalWriteChains.get(sessionId) === current) {
+        terminalWriteChains.delete(sessionId);
+      }
+    }
   });
 
   /**

@@ -652,6 +652,12 @@ export interface SyncedSettings {
   availableModels?: SyncedAvailableModel[];
   /** Desktop's default model ID (e.g., "claude-code:opus") */
   defaultModel?: string;
+  /**
+   * Read-only health for runtime-owned model directories. A client must not
+   * present cache/placeholder rows as verified choices; it can show the
+   * original failure and last successful fetch time from this projection.
+   */
+  modelCatalogStatuses?: Record<string, SyncedModelCatalogStatus>;
   /** Whether the desktop "meta-agent" alpha feature is enabled (gates the mobile Meta Agent UI) */
   metaAgentEnabled?: boolean;
   /** Version for handling future upgrades */
@@ -668,6 +674,20 @@ export interface SyncedAvailableModel {
   name: string;
   /** Provider identifier (e.g., "claude-code", "claude", "openai") */
   provider: string;
+  /** Whether the source engine verified this row in the current app run. */
+  verified?: boolean;
+  /** First-install display-only row; never use it for execution. */
+  unverifiedPlaceholder?: boolean;
+  /** Engine-advertised reasoning tiers, including `ultra` where supported. */
+  supportedEffortLevels?: string[];
+}
+
+/** Read-only model-directory state forwarded with mobile picker settings. */
+export interface SyncedModelCatalogStatus {
+  modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
+  verified?: boolean;
+  lastSuccessAt?: number | null;
+  lastError?: { message?: string } | null;
 }
 
 /**

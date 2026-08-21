@@ -17,22 +17,11 @@
  * (ANTHROPIC_BASE_URL), never a key.
  */
 
-import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
-import { normalizeClaudeCodeVariant, type ClaudeCodeVariant } from '@nimbalyst/runtime/ai/modelConstants';
-
-/**
- * Explicit picker variants must reach the genuine CLI as full model IDs.
- * Canonical family aliases and the older pinned Opus rows intentionally keep
- * their existing CLI behavior below.
- */
-const CLI_EXPLICIT_CLAUDE_MODEL_IDS: Partial<Record<ClaudeCodeVariant, string>> = {
-  'opus-5': 'claude-opus-5',
-  'sonnet-5': 'claude-sonnet-5',
-};
+import { ModelIdentifier, isClaudeCodeFamily } from '@nimbalyst/runtime/ai/server/types';
 
 /**
  * Resolve a Nimbalyst model id to the alias the genuine `claude` CLI accepts for
- * `--model` (`opus` / `sonnet` / `haiku`, with an optional `[1m]` suffix).
+ * `--model` (an SDK-discovered model value, with an optional `[1m]` suffix).
  *
  * Nimbalyst stores the combined `provider:variant` form (e.g.
  * `claude-code-cli:opus-1m`); the provider prefix and Nimbalyst's internal `-1m`
@@ -53,20 +42,12 @@ export function resolveClaudeCliModelArg(model: string | undefined): string | un
 
   // Combined "provider:variant" id → take the variant part; bare value → itself.
   const parsed = ModelIdentifier.tryParse(trimmed);
+  if (parsed && !isClaudeCodeFamily(parsed.provider)) return undefined;
   const isExtended = parsed ? parsed.isExtendedContext : /-1m$/i.test(trimmed);
-  const variantInput = parsed ? parsed.baseVariant : trimmed.toLowerCase().replace(/-1m$/, '');
-
-  const variant = normalizeClaudeCodeVariant(variantInput);
-  if (variant) {
-    // Keep legacy pinned Opus rows collapsed to `opus`, but preserve the new
-    // explicit 5-series rows as complete model IDs.
-    const alias = CLI_EXPLICIT_CLAUDE_MODEL_IDS[variant] ?? (variant.startsWith('opus') ? 'opus' : variant);
-    return isExtended ? `${alias}[1m]` : alias;
-  }
-
-  // Unknown format: a bare full model name is fine to pass through; a non-claude
-  // combined id (e.g. `openai:gpt-5`) must never reach `claude --model`.
-  return parsed ? undefined : trimmed;
+  const variant = parsed ? parsed.baseVariant : trimmed.replace(/-1m$/i, '').toLowerCase();
+  // Dynamic SDK discovery decides the usable values. The launcher only converts
+  // Nimbalyst's persisted 1M suffix back to the CLI contract.
+  return isExtended ? `${variant}[1m]` : variant;
 }
 
 export interface ClaudeCliSpawnInput {

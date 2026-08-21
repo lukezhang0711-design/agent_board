@@ -32,18 +32,19 @@ import {
   ProviderConfig,
   StreamChunk,
 } from '../types';
-import { ModelIdentifier } from '../ModelIdentifier';
-import { CLAUDE_CODE_VARIANTS } from '../types';
 import {
-  CLAUDE_CODE_VARIANT_VERSIONS,
-  CLAUDE_CODE_MODEL_LABELS,
-  CLAUDE_CODE_VARIANTS_WITH_1M,
   DEFAULT_MODELS,
 } from '../../modelConstants';
 import type { ProviderSessionData } from './ProviderSessionManager';
 
 export class ClaudeCodeCliProvider extends BaseAgentProvider {
   static readonly DEFAULT_MODEL = DEFAULT_MODELS['claude-code-cli'];
+  /** Host-owned output of Claude Agent SDK supportedModels(), mapped to CLI ids. */
+  private static modelCatalogSnapshotResolver: (() => AIModel[]) | null = null;
+
+  public static setModelCatalogSnapshotResolver(resolver: (() => AIModel[]) | null): void {
+    ClaudeCodeCliProvider.modelCatalogSnapshotResolver = resolver;
+  }
 
   getProviderName(): string {
     return 'claude-code-cli';
@@ -73,35 +74,12 @@ export class ClaudeCodeCliProvider extends BaseAgentProvider {
     return { providerSessionId };
   }
 
-  /**
-   * Model catalog — shares the Claude variant set with `claude-code` but under
-   * the `claude-code-cli:` namespace so the two providers stay distinct in the
-   * registry and the per-session billing lock holds.
-   */
+  /** Host-owned dynamic catalog under the separate subscription CLI namespace. */
   static async getModels(): Promise<AIModel[]> {
-    const models: AIModel[] = [];
-
-    for (const variant of CLAUDE_CODE_VARIANTS) {
-      models.push({
-        id: ModelIdentifier.create('claude-code-cli', variant).combined,
-        name: `Claude Code CLI · ${CLAUDE_CODE_MODEL_LABELS[variant]} ${CLAUDE_CODE_VARIANT_VERSIONS[variant]}`,
-        provider: 'claude-code-cli' as const,
-        maxTokens: 8192,
-        contextWindow: 200000,
-      });
-
-      if ((CLAUDE_CODE_VARIANTS_WITH_1M as readonly string[]).includes(variant)) {
-        models.push({
-          id: ModelIdentifier.create('claude-code-cli', `${variant}-1m`).combined,
-          name: `Claude Code CLI · ${CLAUDE_CODE_MODEL_LABELS[variant]} ${CLAUDE_CODE_VARIANT_VERSIONS[variant]} (1M)`,
-          provider: 'claude-code-cli' as const,
-          maxTokens: 8192,
-          contextWindow: 1000000,
-        });
-      }
-    }
-
-    return models;
+    return (ClaudeCodeCliProvider.modelCatalogSnapshotResolver?.() ?? []).map((model) => ({
+      ...model,
+      supportedEffortLevels: model.supportedEffortLevels && [...model.supportedEffortLevels],
+    }));
   }
 
   static getDefaultModel(): string {

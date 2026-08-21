@@ -6,11 +6,6 @@ import type { ToolDefinition } from '../tools';
 import type { EffortLevel } from './effortLevels';
 import type { ToolResult } from './protocols/ProtocolInterface';
 import { ModelIdentifier } from './ModelIdentifier';
-import {
-  CLAUDE_CODE_ACCEPTED_VARIANT_INPUTS,
-  CLAUDE_CODE_PINNED_SDK_MODELS,
-  normalizeClaudeCodeVariant,
-} from '../modelConstants';
 import type { TranscriptViewMessage } from './transcript/TranscriptProjector';
 export type { ToolDefinition } from '../tools';
 export { ModelIdentifier } from './ModelIdentifier';
@@ -209,85 +204,31 @@ export function shouldBlockStartedSessionProviderSwitch(
 }
 
 /**
- * Claude Code uses simplified family aliases (opus, sonnet, haiku) as well as
- * explicit picker variants. Family aliases are resolved by the engine to its
- * current latest model; explicit variants map to full model IDs below.
- * These are valid for both Claude Code family providers (`claude-code` and
- * `claude-code-cli`).
- *
- * `opus-4-7` and `opus-4-6` are pinned-version variants retained after bumping
- * the canonical `opus` alias to 4.8, so users can still choose previous
- * generations. See CLAUDE_CODE_PINNED_SDK_MODELS in modelConstants.ts.
- *
- * `fable` is the Fable 5 tier above Opus — the CLI accepts it as a first-class
- * alias (`--model fable`, `/model fable`). The CLI gates the 1M window behind
- * the `fable[1m]` form just like opus/sonnet (plain `fable` is windowed at
- * 200k client-side; verified on CLI 2.1.175), so `fable` IS in
- * CLAUDE_CODE_VARIANTS_WITH_1M and gets a `fable-1m` picker row. Note it
- * requires usage credits on subscription plans (the CLI surfaces that itself
- * when unavailable).
- */
-export const CLAUDE_CODE_VARIANTS = [
-  'fable',
-  'opus',
-  'opus-5',
-  'opus-4-7',
-  'opus-4-6',
-  'sonnet',
-  'sonnet-5',
-  'haiku',
-] as const;
-
-/**
- * Resolves a configured model string to the SDK model value.
- *
- * Key behaviors:
- * - Canonical family aliases (opus, sonnet, haiku) are passed straight through
- *   — the SDK maps these to the current-generation model.
- * - Pinned variants (opus-4-6, ...) are substituted for their full Anthropic
- *   model ID from CLAUDE_CODE_PINNED_SDK_MODELS, so they always resolve to a
- *   specific version regardless of what "latest" becomes.
- * - For -1m variants, appends `[1m]` so the SDK adds the 1M-context beta
- *   header; the SDK strips `[1m]` before sending the model ID to the API.
+ * Resolves a dynamically discovered Claude Agent model to the SDK model value.
+ * The selector stores `[1m]` SDK values as `-1m`; no provider/model inventory
+ * is kept here because `Query.supportedModels()` is the sole catalog source.
  */
 export function resolveClaudeCodeModelVariant(configuredModel: string | undefined, defaultModel: string): string {
-  type ClaudeCodeVariant = typeof CLAUDE_CODE_VARIANTS[number];
-  const configured = configuredModel || defaultModel;
+  const configured = (configuredModel || defaultModel || '').trim();
+  if (!configured) {
+    throw new Error('Claude Agent requires a selected model');
+  }
 
-  const toSdkBase = (variant: string): string => CLAUDE_CODE_PINNED_SDK_MODELS[variant as ClaudeCodeVariant] ?? variant;
-
-  // Try parsing with ModelIdentifier
   const parsed = ModelIdentifier.tryParse(configured);
   if (parsed && isClaudeCodeFamily(parsed.provider)) {
-    // baseVariant strips suffixes like -1m
-    const variant = parsed.baseVariant as ClaudeCodeVariant;
-    if ((CLAUDE_CODE_VARIANTS as readonly string[]).includes(variant)) {
-      const sdkBase = toSdkBase(variant);
-      // Append [1m] suffix for extended context so the SDK auto-detects the 1M beta
-      return parsed.isExtendedContext ? `${sdkBase}[1m]` : sdkBase;
-    }
+    return parsed.isExtendedContext ? `${parsed.baseVariant}[1m]` : parsed.baseVariant;
   }
 
-  // Fallback for non-standard formats
-  const raw = parsed ? parsed.model : configured;
-  const normalized = raw?.toLowerCase();
-  const isExtended = normalized?.endsWith('-1m');
-  const withoutContext = normalized?.replace(/-1m$/, '');
-
-  const normalizedVariant = withoutContext ? normalizeClaudeCodeVariant(withoutContext) : null;
-  if (normalizedVariant) {
-    const sdkBase = toSdkBase(normalizedVariant);
-    return isExtended ? `${sdkBase}[1m]` : sdkBase;
-  }
-
-  const supported = CLAUDE_CODE_ACCEPTED_VARIANT_INPUTS.join(', ');
   if (parsed && !isClaudeCodeFamily(parsed.provider)) {
     throw new Error(`Claude Agent requires a claude-code:* model identifier. Received: ${configured}`);
   }
 
-  throw new Error(
-    `Unsupported Claude Agent model "${configured}". Must be one of: ${supported} (optionally with -1m suffix)`
-  );
+  // Legacy bare SDK values are accepted only as a format convenience. They are
+  // validated against the dynamic catalog before new sessions are created.
+  const normalized = configured.toLowerCase();
+  return normalized.endsWith('-1m')
+    ? `${normalized.slice(0, -'-1m'.length)}[1m]`
+    : normalized;
 }
 
 export interface AIModel {
@@ -296,6 +237,24 @@ export interface AIModel {
   provider: AIProviderType;
   maxTokens?: number;
   contextWindow?: number;
+  /** Engine-supplied detail, shown in the picker without inventing a catalog row. */
+  description?: string;
+  /** Actual engine model behind a selectable alias (for example Claude's `opus`). */
+  resolvedModel?: string;
+  /** Whether this exact engine model exposes a thinking-effort control. */
+  supportsEffort?: boolean;
+  /** Exact effort values reported by the active engine for this model. */
+  supportedEffortLevels?: EffortLevel[];
+  /** Engine-reported default effort, when available. */
+  defaultEffortLevel?: EffortLevel;
+  /**
+   * The engine's own recommended selectable row. This is derived from a live
+   * catalog response (never from a package preset) and is only used when a
+   * new installation has no saved default at all.
+   */
+  isEngineDefault?: boolean;
+  /** Initial-install placeholder only; never a successful discovery result. */
+  unverifiedPlaceholder?: boolean;
 }
 
 /** Structural type describing what role a session plays in the hierarchy */
@@ -414,7 +373,7 @@ export interface ProviderConfig {
   temperature?: number;
   baseUrl?: string;
   allowedTools?: string[];  // List of allowed tool names, ['*'] for all tools
-  effortLevel?: EffortLevel;  // Effort level for Opus 4.6 adaptive reasoning (low/medium/high/max)
+  effortLevel?: EffortLevel;  // Engine-reported thinking effort (including ultra when supported)
   responseFormat?: ProviderResponseFormat;  // Response format constraint (extension chat completions)
   skipLogging?: boolean;  // Skip message logging to DB (extension stateless completions)
 }

@@ -249,6 +249,13 @@ describe('AIService ai:saveSettings', () => {
       }),
       getSettingsStore: () => ({ get: (key: string) => key === 'apiKeys' ? {} : {} }),
       startCodexModelRefreshIfEnabled: vi.fn(),
+      startClaudeCodeModelCatalogIfEnabled: vi.fn(),
+      awaitModelCatalogsIfEnabled: vi.fn(async () => undefined),
+      getModelCatalogStatuses: vi.fn(() => ({
+        'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+        'claude-code-cli': { modelSource: 'runtime', verified: true, lastError: null },
+      })),
+      getMissingDefaultModelWarning: vi.fn(() => null),
       streamingHandler: { handle: vi.fn() },
     });
     (service as any).setupIpcHandlers();

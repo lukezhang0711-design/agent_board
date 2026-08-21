@@ -5,6 +5,7 @@ import * as path from 'path';
 
 const handlerTestState = vi.hoisted(() => ({
   provider: null as any,
+  extractModelForProvider: vi.fn<(model: string, providerName: string) => string | null>(() => null),
   stateManager: {
     startSession: vi.fn().mockResolvedValue(undefined),
     updateActivity: vi.fn().mockResolvedValue(undefined),
@@ -93,7 +94,7 @@ vi.mock('../../../utils/store', () => ({
 vi.mock('../aiServiceUtils', () => ({
   safeSend: vi.fn(),
   previewForLog: (value: string) => value,
-  extractModelForProvider: () => null,
+  extractModelForProvider: handlerTestState.extractModelForProvider,
   bucketMessageLength: () => 'short',
   bucketResponseTime: () => 'fast',
   bucketChunkCount: () => 'few',
@@ -296,6 +297,8 @@ describe('child session event hidden delivery channel', () => {
       },
       getSettingsStore: () => ({ get: vi.fn() }),
       getApiKeyForProvider: () => undefined,
+      resolveCurrentDynamicSessionModel: vi.fn(async (_provider: string, model?: string) => model),
+      resolveCompatibleDynamicSessionEffortLevel: vi.fn(() => undefined),
       buildClaudeCodeRuntimeConfig: vi.fn(),
       continueQueuedPromptChain: vi.fn(),
       tryDispatchNextQueuedPrompt: vi.fn(),
@@ -331,6 +334,7 @@ describe('child session event hidden delivery channel', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     handlerTestState.provider = null;
+    handlerTestState.extractModelForProvider.mockReturnValue(null);
     dbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nim-child-event-channel-'));
     db = new SQLiteDatabase({
       dbDir,
@@ -536,6 +540,8 @@ describe('child session event hidden delivery channel', () => {
       },
       getSettingsStore: () => ({ get: vi.fn() }),
       getApiKeyForProvider: () => undefined,
+      resolveCurrentDynamicSessionModel: vi.fn(async (_provider: string, model?: string) => model),
+      resolveCompatibleDynamicSessionEffortLevel: vi.fn(() => undefined),
       buildClaudeCodeRuntimeConfig: vi.fn(),
       continueQueuedPromptChain: vi.fn(),
       tryDispatchNextQueuedPrompt: vi.fn(),
@@ -639,6 +645,8 @@ describe('child session event hidden delivery channel', () => {
       },
       getSettingsStore: () => ({ get: vi.fn() }),
       getApiKeyForProvider: () => undefined,
+      resolveCurrentDynamicSessionModel: vi.fn(async (_provider: string, model?: string) => model),
+      resolveCompatibleDynamicSessionEffortLevel: vi.fn(() => undefined),
       buildClaudeCodeRuntimeConfig: vi.fn(),
       continueQueuedPromptChain: vi.fn(),
       tryDispatchNextQueuedPrompt: vi.fn(),
@@ -730,6 +738,8 @@ describe('child session event hidden delivery channel', () => {
       },
       getSettingsStore: () => ({ get: vi.fn() }),
       getApiKeyForProvider: () => undefined,
+      resolveCurrentDynamicSessionModel: vi.fn(async (_provider: string, model?: string) => model),
+      resolveCompatibleDynamicSessionEffortLevel: vi.fn(() => undefined),
       buildClaudeCodeRuntimeConfig: vi.fn(),
       continueQueuedPromptChain: vi.fn(),
       tryDispatchNextQueuedPrompt: vi.fn(),
@@ -789,6 +799,9 @@ describe('child session event hidden delivery channel', () => {
       },
     };
     handlerTestState.provider = provider;
+    handlerTestState.extractModelForProvider.mockImplementation((model: string, providerName: string) => (
+      providerName === 'openai-codex' ? model.replace(/^openai-codex:/, '') : null
+    ));
 
     const addMessage = vi.fn().mockResolvedValue(undefined);
     const firstResponse = vi.fn();
@@ -797,10 +810,11 @@ describe('child session event hidden delivery channel', () => {
         loadSession: vi.fn().mockResolvedValue({
           id: healthSessionId,
           provider: 'openai-codex',
+          model: 'openai-codex:gpt-5.6-sol',
           workspacePath: '/workspace',
           title: 'Health check',
           messages: [],
-          metadata: {},
+          metadata: { effortLevel: 'ultra' },
           providerConfig: {},
         }),
         addMessage,
@@ -822,6 +836,8 @@ describe('child session event hidden delivery channel', () => {
       },
       getSettingsStore: () => ({ get: vi.fn() }),
       getApiKeyForProvider: () => undefined,
+      resolveCurrentDynamicSessionModel: vi.fn(async () => 'openai-codex:gpt-5.6-sol'),
+      resolveCompatibleDynamicSessionEffortLevel: vi.fn(() => 'ultra'),
       buildClaudeCodeRuntimeConfig: vi.fn(),
       continueQueuedPromptChain: vi.fn(),
       tryDispatchNextQueuedPrompt: vi.fn(),
@@ -848,6 +864,76 @@ describe('child session event hidden delivery channel', () => {
     expect(modelInputs).toEqual([healthPrompt]);
     expect(firstResponse).toHaveBeenCalledTimes(1);
     expect(addMessage).not.toHaveBeenCalled();
+    // The generic per-turn credential refresh used to overwrite this config
+    // without `model`, causing OpenAICodexProvider to use static gpt-5.5.
+    expect(provider.initialize).toHaveBeenLastCalledWith(expect.objectContaining({
+      model: 'gpt-5.6-sol',
+      effortLevel: 'ultra',
+    }));
+  });
+
+  it('releases a queued prompt when dynamic catalog preflight rejects, so a retry is not silently skipped', async () => {
+    const sessionId = 'catalog-preflight-queued';
+    const promptId = 'catalog-preflight-prompt';
+    const processingQueuedPromptIds = new Set<string>();
+    const resolveCurrentDynamicSessionModel = vi.fn(async () => {
+      throw new Error('codex debug models timed out after 20ms');
+    });
+    const provider = {
+      initialize: vi.fn(),
+      registerToolHandler: vi.fn(),
+      async *sendMessage() {},
+    };
+    handlerTestState.provider = provider;
+    const handler = new MessageStreamingHandler({
+      sessionManager: {
+        loadSession: vi.fn().mockResolvedValue({
+          id: sessionId,
+          provider: 'openai-codex',
+          workspacePath: '/workspace',
+          messages: [],
+          metadata: {},
+          providerConfig: {},
+        }),
+      },
+      analytics: { sendEvent: vi.fn() },
+      sendMessageHandler: null,
+      processingQueuedPromptIds,
+      matchDebounceTimers: new Map(),
+      sessionsProcessingQueue: new Set<string>(),
+      documentContextService: {},
+      hooklessWatcher: {},
+      getSettingsStore: () => ({ get: vi.fn() }),
+      getApiKeyForProvider: () => undefined,
+      resolveCurrentDynamicSessionModel,
+      resolveCompatibleDynamicSessionEffortLevel: vi.fn(() => undefined),
+      buildClaudeCodeRuntimeConfig: vi.fn(),
+      continueQueuedPromptChain: vi.fn(),
+      tryDispatchNextQueuedPrompt: vi.fn(),
+      isSessionQueuePaused: vi.fn(),
+      runAutoContextCommand: vi.fn(),
+      createToolHandler: vi.fn(),
+      inferWorktreePathFromFilePath: vi.fn(),
+      inferWorktreePathFromCommand: vi.fn(),
+      adoptWorktreeForSession: vi.fn(),
+    } as any);
+
+    const send = () => handler.handle(
+      { sender: { id: 1 } } as any,
+      'retry after catalog recovers',
+      { queuedPromptId: promptId } as any,
+      sessionId,
+      '/workspace',
+    );
+    try {
+      await expect(send()).rejects.toThrow('codex debug models timed out after 20ms');
+      expect(processingQueuedPromptIds).not.toContain(promptId);
+      await expect(send()).rejects.toThrow('codex debug models timed out after 20ms');
+      expect(resolveCurrentDynamicSessionModel).toHaveBeenCalledTimes(2);
+      expect(provider.initialize).not.toHaveBeenCalled();
+    } finally {
+      handler.destroy();
+    }
   });
 
   it('preserves a dispatch-sourced title and named flag through the first user message', async () => {

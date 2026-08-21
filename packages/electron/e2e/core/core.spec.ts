@@ -144,13 +144,11 @@ test('should save file with Cmd+S', async () => {
 // ========================================================================
 
 test('Agent Mode button should switch to agent mode', async () => {
-  // Start in files mode
+  // Start in Files mode. A document can legitimately retain its assistant
+  // split pane, so `.workspace-sidebar` is not the authoritative mode signal.
   const filesButton = page.locator(PLAYWRIGHT_TEST_SELECTORS.filesModeButton);
   await filesButton.click();
-  await page.waitForTimeout(300);
-
-  const fileTree = page.locator('.workspace-sidebar');
-  await expect(fileTree).toBeVisible({ timeout: TEST_TIMEOUTS.FILE_TREE_LOAD });
+  await expect(filesButton).toHaveAttribute('aria-pressed', 'true');
 
   await switchToAgentMode(page);
 
@@ -174,7 +172,7 @@ test('Agent Mode should show AgenticPanel when workspace is open', async () => {
   await expect(fallbackMessage).not.toBeVisible();
 });
 
-test('Switching back to Files mode should restore file tree', async () => {
+test('Switching back to Files mode should restore the file workspace', async () => {
   await switchToAgentMode(page);
 
   const agentModeWrapper = page.locator('[data-layout="agent-mode-wrapper"]');
@@ -184,8 +182,10 @@ test('Switching back to Files mode should restore file tree', async () => {
   await filesButton.click();
   await page.waitForTimeout(500);
 
-  const fileTree = page.locator('.workspace-sidebar');
-  await expect(fileTree).toBeVisible();
+  // Files mode preserves an open assistant split next to the active document,
+  // so its mode button and document surface—not the optional tree sidebar—are
+  // the stable return-state contract.
+  await expect(page.locator(ACTIVE_FILE_TAB_SELECTOR)).toContainText('test.md');
 
   await expect(agentModeWrapper).not.toBeVisible();
   await expect(filesButton).toHaveAttribute('aria-pressed', 'true');
@@ -202,41 +202,45 @@ test('Cmd+N should create new session in agent mode', async () => {
 
   const initialSessionButtons = await page.getByRole('button', { name: /^Session:/ }).count();
 
-  await electronApp.evaluate(({ BrowserWindow }) => {
-    const focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow) {
-      focusedWindow.webContents.send('agent-new-session');
-    }
+  const didDispatchNewSession = await electronApp.evaluate(({ BrowserWindow }) => {
+    // Playwright's Electron window need not be macOS's focused window. Target
+    // the launched test app explicitly so this exercises the same renderer IPC
+    // event that Cmd+N uses.
+    const testWindow = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
+    testWindow?.webContents.send('agent-new-session');
+    return Boolean(testWindow);
   });
+  expect(didDispatchNewSession).toBe(true);
 
-  await page.waitForTimeout(1000);
-
-  const newSessionButtons = await page.getByRole('button', { name: /^Session:/ }).count();
-  expect(newSessionButtons).toBeGreaterThan(initialSessionButtons);
+  await expect.poll(
+    () => page.getByRole('button', { name: /^Session:/ }).count(),
+    { timeout: TEST_TIMEOUTS.FILE_TREE_LOAD },
+  ).toBeGreaterThan(initialSessionButtons);
 
   const newFileDialog = page.locator('text="New File"').first();
   await expect(newFileDialog).not.toBeVisible({ timeout: 500 }).catch(() => {});
 });
 
 test('Cmd+N should open new file dialog in files mode', async () => {
-  await page.keyboard.press('Meta+e');
+  // Files mode may preserve the open assistant split, so use the navigation
+  // state rather than a particular tree entry as the mode contract.
+  const filesButton = page.locator(PLAYWRIGHT_TEST_SELECTORS.filesModeButton);
+  await filesButton.click();
+  await expect(filesButton).toHaveAttribute('aria-pressed', 'true');
 
-  await expect(page.locator('text="agent-mode-test.md"')).toBeVisible({ timeout: TEST_TIMEOUTS.DEFAULT_WAIT });
-
-  await electronApp.evaluate(({ BrowserWindow }) => {
-    const focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow) {
-      focusedWindow.webContents.send('file-new-in-workspace');
-    }
+  const didDispatchNewFile = await electronApp.evaluate(({ BrowserWindow }) => {
+    const testWindow = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
+    testWindow?.webContents.send('file-new-in-workspace');
+    return Boolean(testWindow);
   });
-
-  await page.waitForTimeout(500);
+  expect(didDispatchNewFile).toBe(true);
 
   const newFileDialog = page.locator('text="New File"').first();
-  await expect(newFileDialog).toBeVisible({ timeout: TEST_TIMEOUTS.DEFAULT_WAIT });
+  await expect(newFileDialog).toBeVisible({ timeout: TEST_TIMEOUTS.FILE_TREE_LOAD });
 
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(300);
+  const dialog = page.locator('.new-file-dialog');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).not.toBeVisible();
 });
 
 // ========================================================================
@@ -318,17 +322,15 @@ test('should open search/replace bar with Cmd+F and close with Escape', async ()
   await expect(
     page.locator(PLAYWRIGHT_TEST_SELECTORS.tab).filter({ hasText: 'find-test-1.md' })
   ).toBeVisible({ timeout: TEST_TIMEOUTS.TAB_SWITCH });
-  await page.waitForSelector(PLAYWRIGHT_TEST_SELECTORS.contentEditable, {
+  await page.waitForSelector(ACTIVE_EDITOR_SELECTOR, {
     timeout: TEST_TIMEOUTS.EDITOR_LOAD,
   });
 
   await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.searchReplaceBar)).not.toBeVisible();
 
   await electronApp.evaluate(({ BrowserWindow }) => {
-    const focused = BrowserWindow.getFocusedWindow();
-    if (focused) {
-      focused.webContents.send('menu:find');
-    }
+    const testWindow = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
+    testWindow?.webContents.send('menu:find');
   });
 
   await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.searchReplaceBar)).toBeVisible({
@@ -352,15 +354,13 @@ test('should allow typing multiple characters in search box without losing focus
   await expect(
     page.locator(PLAYWRIGHT_TEST_SELECTORS.tab).filter({ hasText: 'find-test-2.md' })
   ).toBeVisible({ timeout: TEST_TIMEOUTS.TAB_SWITCH });
-  await page.waitForSelector(PLAYWRIGHT_TEST_SELECTORS.contentEditable, {
+  await page.waitForSelector(ACTIVE_EDITOR_SELECTOR, {
     timeout: TEST_TIMEOUTS.EDITOR_LOAD,
   });
 
   await electronApp.evaluate(({ BrowserWindow }) => {
-    const focused = BrowserWindow.getFocusedWindow();
-    if (focused) {
-      focused.webContents.send('menu:find');
-    }
+    const testWindow = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
+    testWindow?.webContents.send('menu:find');
   });
 
   await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.searchReplaceBar)).toBeVisible();

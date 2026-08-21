@@ -115,4 +115,149 @@ describe('ModelSelector', () => {
     await waitFor(() => expect(screen.getByTestId('model-picker-provider-claude-code')).toBeTruthy());
     expect(screen.queryByTestId('model-picker-provider-claude-code-cli')).toBeNull();
   });
+
+  it('GREEN: renders live Codex 5.6 IDs, Claude alias resolution, and a cached-catalog red light', async () => {
+    (window as any).electronAPI.aiGetModels.mockResolvedValue({
+      success: true,
+      grouped: {
+        'claude-code': [{
+          id: 'claude-code:opus-1m',
+          name: 'Claude Agent · Opus (1M context)',
+          provider: 'claude-code',
+          resolvedModel: 'claude-opus-5[1m]',
+          supportsEffort: true,
+          supportedEffortLevels: ['low', 'ultra'],
+        }],
+        'openai-codex': [
+          { id: 'openai-codex:gpt-5.6-sol', name: 'GPT-5.6 Sol', provider: 'openai-codex', supportedEffortLevels: ['low', 'ultra'] },
+          { id: 'openai-codex:gpt-5.6-terra', name: 'GPT-5.6 Terra', provider: 'openai-codex', supportedEffortLevels: ['low', 'ultra'] },
+          { id: 'openai-codex:gpt-5.6-luna', name: 'GPT-5.6 Luna', provider: 'openai-codex', supportedEffortLevels: ['low', 'ultra'] },
+        ],
+      },
+      catalogStatuses: {
+        'openai-codex': {
+          verified: true,
+          modelSource: 'cache',
+          lastSuccessAt: 1,
+          lastError: { message: 'codex debug models timed out after 20ms' },
+        },
+      },
+    });
+
+    const onModelChange = vi.fn();
+    render(
+      <ModelSelector
+        currentModel="openai-codex:gpt-5.6-sol"
+        onModelChange={onModelChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('model-picker'));
+
+    await waitFor(() => expect(screen.getAllByText('GPT-5.6 Sol').length).toBeGreaterThanOrEqual(2));
+    expect(screen.getByText('GPT-5.6 Terra')).toBeTruthy();
+    expect(screen.getByText('GPT-5.6 Luna')).toBeTruthy();
+    expect(screen.getByText(/claude-opus-5\[1m\]/)).toBeTruthy();
+    expect(screen.getByTestId('model-catalog-status-openai-codex').textContent)
+      .toContain('codex debug models timed out after 20ms');
+    expect(screen.getByTestId('model-catalog-status-openai-codex').textContent)
+      .toContain('上次成功获取于');
+    expect(screen.getByTestId('model-catalog-status-openai-codex').textContent)
+      .toContain('缓存仅供查看');
+    const cachedSol = screen.getAllByText('GPT-5.6 Sol')
+      .map((node) => node.closest('.model-selector-option'))
+      .find(Boolean) as HTMLButtonElement;
+    expect(cachedSol.disabled).toBe(true);
+    fireEvent.click(cachedSol);
+    expect(onModelChange).not.toHaveBeenCalled();
+  });
+
+  it('GREEN: keeps the original catalog failure visible when first discovery returned no models', async () => {
+    (window as any).electronAPI.aiGetModels.mockResolvedValue({
+      success: true,
+      grouped: {},
+      catalogStatuses: {
+        'claude-code': {
+          verified: false,
+          modelSource: 'none',
+          lastError: { message: 'Claude SDK supportedModels timed out after 20ms' },
+        },
+      },
+    });
+
+    render(
+      <ModelSelector
+        currentModel="openai-codex:gpt-5.6-sol"
+        onModelChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('model-picker'));
+
+    await waitFor(() => expect(screen.getByTestId('model-catalog-status-claude-code')).toBeTruthy());
+    expect(screen.getByTestId('model-catalog-status-claude-code').textContent)
+      .toContain('Claude SDK supportedModels timed out after 20ms');
+    expect(screen.getByText('No models available')).toBeTruthy();
+  });
+
+  it('GREEN: labels the first-install static row as unverified and prevents selecting it', async () => {
+    (window as any).electronAPI.aiGetModels.mockResolvedValue({
+      success: true,
+      grouped: {
+        'claude-code': [{
+          id: 'claude-code:opus-1m',
+          name: 'Claude Agent · Opus (unverified)',
+          provider: 'claude-code',
+          unverifiedPlaceholder: true,
+        }],
+      },
+      catalogStatuses: {
+        'claude-code': { verified: false, modelSource: 'placeholder' },
+      },
+    });
+    const onModelChange = vi.fn();
+
+    render(
+      <ModelSelector
+        currentModel="openai-codex:gpt-5.6-sol"
+        onModelChange={onModelChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('model-picker'));
+
+    const placeholder = await screen.findByText('Claude Agent · Opus (unverified)');
+    const button = placeholder.closest('button') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(button);
+    expect(onModelChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId('model-catalog-status-claude-code').textContent)
+      .toContain('模型目录未验证');
+  });
+
+  it('GREEN: keeps the first-install unverified notice visible even when the placeholder row is withheld', async () => {
+    (window as any).electronAPI.aiGetModels.mockResolvedValue({
+      success: true,
+      grouped: {
+        openai: [{ id: 'openai:gpt-5', name: 'OpenAI GPT', provider: 'openai' }],
+      },
+      catalogStatuses: {
+        'claude-code': { verified: false, modelSource: 'placeholder' },
+      },
+    });
+
+    render(
+      <ModelSelector
+        currentModel="openai:gpt-5"
+        onModelChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('model-picker'));
+
+    await waitFor(() => expect(screen.getByTestId('model-catalog-status-claude-code')).toBeTruthy());
+    expect(screen.getByTestId('model-catalog-status-claude-code').textContent)
+      .toContain('模型目录未验证');
+    expect(screen.queryByText(/Opus \(unverified\)/)).toBeNull();
+  });
 });

@@ -11,11 +11,7 @@
  */
 
 import { AIProviderType, AI_PROVIDER_TYPES, isClaudeCodeFamily } from './types';
-import {
-  CLAUDE_CODE_ACCEPTED_VARIANT_INPUTS,
-  DEFAULT_MODELS,
-  normalizeClaudeCodeVariant,
-} from '../modelConstants';
+import { DEFAULT_MODELS } from '../modelConstants';
 
 /**
  * Valid Claude Code model suffixes (e.g., -1m for 1M context window)
@@ -174,15 +170,15 @@ export class ModelIdentifier {
         }
       }
 
-      const normalizedVariant = normalizeClaudeCodeVariant(baseVariant);
-      if (!normalizedVariant) {
-        throw new Error(
-          `Invalid Claude Code variant: ${model}. Must be one of: ${CLAUDE_CODE_ACCEPTED_VARIANT_INPUTS.join(', ')} (optionally with -1m suffix)`
-        );
+      if (!baseVariant.trim()) {
+        throw new Error(`Invalid Claude Code model: ${model}`);
       }
 
-      // Normalize to lowercase for consistency
-      return new ModelIdentifier(provider, normalizedVariant + suffix);
+      // The installed Claude SDK owns the valid values. Retain only the
+      // transport-format normalization (`[1m]` is persisted as `-1m`) here;
+      // catalog membership is checked against supportedModels() at session
+      // creation rather than against a hard-coded variant list.
+      return new ModelIdentifier(provider, baseVariant + suffix);
     }
 
     if (provider === 'openai-codex') {

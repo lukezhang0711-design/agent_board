@@ -1,758 +1,162 @@
-import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PassThrough } from 'node:stream';
-import type { IpcMainInvokeEvent } from 'electron';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { OpenAICodexProvider } from '@nimbalyst/runtime/ai/server/providers/OpenAICodexProvider';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CodexModelRefreshService } from '../CodexModelRefreshService';
 
-interface FakeChildOptions {
-  codexHome?: string;
-  userAgent?: string;
-  modelResult?: unknown;
-  modelError?: { code: number; message: string };
-  hangModelList?: boolean;
-  exitOnInitialize?: boolean;
-  refreshErrorLine?: string;
-  ignoreSigterm?: boolean;
+const TEMP_DIRECTORIES: string[] = [];
+
+function catalogResult() {
+  return JSON.stringify({
+    models: [
+      {
+        slug: 'gpt-5.6-sol',
+        display_name: 'GPT-5.6 Sol',
+        description: 'Frontier coding model',
+        default_reasoning_level: 'low',
+        supported_reasoning_levels: [
+          { effort: 'low', description: 'Fast' },
+          { effort: 'ultra', description: 'Maximum reasoning' },
+        ],
+        visibility: 'list',
+      },
+      {
+        slug: 'gpt-reserve',
+        display_name: 'Reserve',
+        visibility: 'hide',
+        supported_reasoning_levels: [{ effort: 'ultra' }],
+      },
+    ],
+  });
 }
 
-class FakeCodexChild extends EventEmitter {
-  readonly stdin = new PassThrough();
-  readonly stdout = new PassThrough();
-  readonly stderr = new PassThrough();
-  readonly killSignals: Array<NodeJS.Signals | number | undefined> = [];
-  killed = false;
-  exitCode: number | null = null;
-  signalCode: NodeJS.Signals | null = null;
-  exitEmitted = false;
-
-  private buffer = '';
-  private exitScheduled = false;
-
-  constructor(private readonly options: FakeChildOptions = {}) {
-    super();
-    this.stdin.on('data', (chunk: Buffer) => {
-      this.buffer += chunk.toString('utf8');
-      let newline = this.buffer.indexOf('\n');
-      while (newline >= 0) {
-        const line = this.buffer.slice(0, newline);
-        this.buffer = this.buffer.slice(newline + 1);
-        if (line.trim()) this.handleFrame(JSON.parse(line) as Record<string, unknown>);
-        newline = this.buffer.indexOf('\n');
-      }
-    });
-  }
-
-  kill(signal?: NodeJS.Signals | number): boolean {
-    this.killSignals.push(signal);
-    this.killed = true;
-    const normalized = signal ?? 'SIGTERM';
-    if (this.options.ignoreSigterm && normalized !== 'SIGKILL') return true;
-    this.finishExit(null, typeof normalized === 'string' ? normalized : 'SIGTERM');
-    return true;
-  }
-
-  finishExit(code: number | null, signal: NodeJS.Signals | null): void {
-    if (this.exitScheduled || this.exitCode !== null || this.signalCode !== null) return;
-    this.exitScheduled = true;
-    queueMicrotask(() => {
-      this.exitCode = code;
-      this.signalCode = signal;
-      this.exitEmitted = true;
-      this.emit('exit', code, signal);
-    });
-  }
-
-  private handleFrame(frame: Record<string, unknown>): void {
-    if (frame.method === 'initialize') {
-      if (this.options.exitOnInitialize) {
-        this.finishExit(17, null);
-        return;
-      }
-      this.respond(frame.id, {
-        codexHome: this.options.codexHome ?? '/fake/codex-home',
-        platformFamily: 'unix',
-        platformOs: 'macos',
-        userAgent: this.options.userAgent ?? 'Codex CLI/0.136.0',
-      });
-      return;
-    }
-    if (frame.method !== 'model/list') return;
-    if (this.options.refreshErrorLine) {
-      this.stderr.write(`${this.options.refreshErrorLine}\n`);
-    }
-    if (this.options.hangModelList) return;
-    if (this.options.modelError) {
-      this.stdout.write(`${JSON.stringify({
-        jsonrpc: '2.0',
-        id: frame.id,
-        error: this.options.modelError,
-      })}\n`);
-      return;
-    }
-    this.respond(frame.id, this.options.modelResult ?? {
-      data: [modelPreset('gpt-5.4', 'GPT-5.4')],
-      nextCursor: null,
-    });
-  }
-
-  private respond(id: unknown, result: unknown): void {
-    this.stdout.write(`${JSON.stringify({ jsonrpc: '2.0', id, result })}\n`);
-  }
-}
-
-function modelPreset(id: string, displayName: string) {
-  return {
-    id,
-    model: id,
-    displayName,
-    description: `${displayName} description`,
-    defaultReasoningEffort: 'high',
-    supportedReasoningEfforts: [],
-    isDefault: true,
-    showInPicker: true,
-    supportedInApi: true,
-  };
-}
-
-function fullModelInfo(slug = 'gpt-5.4') {
-  return {
-    slug,
-    display_name: 'GPT-5.4',
-    description: null,
-    supported_reasoning_levels: [],
-    shell_type: 'default',
-    visibility: 'list',
-    supported_in_api: true,
-    priority: 1,
-    availability_nux: null,
-    upgrade: null,
-    base_instructions: 'bundled instructions',
-    model_messages: null,
-    supports_reasoning_summaries: false,
-    default_reasoning_summary: 'auto',
-    support_verbosity: false,
-    default_verbosity: null,
-    apply_patch_tool_type: null,
-    truncation_policy: { mode: 'bytes', limit: 10_000 },
-    supports_parallel_tool_calls: false,
-    context_window: 272_000,
-    auto_compact_token_limit: null,
-    effective_context_window_percent: 95,
-    experimental_supported_tools: [],
-    input_modalities: ['text', 'image'],
-  };
-}
-
-function createHarness(options: {
-  children?: FakeCodexChild[];
-  catalogPath?: string;
-  binaryPath?: string;
-  retryDelaysMs?: number[];
-  requestTimeoutMs?: number;
-  terminationGraceMs?: number;
-  manualRetryDedupeMs?: number;
-  buildEnv?: () => NodeJS.ProcessEnv;
-  loadApiKey?: () => string | undefined;
-  resolveBinaryPath?: () => string;
-} = {}) {
-  const tempDir = options.catalogPath
-    ? path.dirname(options.catalogPath)
-    : fs.mkdtempSync(path.join(process.cwd(), '.codex-model-refresh-test-'));
-  const catalogPath = options.catalogPath ?? path.join(tempDir, 'nimbalyst-model-catalog.json');
-  const children = [...(options.children ?? [])];
-  const spawned: FakeCodexChild[] = [];
-  const spawnTimes: number[] = [];
-  const spawnEnvs: NodeJS.ProcessEnv[] = [];
-  const log = {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  };
+function createHarness(commandRunner: (command: string, args: string[]) => Promise<{ stdout: string; stderr?: string }>) {
+  const directory = fs.mkdtempSync(path.join(process.cwd(), '.codex-model-catalog-test-'));
+  TEMP_DIRECTORIES.push(directory);
+  const log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   const service = new CodexModelRefreshService({
-    catalogPath,
-    retryDelaysMs: options.retryDelaysMs ?? [],
-    requestTimeoutMs: options.requestTimeoutMs ?? 25,
-    terminationGraceMs: options.terminationGraceMs ?? 10,
-    manualRetryDedupeMs: options.manualRetryDedupeMs,
-    resolveBinaryPath: options.resolveBinaryPath ?? (() => options.binaryPath ?? '/fake/codex'),
-    buildEnv: options.buildEnv ?? (() => ({ PATH: '/fake/bin' })),
-    loadApiKey: options.loadApiKey,
-    spawnProcess: (_command, _args, spawnOptions) => {
-      const child = children.shift();
-      if (!child) throw new Error('test spawn queue exhausted');
-      spawned.push(child);
-      spawnTimes.push(Date.now());
-      spawnEnvs.push({ ...spawnOptions.env });
-      return child as never;
-    },
+    catalogPath: path.join(directory, 'models.json'),
+    retryDelaysMs: [],
+    commandRunner,
     logger: log,
   });
-
-  return {
-    service,
-    catalogPath,
-    tempDir,
-    spawned,
-    spawnTimes,
-    spawnEnvs,
-    log,
-    enqueue: (child: FakeCodexChild) => children.push(child),
-  };
+  return { directory, log, service };
 }
 
-async function settleImmediate(): Promise<void> {
-  await Promise.resolve();
-  await Promise.resolve();
-}
+afterEach(() => {
+  for (const directory of TEMP_DIRECTORIES.splice(0)) {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 describe('CodexModelRefreshService', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-17T08:00:00.000Z'));
-  });
+  it('uses only `codex debug models`, lists only visibility=list models, and preserves ultra', async () => {
+    const commandRunner = vi.fn().mockResolvedValue({ stdout: catalogResult() });
+    const { service } = createHarness(commandRunner);
 
-  afterEach(() => {
-    OpenAICodexProvider.setModelRefreshSnapshotResolver(null);
-    OpenAICodexProvider.setModelCatalogPathResolver(null);
-    OpenAICodexProvider.setTrustChecker(null);
-    OpenAICodexProvider.setPermissionPatternChecker(null);
-    OpenAICodexProvider.setPermissionPatternSaver(null);
-    OpenAICodexProvider.setSecurityLogger(null);
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-  });
+    await service.start();
 
-  it('creates a valid hidden sentinel catalog synchronously before any session can spawn', () => {
-    const harness = createHarness();
-    const catalog = JSON.parse(fs.readFileSync(harness.catalogPath, 'utf8')) as {
-      models: Array<Record<string, unknown>>;
-    };
-
-    expect(harness.service.getCatalogPath()).toBe(harness.catalogPath);
-    expect(catalog.models).toHaveLength(1);
-    expect(catalog.models[0]).toMatchObject({
-      slug: '__nimbalyst_offline_catalog__',
-      visibility: 'hide',
-      supported_in_api: false,
-    });
-    expect(catalog.models[0].base_instructions).toBeTypeOf('string');
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('uses only the explicitly configured Codex API key for the refresh child', async () => {
-    const harness = createHarness({
-      children: [new FakeCodexChild()],
-      buildEnv: () => ({
-        PATH: '/fake/bin',
-        OPENAI_API_KEY: 'implicit-openai-key',
-        CODEX_API_KEY: 'implicit-codex-key',
-      }),
-      loadApiKey: () => 'configured-codex-key',
-    });
-
-    await harness.service.start();
-
-    expect(harness.spawnEnvs[0]).toMatchObject({
-      PATH: '/fake/bin',
-      CODEX_API_KEY: 'configured-codex-key',
-    });
-    expect(harness.spawnEnvs[0]).not.toHaveProperty('OPENAI_API_KEY');
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('publishes every deduplicated model reported by the selected runtime, including GPT-5.6', async () => {
-    const harness = createHarness({
-      children: [new FakeCodexChild({
-        modelResult: {
-          data: [
-            modelPreset('gpt-5.6-sol', 'GPT-5.6 Sol'),
-            modelPreset('gpt-5.6-terra', 'GPT-5.6 Terra'),
-            modelPreset('gpt-5.6-sol', 'GPT-5.6 Sol duplicate'),
-            modelPreset('gpt-5.6-luna', 'GPT-5.6 Luna'),
-          ],
-          nextCursor: null,
-        },
-      })],
-    });
-    OpenAICodexProvider.setModelRefreshSnapshotResolver(() => harness.service.getModels());
-
-    await harness.service.start();
-    const pickerModels = await OpenAICodexProvider.getModels();
-
-    expect(pickerModels.map((model) => model.id)).toEqual([
-      'openai-codex:gpt-5.6-sol',
-      'openai-codex:gpt-5.6-terra',
-      'openai-codex:gpt-5.6-luna',
-    ]);
-    expect(pickerModels.map((model) => model.name)).toEqual([
-      'GPT-5.6 Sol duplicate',
-      'GPT-5.6 Terra',
-      'GPT-5.6 Luna',
-    ]);
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('uses increasing backoff, stops at the cap, and waits for every timed-out child to exit', async () => {
-    const children = [
-      new FakeCodexChild({ hangModelList: true }),
-      new FakeCodexChild({ hangModelList: true }),
-      new FakeCodexChild({ hangModelList: true }),
-    ];
-    const harness = createHarness({
-      children,
-      retryDelaysMs: [100, 300],
-      requestTimeoutMs: 25,
-    });
-
-    const firstAttempt = harness.service.start();
-    await vi.advanceTimersByTimeAsync(25);
-    await firstAttempt;
-
-    expect(harness.service.getStatus()).toMatchObject({
-      phase: 'retrying',
-      attempt: 1,
-      maxAttempts: 3,
-      nextRetryAt: Date.now() + 100,
-      lastError: { category: 'network' },
-    });
-    expect(harness.spawned[0].killSignals).toContain('SIGTERM');
-    expect(harness.spawned[0].signalCode).toBe('SIGTERM');
-
-    await vi.advanceTimersByTimeAsync(99);
-    expect(harness.spawned).toHaveLength(1);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(harness.spawned).toHaveLength(2);
-    await vi.advanceTimersByTimeAsync(25);
-    expect(harness.service.getStatus().nextRetryAt).toBe(Date.now() + 300);
-
-    await vi.advanceTimersByTimeAsync(299);
-    expect(harness.spawned).toHaveLength(2);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(harness.spawned).toHaveLength(3);
-    await vi.advanceTimersByTimeAsync(25);
-
-    expect(harness.service.getStatus()).toMatchObject({
-      phase: 'stopped',
-      attempt: 3,
-      maxAttempts: 3,
-      nextRetryAt: null,
-      lastError: { category: 'network' },
-    });
-    expect(harness.spawned.every((child) => (
-      child.signalCode === 'SIGTERM' && child.exitEmitted
-    ))).toBe(true);
-
-    await vi.advanceTimersByTimeAsync(10_000);
-    expect(harness.spawned).toHaveLength(3);
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('escalates to SIGKILL and observes exit when a timed-out child ignores SIGTERM', async () => {
-    const child = new FakeCodexChild({ hangModelList: true, ignoreSigterm: true });
-    const harness = createHarness({
-      children: [child],
-      requestTimeoutMs: 25,
-      terminationGraceMs: 10,
-    });
-
-    const attempt = harness.service.start();
-    await vi.advanceTimersByTimeAsync(25);
-    await vi.advanceTimersByTimeAsync(10);
-    await attempt;
-
-    expect(child.killSignals).toEqual(['SIGTERM', 'SIGKILL']);
-    expect(child.signalCode).toBe('SIGKILL');
-    expect(child.exitEmitted).toBe(true);
-    expect(harness.service.getStatus().phase).toBe('stopped');
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('classifies upstream rejection and child-process failure distinctly in state and logs', async () => {
-    const rejected = createHarness({
-      children: [new FakeCodexChild({
-        modelError: { code: 429, message: 'upstream rejected: rate limited' },
-      })],
-    });
-    await rejected.service.start();
-    expect(rejected.service.getStatus().lastError).toMatchObject({
-      category: 'upstream_rejected',
-      message: expect.stringMatching(/429|rate limited/i),
-    });
-    expect(rejected.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('[upstream_rejected]'),
-      expect.any(Object),
+    expect(commandRunner).toHaveBeenCalledWith(
+      expect.any(String),
+      ['debug', 'models'],
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
     );
-
-    const childFailure = createHarness({
-      children: [new FakeCodexChild({ exitOnInitialize: true })],
-    });
-    await childFailure.service.start();
-    expect(childFailure.service.getStatus().lastError).toMatchObject({
-      category: 'child_process',
-    });
-    expect(childFailure.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('[child_process]'),
-      expect.any(Object),
-    );
-
-    rejected.service.shutdown();
-    childFailure.service.shutdown();
-    fs.rmSync(rejected.tempDir, { recursive: true, force: true });
-    fs.rmSync(childFailure.tempDir, { recursive: true, force: true });
-  });
-
-  it('labels the static fallback when selected-runtime model enumeration fails', async () => {
-    const harness = createHarness({
-      children: [new FakeCodexChild({
-        modelError: { code: 429, message: 'upstream rejected: rate limited' },
-      })],
-    });
-
-    await harness.service.start();
-
-    expect(harness.service.getStatus()).toMatchObject({
-      modelSource: 'fallback',
-      lastError: {
-        category: 'upstream_rejected',
-      },
-    });
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('treats the Codex refresh stderr marker as a network failure even when model/list falls back', async () => {
-    const harness = createHarness({
-      children: [new FakeCodexChild({
-        refreshErrorLine: 'ERROR failed to refresh available models: dns lookup timed out',
-      })],
-    });
-
-    await harness.service.start();
-
-    expect(harness.service.getStatus()).toMatchObject({
-      phase: 'stopped',
-      lastError: {
-        category: 'network',
-        message: expect.stringMatching(/dns lookup timed out/i),
-      },
-    });
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('classifies the observed Codex child-exit timeout marker as a child-process failure', async () => {
-    const harness = createHarness({
-      children: [new FakeCodexChild({
-        refreshErrorLine: 'ERROR failed to refresh available models: timeout waiting for child process to exit',
-      })],
-    });
-
-    await harness.service.start();
-
-    expect(harness.service.getStatus()).toMatchObject({
-      phase: 'stopped',
-      lastError: {
-        category: 'child_process',
-        message: expect.stringMatching(/timeout waiting for child process to exit/i),
-      },
-    });
-    expect(harness.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('[child_process]'),
-      expect.any(Object),
-    );
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('manual retry starts a fresh cycle, recovers, and retains the previous diagnostic', async () => {
-    const harness = createHarness({
-      children: [new FakeCodexChild({ hangModelList: true })],
-      requestTimeoutMs: 25,
-    });
-    const firstAttempt = harness.service.start();
-    await vi.advanceTimersByTimeAsync(25);
-    await firstAttempt;
-    const failedAt = harness.service.getStatus().lastError?.at;
-    expect(harness.service.getStatus().phase).toBe('stopped');
-
-    const handlers = new Map<
-      string,
-      (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown
-    >();
-    harness.service.registerIpcHandlers((channel, handler) => {
-      handlers.set(channel, handler);
-    });
-    harness.enqueue(new FakeCodexChild());
-    const manualResult = await handlers.get('ai:retryModelRefresh')?.({} as IpcMainInvokeEvent);
-
-    expect(manualResult).toMatchObject({ success: true, status: { phase: 'normal' } });
-    expect(harness.service.getStatus()).toMatchObject({
-      phase: 'normal',
-      attempt: 0,
-      nextRetryAt: null,
-      lastSuccessAt: Date.now(),
-      lastError: { category: 'network', at: failedAt },
-    });
-    expect(harness.service.getModels()).toEqual(expect.arrayContaining([
+    expect(service.getModels()).toEqual([
       expect.objectContaining({
-        id: 'openai-codex:gpt-5.4',
-        name: 'GPT-5.4',
-        provider: 'openai-codex',
+        id: 'openai-codex:gpt-5.6-sol',
+        name: 'GPT-5.6 Sol',
+        description: 'Frontier coding model',
+        defaultEffortLevel: 'low',
+        supportedEffortLevels: ['low', 'ultra'],
       }),
-    ]));
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-  });
-
-  it('coalesces repeated explicit retries for two seconds', async () => {
-    const harness = createHarness({
-      children: [new FakeCodexChild(), new FakeCodexChild()],
-    });
-    try {
-      const first = harness.service.manualRetry();
-      const concurrent = harness.service.manualRetry();
-      await Promise.all([first, concurrent]);
-
-      expect(concurrent).toBe(first);
-      expect(harness.spawned).toHaveLength(1);
-
-      await vi.advanceTimersByTimeAsync(1_999);
-      await harness.service.manualRetry();
-      expect(harness.spawned).toHaveLength(1);
-
-      await vi.advanceTimersByTimeAsync(1);
-      await harness.service.manualRetry();
-      expect(harness.spawned).toHaveLength(2);
-    } finally {
-      harness.service.shutdown();
-      fs.rmSync(harness.tempDir, { recursive: true, force: true });
-    }
-  });
-
-  it('atomically promotes Codex full cache metadata after a successful refresh', async () => {
-    const tempCodexHome = fs.mkdtempSync(path.join(process.cwd(), '.codex-home-test-'));
-    const cachedModels = [fullModelInfo()];
-    fs.writeFileSync(
-      path.join(tempCodexHome, 'models_cache.json'),
-      JSON.stringify({ fetched_at: Date.now(), etag: 'etag-1', models: cachedModels }),
-      'utf8',
-    );
-    const harness = createHarness({
-      children: [new FakeCodexChild({ codexHome: tempCodexHome })],
-    });
-
-    await harness.service.start();
-
-    const promoted = JSON.parse(fs.readFileSync(harness.catalogPath, 'utf8')) as { models: unknown[] };
-    expect(promoted.models).toEqual(cachedModels);
-    expect(fs.readdirSync(path.dirname(harness.catalogPath)).filter((entry) => entry.includes('.tmp-'))).toEqual([]);
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
-    fs.rmSync(tempCodexHome, { recursive: true, force: true });
-  });
-
-  it.each([
-    ['the resolver switches from bundled to system', '/fake/bundled/codex', 'Codex CLI/0.143.0', '/fake/system/codex', 'Codex CLI/0.143.0'],
-    ['the selected runtime reports a new version', '/fake/system/codex', 'Codex CLI/0.143.0', '/fake/system/codex', 'Codex CLI/0.144.1'],
-  ])('invalidates the cached catalog and starts one refresh when %s', async (
-    _change,
-    priorBinaryPath,
-    priorUserAgent,
-    nextBinaryPath,
-    nextUserAgent,
-  ) => {
-    const tempCodexHome = fs.mkdtempSync(path.join(process.cwd(), '.codex-home-test-'));
-    fs.writeFileSync(
-      path.join(tempCodexHome, 'models_cache.json'),
-      JSON.stringify({ models: [fullModelInfo('gpt-5.4')] }),
-      'utf8',
-    );
-    const prior = createHarness({
-      binaryPath: priorBinaryPath,
-      children: [new FakeCodexChild({
-        codexHome: tempCodexHome,
-        userAgent: priorUserAgent,
-        modelResult: { data: [modelPreset('gpt-5.4', 'GPT-5.4')], nextCursor: null },
-      })],
-    });
-    await prior.service.start();
-    prior.service.shutdown();
-
-    const next = createHarness({
-      catalogPath: prior.catalogPath,
-      binaryPath: nextBinaryPath,
-      children: [new FakeCodexChild({
-        userAgent: nextUserAgent,
-        hangModelList: true,
-      })],
-    });
-    const refresh = next.service.start();
-    await vi.advanceTimersByTimeAsync(1);
-    await settleImmediate();
-
-    const invalidatedCatalog = JSON.parse(fs.readFileSync(next.catalogPath, 'utf8')) as {
-      models: Array<{ slug?: string }>;
-    };
-    expect(invalidatedCatalog.models).toEqual([
-      expect.objectContaining({ slug: '__nimbalyst_offline_catalog__' }),
     ]);
-    expect(next.service.getModels()).toEqual([]);
-    expect(next.service.getStatus()).toMatchObject({ modelSource: 'fallback' });
-    expect(next.spawned).toHaveLength(1);
-
-    await vi.advanceTimersByTimeAsync(25);
-    await refresh;
-
-    next.service.shutdown();
-    fs.rmSync(prior.tempDir, { recursive: true, force: true });
-    fs.rmSync(tempCodexHome, { recursive: true, force: true });
+    expect(service.getStatus()).toMatchObject({
+      modelSource: 'runtime',
+      verified: true,
+      lastError: null,
+    });
   });
 
-  it('invalidates a repeated A-to-B runtime switch before the final B refresh fails', async () => {
-    let binaryPath = '/fake/runtime-a/codex';
-    const harness = createHarness({
-      manualRetryDedupeMs: 0,
-      resolveBinaryPath: () => binaryPath,
-      children: [
-        new FakeCodexChild({ modelResult: { data: [modelPreset('runtime-a', 'Runtime A')], nextCursor: null } }),
-        new FakeCodexChild({ modelResult: { data: [modelPreset('runtime-b', 'Runtime B')], nextCursor: null } }),
-        new FakeCodexChild({ modelResult: { data: [modelPreset('runtime-a', 'Runtime A')], nextCursor: null } }),
-        new FakeCodexChild({ modelError: { code: 503, message: 'runtime B unavailable' } }),
-      ],
+  it('keeps only a timestamped last-success cache when a later discovery fails', async () => {
+    const first = createHarness(vi.fn().mockResolvedValue({ stdout: catalogResult() }));
+    await first.service.start();
+    const firstStatus = first.service.getStatus();
+
+    const log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const next = new CodexModelRefreshService({
+      catalogPath: path.join(first.directory, 'models.json'),
+      retryDelaysMs: [],
+      commandRunner: vi.fn().mockRejectedValue(new Error('spawn codex ENOENT')),
+      logger: log,
     });
+    await next.start();
 
-    try {
-      await harness.service.start();
-      binaryPath = '/fake/runtime-b/codex';
-      await harness.service.manualRetry();
-      binaryPath = '/fake/runtime-a/codex';
-      await harness.service.manualRetry();
-      binaryPath = '/fake/runtime-b/codex';
-      await harness.service.manualRetry();
-
-      const catalog = JSON.parse(fs.readFileSync(harness.catalogPath, 'utf8')) as {
-        models: Array<{ slug?: string }>;
-      };
-      expect(catalog.models).toEqual([
-        expect.objectContaining({ slug: '__nimbalyst_offline_catalog__' }),
-      ]);
-      expect(harness.service.getModels()).toEqual([]);
-      expect(harness.service.getStatus()).toMatchObject({ modelSource: 'fallback' });
-    } finally {
-      harness.service.shutdown();
-      fs.rmSync(harness.tempDir, { recursive: true, force: true });
-    }
+    expect(next.getModels()).toEqual([
+      expect.objectContaining({ id: 'openai-codex:gpt-5.6-sol' }),
+    ]);
+    expect(next.getStatus()).toMatchObject({
+      modelSource: 'cache',
+      verified: true,
+      lastSuccessAt: firstStatus.lastSuccessAt,
+      lastError: { message: 'spawn codex ENOENT' },
+    });
+    // Cache remains UI evidence only; it must never be injected into a new
+    // app-server child while the live refresh is red.
+    expect(next.getCatalogPath()).toBeUndefined();
+    expect(log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('refresh attempt'),
+      expect.objectContaining({ error: 'spawn codex ENOENT' }),
+    );
   });
 
-  it('registers query and manual-retry IPC entries at the main-process seam', async () => {
-    const harness = createHarness();
-    const handlers = new Map<string, (...args: unknown[]) => unknown>();
-    const register = vi.fn((channel: string, handler: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, handler);
+  it('does not silently fall back to a static catalog after the first discovery fails', async () => {
+    const { log, service } = createHarness(
+      vi.fn().mockRejectedValue(new Error('codex executable not found')),
+    );
+
+    await service.start();
+
+    expect(service.getModels()).toEqual([]);
+    expect(service.getStatus()).toMatchObject({
+      phase: 'stopped',
+      modelSource: 'none',
+      verified: false,
+      lastSuccessAt: null,
+      lastError: { message: 'codex executable not found' },
     });
-
-    harness.service.registerIpcHandlers(register as never);
-
-    expect(register).toHaveBeenCalledWith('ai:getModelRefreshStatus', expect.any(Function));
-    expect(register).toHaveBeenCalledWith('ai:retryModelRefresh', expect.any(Function));
-    expect(await handlers.get('ai:getModelRefreshStatus')?.({})).toEqual({
-      success: true,
-      status: harness.service.getStatus(),
-    });
-
-    harness.service.shutdown();
-    fs.rmSync(harness.tempDir, { recursive: true, force: true });
+    expect(log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('refresh attempt'),
+      expect.objectContaining({ error: 'codex executable not found' }),
+    );
+    expect(service.getCatalogPath()).toBeUndefined();
   });
 
-  it('does not restart or duplicate an active provider turn when refresh times out', async () => {
-    OpenAICodexProvider.setTrustChecker(() => ({ trusted: true, mode: 'allow-all' as never }));
-    OpenAICodexProvider.setPermissionPatternChecker(async () => false);
-    OpenAICodexProvider.setPermissionPatternSaver(async () => {});
-    OpenAICodexProvider.setSecurityLogger(() => {});
+  it('turns a command timeout into a logged red state without exposing a static fallback', async () => {
+    const { log, service } = createHarness(
+      vi.fn().mockRejectedValue(new Error('codex debug models timed out after 20ms')),
+    );
 
-    let releaseTurn!: () => void;
-    const turnGate = new Promise<void>((resolve) => { releaseTurn = resolve; });
-    const createSession = vi.fn(async () => ({
-      id: 'thread-isolated',
-      platform: 'codex-app-server',
-      raw: { sessionChild: true },
-    }));
-    const protocolSend = vi.fn(async function* () {
-      await turnGate;
-      yield { type: 'text', content: 'one reply' };
-      yield {
-        type: 'complete',
-        content: 'one reply',
-        usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
-      };
+    await service.start();
+
+    expect(service.getModels()).toEqual([]);
+    expect(service.getStatus()).toMatchObject({
+      phase: 'stopped',
+      modelSource: 'none',
+      verified: false,
+      lastError: { message: 'codex debug models timed out after 20ms' },
     });
-    const protocol = {
-      platform: 'codex-app-server',
-      createSession,
-      resumeSession: vi.fn(),
-      forkSession: vi.fn(),
-      sendMessage: protocolSend,
-      abortSession: vi.fn(),
-      cleanupSession: vi.fn(),
-    } as never;
-    const provider = new OpenAICodexProvider({}, { protocol, transport: 'app-server' });
-    await provider.initialize({ model: 'openai-codex:gpt-5.4' });
+    expect(log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('refresh attempt'),
+      expect.objectContaining({ error: 'codex debug models timed out after 20ms' }),
+    );
+  });
 
-    const refresh = createHarness({
-      children: [new FakeCodexChild({ hangModelList: true })],
-      requestTimeoutMs: 25,
-    });
-    const chunks: Array<{ type: string; content?: string }> = [];
-    const turn = (async () => {
-      for await (const chunk of provider.sendMessage(
-        'keep this turn alive',
-        undefined,
-        'session-isolated',
-        [],
-        process.cwd(),
-      )) {
-        chunks.push(chunk as { type: string; content?: string });
-      }
-    })();
-    const refreshAttempt = refresh.service.start();
-    await settleImmediate();
+  it('exposes a catalog path only for a fresh successful discovery', async () => {
+    const { service } = createHarness(
+      vi.fn().mockResolvedValue({ stdout: catalogResult() }),
+    );
 
-    releaseTurn();
-    // The provider intentionally waits briefly after completion for a session
-    // naming notification; advance that timer and the refresh timeout together.
-    await vi.advanceTimersByTimeAsync(500);
-    await turn;
-    expect(createSession).toHaveBeenCalledTimes(1);
-    expect(protocolSend).toHaveBeenCalledTimes(1);
-    expect(chunks.filter((chunk) => chunk.type === 'complete')).toHaveLength(1);
-    expect(chunks.filter((chunk) => chunk.type === 'text' && chunk.content === 'one reply')).toHaveLength(1);
+    await service.start();
 
-    await refreshAttempt;
-    expect(refresh.service.getStatus().phase).toBe('stopped');
-    expect(createSession).toHaveBeenCalledTimes(1);
-    expect(protocolSend).toHaveBeenCalledTimes(1);
-
-    provider.destroy();
-    refresh.service.shutdown();
-    fs.rmSync(refresh.tempDir, { recursive: true, force: true });
+    expect(service.getCatalogPath()).toMatch(/models\.json$/);
   });
 });

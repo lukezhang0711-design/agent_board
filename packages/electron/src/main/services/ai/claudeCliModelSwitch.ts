@@ -16,6 +16,7 @@
  */
 
 import { resolveClaudeCliModelArg } from './claudeCliSpawnConfig';
+import { assertDynamicModelCatalogSelection } from './modelCatalogValidation';
 
 /** Gap between the command write and the Enter write (same as claudeCliSubmit). */
 export const MODEL_SWITCH_WRITE_GAP_MS = 25;
@@ -47,6 +48,10 @@ export async function switchClaudeCliModel(
   input: SwitchClaudeCliModelInput,
   deps: SwitchClaudeCliModelDeps,
 ): Promise<SwitchClaudeCliModelResult> {
+  // A live PTY can already be active, so `ensureClaudeCliSession` will not
+  // run again to validate `--model`. Gate the direct `/model` command here:
+  // no stale alias, cache row, or catalog failure may reach the CLI.
+  await assertDynamicModelCatalogSelection('claude-code-cli', input.model);
   const command = buildClaudeCliModelSwitchCommand(input.model);
   if (!command) return { switched: false };
 

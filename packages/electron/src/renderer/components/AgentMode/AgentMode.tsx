@@ -453,14 +453,18 @@ export const AgentMode = forwardRef<AgentModeRef, AgentModeProps>(function Agent
     if (!blitzAnalysisCreated) return;
     const data = blitzAnalysisCreated.payload;
     if (data.workspacePath !== workspacePath) return;
+    if (!data.analysisProvider || !data.analysisModel) {
+      console.error('[AgentMode] Ignoring blitz analysis event without a verified provider/model ID');
+      return;
+    }
 
     addSession({
       id: data.analysisSessionId,
       title: 'Analysis',
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      provider: data.analysisProvider || 'claude-code',
-      model: data.analysisModel || 'claude-code:opus',
+      provider: data.analysisProvider,
+      model: data.analysisModel,
       sessionType: 'session',
       messageCount: 0,
       workspaceId: workspacePath,

@@ -37,6 +37,13 @@ interface ChannelHealthSnapshotView {
   results: ChannelHealthResultView[];
 }
 
+interface ModelCatalogStatusView {
+  modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
+  verified?: boolean;
+  lastSuccessAt?: number | null;
+  lastError?: { message?: string } | null;
+}
+
 const EMPTY_SNAPSHOT: ChannelHealthSnapshotView = { running: false, results: [] };
 
 function formatMs(ms: number | undefined): string {
@@ -47,6 +54,18 @@ function formatMs(ms: number | undefined): string {
 function formatCheckedAt(timestamp: number | undefined): string {
   if (!timestamp) return '尚未体检';
   return `上次体检：${new Date(timestamp).toLocaleString()}`;
+}
+
+function formatCatalogStatus(status: ModelCatalogStatusView | undefined): string | null {
+  if (!status) return null;
+  const cachedAt = typeof status.lastSuccessAt === 'number'
+    ? `上次成功获取于 ${new Date(status.lastSuccessAt).toLocaleString()}`
+    : null;
+  if (status.lastError?.message) {
+    return `目录获取失败：${status.lastError.message}${cachedAt ? `。${cachedAt}` : ''}`;
+  }
+  if (!status.verified) return '模型目录未验证，等待从引擎读取。';
+  return cachedAt;
 }
 
 export function ChannelHealthRow({
@@ -124,6 +143,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
   const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
   const apiKeys = useAtomValue(apiKeysAtom);
   const [snapshot, setSnapshot] = useState<ChannelHealthSnapshotView>(EMPTY_SNAPSHOT);
+  const [catalogs, setCatalogs] = useState<Record<string, ModelCatalogStatusView>>({});
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState<string | null>(null);
 
@@ -134,6 +154,10 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
         running: next?.running === true,
         results: Array.isArray(next?.results) ? next.results : [],
       });
+      const catalogResult = await window.electronAPI.invoke('ai:getModelCatalogStatus') as {
+        catalogs?: Record<string, ModelCatalogStatusView>;
+      };
+      if (catalogResult?.catalogs) setCatalogs(catalogResult.catalogs);
       setRequestError(null);
     } catch {
       setRequestError('无法读取体检结果，请重试。');
@@ -170,6 +194,10 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
         running: next?.running === true,
         results: Array.isArray(next?.results) ? next.results : [],
       });
+      const catalogResult = await window.electronAPI.invoke('ai:getModelCatalogStatus') as {
+        catalogs?: Record<string, ModelCatalogStatusView>;
+      };
+      if (catalogResult?.catalogs) setCatalogs(catalogResult.catalogs);
     } catch {
       setRequestError('体检启动失败，请检查项目和引擎配置后重试。');
       await refresh();
@@ -214,6 +242,19 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
       <p className="my-3 text-xs text-[var(--nim-text-muted)]">
         每次体检会向每个已启用通道发送固定极短提示，并消耗极少量引擎额度。
       </p>
+
+      {(['claude-code', 'openai-codex'] as const).map((provider) => {
+        const message = formatCatalogStatus(catalogs[provider]);
+        return message ? (
+          <p
+            key={provider}
+            data-testid={`model-catalog-health-${provider}`}
+            className={`mb-2 text-xs ${catalogs[provider]?.lastError ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}
+          >
+            {provider === 'claude-code' ? 'Claude 模型目录：' : 'Codex 模型目录：'}{message}
+          </p>
+        ) : null;
+      })}
 
       {requestError && (
         <p className="mb-3 text-sm text-[var(--nim-error)]" role="alert">{requestError}</p>

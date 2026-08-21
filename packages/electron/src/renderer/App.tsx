@@ -615,11 +615,16 @@ export default function App() {
         // for the file. Returns the sessionId / workstreamId.
         openFileInAgentMode: async (workspacePath: string, filePath: string) => {
           const sessionId = crypto.randomUUID();
+          // Editor E2E does not execute an AI turn. Keep its fixture outside
+          // the Claude/Codex dynamic catalogs so it cannot manufacture a
+          // stale engine model just to obtain an editor tab.
+          const e2eProvider = 'openai';
+          const e2eModel = 'openai:e2e-editor';
           const result = await window.electronAPI.invoke('sessions:create', {
             session: {
               id: sessionId,
-              provider: 'claude-code',
-              model: 'claude-code:sonnet',
+              provider: e2eProvider,
+              model: e2eModel,
               title: 'Multi-editor Test Session',
             },
             workspaceId: workspacePath,
@@ -632,8 +637,8 @@ export default function App() {
             title: 'Multi-editor Test Session',
             createdAt: Date.now(),
             updatedAt: Date.now(),
-            provider: 'claude-code',
-            model: 'claude-code:sonnet',
+            provider: e2eProvider,
+            model: e2eModel,
             sessionType: 'session',
             messageCount: 0,
             workspaceId: workspacePath,

@@ -1,8 +1,7 @@
 /**
- * Unit tests for importedClaudeCodeModel - the helper that derives a
- * Nimbalyst model id from the raw per-turn model on imported Claude Code
- * entries. Before this, imported sessions had no model and the renderer
- * fell back to Sonnet, so an Opus session displayed as Sonnet (#394).
+ * Unit tests for importedClaudeCodeModel - the helper that preserves the raw
+ * per-turn engine id on imported Claude Code entries. It must not infer a
+ * static variant; the live supportedModels() catalog resolves it at send time.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -14,28 +13,28 @@ function assistant(model: string | undefined): ClaudeCodeEntry {
 }
 
 describe('importedClaudeCodeModel', () => {
-  it('maps an opus turn to claude-code:opus', () => {
+  it('preserves an opus engine id without guessing a local alias', () => {
     expect(importedClaudeCodeModel([assistant('claude-opus-4-7')])).toBe(
-      'claude-code:opus',
+      'claude-code:claude-opus-4-7',
     );
   });
 
-  it('maps a sonnet turn to claude-code:sonnet', () => {
+  it('preserves a sonnet engine id without guessing a local alias', () => {
     expect(importedClaudeCodeModel([assistant('claude-sonnet-4-6')])).toBe(
-      'claude-code:sonnet',
+      'claude-code:claude-sonnet-4-6',
     );
   });
 
-  it('maps a haiku turn to claude-code:haiku', () => {
+  it('preserves a haiku engine id without guessing a local alias', () => {
     expect(importedClaudeCodeModel([assistant('claude-haiku-4-5-20251001')])).toBe(
-      'claude-code:haiku',
+      'claude-code:claude-haiku-4-5-20251001',
     );
   });
 
-  it('uses the most recent recognizable turn when models differ', () => {
+  it('uses the most recent non-empty engine id when models differ', () => {
     // A session that started on Sonnet and switched to Opus should report Opus.
     const entries = [assistant('claude-sonnet-4-6'), assistant('claude-opus-4-7')];
-    expect(importedClaudeCodeModel(entries)).toBe('claude-code:opus');
+    expect(importedClaudeCodeModel(entries)).toBe('claude-code:claude-opus-4-7');
   });
 
   it('skips entries that carry no model (user / tool turns)', () => {
@@ -44,7 +43,7 @@ describe('importedClaudeCodeModel', () => {
       assistant('claude-opus-4-7'),
       { type: 'user', message: { role: 'user', content: 'thanks' } },
     ];
-    expect(importedClaudeCodeModel(entries)).toBe('claude-code:opus');
+    expect(importedClaudeCodeModel(entries)).toBe('claude-code:claude-opus-4-7');
   });
 
   it('returns undefined for an empty session', () => {
@@ -59,8 +58,8 @@ describe('importedClaudeCodeModel', () => {
     expect(importedClaudeCodeModel(entries)).toBeUndefined();
   });
 
-  it('returns undefined for an unrecognized model id (caller defaults it)', () => {
-    expect(importedClaudeCodeModel([assistant('some-future-model')])).toBeUndefined();
+  it('preserves future model ids so the live catalog can explicitly reject or resolve them', () => {
+    expect(importedClaudeCodeModel([assistant('some-future-model')])).toBe('claude-code:some-future-model');
   });
 
   it('ignores an empty-string model', () => {

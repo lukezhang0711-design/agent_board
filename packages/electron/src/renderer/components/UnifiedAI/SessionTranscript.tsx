@@ -105,8 +105,8 @@ import {
 } from '../../store/atoms/terminals';
 import { scrollToTeammateAtom, scrollToMessageAtom, requestOpenSessionAtom } from '../../store/atoms/agentMode';
 import { usePostHog } from 'posthog-js/react';
-import { setAgentModeSettingsAtom, showPromptAdditionsAtom, hasExternalEditorAtom, externalEditorNameAtom, openInExternalEditorAtom, defaultAgentModelAtom, defaultEffortLevelAtom, chatShowToolCallsAtom } from '../../store/atoms/appSettings';
-import { supportsEffortLevel, parseEffortLevel, type EffortLevel } from '../../utils/modelUtils';
+import { setAgentModeSettingsAtom, showPromptAdditionsAtom, hasExternalEditorAtom, externalEditorNameAtom, openInExternalEditorAtom, defaultAgentModelAtom, defaultEffortLevelAtom, chatShowToolCallsAtom, availableModelsAtom } from '../../store/atoms/appSettings';
+import { parseEffortLevel, type EffortLevel } from '../../utils/modelUtils';
 import { buildPlanImplementationPrompt, resolvePlanFilePath } from '../../utils/pathUtils';
 import { resolveTranscriptClickPath } from '../../utils/resolveTranscriptClickPath';
 import { autoCommitEnabledAtom, setAutoCommitEnabledAtom } from '../../store/atoms/autoCommitAtoms';
@@ -652,6 +652,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const sessionParentId = useAtomValue(sessionParentIdAtom(sessionId));
   const defaultModel = useAtomValue(defaultAgentModelAtom);
   const defaultEffortLevel = useAtomValue(defaultEffortLevelAtom);
+  const availableModels = useAtomValue(availableModelsAtom);
 
   const sessionData = useMemo(() => {
     if (!hasSessionData) return null;
@@ -704,8 +705,16 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     currentTodos,
   ]);
 
-  // Effort level: read from session metadata, fall back to global default
-  const showEffortLevel = useMemo(() => supportsEffortLevel(currentModel), [currentModel]);
+  // Effort values are an exact per-model engine capability, not a provider-wide
+  // static list. Before discovery completes we hide the control rather than
+  // offering an unsupported level.
+  const supportedEffortLevels = useMemo(() => {
+    const model = Object.values(availableModels)
+      .flat()
+      .find((candidate) => candidate.id === currentModel);
+    return model?.supportsEffort === true ? (model.supportedEffortLevels ?? []) : [];
+  }, [availableModels, currentModel]);
+  const showEffortLevel = supportedEffortLevels.length > 0;
   const effortLevel = useMemo(() => {
     return rawEffortLevel != null ? parseEffortLevel(rawEffortLevel) : defaultEffortLevel;
   }, [rawEffortLevel, defaultEffortLevel]);
@@ -3181,6 +3190,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         effortLevel={effortLevel}
         onEffortLevelChange={handleEffortLevelChange}
         showEffortLevel={isClaudeCliTerminalSession(provider) && cliSessionCommitted ? false : showEffortLevel}
+        supportedEffortLevels={supportedEffortLevels}
         tokenUsage={tokenUsage}
         provider={provider}
         onQueue={handleQueue}

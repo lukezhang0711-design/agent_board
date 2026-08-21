@@ -25,6 +25,10 @@ import {
 } from '../services/ai/gitCommitProposalPromptUtils';
 import { enrichTranscriptMessagesWithToolCallDiffs } from '../services/TranscriptToolCallEnricher';
 import { setSessionPendingPrompt } from '../services/ai/pendingPromptPersistence';
+import {
+    assertDynamicModelCatalogSelection,
+    resolveDynamicModelCatalogSelection,
+} from '../services/ai/modelCatalogValidation';
 
 // Initialize session manager
 const sessionManager = new SessionManager();
@@ -234,10 +238,14 @@ export async function registerSessionHandlers() {
                     provider = modelId.provider;
                 }
             } else {
-                // No model provided - get default for the provider using ModelIdentifier
-                model = ModelIdentifier.getDefaultModelId(provider);
+                // Dynamic providers may only use an engine-advertised live
+                // default. Non-catalog providers retain their legacy default.
+                model = await resolveDynamicModelCatalogSelection(provider, undefined)
+                    ?? ModelIdentifier.getDefaultModelId(provider);
                 console.log(`[SessionHandlers] No model provided, using default: ${model}`);
             }
+
+            await assertDynamicModelCatalogSelection(provider, model);
 
             const createPayload = {
                 id: session.id,
@@ -691,8 +699,14 @@ export async function registerSessionHandlers() {
                 }
                 model = providedModel;
             } else {
-                model = ModelIdentifier.getDefaultModelId(provider as AIProviderType);
+                // A direct child created without a model can only take the
+                // engine's live recommended default; no static Claude/Codex
+                // preset is manufactured here.
+                model = await resolveDynamicModelCatalogSelection(provider, undefined)
+                    ?? ModelIdentifier.getDefaultModelId(provider as AIProviderType);
             }
+
+            await assertDynamicModelCatalogSelection(provider, model);
 
             const createPayload = {
                 id: sessionId,

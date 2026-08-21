@@ -96,6 +96,7 @@ interface AIInputProps {
   effortLevel?: EffortLevel;
   onEffortLevelChange?: (level: EffortLevel) => void;
   showEffortLevel?: boolean;
+  supportedEffortLevels?: EffortLevel[];
 
   // Token usage display support (for Claude Code)
   tokenUsage?: {
@@ -176,6 +177,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
     effortLevel,
     onEffortLevelChange,
     showEffortLevel,
+    supportedEffortLevels,
     tokenUsage,
     provider,
     onQueue,
@@ -1372,6 +1374,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
               <EffortLevelSelector
                 level={effortLevel}
                 onLevelChange={onEffortLevelChange}
+                supportedLevels={supportedEffortLevels ?? []}
               />
             )}
             {resolvedModel && (

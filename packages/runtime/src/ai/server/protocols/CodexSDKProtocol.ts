@@ -488,12 +488,11 @@ export class CodexSDKProtocol implements AgentProtocol {
       ? 'danger-full-access'
       : 'workspace-write';
 
-    // Map effort level to Codex SDK ModelReasoningEffort.
-    // Codex SDK supports: 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
-    // Our EffortLevel uses: 'low' | 'medium' | 'high' | 'max'
-    // Map 'max' → 'xhigh', rest map directly.
+    // Keep the engine-reported effort value. `ultra` is newer than the SDK's
+    // declaration but is accepted by the installed Codex CLI; casting remains
+    // local so the UI/catalog type stays exact.
     const effortLevel = options.raw?.effortLevel as string | undefined;
-    const reasoningEffort = effortLevel === 'max' ? 'xhigh' : (effortLevel || 'high');
+    const reasoningEffort = effortLevel || 'high';
 
     const baseOptions = {
       model: options.model || 'gpt-5',

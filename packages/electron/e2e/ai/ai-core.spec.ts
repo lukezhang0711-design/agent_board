@@ -23,7 +23,7 @@ import {
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-test.describe.configure({ mode: 'serial' });
+test.describe.configure({ mode: 'serial', timeout: 45_000 });
 
 let electronApp: ElectronApplication;
 let page: Page;
@@ -44,7 +44,7 @@ test.beforeAll(async () => {
   page = await electronApp.firstWindow();
   await waitForAppReady(page);
   await dismissProjectTrustToast(page);
-});
+}, 45_000);
 
 test.afterAll(async () => {
   await electronApp?.close();
@@ -56,7 +56,24 @@ test.afterAll(async () => {
 // ============================================================================
 
 test('should create Claude Code session via electronAPI', async () => {
-  const providerTest = await page.evaluate(async () => {
+  let selectedModelId: string | undefined;
+  await expect.poll(async () => {
+    selectedModelId = await page.evaluate(async () => {
+      const modelCatalog = await (window as any).electronAPI?.aiGetModels?.();
+      const catalogStatus = modelCatalog?.catalogStatuses?.['claude-code'];
+      if (catalogStatus?.verified !== true || catalogStatus?.lastError) return undefined;
+      return modelCatalog?.models?.find((candidate: any) =>
+        candidate.provider === 'claude-code'
+        && candidate.unverifiedPlaceholder !== true
+      )?.id;
+    });
+    return selectedModelId ?? '';
+  }, {
+    message: '等待 Claude SDK 动态目录返回已验证型号',
+    timeout: 20_000,
+  }).toMatch(/^claude-code:/);
+
+  const providerTest = await page.evaluate(async (modelId) => {
     try {
       const electronAPI = (window as any).electronAPI;
       if (!electronAPI) {
@@ -68,13 +85,14 @@ test('should create Claude Code session via electronAPI', async () => {
           'claude-code',
           undefined,
           '/tmp',
-          'claude-code-cli'
+          modelId,
         );
 
         return {
           success: true,
           sessionId: sessionResult?.sessionId,
           provider: sessionResult?.provider,
+          model: modelId,
         };
       } catch (error) {
         return {
@@ -85,15 +103,11 @@ test('should create Claude Code session via electronAPI', async () => {
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
-  });
+  }, selectedModelId!);
 
-  // Session creation should either succeed or fail gracefully (no crash)
-  if (providerTest.error) {
-    expect(providerTest.error).not.toContain('CRASH');
-    expect(providerTest.error).not.toContain('FATAL');
-  } else {
-    expect(providerTest.success).toBe(true);
-  }
+  expect(providerTest.error).toBeUndefined();
+  expect(providerTest.success).toBe(true);
+  expect(providerTest.model).toMatch(/^claude-code:/);
 });
 
 test('should show context usage display for Claude Code sessions', async () => {
@@ -108,8 +122,10 @@ test('should show context usage display for Claude Code sessions', async () => {
   if (count > 0) {
     const isVisible = await contextUsage.isVisible().catch(() => false);
     if (isVisible) {
-      const usageText = await contextUsage.textContent();
-      expect(usageText).toMatch(/\d+k?\/\d+k Tokens \(\d+%\)/);
+      const usageText = (await contextUsage.textContent())?.trim();
+      // A new session has no token response yet, so the component deliberately
+      // renders `--`; once usage exists it must keep the canonical format.
+      expect(usageText).toMatch(/^(--|\d+k?\/\d+k Tokens \(\d+%\))$/);
     }
   }
 
@@ -135,4 +151,3 @@ test('should switch to agent mode without errors', async () => {
     await expect(chatInput).toBeVisible({ timeout: 3000 });
   }
 });
-

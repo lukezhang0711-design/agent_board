@@ -14,7 +14,7 @@ import { requireMcpAuth } from "./mcpAuth";
 import { resolveProjectPath } from "../utils/workspaceDetection";
 
 type SessionIntent = "investigation" | "implementation";
-type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
+type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
 type CompletionCriteria = {
   outputFiles?: string[];
 };
@@ -194,6 +194,10 @@ type InterruptSessionArgs = {
 };
 
 interface MetaAgentToolFns {
+  listModels?: (
+    metaSessionId: string,
+    workspaceId: string,
+  ) => Promise<string>;
   listWorktrees: (
     metaSessionId: string,
     workspaceId: string
@@ -299,6 +303,15 @@ const META_AGENT_TOOL_DEFS: Array<{
   inputSchema: { type: "object"; properties: Record<string, unknown>; required?: string[] };
 }> = [
   {
+    name: "list_models",
+    description:
+      "Read the current verified provider/model catalog before delegating. Use only the exact model IDs returned here when calling create_session; the response also reports discovery failures, caches, and allowed thinking-effort levels.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
     name: "list_worktrees",
     description:
       "List the available git worktrees for this workspace so you can attach a child session to an existing branch or decide whether to create a fresh worktree.",
@@ -361,7 +374,7 @@ const META_AGENT_TOOL_DEFS: Array<{
         },
         effortLevel: {
           type: "string",
-          enum: ["low", "medium", "high", "xhigh", "max"],
+          enum: ["low", "medium", "high", "xhigh", "max", "ultra"],
           description:
             "Optional per-session thinking effort. Use high or above for difficult delegated work; prefer a smaller model instead of lowering effort to save cost.",
         },
@@ -460,7 +473,7 @@ const META_AGENT_TOOL_DEFS: Array<{
         },
         effortLevel: {
           type: "string",
-          enum: ["low", "medium", "high", "xhigh", "max"],
+          enum: ["low", "medium", "high", "xhigh", "max", "ultra"],
           description:
             "Optional per-session thinking effort. Use high or above for difficult delegated work; prefer a smaller model instead of lowering effort to save cost.",
         },
@@ -654,6 +667,7 @@ const META_AGENT_TOOL_DEFS: Array<{
 // only references create_session). Keep in sync with the meta-agent subset of
 // BaseAgentProvider.META_AGENT_ALLOWED_TOOLS.
 const EXTENSION_META_AGENT_ALLOWED_TOOLS = new Set<string>([
+  "list_models",
   "list_worktrees",
   "submit_plan",
   "create_session",
@@ -709,6 +723,9 @@ export async function dispatchMetaAgentTool(
   const effectiveWorkspaceId = resolveProjectPath(workspaceId);
 
   switch (toolName) {
+    case "list_models":
+      if (!toolFns.listModels) throw new Error('Model catalog tool is not initialized');
+      return toolFns.listModels(aiSessionId, effectiveWorkspaceId);
     case "list_worktrees":
       return toolFns.listWorktrees(aiSessionId, effectiveWorkspaceId);
     case "submit_plan": {

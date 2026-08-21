@@ -2,10 +2,10 @@
  * Effort level constants for adaptive reasoning (Opus 4.6 and Sonnet 4.6).
  * Matches the Claude Code CLI's /model effort slider and CLAUDE_CODE_EFFORT_LEVEL env var.
  *
- * Levels: low, medium, high (default), xhigh, max
+ * Levels: low, medium, high (default), xhigh, max, ultra
  */
 
-export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra';
 
 export const EFFORT_LEVELS: { key: EffortLevel; label: string }[] = [
   { key: 'low', label: 'Low' },
@@ -13,11 +13,12 @@ export const EFFORT_LEVELS: { key: EffortLevel; label: string }[] = [
   { key: 'high', label: 'High' },
   { key: 'xhigh', label: 'xHigh' },
   { key: 'max', label: 'Max' },
+  { key: 'ultra', label: 'Ultra' },
 ];
 
 export const DEFAULT_EFFORT_LEVEL: EffortLevel = 'high';
 
-const VALID_EFFORT_LEVELS = new Set<string>(['low', 'medium', 'high', 'xhigh', 'max']);
+const VALID_EFFORT_LEVELS = new Set<string>(['low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
 
 /**
  * Validate and return a valid EffortLevel, or the default if invalid.

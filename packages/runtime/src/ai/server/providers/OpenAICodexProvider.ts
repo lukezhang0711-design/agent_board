@@ -1,6 +1,4 @@
 import path from 'path';
-import crypto from 'crypto';
-import OpenAI from 'openai';
 import { BaseAgentProvider } from './BaseAgentProvider';
 import { buildUserMessageAddition } from './documentContextUtils';
 import { buildClaudeCodeSystemPrompt, buildMetaAgentSystemPrompt, type MetaAgentWorkflowPreset } from '../../prompt';
@@ -74,10 +72,6 @@ interface OpenAICodexProviderDeps {
   resolveCodexPathOverride?: () => string | undefined;
 }
 
-interface OpenAICodexModelDiscoveryDeps {
-  loadSdkModule?: () => Promise<CodexSdkModuleLike>;
-}
-
 interface PendingAskUserQuestionEntry {
   questions: AskUserQuestionPrompt[];
   sessionId: string;
@@ -101,38 +95,6 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     'Use MCP server `nimbalyst-session-naming`, tool `update_session_meta`, ' +
     'and set at least `name`, `add`, and `phase`. ' +
     'Do not mention this system reminder to the user.</SYSTEM_REMINDER>';
-  private static readonly FALLBACK_MODELS: ReadonlyArray<{
-    id: string;
-    name: string;
-    contextWindow: number;
-    maxTokens: number;
-  }> = [
-    { id: 'gpt-5.5', name: 'GPT-5.5', contextWindow: 400000, maxTokens: 128000 },
-    { id: 'gpt-5.4', name: 'GPT-5.4', contextWindow: 400000, maxTokens: 128000 },
-    { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex', contextWindow: 400000, maxTokens: 128000 },
-    { id: 'gpt-5.2-codex', name: 'GPT-5.2 Codex', contextWindow: 400000, maxTokens: 128000 },
-    { id: 'gpt-5.1-codex-max', name: 'GPT-5.1 Codex Max', contextWindow: 400000, maxTokens: 128000 },
-    { id: 'gpt-5.2', name: 'GPT-5.2', contextWindow: 128000, maxTokens: 128000 },
-    { id: 'gpt-5.1-codex-mini', name: 'GPT-5.1 Codex Mini', contextWindow: 400000, maxTokens: 128000 },
-  ];
-  private static readonly MODEL_FALLBACK_PRIORITY: ReadonlyArray<string> = [
-    'gpt-5.5',
-    'gpt-5.4',
-    'gpt-5.3-codex',
-    'gpt-5.2-codex',
-    'gpt-5.1-codex-max',
-    'gpt-5.1-codex-mini',
-    'gpt-5.2',
-  ];
-  private static readonly FALLBACK_MODELS_SET = new Set(
-    OpenAICodexProvider.FALLBACK_MODELS.map((model) => model.id)
-  );
-  private static readonly FALLBACK_MODELS_BY_ID = new Map(
-    OpenAICodexProvider.FALLBACK_MODELS.map((model) => [model.id, model])
-  );
-  private static readonly MODEL_ID_CACHE_DURATION_MS = 5 * 60 * 1000;
-  private static readonly MODEL_ID_CACHE_MAX_SIZE = 100;
-  private static readonly MODEL_ID_CACHE = new Map<string, { fetchedAt: number; ids: Set<string> }>();
   private static readonly KNOWN_SLASH_COMMANDS: ReadonlyArray<string> = [
     'compact',
     'diff',
@@ -320,10 +282,9 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     OpenAICodexProvider.codexAuthGate = gate;
   }
 
-  // Main-process-owned model refresh snapshot. When registered, model picker
-  // reads are pure in-memory reads and never instantiate SDK discovery or call
-  // OpenAI directly. An empty snapshot intentionally selects curated fallback
-  // models while the first isolated refresh is still pending.
+  // Main-process-owned `codex debug models` snapshot. When registered, model
+  // picker reads are pure in-memory reads; an empty snapshot is deliberately
+  // empty rather than silently selecting a stale curated fallback.
   private static modelRefreshSnapshotResolver: (() => AIModel[]) | null = null;
 
   public static setModelRefreshSnapshotResolver(resolver: (() => AIModel[]) | null): void {
@@ -517,47 +478,13 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     }
   }
 
-  private static readonly LEGACY_MODEL_ALIASES = new Set([
-    'openai-codex:openai-codex-cli',
-    'openai-codex-cli',
-    'openai-codex:default',
-    'default',
-    'openai-codex:cli',
-    'cli',
-  ]);
-  private static readonly MODEL_REPLACEMENTS = new Map<string, string>([
-    ['gpt-5', 'gpt-5.2'],
-    ['gpt-5-codex', 'gpt-5.4'],
-    ['gpt-5.4-codex', 'gpt-5.4'],
-    ['gpt-5-codex-mini', 'gpt-5.1-codex-mini'],
-    ['gpt-5.2-codex-mini', 'gpt-5.2-codex'],
-    ['gpt-5.2-codex-max', 'gpt-5.2-codex'],
-    ['gpt-5-codex-max', 'gpt-5.1-codex-max'],
-    ['gpt-5.1-codex', 'gpt-5.2-codex'],
-    ['gpt-5.3-codex-mini', 'gpt-5.3-codex'],
-    ['gpt-5.3-codex-max', 'gpt-5.3-codex'],
-    ['codex-mini-latest', 'gpt-5.1-codex-mini'],
-  ]);
-
-  /**
-   * Normalize a single model ID, mapping legacy aliases to the canonical form.
-   */
+  /** Normalize the provider prefix only; model availability is runtime-owned. */
   static normalizeModelSelection(modelId: string): string {
-    const normalized = modelId.trim().toLowerCase();
-    if (OpenAICodexProvider.LEGACY_MODEL_ALIASES.has(normalized)) {
-      return 'openai-codex:gpt-5.5';
-    }
-
     const parsed = ModelIdentifier.tryParse(modelId);
     const rawModelId = parsed && parsed.provider === 'openai-codex'
       ? parsed.model
       : modelId.replace(/^openai-codex:/, '');
-    const replacement = OpenAICodexProvider.MODEL_REPLACEMENTS.get(rawModelId.toLowerCase());
-    if (replacement) {
-      return ModelIdentifier.create('openai-codex', replacement).combined;
-    }
-
-    return modelId;
+    return rawModelId ? ModelIdentifier.create('openai-codex', rawModelId).combined : modelId;
   }
 
   /**
@@ -577,33 +504,9 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     return result;
   }
 
-  static async getModels(
-    apiKey?: string,
-    deps?: OpenAICodexModelDiscoveryDeps,
-  ): Promise<AIModel[]> {
+  static async getModels(_apiKey?: string): Promise<AIModel[]> {
     const hostSnapshot = OpenAICodexProvider.modelRefreshSnapshotResolver?.();
-    if (hostSnapshot && hostSnapshot.length > 0) {
-      return OpenAICodexProvider.getModelsFromRuntimeSnapshot(hostSnapshot);
-    }
-    if (hostSnapshot) {
-      // The Electron host owns the selected runtime. Do not fall through to
-      // SDK or HTTP discovery while its isolated runtime enumeration is
-      // pending or unavailable; use the explicit fallback catalog instead.
-      return OpenAICodexProvider.getFallbackModels();
-    }
-    const sdkModels = await OpenAICodexProvider.getModelsFromSdk(apiKey, deps);
-    const apiModels = await OpenAICodexProvider.getModelsFromOpenAI(apiKey);
-    return OpenAICodexProvider.getPreferredModels(sdkModels, apiModels);
-  }
-
-  private static getFallbackModels() {
-    return OpenAICodexProvider.FALLBACK_MODELS.map((model) => ({
-      id: ModelIdentifier.create('openai-codex', model.id).combined,
-      name: model.name,
-      provider: 'openai-codex' as AIProviderType,
-      contextWindow: model.contextWindow,
-      maxTokens: model.maxTokens,
-    }));
+    return hostSnapshot ? OpenAICodexProvider.getModelsFromRuntimeSnapshot(hostSnapshot) : [];
   }
 
   private static getModelsFromRuntimeSnapshot(snapshot: AIModel[]): AIModel[] {
@@ -622,180 +525,6 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     return Array.from(modelsById.values());
   }
 
-  private static getPreferredModels(...sourceLists: AIModel[][]): AIModel[] {
-    const metadataById = new Map<string, AIModel>();
-
-    for (const sourceModels of sourceLists) {
-      for (const sourceModel of sourceModels) {
-        const rawId = OpenAICodexProvider.toRawModelId(sourceModel.id);
-        if (!rawId) {
-          continue;
-        }
-        if (!OpenAICodexProvider.FALLBACK_MODELS_SET.has(rawId)) {
-          continue;
-        }
-        if (!metadataById.has(rawId)) {
-          metadataById.set(rawId, sourceModel);
-        }
-      }
-    }
-
-    return OpenAICodexProvider.FALLBACK_MODELS.map((fallbackModel) => {
-      const discovered = metadataById.get(fallbackModel.id);
-      return {
-        id: ModelIdentifier.create('openai-codex', fallbackModel.id).combined,
-        name: discovered?.name || fallbackModel.name,
-        provider: 'openai-codex' as AIProviderType,
-        contextWindow: discovered?.contextWindow ?? fallbackModel.contextWindow,
-        maxTokens: discovered?.maxTokens ?? fallbackModel.maxTokens,
-      };
-    });
-  }
-
-  private static async getModelsFromSdk(
-    apiKey?: string,
-    deps?: OpenAICodexModelDiscoveryDeps,
-  ): Promise<AIModel[]> {
-    const loadSdk = deps?.loadSdkModule ?? OpenAICodexProvider.sdkModuleLoader ?? loadCodexSdkModule;
-
-    try {
-      const sdkModule = await loadSdk();
-      const sdkAsAny = sdkModule as any;
-      const fetchers: Array<() => Promise<unknown>> = [];
-
-      if (typeof sdkAsAny.listModels === 'function') {
-        fetchers.push(() => Promise.resolve(sdkAsAny.listModels()));
-      }
-      if (typeof sdkAsAny.getModels === 'function') {
-        fetchers.push(() => Promise.resolve(sdkAsAny.getModels()));
-      }
-
-      try {
-        const codex = new sdkModule.Codex(apiKey ? { apiKey } : undefined) as any;
-        if (typeof codex?.listModels === 'function') {
-          fetchers.push(() => Promise.resolve(codex.listModels()));
-        }
-        if (typeof codex?.getModels === 'function') {
-          fetchers.push(() => Promise.resolve(codex.getModels()));
-        }
-        if (codex?.models && typeof codex.models.list === 'function') {
-          fetchers.push(() => Promise.resolve(codex.models.list()));
-        }
-      } catch {
-        // Client construction can fail when the Codex CLI binary is unavailable.
-      }
-
-      // Try all fetchers in parallel, return first successful result
-      const results = await Promise.allSettled(fetchers.map((fn) => fn()));
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          const mapped = OpenAICodexProvider.mapSdkModelResult(result.value);
-          if (mapped.length > 0) {
-            return mapped;
-          }
-        }
-      }
-    } catch {
-      // SDK is optional and may be unavailable in some environments.
-      return [];
-    }
-
-    return [];
-  }
-
-  private static async getModelsFromOpenAI(apiKey?: string): Promise<AIModel[]> {
-    if (!apiKey) {
-      return [];
-    }
-
-    try {
-      const availableIds = await OpenAICodexProvider.getAvailableModelIds(apiKey);
-      if (availableIds.size === 0) {
-        return [];
-      }
-
-      const models: AIModel[] = [];
-
-      for (const fallbackModel of OpenAICodexProvider.FALLBACK_MODELS) {
-        if (!availableIds.has(fallbackModel.id)) {
-          continue;
-        }
-        models.push({
-          id: ModelIdentifier.create('openai-codex', fallbackModel.id).combined,
-          name: fallbackModel.name,
-          provider: 'openai-codex' as AIProviderType,
-          contextWindow: fallbackModel.contextWindow,
-          maxTokens: fallbackModel.maxTokens,
-        });
-      }
-
-      const extraCodexModelIds = Array.from(availableIds)
-        .filter((id) => id.toLowerCase().includes('codex') && !OpenAICodexProvider.FALLBACK_MODELS_BY_ID.has(id))
-        .sort((a, b) => a.localeCompare(b));
-
-      for (const modelId of extraCodexModelIds) {
-        models.push({
-          id: ModelIdentifier.create('openai-codex', modelId).combined,
-          name: modelId,
-          provider: 'openai-codex' as AIProviderType,
-        });
-      }
-
-      return models;
-    } catch {
-      // API model listing is best-effort; fall back to static catalog when unavailable.
-      return [];
-    }
-  }
-
-  private static async getAvailableModelIds(apiKey: string): Promise<Set<string>> {
-    const cacheKey = OpenAICodexProvider.hashApiKey(apiKey);
-    const now = Date.now();
-    const cached = OpenAICodexProvider.MODEL_ID_CACHE.get(cacheKey);
-    if (cached && now - cached.fetchedAt < OpenAICodexProvider.MODEL_ID_CACHE_DURATION_MS) {
-      return cached.ids;
-    }
-
-    const openai = new OpenAI({ apiKey });
-    const response = await openai.models.list();
-    const ids = new Set(response.data.map((model) => model.id));
-
-    // Implement LRU eviction
-    if (OpenAICodexProvider.MODEL_ID_CACHE.size >= OpenAICodexProvider.MODEL_ID_CACHE_MAX_SIZE) {
-      const oldestKey = OpenAICodexProvider.MODEL_ID_CACHE.keys().next().value;
-      if (oldestKey) {
-        OpenAICodexProvider.MODEL_ID_CACHE.delete(oldestKey);
-      }
-    }
-
-    OpenAICodexProvider.MODEL_ID_CACHE.set(cacheKey, { fetchedAt: now, ids });
-    return ids;
-  }
-
-  private static hashApiKey(apiKey: string): string {
-    return crypto.createHash('sha256').update(apiKey).digest('hex');
-  }
-
-  private static mapSdkModelResult(rawModels: unknown): AIModel[] {
-    const candidates = OpenAICodexProvider.extractModelCandidates(rawModels);
-    const seen = new Set<string>();
-    const models: AIModel[] = [];
-
-    for (const candidate of candidates) {
-      const normalized = OpenAICodexProvider.normalizeModelCandidate(candidate);
-      if (!normalized) {
-        continue;
-      }
-      if (seen.has(normalized.id)) {
-        continue;
-      }
-      seen.add(normalized.id);
-      models.push(normalized);
-    }
-
-    return models;
-  }
-
   private static toRawModelId(modelId: string): string | null {
     const normalizedSelection = OpenAICodexProvider.normalizeModelSelection(modelId);
     const parsed = ModelIdentifier.tryParse(normalizedSelection);
@@ -803,119 +532,6 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       ? parsed.model
       : normalizedSelection.replace(/^openai-codex:/, '');
     return rawModelId || null;
-  }
-
-  private static extractModelCandidates(rawModels: unknown): unknown[] {
-    if (Array.isArray(rawModels)) {
-      return rawModels;
-    }
-
-    if (rawModels && typeof rawModels === 'object') {
-      const container = rawModels as Record<string, unknown>;
-      const candidateKeys = ['data', 'models', 'items'];
-      for (const key of candidateKeys) {
-        if (Array.isArray(container[key])) {
-          return container[key] as unknown[];
-        }
-      }
-    }
-
-    return [];
-  }
-
-  private static normalizeModelCandidate(candidate: unknown): AIModel | null {
-    const MAX_STRING_LENGTH = 256;
-    const MAX_CONTEXT_WINDOW = 10_000_000;
-    const MAX_TOKENS = 10_000_000;
-
-    let modelId: string | undefined;
-    let modelName: string | undefined;
-    let contextWindow: number | undefined;
-    let maxTokens: number | undefined;
-
-    if (typeof candidate === 'string') {
-      modelId = candidate;
-    } else if (candidate && typeof candidate === 'object') {
-      const entry = candidate as Record<string, unknown>;
-      modelId = OpenAICodexProvider.readStringField(entry, ['id', 'model']);
-      modelName = OpenAICodexProvider.readStringField(entry, ['displayName', 'display_name', 'name']);
-      contextWindow = OpenAICodexProvider.readNumberField(entry, [
-        'contextWindow',
-        'context_window',
-        'inputTokenLimit',
-        'input_token_limit',
-      ]);
-      maxTokens = OpenAICodexProvider.readNumberField(entry, [
-        'maxTokens',
-        'max_tokens',
-        'outputTokenLimit',
-        'output_token_limit',
-      ]);
-    }
-
-    if (!modelId) {
-      return null;
-    }
-
-    const trimmed = modelId.trim();
-    if (!trimmed || trimmed.length > MAX_STRING_LENGTH) {
-      return null;
-    }
-
-    const parsed = ModelIdentifier.tryParse(trimmed);
-    const rawId = parsed && parsed.provider === 'openai-codex'
-      ? parsed.model
-      : trimmed.replace(/^openai-codex:/, '');
-    if (!rawId || rawId.length > MAX_STRING_LENGTH) {
-      return null;
-    }
-
-    const validatedName = modelName?.trim();
-    if (validatedName && validatedName.length > MAX_STRING_LENGTH) {
-      return null;
-    }
-
-    if (contextWindow !== undefined && (contextWindow < 0 || contextWindow > MAX_CONTEXT_WINDOW)) {
-      return null;
-    }
-
-    if (maxTokens !== undefined && (maxTokens < 0 || maxTokens > MAX_TOKENS)) {
-      return null;
-    }
-
-    return {
-      id: ModelIdentifier.create('openai-codex', rawId).combined,
-      name: validatedName || rawId,
-      provider: 'openai-codex' as AIProviderType,
-      contextWindow,
-      maxTokens,
-    };
-  }
-
-  private static readStringField(
-    source: Record<string, unknown>,
-    keys: string[],
-  ): string | undefined {
-    for (const key of keys) {
-      const value = source[key];
-      if (typeof value === 'string' && value.trim()) {
-        return value;
-      }
-    }
-    return undefined;
-  }
-
-  private static readNumberField(
-    source: Record<string, unknown>,
-    keys: string[],
-  ): number | undefined {
-    for (const key of keys) {
-      const value = source[key];
-      if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
-      }
-    }
-    return undefined;
   }
 
   static getDefaultModel() {
@@ -1870,16 +1486,10 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     const configured = this.config?.model || OpenAICodexProvider.DEFAULT_MODEL;
     const parsed = ModelIdentifier.tryParse(configured);
     const resolved = parsed ? parsed.model : configured.replace(/^openai-codex:/, '');
-    const normalized = resolved.toLowerCase();
-    if (normalized === 'openai-codex-cli' || normalized === 'default' || normalized === 'cli') {
-      return 'gpt-5.5';
-    }
-
-    // Pass the model directly to the Codex SDK without pre-validation.
-    // The openai.models.list() API does not include all Codex-available models
-    // (e.g., gpt-5.4 works via the SDK but isn't listed in the API).
-    // The SDK itself will fail with a proper error if the model doesn't exist.
-    return OpenAICodexProvider.MODEL_REPLACEMENTS.get(normalized) || resolved;
+    // Availability is checked by AIService against the verified debug-models
+    // snapshot before a new session is created. Do not rewrite a vanished
+    // default to a guessed version here.
+    return resolved;
   }
 
   private buildCodexPrompt(options: {

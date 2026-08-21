@@ -35,14 +35,10 @@ import {
   AIModel,
   PermissionRequestContent,
   PermissionResponseContent,
-  CLAUDE_CODE_VARIANTS,
   ModelIdentifier,
   resolveClaudeCodeModelVariant,
 } from '../types';
 import {
-  CLAUDE_CODE_VARIANT_VERSIONS,
-  CLAUDE_CODE_MODEL_LABELS,
-  CLAUDE_CODE_VARIANTS_WITH_1M,
   CLAUDE_CODE_SAFE_FALLBACK_MODEL,
 } from '../../modelConstants';
 import { isBedrockToolSearchError } from '../utils/errorDetection';
@@ -170,9 +166,6 @@ const NIMBALYST_HANDLED_TOOLS: readonly string[] = [
  * https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md
  * https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md
  */
-// CLAUDE_CODE_VARIANT_VERSIONS and CLAUDE_CODE_MODEL_LABELS now live in
-// `modelConstants.ts` so the renderer can share them — see comment there.
-
 export interface ScheduleWakeupRequest {
   sessionId: string;
   workspacePath: string;
@@ -212,6 +205,12 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
   // fallback before their own init chunk arrives.
   private static cachedSdkSkills: string[] = [];
   private static cachedSdkSlashCommands: string[] = [];
+  /** Host-owned output of Query.supportedModels(); never a static fallback. */
+  private static modelCatalogSnapshotResolver: (() => AIModel[]) | null = null;
+
+  public static setModelCatalogSnapshotResolver(resolver: (() => AIModel[]) | null): void {
+    ClaudeCodeProvider.modelCatalogSnapshotResolver = resolver;
+  }
 
   // Per-process guard: tracks sessionIds we've already attempted naming for so we
   // don't keep nudging the SDK every turn if the first attempt failed.
@@ -3372,39 +3371,12 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     return prompt;
   }
 
-  /**
-   * Get Claude Code models.
-   * Returns standard models plus Sonnet 1M variant (access controlled by Anthropic).
-   */
+  /** Get the host's latest SDK-supported catalog without inventing model rows. */
   static async getModels(): Promise<AIModel[]> {
-    const models: AIModel[] = [];
-
-    // Add models in desired order
-    for (const variant of CLAUDE_CODE_VARIANTS) {
-      // Add base model (standard 200K context)
-      models.push({
-        id: ModelIdentifier.create('claude-code', variant).combined,
-        name: `Claude Agent · ${CLAUDE_CODE_MODEL_LABELS[variant]} ${CLAUDE_CODE_VARIANT_VERSIONS[variant]}`,
-        provider: 'claude-code' as const,
-        maxTokens: 8192,
-        contextWindow: 200000
-      });
-
-      // Add 1M context variant if the variant supports it.
-      // 1M context is GA at standard pricing (March 2026).
-      if ((CLAUDE_CODE_VARIANTS_WITH_1M as readonly string[]).includes(variant)) {
-        models.push({
-          id: ModelIdentifier.create('claude-code', `${variant}-1m`).combined,
-          name: `Claude Agent · ${CLAUDE_CODE_MODEL_LABELS[variant]} ${CLAUDE_CODE_VARIANT_VERSIONS[variant]} (1M)`,
-          provider: 'claude-code' as const,
-          maxTokens: 8192,
-          contextWindow: 1000000
-        });
-      }
-
-    }
-
-    return models;
+    return (ClaudeCodeProvider.modelCatalogSnapshotResolver?.() ?? []).map((model) => ({
+      ...model,
+      supportedEffortLevels: model.supportedEffortLevels && [...model.supportedEffortLevels],
+    }));
   }
 
   /**

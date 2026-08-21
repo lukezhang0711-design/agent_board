@@ -93,6 +93,10 @@ function createHealthService(): Record<string, any> {
       getCurrentSession: vi.fn(() => null),
       createSession: vi.fn(async () => session),
     },
+    // Transport tests deliberately isolate the CLI handshake. Catalog
+    // validation has its own service/bridge coverage, so inject a verified
+    // selection rather than constructing the full Electron catalog owner.
+    resolveValidatedModelForNewSession: vi.fn(async () => 'claude-code-cli:sonnet'),
     disposeChannelHealthSession: vi.fn(),
   });
   return service;

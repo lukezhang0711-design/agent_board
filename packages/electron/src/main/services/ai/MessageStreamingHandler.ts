@@ -35,7 +35,7 @@ import {
 } from '@nimbalyst/runtime/ai/server/types';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { isBedrockToolSearchError } from '@nimbalyst/runtime/ai/server/utils/errorDetection';
-import { resolveEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import { resolveEffortLevel, type EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import type { RawDocumentContext, DocumentContextService } from '@nimbalyst/runtime';
 import { AISessionsRepository } from '@nimbalyst/runtime';
 import { AgentMessagesRepository } from '@nimbalyst/runtime/storage/repositories/AgentMessagesRepository';
@@ -246,6 +246,22 @@ interface AIServiceInternal {
   // Helper methods
   getSettingsStore(): Store<Record<string, unknown>>;
   getApiKeyForProvider(provider: string, workspacePath?: string): string | undefined;
+  assertCurrentDynamicModelAvailable(
+    provider: AIProviderType,
+    modelId: string,
+    requestedEffort?: EffortLevel,
+  ): Promise<void>;
+  resolveCurrentDynamicSessionModel(
+    provider: string,
+    sessionModel?: string,
+    providerConfigModel?: string,
+    requestedEffort?: EffortLevel,
+  ): Promise<string | undefined>;
+  resolveCompatibleDynamicSessionEffortLevel(
+    provider: AIProviderType,
+    modelId: string | undefined,
+    sessionEffortLevel: unknown,
+  ): EffortLevel | undefined;
   buildClaudeCodeRuntimeConfig(session: SessionData, workspacePath?: string): Promise<ProviderConfig>;
   continueQueuedPromptChain(
     sessionId: string,
@@ -278,6 +294,20 @@ interface AIServiceInternal {
     worktreePath: string,
     event: Electron.IpcMainInvokeEvent,
   ): Promise<void>;
+}
+
+function isRuntimeDynamicCatalogProvider(provider: string): boolean {
+  return provider === 'openai-codex'
+    || provider === 'openai-codex-acp'
+    || provider === 'claude-code'
+    || provider === 'claude-code-cli';
+}
+
+function explicitSessionEffortLevel(session: SessionData): EffortLevel | undefined {
+  const value = (session.metadata as any)?.effortLevel;
+  return value != null && value !== ''
+    ? resolveEffortLevel(value, undefined)
+    : undefined;
 }
 
 /**
@@ -486,6 +516,34 @@ export class MessageStreamingHandler {
       throw new Error(`Session mismatch: requested ${sessionId} but got ${session.id}`);
     }
 
+    // Legacy/imported dynamic sessions may be missing a model or reference a
+    // model that has disappeared. Reject before persisting the input or
+    // initializing a provider: package defaults are not live-engine evidence.
+    if (isRuntimeDynamicCatalogProvider(session.provider)) {
+      try {
+        // Only a saved per-session setting is an explicit effort request. An
+        // incompatible app-wide preference adapts to the selected model later;
+        // otherwise switching to a no-effort/limited-effort model would make
+        // every send fail despite the UI showing a valid fallback option.
+        const liveModel = await this.svc.resolveCurrentDynamicSessionModel(
+          session.provider,
+          session.model,
+          session.providerConfig?.model,
+          explicitSessionEffortLevel(session),
+        );
+        if (liveModel) session.model = liveModel;
+      } catch (error) {
+        // The stream-level catch begins after this preflight. Release a queued
+        // prompt here so a catalog red light never permanently deduplicates its
+        // later retry attempt.
+        if (queuedPromptId) {
+          this.svc.processingQueuedPromptIds.delete(queuedPromptId);
+          logger.main.info(`[AIService] Cleared prompt tracking for ${queuedPromptId} (catalog preflight error)`);
+        }
+        throw error;
+      }
+    }
+
     const inputType = (documentContext as any)?.inputType as string | undefined;
     if (inputType === 'user' && !queuedPromptId) {
       await this.disableParentNotificationsAfterDirectTakeover(session);
@@ -670,7 +728,13 @@ export class MessageStreamingHandler {
       if (isProviderClaudeCode) {
       }
 
-      const reinitEffortLevel = resolveEffortLevel((session.metadata as any)?.effortLevel, getDefaultEffortLevel());
+      const reinitEffortLevel = isRuntimeDynamicCatalogProvider(session.provider)
+        ? this.svc.resolveCompatibleDynamicSessionEffortLevel(
+            session.provider as AIProviderType,
+            session.model || session.providerConfig?.model,
+            (session.metadata as any)?.effortLevel,
+          )
+        : resolveEffortLevel((session.metadata as any)?.effortLevel, getDefaultEffortLevel());
       const reinitConfig: any = {
         apiKey,
         maxTokens: (session.providerConfig as any)?.maxTokens,
@@ -700,6 +764,8 @@ export class MessageStreamingHandler {
             const modelForProvider = extractModelForProvider(fullModel, session.provider as AIProviderType);
             if (modelForProvider !== null) {
               reinitConfig.model = modelForProvider;
+            } else if (isRuntimeDynamicCatalogProvider(session.provider)) {
+              throw new Error(`${session.provider} 会话模型未通过实时目录校验。请重新选择模型；系统不会使用静态默认型号。`);
             } else {
               // extractModelForProvider returned null - fall back to default
               const defaultModel = await ModelRegistry.getDefaultModel(session.provider as AIProviderType);
@@ -714,6 +780,9 @@ export class MessageStreamingHandler {
           }
         }
       } else {
+        if (isRuntimeDynamicCatalogProvider(session.provider)) {
+          throw new Error(`${session.provider} 会话未设置已验证的模型。请重新选择模型；系统不会使用静态默认型号。`);
+        }
         // No model specified - get default
         const defaultModel = await ModelRegistry.getDefaultModel(session.provider as AIProviderType);
         if (defaultModel) {
@@ -1276,13 +1345,30 @@ export class MessageStreamingHandler {
       } else {
         // Refresh credentials every turn for all providers so key changes in settings apply immediately.
         const freshApiKey = this.svc.getApiKeyForProvider(session.provider, effectiveWorkspacePath);
-        const turnEffortLevel = resolveEffortLevel((session.metadata as any)?.effortLevel, getDefaultEffortLevel());
-        await provider.initialize({
+        const turnEffortLevel = isRuntimeDynamicCatalogProvider(session.provider)
+          ? this.svc.resolveCompatibleDynamicSessionEffortLevel(
+              session.provider as AIProviderType,
+              session.model || session.providerConfig?.model,
+              (session.metadata as any)?.effortLevel,
+            )
+          : resolveEffortLevel((session.metadata as any)?.effortLevel, getDefaultEffortLevel());
+        const turnConfig: ProviderConfig = {
           apiKey: freshApiKey,
           maxTokens: (session.providerConfig as any)?.maxTokens,
           temperature: (session.providerConfig as any)?.temperature,
           ...(turnEffortLevel && { effortLevel: turnEffortLevel }),
-        });
+        };
+        if (isRuntimeDynamicCatalogProvider(session.provider)) {
+          const fullModel = session.model || session.providerConfig?.model;
+          const modelForProvider = fullModel
+            ? extractModelForProvider(fullModel, session.provider as AIProviderType)
+            : null;
+          if (modelForProvider === null) {
+            throw new Error(`${session.provider} 会话未设置已验证的模型。请重新选择模型；系统不会使用静态默认型号。`);
+          }
+          turnConfig.model = modelForProvider;
+        }
+        await provider.initialize(turnConfig);
       }
 
       // Attach @ mentioned files for non-agent providers

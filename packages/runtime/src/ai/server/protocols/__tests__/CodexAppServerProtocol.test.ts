@@ -580,7 +580,7 @@ describe('CodexAppServerProtocol', () => {
           },
           show_raw_agent_reasoning: true,
         },
-        effortLevel: 'high',
+        effortLevel: 'ultra',
       },
     } as never);
     const initReq = await nextWrittenMatching(child, 'initialize');
@@ -606,7 +606,7 @@ describe('CodexAppServerProtocol', () => {
       'nimbalyst-mcp': { command: 'npx', args: ['mcp-remote', 'http://127.0.0.1:3456/mcp?sessionId=s1'] },
     });
     expect(params.config!.show_raw_agent_reasoning).toBe(true);
-    expect(params.config!.model_reasoning_effort).toBe('high');
+    expect(params.config!.model_reasoning_effort).toBe('ultra');
     // ThreadResumeParams does NOT accept `ephemeral`; codex would reject the
     // params if we forwarded it. Verify we strip it.
     expect((params as Record<string, unknown>).ephemeral).toBeUndefined();

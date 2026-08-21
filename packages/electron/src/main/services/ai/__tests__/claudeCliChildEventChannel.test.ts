@@ -14,6 +14,10 @@ const productionState = vi.hoisted(() => ({
 }));
 
 vi.mock('electron', () => ({
+  app: {
+    getPath: () => '/tmp',
+    isPackaged: false,
+  },
   BrowserWindow: {
     getAllWindows: () => [],
   },
@@ -51,10 +55,14 @@ vi.mock('../claudeCliRevealTerminal', () => ({
 }));
 
 vi.mock('@nimbalyst/runtime', async () => {
-  const { AgentMessagesRepository } = await import(
-    '@nimbalyst/runtime/storage/repositories/AgentMessagesRepository'
-  );
-  return { AgentMessagesRepository };
+  const [
+    { AgentMessagesRepository },
+    { AISessionsRepository },
+  ] = await Promise.all([
+    import('@nimbalyst/runtime/storage/repositories/AgentMessagesRepository'),
+    import('@nimbalyst/runtime/storage/repositories/AISessionsRepository'),
+  ]);
+  return { AgentMessagesRepository, AISessionsRepository };
 });
 
 import { AISessionsRepository } from '@nimbalyst/runtime/storage/repositories/AISessionsRepository';
@@ -67,6 +75,7 @@ import {
 } from '../../PGLiteQueuedPromptsStore';
 import { createPGLiteSessionStore } from '../../PGLiteSessionStore';
 import { flushNextClaudeCliQueuedPromptForSession } from '../claudeCliQueueFlushSingleton';
+import { setDynamicModelCatalogValidator } from '../modelCatalogValidation';
 
 const eventTypes = [
   'session:completed',
@@ -84,6 +93,7 @@ describe('claude-code-cli child session event channel', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    setDynamicModelCatalogValidator(async () => {});
     productionState.terminalWrites.length = 0;
     dbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nim-cli-child-event-'));
     db = new SQLiteDatabase({
@@ -100,6 +110,7 @@ describe('claude-code-cli child session event channel', () => {
   });
 
   afterEach(async () => {
+    setDynamicModelCatalogValidator(null);
     productionState.queueStore = null;
     AgentMessagesRepository.clearStore();
     AISessionsRepository.clearStore();
@@ -114,6 +125,7 @@ describe('claude-code-cli child session event channel', () => {
     await AISessionsRepository.create({
       id: sessionId,
       provider: 'claude-code-cli',
+      model: 'claude-code-cli:sonnet',
       workspaceId: '/workspace',
       title: `CLI parent ${eventName}`,
     });
@@ -152,6 +164,7 @@ describe('claude-code-cli child session event channel', () => {
     await AISessionsRepository.create({
       id: sessionId,
       provider: 'claude-code-cli',
+      model: 'claude-code-cli:sonnet',
       workspaceId: '/workspace',
       title: 'CLI parent user',
     });
@@ -186,6 +199,35 @@ describe('claude-code-cli child session event channel', () => {
       direction: 'input',
       content: JSON.stringify({ prompt }),
       hidden: 0,
+    });
+  });
+
+  it('marks an idle-flush prompt failed without writing the PTY when the catalog turns red', async () => {
+    const sessionId = 'cli-parent-catalog-failed';
+    await AISessionsRepository.create({
+      id: sessionId,
+      provider: 'claude-code-cli',
+      model: 'claude-code-cli:sonnet',
+      workspaceId: '/workspace',
+      title: 'CLI parent catalog failed',
+    });
+    const queued = await queueStore.create({
+      id: 'cli-catalog-failed',
+      sessionId,
+      prompt: 'must remain unsent',
+    });
+    setDynamicModelCatalogValidator(async () => {
+      throw new Error('supportedModels(): network unavailable');
+    });
+
+    await expect(
+      flushNextClaudeCliQueuedPromptForSession(sessionId, '/workspace', 'idle-transition'),
+    ).resolves.toBe(false);
+
+    expect(productionState.terminalWrites).toEqual([]);
+    await expect(queueStore.get(queued.id)).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'supportedModels(): network unavailable',
     });
   });
 });

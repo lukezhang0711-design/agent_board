@@ -62,8 +62,9 @@ describe('claude-code-cli provider wiring (Phase 0)', () => {
       expect(id.isExtendedContext).toBe(true);
     });
 
-    it('rejects invalid variants', () => {
-      expect(() => ModelIdentifier.parse('claude-code-cli:not-a-variant')).toThrow('Invalid Claude Code variant');
+    it('defers variant membership to the live SDK catalog', () => {
+      expect(ModelIdentifier.parse('claude-code-cli:not-a-variant').combined)
+        .toBe('claude-code-cli:not-a-variant');
     });
 
     it('has a parseable default model', () => {
@@ -82,9 +83,9 @@ describe('claude-code-cli provider wiring (Phase 0)', () => {
       expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-1m', 'opus')).toBe('sonnet[1m]');
     });
 
-    it('resolves explicit 5-series variants to full model IDs', () => {
-      expect(resolveClaudeCodeModelVariant('claude-code-cli:opus-5', 'opus')).toBe('claude-opus-5');
-      expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-5-1m', 'opus')).toBe('claude-sonnet-5[1m]');
+    it('keeps dynamically discovered variants and only converts the 1M suffix', () => {
+      expect(resolveClaudeCodeModelVariant('claude-code-cli:opus-5', 'opus')).toBe('opus-5');
+      expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-5-1m', 'opus')).toBe('sonnet-5[1m]');
     });
   });
 

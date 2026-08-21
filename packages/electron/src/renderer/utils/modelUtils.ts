@@ -4,24 +4,22 @@
  * IMPORTANT — keep the iOS Swift mirror in sync:
  *   packages/ios/NimbalystNative/Sources/Utils/ModelLabel.swift
  *
- * When you add/rename/remove a Claude Code variant, a Claude API model, an
- * OpenAI model, or change the provider switch in `parseModelInfo` /
+ * When you add/rename/remove a Claude API model, an OpenAI model, or change
+ * the provider switch in `parseModelInfo` /
  * `getModelShortName`, apply the equivalent change to ModelLabel.swift and
  * update its tests (`Tests/ModelLabelTests.swift`). The iOS session list
  * badge depends on both sides producing the same short label for a given
  * `(provider, model)` pair. Source-of-truth for the tables themselves is
- * still `packages/runtime/src/ai/modelConstants.ts` — the Swift file mirrors
- * the subset of that file it needs.
+ * still `packages/runtime/src/ai/modelConstants.ts` for chat models — the
+ * Swift file mirrors the subset of that file it needs. Claude Agent models
+ * come from the live SDK catalog and intentionally have no local table.
  */
 
 import {
   CLAUDE_MODELS,
   OPENAI_MODELS,
-  CLAUDE_CODE_VARIANT_VERSIONS,
-  CLAUDE_CODE_MODEL_LABELS,
-  type ClaudeCodeVariant,
 } from '@nimbalyst/runtime/ai/modelConstants';
-import { CLAUDE_CODE_VARIANTS, ModelIdentifier, isClaudeCodeFamily } from '@nimbalyst/runtime/ai/server/types';
+import { ModelIdentifier, isClaudeCodeFamily } from '@nimbalyst/runtime/ai/server/types';
 
 export { type EffortLevel, EFFORT_LEVELS, DEFAULT_EFFORT_LEVEL, parseEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 
@@ -36,33 +34,24 @@ interface ModelInfo {
  * Extract Claude Code variant from a model ID using ModelIdentifier.
  * Returns the base variant (without suffix) or null if not a valid Claude Code model.
  */
-export function extractClaudeCodeVariant(modelId?: string): ClaudeCodeVariant | null {
+export function extractClaudeCodeVariant(modelId?: string): string | null {
   if (!modelId) return null;
 
   // Try parsing with ModelIdentifier
   const parsed = ModelIdentifier.tryParse(modelId);
   if (parsed && isClaudeCodeFamily(parsed.provider)) {
-    // Covers both `claude-code` (SDK) and `claude-code-cli` (subscription CLI):
-    // they share the variant set, so neither must collapse to the sonnet fallback.
-    // baseVariant strips suffixes like -1m. Membership is checked against the
-    // shared CLAUDE_CODE_VARIANTS array so pinned variants (opus-4-6, ...)
-    // aren't silently dropped and fall back to sonnet in the picker label.
-    const variant = parsed.baseVariant;
-    if ((CLAUDE_CODE_VARIANTS as readonly string[]).includes(variant)) {
-      return variant as ClaudeCodeVariant;
-    }
-  }
-
-  // Legacy case: bare 'claude-code' without variant defaults to sonnet
-  if (modelId.toLowerCase() === 'claude-code') {
-    return 'sonnet';
+    // Values are validated by the live SDK catalog before creation. This helper
+    // is display-only and must not reintroduce a static allowlist.
+    return parsed.baseVariant;
   }
 
   return null;
 }
 
-function formatVariantLabel(variant: ClaudeCodeVariant): string {
-  return CLAUDE_CODE_MODEL_LABELS[variant] ?? variant.charAt(0).toUpperCase() + variant.slice(1);
+function formatVariantLabel(variant: string): string {
+  return variant
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 /**
@@ -76,19 +65,17 @@ function getClaudeCodeFamilyPrefix(modelId?: string): string {
 }
 
 export function getClaudeCodeModelLabel(modelId?: string): string {
-  const variant = extractClaudeCodeVariant(modelId) ?? 'sonnet';
+  const variant = extractClaudeCodeVariant(modelId) ?? 'Unknown';
   const parsed = modelId ? ModelIdentifier.tryParse(modelId) : null;
-  const version = CLAUDE_CODE_VARIANT_VERSIONS[variant];
   const suffix = parsed?.isExtendedContext ? ' (1M)' : '';
-  return `${getClaudeCodeFamilyPrefix(modelId)} · ${formatVariantLabel(variant)} ${version}${suffix}`;
+  return `${getClaudeCodeFamilyPrefix(modelId)} · ${formatVariantLabel(variant)}${suffix}`;
 }
 
 export function getClaudeCodeModelShortLabel(modelId?: string): string {
-  const variant = extractClaudeCodeVariant(modelId) ?? 'sonnet';
+  const variant = extractClaudeCodeVariant(modelId) ?? 'Unknown';
   const parsed = modelId ? ModelIdentifier.tryParse(modelId) : null;
-  const version = CLAUDE_CODE_VARIANT_VERSIONS[variant];
   const suffix = parsed?.isExtendedContext ? ' (1M)' : '';
-  return `${formatVariantLabel(variant)} ${version}${suffix}`;
+  return `${formatVariantLabel(variant)}${suffix}`;
 }
 
 /**
@@ -237,20 +224,4 @@ export function getModelShortName(provider: string, modelId: string): string {
   // Default truncation for unknown providers
   if (modelId.length > 15) return modelId.substring(0, 12) + '...';
   return modelId;
-}
-
-/**
- * Check if a model supports effort level configuration.
- * Supported: all shared Claude Code variants (including pinned and 1M variants),
- * plus OpenAI Codex models.
- */
-export function supportsEffortLevel(modelId?: string): boolean {
-  if (!modelId) return false;
-  const variant = extractClaudeCodeVariant(modelId);
-  if (variant) return true;
-  // OpenAI Codex models support reasoning effort (both SDK and ACP transports)
-  const parsed = ModelIdentifier.tryParse(modelId);
-  if (parsed?.provider === 'openai-codex' || parsed?.provider === 'openai-codex-acp') return true;
-  if (modelId.startsWith('openai-codex:') || modelId.startsWith('openai-codex-acp:')) return true;
-  return false;
 }

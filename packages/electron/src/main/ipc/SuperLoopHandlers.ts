@@ -14,6 +14,8 @@ import { GitWorktreeService } from '../services/GitWorktreeService';
 import { createWorktreeStore } from '../services/WorktreeStore';
 import { getDatabase } from '../database/initialize';
 import { wasProgressToolCalled, clearProgressToolCall } from '../mcp/superLoopProgressServer';
+import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
+import { assertDynamicModelCatalogSelection } from '../services/ai/modelCatalogValidation';
 
 const logger = log.scope('SuperLoopHandlers');
 
@@ -52,6 +54,14 @@ export function registerSuperLoopHandlers(): void {
       if (!taskDescription || taskDescription.trim().length === 0) {
         throw new Error('taskDescription is required');
       }
+      const modelId = config?.modelId?.trim();
+      if (!modelId) {
+        throw new Error('请选择已验证的模型；系统不会为 Super Loop 静默使用静态默认型号。');
+      }
+      const selectedProvider = ModelIdentifier.tryParse(modelId)?.provider;
+      // Reject before the handler creates a worktree, so a stale default does
+      // not leave an orphaned filesystem side effect behind.
+      await assertDynamicModelCatalogSelection(selectedProvider ?? 'claude-code', modelId);
 
       logger.info('Creating super loop with auto-worktree', {
         workspacePath,

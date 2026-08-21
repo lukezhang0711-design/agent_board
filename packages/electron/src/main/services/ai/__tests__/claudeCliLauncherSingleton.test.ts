@@ -26,6 +26,7 @@ describe('claudeCliLauncherSingleton', () => {
     };
     const launch = vi.fn(async (_input?: any): Promise<void> => undefined);
     const flushQueuedPrompt = vi.fn(async () => false);
+    const assertDynamicModelCatalogSelection = vi.fn(async () => undefined);
 
     vi.doMock('../../TerminalSessionManager', () => ({
       getTerminalSessionManager: () => manager,
@@ -80,6 +81,9 @@ describe('claudeCliLauncherSingleton', () => {
     vi.doMock('../claudeCliQueueFlushSingleton', () => ({
       flushNextClaudeCliQueuedPromptForSession: flushQueuedPrompt,
     }));
+    vi.doMock('../modelCatalogValidation', () => ({
+      assertDynamicModelCatalogSelection,
+    }));
     vi.doMock('../ClaudeCliSessionLauncher', () => ({
       ClaudeCliSessionLauncher: class {
         constructor() {
@@ -97,6 +101,7 @@ describe('claudeCliLauncherSingleton', () => {
       flushQueuedPrompt,
       getSession,
       buildMetaAgentSystemPrompt,
+      assertDynamicModelCatalogSelection,
     };
   }
 
@@ -172,6 +177,25 @@ describe('claudeCliLauncherSingleton', () => {
       claudeNotInstalled: true,
       error: 'Claude Code CLI is not installed',
     });
+    expect(h.stateManager.startSession).not.toHaveBeenCalled();
+    expect(h.launch).not.toHaveBeenCalled();
+  }, 20000);
+
+  it('rejects an empty or vanished live-catalog model before CLI launch', async () => {
+    const h = await loadHarness();
+    h.assertDynamicModelCatalogSelection.mockRejectedValueOnce(
+      new Error('claude-code-cli 模型目录不可用：supportedModels timed out'),
+    );
+
+    await expect(h.ensureClaudeCliSession({
+      sessionId: 'stale-session',
+      workspacePath: '/work',
+    })).rejects.toThrow('supportedModels timed out');
+
+    expect(h.assertDynamicModelCatalogSelection).toHaveBeenCalledWith(
+      'claude-code-cli',
+      undefined,
+    );
     expect(h.stateManager.startSession).not.toHaveBeenCalled();
     expect(h.launch).not.toHaveBeenCalled();
   }, 20000);

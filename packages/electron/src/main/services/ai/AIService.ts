@@ -23,11 +23,11 @@ import {
   ClaudeCodeProvider,
   OpenAICodexProvider,
 } from '@nimbalyst/runtime/ai/server';
-import { CLAUDE_CODE_SAFE_FALLBACK_MODEL } from '@nimbalyst/runtime/ai/modelConstants';
+import { ClaudeCodeCliProvider } from '@nimbalyst/runtime/ai/server/providers/ClaudeCodeCliProvider';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { parseContextUsageMessage } from '@nimbalyst/runtime/ai/server/utils/contextUsage';
 import { isBedrockToolSearchError } from '@nimbalyst/runtime/ai/server/utils/errorDetection';
-import { resolveEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import { resolveEffortLevel, type EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
 import type { SessionStore } from '@nimbalyst/runtime';
 import {
@@ -71,7 +71,6 @@ import {
   clearAIProviderOverrides,
   getWorkspaceState,
   getDefaultAIModel,
-  setDefaultAIModel,
   incrementCompletedSessionsWithTools,
   markCommunityPopupShown,
   normalizeAIProviderOverrides,
@@ -109,7 +108,6 @@ import {
   isBinaryFile,
   attachMentionedFiles,
   tagFileBeforeEdit,
-  formatCodexTestError,
   categorizeAIError,
 } from './aiServiceUtils';
 import { MessageStreamingHandler } from './MessageStreamingHandler';
@@ -154,11 +152,14 @@ import {
 } from '../PGLiteQueuedPromptsStore';
 import { getQueuedPromptsStore } from '../RepositoryManager';
 import { CodexModelRefreshService } from '../CodexModelRefreshService';
-import { database as databaseWorker } from '../../database/PGLiteDatabaseWorker';
+import { ClaudeCodeModelCatalogService } from './ClaudeCodeModelCatalogService';
 import {
-  CLAUDE_CODE_BUILTIN_MODEL_IDS,
-  refreshClaudeCodeModelCatalog,
-} from './claudeCodeModelCatalogRefresh';
+  setDynamicModelCatalogStatusReader,
+  setDynamicModelCatalogSelectionResolver,
+  setDynamicModelCatalogValidator,
+  type DynamicModelCatalogStatus,
+} from './modelCatalogValidation';
+import { database as databaseWorker } from '../../database/PGLiteDatabaseWorker';
 import {
   createTolerantAISettingsWriter,
   formatAISettingsKeysForLog,
@@ -447,6 +448,7 @@ export class AIService {
   private readonly channelHealthService: ChannelHealthService;
   private startupChannelHealthScheduled = false;
   private readonly codexModelRefreshService: CodexModelRefreshService;
+  private readonly claudeCodeModelCatalogService: ClaudeCodeModelCatalogService;
 
   constructor(sessionStore: SessionStore) {
     logger.main.info('[AIService] Constructor called');
@@ -467,10 +469,14 @@ export class AIService {
         'codex-model-refresh',
         'models.json',
       ),
-      loadApiKey: () => {
-        const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
-        return apiKeys['openai-codex'];
-      },
+    });
+    this.claudeCodeModelCatalogService = new ClaudeCodeModelCatalogService({
+      cachePath: path.join(
+        settingsDirectory,
+        'claude-code-model-catalog',
+        'models.json',
+      ),
+      getExplicitAuthEnv: () => this.getExplicitClaudeCodeCatalogAuthEnv(),
     });
     OpenAICodexProvider.setModelRefreshSnapshotResolver(
       () => this.codexModelRefreshService.getModels(),
@@ -478,6 +484,19 @@ export class AIService {
     OpenAICodexProvider.setModelCatalogPathResolver(
       () => this.codexModelRefreshService.getCatalogPath(),
     );
+    ClaudeCodeProvider.setModelCatalogSnapshotResolver(
+      () => this.claudeCodeModelCatalogService.getModels(),
+    );
+    ClaudeCodeCliProvider.setModelCatalogSnapshotResolver(
+      () => this.claudeCodeModelCatalogService.getCliModels(),
+    );
+    setDynamicModelCatalogValidator((provider, modelId) =>
+      this.assertCurrentDynamicModelAvailable(provider, modelId),
+    );
+    setDynamicModelCatalogSelectionResolver((provider, modelId) =>
+      this.resolveValidatedModelForNewSession(provider, modelId),
+    );
+    setDynamicModelCatalogStatusReader(() => this.getModelCatalogStatuses());
     this.codexModelRefreshService.registerIpcHandlers();
 
     // Set up persistence callback for DocumentContextService
@@ -531,6 +550,9 @@ export class AIService {
     this.setupIpcHandlers();
 
     this.startCodexModelRefreshIfEnabled(
+      this.getNormalizedProviderSettings() as Record<AIProviderType, any>,
+    );
+    this.startClaudeCodeModelCatalogIfEnabled(
       this.getNormalizedProviderSettings() as Record<AIProviderType, any>,
     );
 
@@ -614,10 +636,15 @@ export class AIService {
     }
 
     const previousSession = this.sessionManager.getCurrentSession();
+    const model = await this.resolveValidatedModelForNewSession(
+      input.channel.id as AIProviderType,
+    );
     const session = await this.sessionManager.createSession(
       input.channel.id as AIProviderType,
       undefined,
       input.workspacePath,
+      undefined,
+      model,
     );
     const startedAt = Date.now();
     let firstResponseMs: number | undefined;
@@ -678,10 +705,13 @@ export class AIService {
     prompt: string;
   }): Promise<ChannelHealthTransportResult> {
     const previousSession = this.sessionManager.getCurrentSession();
+    const model = await this.resolveValidatedModelForNewSession('claude-code-cli');
     const session = await this.sessionManager.createSession(
       'claude-code-cli',
       undefined,
       input.workspacePath,
+      undefined,
+      model,
     );
     markClaudeCliChannelHealthSession(session.id);
     const terminalManager = getTerminalSessionManager();
@@ -1333,22 +1363,6 @@ export class AIService {
     return { success: true, planApprovalState };
   }
 
-  private refreshClaudeCodeModelCatalog(): void {
-    refreshClaudeCodeModelCatalog({
-      getProviderSettings: () => this.settingsStore!.get('providerSettings', {}) as Record<string, unknown>,
-      setProviderSettings: (providerSettings) => this.settingsStore!.set('providerSettings', providerSettings),
-      getMigrations: () => this.settingsStore!.get('migrations', {}) as Record<string, unknown>,
-      setMigrations: (migrations) => this.settingsStore!.set('migrations', migrations),
-      getDefaultModel: getDefaultAIModel,
-      setDefaultModel: setDefaultAIModel,
-      logRefresh: ({ previousCount, nextCount, previousFingerprint, nextFingerprint }) => {
-        logger.main.info(
-          `[AIService] Refreshed Claude Agent model catalog (${previousCount}/${previousFingerprint} -> ${nextCount}/${nextFingerprint})`,
-        );
-      },
-    });
-  }
-
   private getSettingsStore(): Store<Record<string, unknown>> {
     if (!this.settingsStore) {
       this.settingsStore = new Store<Record<string, unknown>>({
@@ -1373,7 +1387,6 @@ export class AIService {
                 enabled: true,
                 testStatus: "idle",
                 installStatus: "not-installed",
-                models: [...CLAUDE_CODE_BUILTIN_MODEL_IDS]
               },
               openai: {
                 enabled: false,
@@ -1411,18 +1424,391 @@ export class AIService {
           `[AIService] Quarantined unrecognized ai-settings provider entries: ${formatAISettingsKeysForLog(quarantinedProviderIds)}`,
         );
       }
-      this.refreshClaudeCodeModelCatalog();
     }
     return this.settingsStore;
+  }
+
+  private isCodexCatalogConsumed(
+    providerSettings: Record<AIProviderType, any>,
+  ): boolean {
+    return providerSettings['openai-codex']?.enabled === true
+      // ACP is hidden for new sessions, but its persisted legacy rows can
+      // still require a live catalog before they are allowed to execute.
+      || providerSettings['openai-codex-acp']?.enabled === true;
+  }
+
+  private isClaudeCatalogConsumed(
+    providerSettings: Record<AIProviderType, any>,
+  ): boolean {
+    return providerSettings['claude-code']?.enabled !== false
+      || (
+        getSettingsService().get('ai.showClaudeCliChannel') === true
+        && providerSettings['claude-code-cli']?.enabled !== false
+      );
   }
 
   private startCodexModelRefreshIfEnabled(
     providerSettings: Record<AIProviderType, any>,
   ): void {
-    if (providerSettings['openai-codex']?.enabled !== true) return;
+    if (!this.isCodexCatalogConsumed(providerSettings)) return;
     void this.codexModelRefreshService.start().catch((error) => {
       logger.main.error('[AIService] Codex model refresh start failed:', error);
     });
+  }
+
+  private startClaudeCodeModelCatalogIfEnabled(
+    providerSettings: Record<AIProviderType, any>,
+  ): void {
+    if (!this.isClaudeCatalogConsumed(providerSettings)) return;
+    void this.claudeCodeModelCatalogService.start().catch((error) => {
+      logger.main.error('[AIService] Claude Agent model catalog start failed:', error);
+    });
+  }
+
+  private async awaitModelCatalogsIfEnabled(
+    providerSettings: Record<AIProviderType, any>,
+  ): Promise<void> {
+    const pending: Promise<unknown>[] = [];
+    if (this.isCodexCatalogConsumed(providerSettings)) {
+      pending.push(this.codexModelRefreshService.start());
+    }
+    if (this.isClaudeCatalogConsumed(providerSettings)) {
+      pending.push(this.claudeCodeModelCatalogService.start());
+    }
+    await Promise.all(pending);
+  }
+
+  /** A manual channel health run also asks each enabled engine for a fresh catalog. */
+  private async refreshModelCatalogsForHealth(
+    providerSettings: Record<AIProviderType, any>,
+  ): Promise<void> {
+    const pending: Promise<unknown>[] = [];
+    if (this.isCodexCatalogConsumed(providerSettings)) {
+      pending.push(this.codexModelRefreshService.manualRetry());
+    }
+    if (this.isClaudeCatalogConsumed(providerSettings)) {
+      pending.push(this.claudeCodeModelCatalogService.manualRetry());
+    }
+    await Promise.all(pending);
+  }
+
+  /**
+   * An old CLI/ACP session can outlive its visible provider toggle. Before it
+   * sends anything, force its shared engine catalog to leave disk-cache state
+   * through the same startup fetch used by the primary channel.
+   */
+  private async awaitModelCatalogForProvider(provider: AIProviderType): Promise<void> {
+    if (provider === 'openai-codex' || provider === 'openai-codex-acp') {
+      await this.codexModelRefreshService.start();
+      return;
+    }
+    if (provider === 'claude-code' || provider === 'claude-code-cli') {
+      await this.claudeCodeModelCatalogService.start();
+    }
+  }
+
+  private getModelCatalogStatuses(): Record<string, DynamicModelCatalogStatus> {
+    const claudeStatus = this.claudeCodeModelCatalogService.getStatus();
+    return {
+      'claude-code': claudeStatus,
+      // The CLI provider is a namespace projection of the same SDK catalog.
+      'claude-code-cli': claudeStatus,
+      'openai-codex': this.codexModelRefreshService.getStatus(),
+      // ACP is legacy/replay-only for new sessions, but existing rows share
+      // the same Codex catalog gate before they can execute.
+      'openai-codex-acp': this.codexModelRefreshService.getStatus(),
+    };
+  }
+
+  /**
+   * Configuration surfaces may inspect a retained cache, but no surface may
+   * offer it as a selectable model. Keep that policy next to the catalog owner
+   * so every IPC payload applies the same runtime-only rule.
+   */
+  private isCurrentDynamicCatalogModel(model: AIModel): boolean {
+    if (!this.isRuntimeDynamicCatalogProviderName(model.provider)) return true;
+    const status = this.getModelCatalogStatuses()[model.provider];
+    return model.unverifiedPlaceholder !== true
+      && status?.modelSource === 'runtime'
+      && status.verified === true
+      && !status.lastError;
+  }
+
+  private getMissingDefaultModelWarning(): string | null {
+    const defaultModel = getDefaultAIModel();
+    const parsed = defaultModel ? ModelIdentifier.tryParse(defaultModel) : null;
+    if (!parsed) return null;
+    const models = parsed.provider === 'openai-codex' || parsed.provider === 'openai-codex-acp'
+      ? this.codexModelRefreshService.getModels()
+      : parsed.provider === 'claude-code'
+        ? this.claudeCodeModelCatalogService.getModels()
+        : parsed.provider === 'claude-code-cli'
+          ? this.claudeCodeModelCatalogService.getCliModels()
+          : null;
+    const status = parsed.provider === 'openai-codex' || parsed.provider === 'openai-codex-acp'
+      ? this.codexModelRefreshService.getStatus()
+      : parsed.provider === 'claude-code' || parsed.provider === 'claude-code-cli'
+        ? this.claudeCodeModelCatalogService.getStatus()
+        : null;
+    const resolvedDefaultModel = defaultModel ?? '';
+    const catalogDefaultModel = parsed.provider === 'openai-codex-acp'
+      ? `openai-codex:${resolvedDefaultModel.replace(/^openai-codex-acp:/, '')}`
+      : resolvedDefaultModel;
+    if (!models || !status?.verified || models.some((model) => model.id === catalogDefaultModel)) return null;
+    return `默认模型“${defaultModel}”已不在当前可用目录中。请选择一个新模型；系统不会自动替换。`;
+  }
+
+  /**
+   * Head's read-only inventory. It intentionally reports only runtime-owned
+   * agent catalogs, because those are the provider/model pairs a Head can
+   * safely select without guessing a stale package preset.
+   */
+  public async getCurrentModelCatalog(): Promise<Record<string, unknown>> {
+    const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
+    await this.awaitModelCatalogsIfEnabled(providerSettings);
+    const models: AIModel[] = [];
+    const claudeStatus = this.claudeCodeModelCatalogService.getStatus();
+    const codexStatus = this.codexModelRefreshService.getStatus();
+    if (providerSettings['claude-code']?.enabled !== false && claudeStatus.verified && !claudeStatus.lastError) {
+      models.push(...this.claudeCodeModelCatalogService.getModels());
+    }
+    if (
+      getSettingsService().get('ai.showClaudeCliChannel') === true
+      && providerSettings['claude-code-cli']?.enabled !== false
+      && claudeStatus.verified
+      && !claudeStatus.lastError
+    ) {
+      models.push(...this.claudeCodeModelCatalogService.getCliModels());
+    }
+    if (providerSettings['openai-codex']?.enabled === true && codexStatus.verified && !codexStatus.lastError) {
+      models.push(...this.codexModelRefreshService.getModels());
+    }
+    return {
+      models: models.map((model) => ({
+        id: model.id,
+        provider: model.provider,
+        displayName: model.name,
+        resolvedModel: model.resolvedModel,
+        description: model.description,
+        supportedEffortLevels: model.supportedEffortLevels,
+        isEngineDefault: model.isEngineDefault === true,
+        unverifiedPlaceholder: model.unverifiedPlaceholder === true,
+      })),
+      catalogs: this.getModelCatalogStatuses(),
+    };
+  }
+
+  /** Used by Head before it persists a child session; no fallback substitution. */
+  public async assertCurrentDynamicModelAvailable(
+    provider: AIProviderType,
+    modelId: string,
+    requestedEffort?: EffortLevel,
+  ): Promise<void> {
+    await this.awaitModelCatalogForProvider(provider);
+    await this.assertDynamicModelAvailable(provider, modelId, requestedEffort);
+  }
+
+  /**
+   * Existing sessions must carry an exact, live catalog entry. Unlike a new
+   * session, an imported/legacy session with no model cannot assume an engine
+   * recommendation: require the user to select one rather than revive a
+   * package default that the engine may no longer offer.
+   */
+  public async resolveCurrentDynamicSessionModel(
+    provider: string,
+    sessionModel?: string,
+    providerConfigModel?: string,
+    requestedEffort?: EffortLevel,
+  ): Promise<string | undefined> {
+    if (!this.isRuntimeDynamicCatalogProviderName(provider)) {
+      return sessionModel || providerConfigModel;
+    }
+
+    const suppliedModel = sessionModel || providerConfigModel;
+    const requestedModelId = this.normalizeDynamicModelIdentifier(provider, suppliedModel);
+    await this.awaitModelCatalogForProvider(provider as AIProviderType);
+    const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, requestedModelId);
+    await this.assertDynamicModelAvailable(provider, catalogModelId, requestedEffort);
+
+    // ACP is replay-only for new sessions, but old rows can still stream. Its
+    // transport requires its own prefix; validate against the shared Codex
+    // catalog without rewriting the legacy provider identifier.
+    return provider === 'openai-codex-acp' ? requestedModelId : catalogModelId;
+  }
+
+  /**
+   * Every new-session entry point uses this resolver. A dynamic provider's
+   * persisted default is validated as-is, never replaced with a preset when
+   * that exact model has disappeared from the engine catalog.
+   */
+  private async resolveValidatedModelForNewSession(
+    provider: AIProviderType,
+    requestedModel?: string,
+  ): Promise<string | undefined> {
+    let model = requestedModel;
+    if (!model) {
+      const savedDefault = getDefaultAIModel();
+      const parsedSavedDefault = savedDefault ? ModelIdentifier.tryParse(savedDefault) : null;
+      if (parsedSavedDefault?.provider === provider) {
+        // A saved dynamic default must remain exact. If it disappeared, the
+        // validation below surfaces a reselection error instead of replacing it.
+        model = savedDefault;
+      } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
+        // First install has no saved preference. The only automatic selection
+        // permitted is an SDK/CLI row dynamically marked as the engine's own
+        // recommendation; Codex has no such row and therefore asks the user.
+        await this.awaitModelCatalogForProvider(provider);
+        await this.assertDynamicCatalogReady(provider);
+        model = this.getEngineRecommendedDynamicModel(provider);
+        if (!model) {
+          throw new Error(`${provider} 模型目录未声明引擎推荐的默认型号。请在模型选择器中明确选择；系统不会猜测静态型号。`);
+        }
+      } else {
+        model = await ModelRegistry.getDefaultModel(provider);
+      }
+    }
+    await this.assertCurrentDynamicModelAvailable(provider, model ?? '');
+    return model;
+  }
+
+  private isRuntimeDynamicCatalogProvider(provider: AIProviderType): boolean {
+    return this.isRuntimeDynamicCatalogProviderName(provider);
+  }
+
+  private isRuntimeDynamicCatalogProviderName(provider: string): provider is 'openai-codex' | 'openai-codex-acp' | 'claude-code' | 'claude-code-cli' {
+    return provider === 'openai-codex'
+      || provider === 'openai-codex-acp'
+      || provider === 'claude-code'
+      || provider === 'claude-code-cli';
+  }
+
+  /** A legacy providerConfig may contain only the unprefixed engine value. */
+  private normalizeDynamicModelIdentifier(provider: AIProviderType, modelId: string | undefined): string | undefined {
+    const trimmed = modelId?.trim();
+    if (!trimmed) return undefined;
+    return trimmed.includes(':') ? trimmed : `${provider}:${trimmed}`;
+  }
+
+  private getDynamicCatalogModels(provider: AIProviderType): AIModel[] {
+    if (provider === 'openai-codex' || provider === 'openai-codex-acp') {
+      return this.codexModelRefreshService.getModels();
+    }
+    if (provider === 'claude-code-cli') {
+      return this.claudeCodeModelCatalogService.getCliModels();
+    }
+    if (provider === 'claude-code') {
+      return this.claudeCodeModelCatalogService.getModels();
+    }
+    return [];
+  }
+
+  /**
+   * A JSONL import records Claude's concrete wire id, while supportedModels()
+   * publishes selectable values plus resolvedModel. Match that value exactly;
+   * no family-name substring or static alias is ever inferred.
+   */
+  private resolveDynamicCatalogModelIdentifier(
+    provider: AIProviderType,
+    modelId: string | undefined,
+  ): string | undefined {
+    if (!modelId) return undefined;
+    const models = this.getDynamicCatalogModels(provider);
+    const catalogModelId = provider === 'openai-codex-acp'
+      ? `openai-codex:${modelId.replace(/^openai-codex-acp:/, '')}`
+      : modelId;
+    if (models.some((model) => model.id === catalogModelId)) return catalogModelId;
+    if (provider === 'claude-code') {
+      const rawModel = catalogModelId.replace(/^claude-code:/, '');
+      const exactResolved = models.find((model) => model.resolvedModel === rawModel);
+      if (exactResolved) return exactResolved.id;
+    }
+    return catalogModelId;
+  }
+
+  private getEngineRecommendedDynamicModel(provider: AIProviderType): string | undefined {
+    const models = this.getDynamicCatalogModels(provider);
+    return models.find((model) => model.isEngineDefault === true && !model.unverifiedPlaceholder)?.id;
+  }
+
+  private async assertDynamicCatalogReady(provider: AIProviderType): Promise<void> {
+    const service = provider === 'openai-codex' || provider === 'openai-codex-acp'
+      ? this.codexModelRefreshService
+      : provider === 'claude-code' || provider === 'claude-code-cli'
+        ? this.claudeCodeModelCatalogService
+        : null;
+    if (!service) return;
+
+    const status = service.getStatus();
+    if (!status.verified || status.lastError) {
+      const detail = status.lastError?.message
+        ? ` 原因：${status.lastError.message}`
+        : ' 模型目录仍未验证。';
+      throw new Error(`${provider} 模型目录不可用，无法静默选择默认模型。请重试目录拉取后重新选择模型。${detail}`);
+    }
+  }
+
+  private async assertDynamicModelAvailable(
+    provider: AIProviderType,
+    modelId: string | undefined,
+    requestedEffort?: EffortLevel,
+  ): Promise<void> {
+    const service = provider === 'openai-codex' || provider === 'openai-codex-acp'
+      ? this.codexModelRefreshService
+      : provider === 'claude-code' || provider === 'claude-code-cli'
+        ? this.claudeCodeModelCatalogService
+        : null;
+    if (!service) return;
+
+    // A retained cache is useful evidence for the user, but it is not proof
+    // that a model remains available now. The failure must therefore block
+    // new-session creation (including Head dispatch) until a fresh catalog
+    // succeeds; otherwise cache retention becomes a silent routing fallback.
+    await this.assertDynamicCatalogReady(provider);
+    const models = this.getDynamicCatalogModels(provider);
+    if (!modelId) {
+      throw new Error(`${provider} 会话未设置已验证的模型。请在模型选择器中重新选择；系统不会使用静态默认型号。`);
+    }
+    const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, modelId);
+    const model = models.find((candidate) => candidate.id === catalogModelId);
+    if (!model) {
+      throw new Error(`已保存的模型“${modelId}”不再属于当前 ${provider} 模型目录。请重新选择模型；系统不会自动改为其他型号。`);
+    }
+    if (requestedEffort && (
+      model.supportsEffort !== true
+      || !model.supportedEffortLevels?.includes(requestedEffort)
+    )) {
+      throw new Error(`型号“${model.id}”不支持思考档“${requestedEffort}”。请按当前模型目录重新选择思考档。`);
+    }
+  }
+
+  /**
+   * A saved session-level effort is an explicit request and is rejected by the
+   * send gate when unsupported. The app-wide default is only a preference: if
+   * a newly selected model lacks it, use that model's first advertised tier so
+   * the backend matches the selector's capability-aware fallback.
+   */
+  public resolveCompatibleDynamicSessionEffortLevel(
+    provider: AIProviderType,
+    modelId: string | undefined,
+    sessionEffortLevel: unknown,
+  ): EffortLevel | undefined {
+    if (!this.isRuntimeDynamicCatalogProvider(provider)) {
+      return resolveEffortLevel(sessionEffortLevel, getDefaultEffortLevel());
+    }
+    const hasExplicitSessionEffort = sessionEffortLevel != null && sessionEffortLevel !== '';
+    const requested = resolveEffortLevel(
+      sessionEffortLevel,
+      hasExplicitSessionEffort ? undefined : getDefaultEffortLevel(),
+    );
+    if (!requested || !modelId) return undefined;
+    const models = this.getDynamicCatalogModels(provider);
+    const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, modelId);
+    const model = models.find((candidate) => candidate.id === catalogModelId);
+    if (model?.supportsEffort !== true || !model.supportedEffortLevels?.length) {
+      return undefined;
+    }
+    if (model.supportedEffortLevels.includes(requested)) return requested;
+    return hasExplicitSessionEffort ? undefined : model.supportedEffortLevels[0];
   }
 
   /**
@@ -1481,6 +1867,21 @@ export class AIService {
   }
 
   /**
+   * The catalog probe is not tied to a workspace, so it may use only the
+   * user's explicitly configured global Claude Code API key. It deliberately
+   * excludes ambient process/shell keys and per-project overrides.
+   */
+  private getExplicitClaudeCodeCatalogAuthEnv(): NodeJS.ProcessEnv {
+    const providerSettings = this.getNormalizedProviderSettings() as Record<string, { authMethod?: string }>;
+    if (providerSettings['claude-code']?.authMethod !== 'api-key') {
+      return {};
+    }
+    const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string | undefined>;
+    const apiKey = apiKeys['claude-code']?.trim();
+    return apiKey ? { ANTHROPIC_API_KEY: apiKey } : {};
+  }
+
+  /**
    * Build the latest Claude Code runtime config from current settings/session state.
    * This is used to refresh existing provider instances so auth changes take effect immediately.
    */
@@ -1491,7 +1892,16 @@ export class AIService {
     const effectiveWorkspacePath = session.workspacePath || workspacePath;
     const apiKey = this.getApiKeyForProvider('claude-code', effectiveWorkspacePath);
 
-    const effortLevel = resolveEffortLevel((session.metadata as any)?.effortLevel, getDefaultEffortLevel());
+    const fullModel = await this.resolveCurrentDynamicSessionModel(
+      'claude-code',
+      session.model,
+      session.providerConfig?.model,
+    );
+    const effortLevel = this.resolveCompatibleDynamicSessionEffortLevel(
+      'claude-code',
+      fullModel,
+      (session.metadata as any)?.effortLevel,
+    );
     const config: ProviderConfig = {
       maxTokens: (session.providerConfig as any)?.maxTokens,
       temperature: (session.providerConfig as any)?.temperature,
@@ -1499,16 +1909,13 @@ export class AIService {
       ...(effortLevel && { effortLevel }),
     };
 
-    const fullModel = session.model || session.providerConfig?.model;
-    if (fullModel) {
-      config.model = fullModel;
-    } else {
-      // Billing safety (#631 / NIM-848): a session with no resolved model must
-      // fall back to a STANDARD 200k model, never the 1M user-facing default
-      // (ModelRegistry.getDefaultModel('claude-code') is `opus-1m`). Sending the
-      // paid 1M beta for an empty/lost model silently bills the user.
-      config.model = CLAUDE_CODE_SAFE_FALLBACK_MODEL;
+    // resolveCurrentDynamicSessionModel rejects an empty, stale, or unverified
+    // value. Keep this guard for the type checker and for any future resolver
+    // change; sending a static fallback here would bypass the catalog red light.
+    if (!fullModel) {
+      throw new Error('claude-code 会话未设置已验证的模型。请重新选择模型。');
     }
+    config.model = fullModel;
 
     return config;
   }
@@ -1733,6 +2140,10 @@ export class AIService {
     }
 
     const terminalManager = getTerminalSessionManager();
+    const model = await this.resolveCurrentDynamicSessionModel(
+      'claude-code-cli',
+      session.model ?? undefined,
+    );
     return dispatchQueuedPromptToClaudeCli(
       {
         isTerminalActive: (id) => terminalManager.isTerminalActive(id),
@@ -1743,7 +2154,7 @@ export class AIService {
         logInfo: (message) => logger.main.info(`[AIService] ${source}: ${message}`),
         logWarn: (message) => logger.main.warn(`[AIService] ${source}: ${message}`),
       },
-      { sessionId, workspacePath, model: session.model, cwd },
+      { sessionId, workspacePath, model, cwd },
     );
   }
 
@@ -2071,10 +2482,14 @@ export class AIService {
               }
             }
 
-            // Create the session using the SessionManager
-            // Use mobile's provider/model selection if provided, otherwise fall back to desktop defaults
+            // Create the session using the SessionManager.
+            // Use mobile's provider/model selection if provided; dynamic
+            // defaults are validated rather than silently replaced.
             const resolvedProvider = (request.provider || 'claude-code') as import('@nimbalyst/runtime/ai/server/types').AIProviderType;
-            const resolvedModel = request.model || getDefaultAIModel() || 'claude-code:opus-1m';
+            const resolvedModel = await this.resolveValidatedModelForNewSession(
+              resolvedProvider,
+              request.model,
+            );
             const resolvedSessionType = (request.sessionType || 'session') as import('@nimbalyst/runtime/ai/server/types').SessionType;
             const resolvedAgentRole = (request.agentRole || 'standard') as import('@nimbalyst/runtime/ai/server/types').AgentRole;
             const session = await this.sessionManager.createSession(
@@ -2205,6 +2620,12 @@ export class AIService {
         syncProvider.onCreateWorktreeRequest(async (request) => {
           logger.main.info('[AIService] Received worktree creation request from mobile:', request.requestId, 'projectId:', request.projectId);
           try {
+            // Check before mutating the worktree: a stale default must ask for
+            // reselection instead of leaving an orphaned worktree/session.
+            const defaultModel = await this.resolveValidatedModelForNewSession('claude-code');
+            if (!defaultModel) {
+              throw new Error('Claude Agent 模型目录未返回可用型号。请重新选择模型后重试。');
+            }
             // Step 1: Create git worktree with name deduplication (same as worktree:create handler)
             const { GitWorktreeService } = await import('../GitWorktreeService');
             const { createWorktreeStore } = await import('../WorktreeStore');
@@ -2244,7 +2665,6 @@ export class AIService {
             // Step 2: Create session with worktreeId (same as AgentMode + sessions:create)
             const { AISessionsRepository } = await import('@nimbalyst/runtime/storage/repositories/AISessionsRepository');
             const { randomUUID } = await import('crypto');
-            const defaultModel = getDefaultAIModel() || 'claude-code:opus-1m';
             const sessionId = randomUUID();
             const sessionTitle = `Worktree: ${worktree.name}`;
 
@@ -2678,14 +3098,11 @@ export class AIService {
         }
       }
 
-      // Get model details if specified
-      let model = modelId;
-      if (!model) {
-        // Use provider defaults when no explicit model is supplied
-        model = await ModelRegistry.getDefaultModel(provider);
-      }
+      // A matching app-wide default is deliberate user state. The shared
+      // resolver validates dynamic catalogs and never replaces a stale one.
+      const model = await this.resolveValidatedModelForNewSession(provider, modelId);
 
-      // For claude-code, don't pass a model at all - let it handle its own selection
+      // The chosen dynamic model is passed through at the provider boundary.
       const providerConfig: any = {
         maxTokens: this.getProviderSetting(provider, 'maxTokens'),
         temperature: this.getProviderSetting(provider, 'temperature')
@@ -2696,6 +3113,8 @@ export class AIService {
         const modelForProvider = extractModelForProvider(model, provider);
         if (modelForProvider !== null) {
           providerConfig.model = modelForProvider;
+        } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
+          throw new Error(`${provider} 型号未通过实时目录校验。请重新选择模型；系统不会使用静态默认型号。`);
         } else if (provider !== 'claude-code') {
           // extractModelForProvider returned null (invalid model) - fall back to default
           const defaultModel = await ModelRegistry.getDefaultModel(provider);
@@ -2707,6 +3126,8 @@ export class AIService {
             }
           }
         }
+      } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
+        throw new Error(`${provider} 未返回已验证的型号。请重新选择模型；系统不会使用静态默认型号。`);
       } else if (provider !== 'claude-code') {
         // For other providers, fall back to settings
         const settingsModel = this.getProviderSetting(provider, 'model');
@@ -2786,14 +3207,19 @@ export class AIService {
         initConfig.apiKey = apiKey;
       }
 
-      // Only skip explicit model assignment for claude-code (it manages variants internally)
-      // Check both session.model (set via UI) and providerConfig.model (set at creation)
-      if ((session.model || session.providerConfig?.model) && provider !== 'claude-code') {
+      // Check both session.model (set via UI) and providerConfig.model (set at creation).
+      // Claude Agent receives the dynamic combined identifier; its provider
+      // converts -1m back to the SDK's [1m] format at the boundary.
+      if (provider === 'claude-code' && (session.model || session.providerConfig?.model)) {
+        initConfig.model = session.model || session.providerConfig?.model;
+      } else if ((session.model || session.providerConfig?.model) && provider !== 'claude-code') {
         const fullModel = session.model || session.providerConfig?.model;
         if (fullModel) {
           const modelForProvider = extractModelForProvider(fullModel, provider);
           if (modelForProvider !== null) {
             initConfig.model = modelForProvider;
+          } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
+            throw new Error(`${provider} 型号未通过实时目录校验。请重新选择模型；系统不会使用静态默认型号。`);
           } else {
             // extractModelForProvider returned null - fall back to default
             const defaultModel = await ModelRegistry.getDefaultModel(provider);
@@ -2806,6 +3232,8 @@ export class AIService {
             }
           }
         }
+      } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
+        throw new Error(`${provider} 未返回已验证的型号。请重新选择模型；系统不会使用静态默认型号。`);
       } else if (provider !== 'claude-code') {
         // No model specified - get default
         const defaultModel = await ModelRegistry.getDefaultModel(provider);
@@ -2832,7 +3260,11 @@ export class AIService {
         }
         // Effort level: explicit session value, else the app-wide default the
         // selector displays (Opus 4.6 adaptive reasoning).
-        const effortLevel = resolveEffortLevel((session.metadata as any)?.effortLevel, getDefaultEffortLevel());
+        const effortLevel = this.resolveCompatibleDynamicSessionEffortLevel(
+          provider,
+          session.model || session.providerConfig?.model,
+          (session.metadata as any)?.effortLevel,
+        );
         if (effortLevel) {
           initConfig.effortLevel = effortLevel;
         }
@@ -2840,7 +3272,11 @@ export class AIService {
 
       // Pass effort level for OpenAI Codex
       if (provider === 'openai-codex') {
-        const effortLevel = resolveEffortLevel((session.metadata as any)?.effortLevel, getDefaultEffortLevel());
+        const effortLevel = this.resolveCompatibleDynamicSessionEffortLevel(
+          provider,
+          session.model || session.providerConfig?.model,
+          (session.metadata as any)?.effortLevel,
+        );
         if (effortLevel) {
           initConfig.effortLevel = effortLevel;
         }
@@ -2889,6 +3325,11 @@ export class AIService {
         if (!resolvedWorkspacePath) {
           throw new Error('Open a workspace before running channel health checks');
         }
+        // Catalog discovery is an adjacent diagnostic only. It must not alter
+        // ChannelHealthService's established three-line pass/fail criteria.
+        await this.refreshModelCatalogsForHealth(
+          this.getNormalizedProviderSettings() as Record<AIProviderType, any>,
+        );
         return this.channelHealthService.runManually({
           event,
           workspacePath: resolvedWorkspacePath,
@@ -4050,66 +4491,34 @@ export class AIService {
       }
 
       try {
+        // Dynamic engines own their authenticated catalog probes. Do not make
+        // a paid test turn against a package default: a green connection test
+        // with a failed catalog would otherwise bypass the picker red light.
+        if (provider === 'openai-codex' || provider === 'claude-code') {
+          // The Settings button remains available while a channel is disabled.
+          // It must still run the requested engine probe rather than trust a
+          // disk cache marked verified by a previous app run.
+          if (provider === 'openai-codex') {
+            await this.codexModelRefreshService.manualRetry();
+          } else {
+            await this.claudeCodeModelCatalogService.manualRetry();
+          }
+          const status = provider === 'openai-codex'
+            ? this.codexModelRefreshService.getStatus()
+            : this.claudeCodeModelCatalogService.getStatus();
+          if (!status.verified || status.lastError) {
+            return {
+              success: false,
+              error: status.lastError?.message ?? `${provider} 模型目录仍未验证。请重试目录拉取。`,
+            };
+          }
+          return { success: true, provider };
+        }
+
         // For OpenAI, just try to list models as a connection test
         if (provider === 'openai') {
           const models = await ModelRegistry.getModelsForProvider('openai', apiKey);
           return { success: models.length > 0, provider };
-        }
-
-        // For OpenAI Codex, run a real SDK request to validate credentials and connectivity
-        if (provider === 'openai-codex') {
-          const defaultModel = await ModelRegistry.getDefaultModel('openai-codex');
-          const testProvider = new OpenAICodexProvider(apiKey ? { apiKey } : undefined);
-          // Honor the project rail's active selection (#544). windowStates is
-          // keyed by Nimbalyst's window id, not webContents.id, so resolve the
-          // window id via getWindowId before the lookup.
-          const browserWindow = BrowserWindow.fromWebContents(event.sender);
-          const windowId = browserWindow ? getWindowId(browserWindow) : null;
-          const effectiveWorkspacePath =
-            workspacePath || resolveActiveWorkspacePathForWindowId(windowId);
-
-          if (!effectiveWorkspacePath) {
-            return {
-              success: false,
-              error: 'Open a workspace and trust it to test OpenAI Codex.',
-            };
-          }
-
-          await testProvider.initialize({
-            model: defaultModel,
-            maxTokens: 256,
-            ...(apiKey ? { apiKey } : {}),
-          });
-
-          let sawResponse = false;
-          const response = testProvider.sendMessage(
-            'Reply with exactly "ok".',
-            undefined,
-            undefined,
-            [],
-            effectiveWorkspacePath
-          );
-
-          for await (const chunk of response) {
-            if (!chunk) continue;
-            if (chunk.type === 'error') {
-              const raw = chunk.error || 'Unknown Codex error';
-              throw new Error(formatCodexTestError(raw, !!apiKey));
-            }
-            if (chunk.type === 'text' && (chunk.content || '').trim().length > 0) {
-              sawResponse = true;
-            }
-            if (chunk.type === 'complete') {
-              break;
-            }
-          }
-
-          testProvider.destroy();
-          if (!sawResponse) {
-            throw new Error('No response content received from Codex SDK');
-          }
-
-          return { success: true, provider };
         }
 
         // For OpenCode, verify the CLI is installed. Electron's spawn
@@ -4170,34 +4579,6 @@ export class AIService {
           testProvider.destroy();
         }
 
-        // For Claude Code, just verify the API key works with the regular Claude API
-        if (provider === 'claude-code') {
-          console.log('[AIService] testConnection - Testing Claude Code provider');
-
-          // Test using the regular Claude API to verify the key
-          const testProvider = new (await import('@nimbalyst/runtime/ai/server/providers/ClaudeProvider')).ClaudeProvider();
-          const config: any = {
-            apiKey,
-            model: 'claude-haiku-4-5-20251001'
-          };
-
-          await testProvider.initialize(config);
-
-          // Quick test message
-          const response = testProvider.sendMessage('Say "Hello" in one word');
-          for await (const chunk of response) {
-            if (!chunk) continue;
-            if (chunk.type === 'error') {
-              throw new Error(chunk.error || 'Unknown error');
-            }
-            // Exit after first response
-            if (chunk.type === 'text') {
-              break;
-            }
-          }
-          testProvider.destroy();
-        }
-
         // For LMStudio, test the endpoint
         if (provider === 'lmstudio') {
           const providerSettings = this.getSettingsStore().get('providerSettings', {}) as any;
@@ -4221,6 +4602,8 @@ export class AIService {
 
       const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
       this.startCodexModelRefreshIfEnabled(providerSettings);
+      this.startClaudeCodeModelCatalogIfEnabled(providerSettings);
+      await this.awaitModelCatalogsIfEnabled(providerSettings);
       const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
 
       // Only fetch from providers that are enabled (skip LMStudio network call when disabled)
@@ -4236,7 +4619,8 @@ export class AIService {
         ...apiKeys,
         lmstudio_url: providerSettings['lmstudio']?.baseUrl || 'http://127.0.0.1:8234'
       };
-      const allModels = await ModelRegistry.getAllModels(modelsConfig, enabledSet);
+      const allModels = (await ModelRegistry.getAllModels(modelsConfig, enabledSet))
+        .filter((model) => this.isCurrentDynamicCatalogModel(model));
 
       // Append extension-contributed agent provider models (see ai:getModels).
       for (const agentEntry of getAgentProviderRegistry().list()) {
@@ -4262,15 +4646,22 @@ export class AIService {
       return {
         success: true,
         models: allModels,
-        grouped
+        grouped,
+        catalogStatuses: this.getModelCatalogStatuses(),
+        defaultModelWarning: this.getMissingDefaultModelWarning(),
       };
     });
 
     // Clear model cache
     safeHandle('ai:clearModelCache', async () => {
       ModelRegistry.clearCache();
-      return { success: true, modelRefreshStatus: this.codexModelRefreshService.getStatus() };
+      return { success: true, modelRefreshStatus: this.codexModelRefreshService.getStatus(), catalogStatuses: this.getModelCatalogStatuses() };
     });
+
+    safeHandle('ai:getModelCatalogStatus', async () => ({
+      success: true,
+      catalogs: this.getModelCatalogStatuses(),
+    }));
 
     safeHandle('ai:refreshSessionProvider', async (_event, sessionId: string) => {
       ProviderFactory.destroyProvider(sessionId);
@@ -4343,6 +4734,8 @@ export class AIService {
       // console.log('[AIService] ai:getModels called - fetching enabled models');
       const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
       this.startCodexModelRefreshIfEnabled(providerSettings);
+      this.startClaudeCodeModelCatalogIfEnabled(providerSettings);
+      await this.awaitModelCatalogsIfEnabled(providerSettings);
       const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
       const claudeCodeSettings = providerSettings['claude-code'] || {};
       const showClaudeCliChannel = getSettingsService().get('ai.showClaudeCliChannel') === true;
@@ -4361,7 +4754,9 @@ export class AIService {
         'claude-code': {
           // Respect the user's toggle but don't require an API key—Claude Code uses CLI auth
           enabled: claudeCodeSettings.enabled !== false,
-          models: claudeCodeSettings.models
+          // Existing persisted arrays are historical static picker state, not
+          // a whitelist for the SDK-owned live catalog.
+          models: undefined,
         },
         'claude-code-cli': {
           // Genuine `claude` CLI on the user's subscription. It remains in the
@@ -4369,7 +4764,7 @@ export class AIService {
           // required because the CLI uses its own login.
           enabled: isNewSessionProviderVisible('claude-code-cli', showClaudeCliChannel)
             && providerSettings['claude-code-cli']?.enabled !== false,
-          models: providerSettings['claude-code-cli']?.models
+          models: undefined,
         },
         'openai': {
           enabled: providerSettings['openai']?.enabled === true && !!apiKeys['openai'],
@@ -4416,6 +4811,7 @@ export class AIService {
 
       // Filter to only enabled models
       const enabledModels = allModels.filter(model => {
+        if (!this.isCurrentDynamicCatalogModel(model)) return false;
         const provider = enabledProviders[model.provider as AIProviderType];
         // if (model.provider === 'openai-codex') {
         //   console.log('[AIService] Filtering openai-codex model:', {
@@ -4427,17 +4823,6 @@ export class AIService {
         if (!provider?.enabled) return false;
         // If specific models are selected, filter to those
         if (provider.models && provider.models.length > 0) {
-          if (model.provider === 'claude-code' && provider.models.includes('claude-code')) {
-            return true;
-          }
-          // For Claude Code: if base model is selected, also include 1M variants
-          // e.g., if 'claude-code:sonnet' is selected, also include 'claude-code:sonnet-1m'
-          if (model.provider === 'claude-code' && model.id.includes('-1m')) {
-            const baseModelId = model.id.replace(/-1m$/, '');
-            if (provider.models.includes(baseModelId)) {
-              return true;
-            }
-          }
           return provider.models.includes(model.id);
         }
         // Otherwise include all models for this provider
@@ -4489,9 +4874,18 @@ export class AIService {
           id: m.id,
           display_name: m.name,
           provider: m.provider,
-          maxTokens: m.maxTokens
+          maxTokens: m.maxTokens,
+          description: m.description,
+          resolvedModel: m.resolvedModel,
+          supportsEffort: m.supportsEffort,
+          supportedEffortLevels: m.supportedEffortLevels,
+          defaultEffortLevel: m.defaultEffortLevel,
+          isEngineDefault: m.isEngineDefault === true,
+          unverifiedPlaceholder: m.unverifiedPlaceholder,
         })),
         grouped,  // This now contains only enabled models
+        catalogStatuses: this.getModelCatalogStatuses(),
+        defaultModelWarning: this.getMissingDefaultModelWarning(),
         providers: enabledProviders,
         // Maps of extension contribution id -> manifest displayName / icon, so
         // the picker labels extension agent groups (e.g. "Gemini" + auto_awesome)
@@ -4634,8 +5028,9 @@ export class AIService {
         }
       }
 
-      // Use explicitly requested model, or fall back to provider default
-      const model = options.model || await ModelRegistry.getDefaultModel(provider);
+      // Use the same validation as desktop/mobile session creation. A dynamic
+      // provider cannot silently replace an unavailable saved default here.
+      const model = await this.resolveValidatedModelForNewSession(provider, options.model);
       const providerConfig: any = {
         maxTokens: this.getProviderSetting(provider, 'maxTokens'),
         temperature: this.getProviderSetting(provider, 'temperature'),
@@ -4968,8 +5363,14 @@ export class AIService {
 
   public destroy() {
     this.codexModelRefreshService.shutdown();
+    this.claudeCodeModelCatalogService.shutdown();
+    setDynamicModelCatalogValidator(null);
+    setDynamicModelCatalogSelectionResolver(null);
+    setDynamicModelCatalogStatusReader(null);
     OpenAICodexProvider.setModelRefreshSnapshotResolver(null);
     OpenAICodexProvider.setModelCatalogPathResolver(null);
+    ClaudeCodeProvider.setModelCatalogSnapshotResolver(null);
+    ClaudeCodeCliProvider.setModelCatalogSnapshotResolver(null);
 
     try {
       // Clean up all providers with error handling

@@ -30,6 +30,7 @@ import { AgentMessagesRepository } from '../../../storage/repositories/AgentMess
 export abstract class BaseAgentProvider extends BaseAIProvider {
   protected static readonly META_AGENT_ALLOWED_TOOLS: string[] = [
     'mcp__nimbalyst-meta-agent__list_spawned_sessions',
+    'mcp__nimbalyst-meta-agent__list_models',
     'mcp__nimbalyst-meta-agent__list_worktrees',
     'mcp__nimbalyst-meta-agent__submit_plan',
     'mcp__nimbalyst-meta-agent__create_session',
