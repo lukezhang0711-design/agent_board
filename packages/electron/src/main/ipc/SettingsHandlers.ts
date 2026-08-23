@@ -50,7 +50,10 @@ import { getRestartSignalPath } from '../utils/appPaths';
 import { TrayManager } from '../tray/TrayManager';
 import { STYTCH_CONFIG } from '@nimbalyst/runtime';
 import { type EffortLevel, parseEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
-import { assertDynamicModelCatalogSelection } from '../services/ai/modelCatalogValidation';
+import {
+    assertDynamicModelCatalogSelection,
+    resolveDynamicModelCatalogSelection,
+} from '../services/ai/modelCatalogValidation';
 
 // Track if we've subscribed to sync status changes
 let syncStatusListenerSetup = false;
@@ -539,17 +542,18 @@ export function registerSettingsHandlers() {
             throw new Error('默认模型必须是字符串。');
         }
         const trimmedModel = model.trim();
+        let modelToPersist = trimmedModel;
         if (trimmedModel) {
             const separator = trimmedModel.indexOf(':');
             if (separator <= 0) {
                 throw new Error('默认模型必须采用“provider:model”格式。');
             }
-            await assertDynamicModelCatalogSelection(
-                trimmedModel.slice(0, separator),
-                trimmedModel,
-            );
+            const provider = trimmedModel.slice(0, separator);
+            modelToPersist = await resolveDynamicModelCatalogSelection(provider, trimmedModel)
+                ?? trimmedModel;
+            await assertDynamicModelCatalogSelection(provider, modelToPersist);
         }
-        setDefaultAIModel(model);
+        setDefaultAIModel(modelToPersist);
     });
 
     // Default effort level settings (Opus 4.6 adaptive reasoning)

@@ -1,4 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  getDefaultAIModel: vi.fn<() => string | undefined>(() => undefined),
+  setDefaultAIModel: vi.fn(),
+  resolveDynamicModelCatalogSelection: vi.fn(),
+  assertDynamicModelCatalogSelection: vi.fn(),
+}));
 
 // SettingsControlService imports from many other modules (electron, store,
 // StytchAuthService, WindowManager). For these invariants we only need the
@@ -14,7 +21,7 @@ vi.mock('../../utils/store', () => ({
   clearPendingThemeFallback: vi.fn(),
   getAppSetting: vi.fn(() => undefined),
   getAppStore: vi.fn(() => ({ set: vi.fn(), get: vi.fn(() => undefined) })),
-  getDefaultAIModel: vi.fn(() => undefined),
+  getDefaultAIModel: mocks.getDefaultAIModel,
   getReleaseChannel: vi.fn(() => 'stable'),
   getSessionSyncConfig: vi.fn(() => undefined),
   getTheme: vi.fn(() => 'dark'),
@@ -24,7 +31,7 @@ vi.mock('../../utils/store', () => ({
   isSettingsAgentToolsDisabled: vi.fn(() => false),
   setAnalyticsEnabled: vi.fn(),
   setAppSetting: vi.fn(),
-  setDefaultAIModel: vi.fn(),
+  setDefaultAIModel: mocks.setDefaultAIModel,
   setPreferredAgentLanguage: vi.fn(),
   setSessionSyncConfig: vi.fn(),
   setTheme: vi.fn(),
@@ -61,13 +68,26 @@ vi.mock('../../utils/logger', () => ({
   },
 }));
 
+vi.mock('../ai/modelCatalogValidation', () => ({
+  resolveDynamicModelCatalogSelection: mocks.resolveDynamicModelCatalogSelection,
+  assertDynamicModelCatalogSelection: mocks.assertDynamicModelCatalogSelection,
+}));
+
 import {
   ALLOWED_APP_KEYS,
   ALLOWED_WORKSPACE_KEYS,
   DENIED_APP_KEYS,
+  SettingsControlService,
 } from '../SettingsControlService';
 
 describe('SettingsControlService allowlist invariants', () => {
+  beforeEach(() => {
+    mocks.getDefaultAIModel.mockReset().mockReturnValue(undefined);
+    mocks.setDefaultAIModel.mockReset();
+    mocks.resolveDynamicModelCatalogSelection.mockReset().mockResolvedValue(undefined);
+    mocks.assertDynamicModelCatalogSelection.mockReset().mockResolvedValue(undefined);
+  });
+
   it('does not include any DENIED_APP_KEYS in ALLOWED_APP_KEYS', () => {
     // The whole point of the deny list: if anyone ever adds, say, `apiKeys` to
     // the allow list (intentionally or via a bad merge), this fails in CI.
@@ -113,5 +133,23 @@ describe('SettingsControlService allowlist invariants', () => {
     expect([...ALLOWED_WORKSPACE_KEYS].sort()).toEqual(
       ['agentPermissions', 'issueKeyPrefix', 'trackerSyncPolicies'].sort(),
     );
+  });
+
+  it('persists the live catalog ID when a legacy dynamic default resolves equivalently', async () => {
+    const legacyModel = 'claude-code:fable-1m';
+    const canonicalModel = 'claude-code:claude-fable-5-1m';
+    mocks.getDefaultAIModel.mockReturnValue(legacyModel);
+    mocks.resolveDynamicModelCatalogSelection.mockResolvedValue(canonicalModel);
+
+    const result = await SettingsControlService.getInstance().setDefaultAIModel(
+      'settings-model-migration-test',
+      { providerModel: legacyModel },
+    );
+
+    expect(mocks.resolveDynamicModelCatalogSelection).toHaveBeenCalledWith('claude-code', legacyModel);
+    expect(mocks.assertDynamicModelCatalogSelection).toHaveBeenCalledWith('claude-code', canonicalModel);
+    expect(mocks.setDefaultAIModel).toHaveBeenCalledWith(canonicalModel);
+    expect(mocks.setDefaultAIModel).not.toHaveBeenCalledWith(legacyModel);
+    expect(result).toEqual({ ok: true, before: legacyModel, after: canonicalModel });
   });
 });

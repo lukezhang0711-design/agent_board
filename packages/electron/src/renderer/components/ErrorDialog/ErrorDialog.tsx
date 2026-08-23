@@ -20,9 +20,10 @@ interface ErrorDialogProps {
   title: string;
   message: string;
   details?: DiffErrorDetails | string;
+  recovery?: React.ReactNode;
 }
 
-export function ErrorDialog({ isOpen, onClose, title, message, details }: ErrorDialogProps) {
+export function ErrorDialog({ isOpen, onClose, title, message, details, recovery }: ErrorDialogProps) {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['error']));
 
@@ -129,8 +130,10 @@ ${r.newText}
         <div className="error-dialog-content nim-modal-body">
           <div className="error-dialog-message flex items-start gap-3 mb-5 p-4 rounded-md border border-[var(--nim-error-border)] bg-[var(--nim-error-light)]">
             <div className="error-icon text-2xl shrink-0">⚠️</div>
-            <p className="m-0 text-sm leading-relaxed text-[var(--nim-error)]">{message}</p>
+            <p className="m-0 text-sm leading-relaxed text-[var(--nim-error)] select-text">{message}</p>
           </div>
+
+          {recovery}
 
           {typeof details === 'string' && details && (
             <div className="error-dialog-details mt-5">

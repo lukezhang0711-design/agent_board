@@ -350,6 +350,7 @@ export function SettingsView({
     'lmstudio',
   ];
   const userCategories: SettingsCategory[] = [
+    'channel-health',
     'claude-code',
     'claude',
     'openai',

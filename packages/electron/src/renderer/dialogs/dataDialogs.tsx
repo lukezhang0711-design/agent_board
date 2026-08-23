@@ -31,6 +31,8 @@ export interface ErrorDialogData {
   title: string;
   message: string;
   details?: any;
+  recovery?: React.ReactNode;
+  onClose?: () => void;
 }
 
 export interface SessionImportData {
@@ -92,10 +94,14 @@ function ErrorDialogWrapper({
   return (
     <ErrorDialog
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => {
+        data.onClose?.();
+        onClose();
+      }}
       title={data.title}
       message={data.message}
       details={data.details}
+      recovery={data.recovery}
     />
   );
 }
