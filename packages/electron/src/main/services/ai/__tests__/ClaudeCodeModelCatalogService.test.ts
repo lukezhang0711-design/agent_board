@@ -1,7 +1,16 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClaudeCodeModelCatalogService } from '../ClaudeCodeModelCatalogService';
+
+const sdkQueryMock = vi.hoisted(() => vi.fn());
+vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
+  query: sdkQueryMock,
+}));
+vi.mock('@nimbalyst/runtime/electron/claudeCodeEnvironment', () => ({
+  resolveClaudeCodeExecutablePath: () => '/packaged/unpacked/claude-native-binary',
+}));
 
 const TEMP_DIRECTORIES: string[] = [];
 
@@ -199,5 +208,30 @@ describe('ClaudeCodeModelCatalogService', () => {
     await service.start();
 
     expect(fetchSupportedModels).toHaveBeenCalledTimes(1);
+  });
+
+  it('spawns the SDK control session with a packaged-safe executable path and a real cwd', async () => {
+    const directory = fs.mkdtempSync(path.join(process.cwd(), '.claude-model-catalog-test-'));
+    TEMP_DIRECTORIES.push(directory);
+    sdkQueryMock.mockReset();
+    sdkQueryMock.mockReturnValue({
+      supportedModels: async () => SDK_MODELS,
+      close: () => {},
+    });
+    const service = new ClaudeCodeModelCatalogService({
+      cachePath: path.join(directory, 'models.json'),
+      retryDelaysMs: [],
+      logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    });
+
+    await service.start();
+
+    expect(sdkQueryMock).toHaveBeenCalledTimes(1);
+    const options = sdkQueryMock.mock.calls[0][0]?.options;
+    // Packaged builds cannot rely on the SDK default require.resolve (asar):
+    // the control session must reuse the provider's packaged-safe binary path
+    // and a real directory cwd, otherwise spawn fails with ENOTDIR.
+    expect(options?.pathToClaudeCodeExecutable).toBe('/packaged/unpacked/claude-native-binary');
+    expect(options?.cwd).toBe(os.homedir());
   });
 });

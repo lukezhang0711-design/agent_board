@@ -1,6 +1,8 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { query, type ModelInfo } from '@anthropic-ai/claude-agent-sdk';
+import { resolveClaudeCodeExecutablePath } from '@nimbalyst/runtime/electron/claudeCodeEnvironment';
 import type { AIModel, AIProviderType } from '@nimbalyst/runtime/ai/server/types';
 import { EFFORT_LEVELS, type EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { logger } from '../../utils/logger';
@@ -183,6 +185,10 @@ async function fetchSupportedModelsFromSdk(
   if (explicitApiKey) {
     env.ANTHROPIC_API_KEY = explicitApiKey;
   }
+  // Packaged builds cannot rely on the SDK's default require.resolve (it may
+  // land inside app.asar and spawn fails with ENOTDIR). Reuse the provider's
+  // packaged-safe binary resolution and a real directory as cwd.
+  const pathToClaudeCodeExecutable = resolveClaudeCodeExecutablePath();
   const control = query({
     prompt: idleControlPrompt(),
     options: {
@@ -190,6 +196,8 @@ async function fetchSupportedModelsFromSdk(
       permissionMode: 'dontAsk',
       persistSession: false,
       includePartialMessages: false,
+      cwd: os.homedir(),
+      ...(pathToClaudeCodeExecutable ? { pathToClaudeCodeExecutable } : {}),
       env,
     },
   });
