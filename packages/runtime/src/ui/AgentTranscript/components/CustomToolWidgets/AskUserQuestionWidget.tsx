@@ -13,6 +13,10 @@ import { useAtom, useAtomValue } from 'jotai';
 import type { CustomToolWidgetProps } from './index';
 import { interactiveWidgetHostAtom } from '../../../../store/atoms/interactiveWidgetHost';
 import {
+  InteractivePromptStatusCard,
+  useInteractivePromptStatus,
+} from './InteractivePromptStatus';
+import {
   askUserQuestionDraftAtom,
   clearAskUserQuestionDraft,
   EMPTY_ASK_USER_QUESTION_DRAFT,
@@ -212,6 +216,7 @@ function parseCancelledResult(result: unknown): boolean {
 export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
   message,
   sessionId,
+  getInteractivePromptStatus,
 }) => {
   const toolCall = message.toolCall;
   const questionId = toolCall?.providerToolCallId || '';
@@ -243,6 +248,14 @@ export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
 
   const isCompleted = hasResult;
   const isPending = !isCompleted;
+
+  const { status: promptStatus, markUnavailable } = useInteractivePromptStatus(
+    getInteractivePromptStatus,
+    questionId,
+    'ask_user_question',
+    isPending,
+    getInteractivePromptStatus ? 'checking' : host ? 'available' : 'checking',
+  );
 
   // Draft state lives in a jotai atomFamily keyed by questionId so it survives
   // component unmount -- session switches and virtual-scroll churn no longer lose it.
@@ -342,7 +355,7 @@ export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
 
   // Handle submit
   const handleSubmit = useCallback(async () => {
-    if (!host || hasResponded || !isPending) return;
+    if (!host || hasResponded || !isPending || promptStatus !== 'available') return;
 
     // Build answers object
     const answers: Record<string, string> = {};
@@ -382,16 +395,17 @@ export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
       clearAskUserQuestionDraft(questionId);
     } catch (error) {
       console.error('[AskUserQuestionWidget] Failed to submit:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, questionId, questions, selections, otherSelected, otherText, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, questionId, questions, selections, otherSelected, otherText, hasResponded, isPending]);
 
   // Handle cancel
   const handleCancel = useCallback(async () => {
-    if (!host || hasResponded || !isPending) return;
+    if (!host || hasResponded || !isPending || promptStatus !== 'available') return;
 
     setIsSubmitting(true);
     setLocalResult({ answers: {}, cancelled: true });
@@ -402,10 +416,13 @@ export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
       clearAskUserQuestionDraft(questionId);
     } catch (error) {
       console.error('[AskUserQuestionWidget] Failed to cancel:', error);
+      if (getInteractivePromptStatus) markUnavailable();
+      setLocalResult(null);
+      setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, questionId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, questionId, hasResponded, isPending]);
 
   // If no questions, show nothing
   if (questions.length === 0) {
@@ -533,6 +550,16 @@ export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
     );
   }
 
+  if (promptStatus === 'unavailable' || promptStatus === 'resolved') {
+    return (
+      <InteractivePromptStatusCard
+        testId="ask-user-question-widget"
+        title="AskUserQuestion"
+        status={promptStatus}
+      />
+    );
+  }
+
   // Show interactive UI for pending request.
   // If the host is momentarily unavailable (e.g. SessionTranscript's host effect
   // re-ran and hasn't yet re-populated the atom after a mode switch), still
@@ -557,7 +584,7 @@ export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
         <span className="text-sm font-semibold text-nim flex-1">
           Questions from Claude
         </span>
-        {!host && (
+        {(!host || promptStatus === 'checking') && (
           <span data-testid="ask-user-question-pending" className="text-xs text-nim-muted">Waiting...</span>
         )}
       </div>
@@ -677,7 +704,7 @@ export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
             type="button"
             data-testid="ask-user-question-cancel"
             onClick={handleCancel}
-            disabled={isSubmitting || !host}
+            disabled={isSubmitting || !host || promptStatus !== 'available'}
             className="px-3 py-1.5 rounded-md text-[13px] cursor-pointer border border-nim transition-colors duration-150 hover:bg-nim-hover bg-nim-tertiary text-nim-muted disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
@@ -686,7 +713,7 @@ export const AskUserQuestionWidget: React.FC<CustomToolWidgetProps> = ({
             type="button"
             data-testid="ask-user-question-submit"
             onClick={handleSubmit}
-            disabled={!allAnswered || isSubmitting || !host}
+            disabled={!allAnswered || isSubmitting || !host || promptStatus !== 'available'}
             className="px-4 py-1.5 rounded-md text-[13px] font-medium cursor-pointer border-none transition-colors duration-150 hover:opacity-90 bg-nim-primary text-nim-on-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Submitting...' : 'Submit'}

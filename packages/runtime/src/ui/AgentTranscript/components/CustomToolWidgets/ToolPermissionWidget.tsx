@@ -31,6 +31,10 @@ import type { CustomToolWidgetProps } from './index';
 import { interactiveWidgetHostAtom, getInteractiveWidgetHost } from '../../../../store/atoms/interactiveWidgetHost';
 import type { PermissionScope } from './InteractiveWidgetHost';
 import { unwrapShellCommand } from '../../utils/unwrapShellCommand';
+import {
+  InteractivePromptStatusCard,
+  useInteractivePromptStatus,
+} from './InteractivePromptStatus';
 
 /**
  * Get a human-readable display name for a tool pattern
@@ -100,6 +104,7 @@ function getPatternDisplayName(pattern: string): string {
 export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
   message,
   sessionId,
+  getInteractivePromptStatus,
 }) => {
   const toolCall = message.toolCall;
   if (!toolCall) return null;
@@ -156,6 +161,17 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
   const isCompleted = hasResult && completedState !== null;
   const isPending = !isCompleted;
 
+  // Keep the historical host-null rendering for callers that do not provide a
+  // liveness query. SessionTranscript supplies the query, which turns this
+  // into a non-clickable invalid card when the native supplier is truly gone.
+  const { status: promptStatus, markUnavailable } = useInteractivePromptStatus(
+    getInteractivePromptStatus,
+    requestId,
+    'tool_permission',
+    isPending,
+    getInteractivePromptStatus ? 'checking' : 'available',
+  );
+
   // Local state for UI
   const [showTooltip, setShowTooltip] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -169,7 +185,7 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
   // the click before the live host can answer. See #276.
   const handleDeny = useCallback(async () => {
     const liveHost = host || getInteractiveWidgetHost(sessionId);
-    if (!liveHost || hasResponded || !isPending) return;
+    if (!liveHost || hasResponded || !isPending || (getInteractivePromptStatus && promptStatus !== 'available')) return;
 
     setIsSubmitting(true);
     setLocalResult({ decision: 'deny', scope: 'once' });
@@ -179,17 +195,18 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
       await liveHost.toolPermissionSubmit(requestId, { decision: 'deny', scope: 'once' });
     } catch (error) {
       console.error('[ToolPermissionWidget] Failed to deny:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, sessionId, requestId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, sessionId, requestId, hasResponded, isPending]);
 
   // Handle allow once
   const handleAllowOnce = useCallback(async () => {
     const liveHost = host || getInteractiveWidgetHost(sessionId);
-    if (!liveHost || hasResponded || !isPending) return;
+    if (!liveHost || hasResponded || !isPending || (getInteractivePromptStatus && promptStatus !== 'available')) return;
 
     setIsSubmitting(true);
     setLocalResult({ decision: 'allow', scope: 'once' });
@@ -199,17 +216,18 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
       await liveHost.toolPermissionSubmit(requestId, { decision: 'allow', scope: 'once' });
     } catch (error) {
       console.error('[ToolPermissionWidget] Failed to allow once:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, sessionId, requestId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, sessionId, requestId, hasResponded, isPending]);
 
   // Handle allow session
   const handleAllowSession = useCallback(async () => {
     const liveHost = host || getInteractiveWidgetHost(sessionId);
-    if (!liveHost || hasResponded || !isPending) return;
+    if (!liveHost || hasResponded || !isPending || (getInteractivePromptStatus && promptStatus !== 'available')) return;
 
     setIsSubmitting(true);
     setLocalResult({ decision: 'allow', scope: 'session' });
@@ -219,17 +237,18 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
       await liveHost.toolPermissionSubmit(requestId, { decision: 'allow', scope: 'session' });
     } catch (error) {
       console.error('[ToolPermissionWidget] Failed to allow session:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, sessionId, requestId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, sessionId, requestId, hasResponded, isPending]);
 
   // Handle allow always
   const handleAllowAlways = useCallback(async () => {
     const liveHost = host || getInteractiveWidgetHost(sessionId);
-    if (!liveHost || hasResponded || !isPending) return;
+    if (!liveHost || hasResponded || !isPending || (getInteractivePromptStatus && promptStatus !== 'available')) return;
 
     setIsSubmitting(true);
     setLocalResult({ decision: 'allow', scope: 'always' });
@@ -239,17 +258,18 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
       await liveHost.toolPermissionSubmit(requestId, { decision: 'allow', scope: 'always' });
     } catch (error) {
       console.error('[ToolPermissionWidget] Failed to allow always:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, sessionId, requestId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, sessionId, requestId, hasResponded, isPending]);
 
   // Handle allow all domains (WebFetch only)
   const handleAllowAllDomains = useCallback(async () => {
     const liveHost = host || getInteractiveWidgetHost(sessionId);
-    if (!liveHost || hasResponded || !isPending) return;
+    if (!liveHost || hasResponded || !isPending || (getInteractivePromptStatus && promptStatus !== 'available')) return;
 
     setIsAllowingAllDomains(true);
     setLocalResult({ decision: 'allow', scope: 'always-all' });
@@ -259,11 +279,12 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
       await liveHost.toolPermissionSubmit(requestId, { decision: 'allow', scope: 'always-all' });
     } catch (error) {
       console.error('[ToolPermissionWidget] Failed to allow all domains:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
       setIsAllowingAllDomains(false);
     }
-  }, [host, sessionId, requestId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, sessionId, requestId, hasResponded, isPending]);
 
   // Determine display state
   const displayResult = localResult || completedState;
@@ -339,6 +360,21 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
       </div>
     );
   }
+
+  if (promptStatus === 'unavailable' || promptStatus === 'resolved') {
+    return (
+      <InteractivePromptStatusCard
+        testId="tool-permission-widget"
+        title="ToolPermission"
+        status={promptStatus}
+      />
+    );
+  }
+
+  const hasLiveHost = !!host || !!getInteractiveWidgetHost(sessionId);
+  const responseDisabled = isSubmitting || Boolean(
+    getInteractivePromptStatus && (promptStatus !== 'available' || !hasLiveHost),
+  );
 
   // Previously: when `host` was null we rendered a button-less "Waiting..."
   // shell. That trapped users when SessionTranscript's host-attaching effect
@@ -480,7 +516,7 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
             type="button"
             data-testid="tool-permission-deny"
             onClick={handleDeny}
-            disabled={isSubmitting}
+            disabled={responseDisabled}
             className="px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer border border-nim bg-nim-tertiary text-nim whitespace-nowrap transition-all duration-150 hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Deny
@@ -489,7 +525,7 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
             type="button"
             data-testid="tool-permission-allow-once"
             onClick={handleAllowOnce}
-            disabled={isSubmitting}
+            disabled={responseDisabled}
             className="px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer border border-nim bg-nim-tertiary text-nim whitespace-nowrap transition-all duration-150 hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Allow Once
@@ -499,7 +535,7 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
             type="button"
             data-testid="tool-permission-allow-session"
             onClick={handleAllowSession}
-            disabled={isSubmitting}
+            disabled={responseDisabled}
             title={`Allow ${patternDisplayName} for this session`}
             className="px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer border border-nim-primary bg-transparent text-nim-primary whitespace-nowrap transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -509,7 +545,7 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
             type="button"
             data-testid="tool-permission-allow-always"
             onClick={handleAllowAlways}
-            disabled={isSubmitting}
+            disabled={responseDisabled}
             title={`Save ${patternDisplayName} to .claude/settings.local.json`}
             className="px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer border-none bg-nim-primary text-nim-on-primary whitespace-nowrap transition-all duration-150 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -522,7 +558,7 @@ export const ToolPermissionWidget: React.FC<CustomToolWidgetProps> = ({
                 type="button"
                 data-testid="tool-permission-allow-all-domains"
                 onClick={handleAllowAllDomains}
-                disabled={isSubmitting || isAllowingAllDomains}
+                disabled={responseDisabled || isAllowingAllDomains}
                 title="Allow fetching from any domain without asking"
                 className="px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer border-none bg-nim-primary text-nim-on-primary whitespace-nowrap transition-all duration-150 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >

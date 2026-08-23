@@ -21,6 +21,29 @@ export interface TranscriptSettings {
 }
 
 /**
+ * Native interactive prompt kinds whose renderer needs to know whether the
+ * response supplier can still receive a click after a restart or mode switch.
+ */
+export type InteractivePromptType =
+  | 'ask_user_question'
+  | 'request_user_input'
+  | 'exit_plan_mode'
+  | 'tool_permission'
+  | 'git_commit';
+
+export type InteractivePromptAvailability = 'available' | 'unavailable' | 'resolved';
+
+export interface InteractivePromptStatusResult {
+  status: InteractivePromptAvailability;
+  reason?: string;
+}
+
+export type InteractivePromptStatusQuery = (
+  promptId: string,
+  promptType: InteractivePromptType,
+) => Promise<InteractivePromptStatusResult>;
+
+/**
  * Prompt marker for navigation sidebar
  */
 export interface PromptMarker {

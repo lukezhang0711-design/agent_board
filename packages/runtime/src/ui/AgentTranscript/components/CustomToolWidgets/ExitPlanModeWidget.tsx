@@ -12,6 +12,10 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useAtomValue } from 'jotai';
 import type { CustomToolWidgetProps } from './index';
 import { interactiveWidgetHostAtom } from '../../../../store/atoms/interactiveWidgetHost';
+import {
+  InteractivePromptStatusCard,
+  useInteractivePromptStatus,
+} from './InteractivePromptStatus';
 
 // ============================================================
 // Types
@@ -30,6 +34,7 @@ export const ExitPlanModeWidget: React.FC<CustomToolWidgetProps> = ({
   message,
   workspacePath,
   sessionId,
+  getInteractivePromptStatus,
 }) => {
   const toolCall = message.toolCall;
   if (!toolCall) {
@@ -48,10 +53,21 @@ export const ExitPlanModeWidget: React.FC<CustomToolWidgetProps> = ({
   const isCompleted = toolResult !== '';
 
   // The requestId is the tool call ID
-  const requestId = toolCall.providerToolCallId || `exit-plan-${Date.now()}`;
+  const fallbackRequestIdRef = useRef<string | null>(null);
+  const requestId = toolCall.providerToolCallId || (
+    fallbackRequestIdRef.current ??= `exit-plan-${Date.now()}`
+  );
 
   // Widget is interactive if the tool hasn't completed yet
   const isPending = !isCompleted;
+
+  const { status: promptStatus, markUnavailable } = useInteractivePromptStatus(
+    getInteractivePromptStatus,
+    requestId,
+    'exit_plan_mode',
+    isPending,
+    getInteractivePromptStatus ? 'checking' : host ? 'available' : 'checking',
+  );
 
   // Local state for UI
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
@@ -109,7 +125,7 @@ export const ExitPlanModeWidget: React.FC<CustomToolWidgetProps> = ({
 
   // Handle approve
   const handleApprove = useCallback(async () => {
-    if (hasResponded || !isPending || !host) return;
+    if (hasResponded || !isPending || !host || promptStatus !== 'available') return;
 
     setIsSubmitting(true);
     setLocalResult({ approved: true });
@@ -119,16 +135,17 @@ export const ExitPlanModeWidget: React.FC<CustomToolWidgetProps> = ({
       await host.exitPlanModeApprove(requestId);
     } catch (error) {
       console.error('[ExitPlanModeWidget] Failed to approve:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, requestId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, requestId, hasResponded, isPending]);
 
   // Handle start new session
   const handleStartNewSession = useCallback(async () => {
-    if (hasResponded || !isPending || !host) return;
+    if (hasResponded || !isPending || !host || promptStatus !== 'available') return;
 
     setIsSubmitting(true);
     // Match the "Stop for now" end state in the original session while
@@ -140,16 +157,17 @@ export const ExitPlanModeWidget: React.FC<CustomToolWidgetProps> = ({
       await host.exitPlanModeStartNewSession(requestId, planFilePath);
     } catch (error) {
       console.error('[ExitPlanModeWidget] Failed to start new session:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, requestId, planFilePath, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, requestId, planFilePath, hasResponded, isPending]);
 
   // Handle deny with feedback
   const handleDeny = useCallback(async (feedbackText?: string) => {
-    if (hasResponded || !isPending || !host) return;
+    if (hasResponded || !isPending || !host || promptStatus !== 'available') return;
 
     setIsSubmitting(true);
     setLocalResult({ approved: false, feedback: feedbackText });
@@ -159,16 +177,17 @@ export const ExitPlanModeWidget: React.FC<CustomToolWidgetProps> = ({
       await host.exitPlanModeDeny(requestId, feedbackText);
     } catch (error) {
       console.error('[ExitPlanModeWidget] Failed to deny:', error);
+      if (getInteractivePromptStatus) markUnavailable();
       setLocalResult(null);
       setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, requestId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, requestId, hasResponded, isPending]);
 
   // Handle cancel (stop the session)
   const handleCancel = useCallback(async () => {
-    if (hasResponded || !isPending || !host) return;
+    if (hasResponded || !isPending || !host || promptStatus !== 'available') return;
 
     setIsSubmitting(true);
     setLocalResult({ approved: false });
@@ -178,10 +197,13 @@ export const ExitPlanModeWidget: React.FC<CustomToolWidgetProps> = ({
       await host.exitPlanModeCancel(requestId);
     } catch (error) {
       console.error('[ExitPlanModeWidget] Failed to cancel:', error);
+      if (getInteractivePromptStatus) markUnavailable();
+      setLocalResult(null);
+      setHasResponded(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [host, requestId, hasResponded, isPending]);
+  }, [getInteractivePromptStatus, host, markUnavailable, promptStatus, requestId, hasResponded, isPending]);
 
   const handleShowFeedbackInput = useCallback(() => {
     setShowFeedbackInput(true);
@@ -282,8 +304,20 @@ export const ExitPlanModeWidget: React.FC<CustomToolWidgetProps> = ({
     return null;
   }
 
-  // If no host available, show non-interactive pending state
-  if (!host) {
+  if (promptStatus === 'unavailable' || promptStatus === 'resolved') {
+    return (
+      <InteractivePromptStatusCard
+        testId="exit-plan-mode-widget"
+        title="ExitPlanMode"
+        status={promptStatus}
+      />
+    );
+  }
+
+  // A missing host or an in-flight liveness read is a waiting state, not a
+  // clickable card. The liveness query is allowed to revive the card once the
+  // durable/provider route is confirmed.
+  if (!host || promptStatus === 'checking') {
     return (
       <div
         data-testid="exit-plan-mode-widget"

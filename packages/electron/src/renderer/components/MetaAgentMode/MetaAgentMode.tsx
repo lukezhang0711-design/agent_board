@@ -506,6 +506,7 @@ export function MetaAgentMode({
           sessionId={metaSessionId}
           workspacePath={workspacePath}
           mode="agent"
+          disableModeToggle={true}
           hideSidebar={true}
           additionalTeammates={activeChildSessionTeammates}
           waitingForNoun="session"
