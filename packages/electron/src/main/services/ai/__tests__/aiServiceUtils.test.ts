@@ -3,23 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // The runtime workspace is not pre-built when vitest runs in this package, so the
 // subpath imports in aiServiceUtils.ts (`@nimbalyst/runtime/ai/server*`) fail to
 // resolve. Stub the values + types we actually use; the helpers under test only
-// touch ModelIdentifier.tryParse, OpenAICodexProvider.normalizeModelSelection,
-// and the two const arrays.
+// touch ModelIdentifier.tryParse and OpenAICodexProvider.normalizeModelSelection.
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
   OpenAICodexProvider: {
     normalizeModelSelection: (m: string) => {
-      const normalized = m.trim().toLowerCase();
-      if (
-        normalized === 'openai-codex:openai-codex-cli' ||
-        normalized === 'openai-codex-cli' ||
-        normalized === 'openai-codex:default' ||
-        normalized === 'default' ||
-        normalized === 'openai-codex:cli' ||
-        normalized === 'cli'
-      ) {
-        return 'openai-codex:gpt-5.5';
-      }
-      return m;
+      const raw = m.trim().replace(/^openai-codex:/, '');
+      return raw ? `openai-codex:${raw}` : m;
     },
   },
 }));
@@ -32,7 +21,6 @@ vi.mock('@nimbalyst/runtime/ai/server/types', () => ({
       return { provider: id.slice(0, colon), model: id.slice(colon + 1) };
     },
   },
-  CLAUDE_CODE_VARIANTS: ['opus', 'sonnet', 'haiku'] as const,
   AI_PROVIDER_TYPES: ['claude', 'claude-code', 'openai', 'openai-codex', 'lmstudio'] as const,
 }));
 
@@ -260,9 +248,9 @@ describe('aiServiceUtils', () => {
       expect(extractModelForProvider('openai-codex:gpt-5', 'openai-codex')).toBe('gpt-5');
     });
 
-    it('maps legacy openai-codex default aliases through provider normalization', () => {
-      expect(extractModelForProvider('openai-codex:openai-codex-cli', 'openai-codex')).toBe('gpt-5.5');
-      expect(extractModelForProvider('openai-codex:default', 'openai-codex')).toBe('gpt-5.5');
+    it('preserves a legacy OpenAI Codex alias so runtime catalog validation can reject it', () => {
+      expect(extractModelForProvider('openai-codex:openai-codex-cli', 'openai-codex')).toBe('openai-codex-cli');
+      expect(extractModelForProvider('openai-codex:default', 'openai-codex')).toBe('default');
     });
 
     it('returns the full model unchanged for claude-code', () => {
@@ -278,9 +266,9 @@ describe('aiServiceUtils', () => {
       expect(extractModelForProvider('claude-code:opus', 'claude')).toBeNull();
     });
 
-    it('returns null when a bare Claude Code variant is paired with the claude provider', () => {
-      expect(extractModelForProvider('opus', 'claude')).toBeNull();
-      expect(extractModelForProvider('SONNET', 'claude')).toBeNull();
+    it('does not guess whether a bare value belongs to the dynamic Claude Agent catalog', () => {
+      expect(extractModelForProvider('opus', 'claude')).toBe('opus');
+      expect(extractModelForProvider('SONNET', 'claude')).toBe('SONNET');
     });
 
     it('returns null when the model string is just a provider name', () => {

@@ -149,9 +149,9 @@ describe('buildSdkOptions env-key hardening', () => {
   });
 
   it.each([
-    ['claude-code:opus-5', 'claude-opus-5'],
-    ['claude-code:sonnet-5', 'claude-sonnet-5'],
-  ])('carries non-default effort for %s into the SDK spawn environment', async (selectedModel, expectedSdkModel) => {
+    ['claude-code:opus-5', 'opus-5'],
+    ['claude-code:sonnet-5', 'sonnet-5'],
+  ])('carries non-default effort for dynamically discovered %s into the SDK spawn environment', async (selectedModel, expectedSdkModel) => {
     const { options } = await buildSdkOptions(
       makeDeps({
         config: { model: selectedModel, effortLevel: 'max' },
@@ -174,7 +174,7 @@ describe('buildSdkOptions env-key hardening', () => {
       makeParams(),
     );
 
-    expect(options.model).toBe('claude-sonnet-5');
+    expect(options.model).toBe('sonnet-5');
     expect(options.env).not.toHaveProperty('CLAUDE_CODE_EFFORT_LEVEL');
   });
 });

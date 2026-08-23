@@ -11,6 +11,8 @@ import { AISessionsRepository } from '@nimbalyst/runtime';
 import { getDatabase } from '../../database/initialize';
 import { getDefaultAIModel } from '../../utils/store';
 import { randomUUID } from 'crypto';
+import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
+import { assertDynamicModelCatalogSelection } from '../ai/modelCatalogValidation';
 
 // Store active voice session info
 interface VoiceSession {
@@ -627,8 +629,13 @@ export function initVoiceModeService() {
           }
 
           const newSessionId = randomUUID();
-          const provider = 'claude-code';
-          const model = getDefaultAIModel() || 'claude-code:opus-1m';
+          const model = getDefaultAIModel();
+          const parsedModel = model ? ModelIdentifier.tryParse(model) : null;
+          if (!model || !parsedModel) {
+            return { success: false, error: '请先选择一个当前可用的模型；系统不会静默使用旧的默认型号。' };
+          }
+          const provider = parsedModel.provider;
+          await assertDynamicModelCatalogSelection(provider, model);
           const newTitle = title?.trim() || 'New Session';
 
           await AISessionsRepository.create({

@@ -6,6 +6,12 @@ interface Model {
   id: string;
   name: string;
   provider: string;
+  unverifiedPlaceholder?: boolean;
+}
+
+interface CatalogStatus {
+  verified?: boolean;
+  lastError?: { message?: string } | null;
 }
 
 interface ModelSelection {
@@ -31,7 +37,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
 }) => {
   const [prompt, setPrompt] = useState('');
   const [modelSelections, setModelSelections] = useState<ModelSelection[]>([]);
-  const [analysisModel, setAnalysisModel] = useState<string>('claude-code:opus');
+  const [analysisModel, setAnalysisModel] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +54,22 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
         if (response.success && response.grouped) {
           const selections: ModelSelection[] = [];
 
-          // Only show agent-type providers (claude-code, openai-codex)
+          const statuses = (response as { catalogStatuses?: Record<string, CatalogStatus> }).catalogStatuses ?? {};
+          const isVerifiedDynamicModel = (provider: string, model: Model) => {
+            if (provider !== 'claude-code' && provider !== 'openai-codex') return true;
+            const status = statuses[provider];
+            return model.unverifiedPlaceholder !== true
+              && status?.verified === true
+              && !status.lastError?.message;
+          };
+
+          // Only show verified runtime-discovered agent rows. A retained cache
+          // remains visible in the main selector for diagnosis, but must not
+          // create a blitz worktree against an unverified current catalog.
           for (const [provider, models] of Object.entries(response.grouped as Record<string, Model[]>)) {
             if (provider === 'claude-code' || provider === 'openai-codex') {
               for (const model of models) {
+                if (!isVerifiedDynamicModel(provider, model)) continue;
                 selections.push({
                   id: model.id,
                   name: model.name,
@@ -70,9 +88,10 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
 
           setModelSelections(selections);
 
-          // Default analysis model to opus if available, otherwise first model
+          // The analysis model is one of the verified, selectable rows. Never
+          // manufacture a package-local Opus fallback.
           const opusModel = selections.find(s => s.id.includes('opus'));
-          setAnalysisModel(opusModel?.id || selections[0]?.id || 'claude-code:opus');
+          setAnalysisModel(opusModel?.id || selections[0]?.id || '');
         }
       } catch (err) {
         console.error('[BlitzDialog] Failed to load models:', err);
@@ -308,9 +327,11 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
               className="w-full px-3 py-2 text-[13px] bg-nim border border-nim rounded-lg text-nim outline-none focus:border-nim-focus transition-colors cursor-pointer"
               value={analysisModel}
               onChange={(e) => setAnalysisModel(e.target.value)}
-              disabled={creating || loading}
+              disabled={creating || loading || modelSelections.length === 0}
             >
-              {modelSelections.map(model => (
+              {modelSelections.length === 0 ? (
+                <option value="">没有已验证模型，请检查模型目录状态</option>
+              ) : modelSelections.map(model => (
                 <option key={model.id} value={model.id}>
                   {getModelDisplayName(model)}
                 </option>

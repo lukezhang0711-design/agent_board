@@ -741,7 +741,10 @@ export const sessionWorktreeIdAtom = atomFamily((sessionId: string) =>
  */
 export const sessionModelAtom = atomFamily((sessionId: string) =>
   atom(
-    (get) => get(sessionStoreAtom(sessionId))?.model || 'claude-code:sonnet',
+    // Missing model is intentional: a dynamic provider must ask the user to
+    // reselect from its live catalog instead of rendering a static Sonnet
+    // preset that the engine may not offer.
+    (get) => get(sessionStoreAtom(sessionId))?.model ?? '',
     (get, set, newModel: string) => {
       const current = get(sessionStoreAtom(sessionId));
       if (current) {
@@ -1242,7 +1245,7 @@ export const createChildSessionAtom = atom(
           id: result.sessionId,
           title: 'New Session',
           provider: resolvedProvider,
-          model: model || 'claude-code:sonnet',
+          model: model ?? '',
           mode: 'agent',
           messages: [],
           parentSessionId,
@@ -1582,7 +1585,7 @@ export const convertToWorkstreamAtom = atom(
           id: siblingResult.sessionId,
           title: 'New Session',
           provider: sessionData.provider || 'claude-code',
-          model: model || sessionData.model || 'claude-code:sonnet',
+          model: model ?? sessionData.model ?? '',
           mode: 'agent',
           messages: [],
           parentSessionId,
@@ -2382,7 +2385,7 @@ export const addSessionFullAtom = atom(
         id: session.id,
         title: session.title || 'Untitled Session',
         provider: session.provider || 'claude-code',
-        model: session.model || 'claude-code:sonnet',
+        model: session.model ?? '',
         mode: 'agent',
         messages: [],
         createdAt: session.createdAt,

@@ -19,14 +19,18 @@ interface AgentModel {
   id: string;
   name: string;
   provider: string;
+  unverifiedPlaceholder?: boolean;
+}
+
+interface CatalogStatus {
+  verified?: boolean;
+  lastError?: { message?: string } | null;
 }
 
 interface NewSuperLoopDialogProps {
   workspacePath: string;
   onSuperLoopCreated?: (superLoopId: string, worktreeId: string) => void;
 }
-
-const DEFAULT_MODEL = 'claude-code:opus';
 
 export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
   workspacePath,
@@ -37,7 +41,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
 
   const [taskDescription, setTaskDescription] = useState('');
   const [maxIterations, setMaxIterations] = useState<number>(SUPER_LOOP_DEFAULTS.maxIterations);
-  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [agentModels, setAgentModels] = useState<AgentModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -52,20 +56,34 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
       try {
         const response = await window.electronAPI.aiGetModels();
         if (response.success && response.grouped) {
-          // Only include agent providers (claude-code, openai-codex)
+          const statuses = (response as { catalogStatuses?: Record<string, CatalogStatus> }).catalogStatuses ?? {};
+          const isVerifiedDynamicModel = (provider: string, model: AgentModel) => {
+            if (provider !== 'claude-code' && provider !== 'openai-codex') return true;
+            const status = statuses[provider];
+            return model.unverifiedPlaceholder !== true
+              && status?.verified === true
+              && !status.lastError?.message;
+          };
+
+          // Only include verified dynamic agent rows. Cached error rows are
+          // diagnostic display, not a valid target for a new loop.
           const agents: AgentModel[] = [];
           for (const [provider, models] of Object.entries(response.grouped)) {
             if (provider === 'claude-code' || provider === 'openai-codex') {
               for (const model of models as AgentModel[]) {
+                if (!isVerifiedDynamicModel(provider, model)) continue;
                 agents.push(model);
               }
             }
           }
           setAgentModels(agents);
 
-          // If the default model isn't in the list, select the first available
+          // Select only a returned engine model; do not restore a static alias
+          // if discovery has failed.
           if (agents.length > 0 && !agents.some(m => m.id === selectedModel)) {
             setSelectedModel(agents[0].id);
+          } else if (agents.length === 0) {
+            setSelectedModel('');
           }
         }
       } catch (err) {
@@ -83,7 +101,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
     if (isOpen) {
       setTaskDescription('');
       setMaxIterations(SUPER_LOOP_DEFAULTS.maxIterations);
-      setSelectedModel(DEFAULT_MODEL);
+      setSelectedModel('');
       setError(null);
     }
   }, [isOpen]);
@@ -97,6 +115,10 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
   const handleCreate = useCallback(async () => {
     if (!taskDescription.trim()) {
       setError('Task description is required');
+      return;
+    }
+    if (!selectedModel) {
+      setError('请选择已验证的模型；目录获取失败时不能创建 Super Loop。');
       return;
     }
 
@@ -219,12 +241,12 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-md text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary appearance-none pr-8"
-                  disabled={isCreating || loadingModels}
+                  disabled={isCreating || loadingModels || agentModels.length === 0}
                 >
                   {loadingModels ? (
-                    <option value={selectedModel}>Loading models...</option>
+                    <option value="">Loading models...</option>
                   ) : agentModels.length === 0 ? (
-                    <option value={DEFAULT_MODEL}>{getModelDisplayName(DEFAULT_MODEL)}</option>
+                    <option value="">没有已验证模型，请检查模型目录状态</option>
                   ) : (
                     agentModels.map((model) => (
                       <option key={model.id} value={model.id}>
@@ -288,7 +310,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
           </button>
           <button
             onClick={handleCreate}
-            disabled={isCreating || !taskDescription.trim()}
+            disabled={isCreating || !taskDescription.trim() || !selectedModel}
             className="px-4 py-2 text-sm font-medium text-nim-on-primary bg-nim-primary hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors flex items-center gap-2"
           >
             {isCreating ? (

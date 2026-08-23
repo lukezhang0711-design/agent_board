@@ -2356,19 +2356,12 @@ export function runMigrations(currentVersion: string): void {
   // (versions before we started tracking lastKnownVersion)
   const isUpgradingFromOldVersion = !lastKnownVersion;
 
-  // One-shot, version-independent migration (NIM-827): plain `fable` defaults
-  // become `fable-1m`. Claude Code windows plain `fable` at 200k and gates the
-  // 1M window behind `fable[1m]`; the original Fable picker row predated
-  // `fable-1m`, so users who picked it were silently on 200k and hit "Prompt
-  // is too long" as soon as a large skill loaded. Flag-guarded (not
-  // version-gated) so it also fires on dev builds where the version doesn't
-  // change; a user who later deliberately re-picks plain Fable stays on it.
+  // Historical Fable migration marker. Keep an old saved model unchanged:
+  // only the engine's live catalog may tell us whether it is still available.
   if (!getAppStore().get('fableDefaultMigratedTo1m')) {
     const currentDefault = getAppStore().get('defaultAIModel');
     if (currentDefault === 'claude-code:fable' || currentDefault === 'claude-code-cli:fable') {
-      const migrated = `${currentDefault}-1m`;
-      logger.store.info(`[Migrations] Migrating default model from ${currentDefault} to ${migrated}`);
-      getAppStore().set('defaultAIModel', migrated);
+      logger.store.info(`[Migrations] Preserving ${currentDefault}; the live model catalog will require explicit reselection if it is no longer available`);
     }
     getAppStore().set('fableDefaultMigratedTo1m', true);
   }
@@ -2380,14 +2373,12 @@ export function runMigrations(currentVersion: string): void {
 
   logger.store.info('[Migrations] Running migrations from', lastKnownVersion || '(unknown/<=0.52.10)', 'to', currentVersion);
 
-  // Migration: Auto-switch users from claude-code:opus to claude-code:opus-1m (1M context)
-  // Only runs once — on first upgrade to a version with this migration.
-  // New users get opus-1m by default; this migrates existing users who had opus selected.
+  // Historical Opus migration boundary. Do not replace a user-selected model
+  // with a package alias; stale defaults are surfaced for explicit reselection.
   if (isUpgradingFromOldVersion || versionLessThanOrEqual(lastKnownVersion, '0.56.7')) {
     const currentDefault = getAppStore().get('defaultAIModel');
     if (currentDefault === 'claude-code:opus') {
-      logger.store.info('[Migrations] Migrating default model from claude-code:opus to claude-code:opus-1m');
-      getAppStore().set('defaultAIModel', 'claude-code:opus-1m');
+      logger.store.info('[Migrations] Preserving claude-code:opus; the live model catalog will require explicit reselection if it is no longer available');
     }
   }
 

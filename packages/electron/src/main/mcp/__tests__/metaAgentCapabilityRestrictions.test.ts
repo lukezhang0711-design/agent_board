@@ -28,6 +28,7 @@ describe('extension Meta Agent current capability restrictions', () => {
     const fullDevToolNames = getDevAgentOpenAITools('full').map((tool) => tool.function.name);
 
     expect(metaToolNames).toEqual([
+      'list_models',
       'list_worktrees',
       'submit_plan',
       'create_session',

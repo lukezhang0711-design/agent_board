@@ -120,32 +120,13 @@ describe('OpenAICodexProvider', () => {
     }
   });
 
-  it('returns fallback models when SDK model discovery is unavailable', async () => {
+  it('does not expose a static catalog when the host has no verified snapshot', async () => {
     expect(OpenAICodexProvider.DEFAULT_MODEL).toBe('openai-codex:gpt-5.5');
 
-    const models = await OpenAICodexProvider.getModels(undefined, {
-      loadSdkModule: async () => {
-        throw new Error('sdk unavailable');
-      },
-    });
-
-    expect(models.length).toBeGreaterThan(1);
-    expect(models).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: 'openai-codex:gpt-5.4',
-        provider: 'openai-codex',
-      }),
-      expect.objectContaining({
-        id: 'openai-codex:gpt-5.3-codex',
-        provider: 'openai-codex',
-      }),
-    ]));
+    await expect(OpenAICodexProvider.getModels()).resolves.toEqual([]);
   });
 
-  it('uses the host refresh snapshot without invoking SDK discovery', async () => {
-    const loadSdkModule = vi.fn(async () => {
-      throw new Error('host snapshot must prevent SDK discovery');
-    });
+  it('uses the host refresh snapshot as the only model catalog source', async () => {
     OpenAICodexProvider.setModelRefreshSnapshotResolver(() => [{
       id: 'openai-codex:gpt-5.4',
       name: 'GPT-5.4 from refresh service',
@@ -154,9 +135,8 @@ describe('OpenAICodexProvider', () => {
       maxTokens: 128_000,
     }]);
 
-    const models = await OpenAICodexProvider.getModels(undefined, { loadSdkModule });
+    const models = await OpenAICodexProvider.getModels();
 
-    expect(loadSdkModule).not.toHaveBeenCalled();
     expect(models).toContainEqual(expect.objectContaining({
       id: 'openai-codex:gpt-5.4',
       name: 'GPT-5.4 from refresh service',
@@ -209,77 +189,28 @@ describe('OpenAICodexProvider', () => {
     }));
   });
 
-  it('normalizes legacy codex default aliases to the GPT-5.5 default', () => {
-    expect(OpenAICodexProvider.normalizeModelSelection('openai-codex:openai-codex-cli')).toBe('openai-codex:gpt-5.5');
-    expect(OpenAICodexProvider.normalizeModelSelection('openai-codex:default')).toBe('openai-codex:gpt-5.5');
-    expect(OpenAICodexProvider.normalizeModelSelection('cli')).toBe('openai-codex:gpt-5.5');
+  it('normalizes only the provider prefix and never rewrites a missing model', () => {
+    expect(OpenAICodexProvider.normalizeModelSelection('openai-codex:openai-codex-cli')).toBe('openai-codex:openai-codex-cli');
+    expect(OpenAICodexProvider.normalizeModelSelection('openai-codex:default')).toBe('openai-codex:default');
+    expect(OpenAICodexProvider.normalizeModelSelection('cli')).toBe('openai-codex:cli');
   });
 
-  it('uses SDK-provided model discovery when available', async () => {
-    vi.spyOn(OpenAICodexProvider as any, 'getModelsFromOpenAI').mockResolvedValue([]);
-    let codexConstructorOptions: Record<string, unknown> | undefined;
-    const listModels = vi.fn(async () => ({
-      data: [
-        {
-          id: 'gpt-5.2-codex',
-          name: 'GPT-5.2 Codex',
-          contextWindow: 400000,
-          maxTokens: 128000,
-        },
-      ],
-    }));
+  it('preserves all runtime snapshot metadata, including ultra effort', async () => {
+    OpenAICodexProvider.setModelRefreshSnapshotResolver(() => [{
+      id: 'openai-codex:gpt-5.6-sol',
+      name: 'GPT-5.6 Sol',
+      provider: 'openai-codex',
+      supportedEffortLevels: ['low', 'ultra'],
+      defaultEffortLevel: 'ultra',
+    }]);
 
-    const models = await OpenAICodexProvider.getModels('test-key', {
-      loadSdkModule: async () =>
-        ({
-          Codex: class {
-            constructor(options?: Record<string, unknown>) {
-              codexConstructorOptions = options;
-            }
-
-            listModels = listModels;
-
-            startThread = vi.fn();
-
-            resumeThread = vi.fn();
-          },
-        }) as any,
-    });
-
-    expect(codexConstructorOptions).toEqual({ apiKey: 'test-key' });
-    expect(listModels).toHaveBeenCalledTimes(1);
-    expect(models).toEqual(expect.arrayContaining([
+    await expect(OpenAICodexProvider.getModels()).resolves.toEqual([
       expect.objectContaining({
-        id: 'openai-codex:gpt-5.5',
-        provider: 'openai-codex',
+        id: 'openai-codex:gpt-5.6-sol',
+        supportedEffortLevels: ['low', 'ultra'],
+        defaultEffortLevel: 'ultra',
       }),
-      expect.objectContaining({
-        id: 'openai-codex:gpt-5.4',
-        provider: 'openai-codex',
-      }),
-      expect.objectContaining({
-        id: 'openai-codex:gpt-5.3-codex',
-        provider: 'openai-codex',
-      }),
-      expect.objectContaining({
-        id: 'openai-codex:gpt-5.2-codex',
-        name: 'GPT-5.2 Codex',
-        provider: 'openai-codex',
-      }),
-      expect.objectContaining({
-        id: 'openai-codex:gpt-5.1-codex-max',
-        provider: 'openai-codex',
-      }),
-      expect.objectContaining({
-        id: 'openai-codex:gpt-5.2',
-        provider: 'openai-codex',
-      }),
-      expect.objectContaining({
-        id: 'openai-codex:gpt-5.1-codex-mini',
-        provider: 'openai-codex',
-      }),
-    ]));
-    expect(models).toHaveLength(7);
+    ]);
   });
 
   it('preserves CLI auth when initialized without an API key', async () => {
@@ -1527,7 +1458,7 @@ describe('OpenAICodexProvider', () => {
     expect(errorChunk?.error).toContain('permission mode');
   });
 
-  it('maps default codex cli aliases to gpt-5.5 when starting a thread', async () => {
+  it('does not silently rewrite a removed Codex default alias when starting a thread', async () => {
     const startThread = vi.fn((config: { model: string }) => ({
       id: 'thread-legacy',
       runStreamed: async () => ({
@@ -1567,10 +1498,10 @@ describe('OpenAICodexProvider', () => {
 
     expect(startThread).toHaveBeenCalledTimes(1);
     const startArgs = (startThread.mock.calls as unknown as [Record<string, unknown>][])[0][0];
-    expect(startArgs.model).toBe('gpt-5.5');
+    expect(startArgs.model).toBe('openai-codex-cli');
   });
 
-  it('maps removed codex aliases to supported model ids', async () => {
+  it('does not silently rewrite a removed Codex alias', async () => {
     const startThread = vi.fn((config: { model: string }) => ({
       id: 'thread-alias',
       runStreamed: async () => ({
@@ -1610,10 +1541,10 @@ describe('OpenAICodexProvider', () => {
 
     expect(startThread).toHaveBeenCalledTimes(1);
     const startArgs = (startThread.mock.calls as unknown as [Record<string, unknown>][])[0][0];
-    expect(startArgs.model).toBe('gpt-5.1-codex-mini');
+    expect(startArgs.model).toBe('codex-mini-latest');
   });
 
-  it('maps removed codex max aliases to supported model ids', async () => {
+  it('does not silently rewrite a removed Codex max alias', async () => {
     const startThread = vi.fn((config: { model: string }) => ({
       id: 'thread-alias-max',
       runStreamed: async () => ({
@@ -1653,7 +1584,7 @@ describe('OpenAICodexProvider', () => {
 
     expect(startThread).toHaveBeenCalledTimes(1);
     const startArgs = (startThread.mock.calls as unknown as [Record<string, unknown>][])[0][0];
-    expect(startArgs.model).toBe('gpt-5.2-codex');
+    expect(startArgs.model).toBe('gpt-5.2-codex-max');
   });
 
   it('supports direct handleToolCall execution through the shared tool handler', async () => {

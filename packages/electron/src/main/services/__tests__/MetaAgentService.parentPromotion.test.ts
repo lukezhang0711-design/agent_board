@@ -114,7 +114,10 @@ describe('MetaAgentService parent agent_role promotion (NIM-858)', () => {
 
   it('does NOT promote a standard parent to meta-agent when it spawns a child', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(STANDARD_PARENT as any);
 
     await (service as any).createChildSessionInternal('standard-parent', '/workspace/path', {});

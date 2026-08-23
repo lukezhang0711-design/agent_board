@@ -970,7 +970,7 @@ export async function initAIDebugSettings(): Promise<AIDebugSettings> {
 export interface AgentModeSettings {
   /** The last model selected by the user in agent mode, used as default for new sessions */
   defaultModel: string;
-  /** The effort level for Opus 4.6 adaptive reasoning (low/medium/high/max) */
+  /** Engine-reported thinking effort (including ultra when supported). */
   defaultEffortLevel: EffortLevel;
 }
 
@@ -978,7 +978,10 @@ export interface AgentModeSettings {
  * Default agent mode settings.
  */
 const defaultAgentModeSettings: AgentModeSettings = {
-  defaultModel: 'claude-code:opus-1m',
+  // Do not manufacture a package model ID before the engine catalog arrives.
+  // Main resolves a first-install session only from the engine's own live
+  // recommended row; a previously saved model is always validated as-is.
+  defaultModel: '',
   defaultEffortLevel: DEFAULT_EFFORT_LEVEL,
 };
 
@@ -1096,6 +1099,13 @@ export interface AIModel {
   id: string;
   name: string;
   provider: string;
+  description?: string;
+  resolvedModel?: string;
+  supportsEffort?: boolean;
+  supportedEffortLevels?: EffortLevel[];
+  defaultEffortLevel?: EffortLevel;
+  isEngineDefault?: boolean;
+  unverifiedPlaceholder?: boolean;
 }
 
 /**

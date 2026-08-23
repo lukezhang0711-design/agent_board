@@ -763,8 +763,10 @@ export class CodexAppServerProtocol implements AgentProtocol {
     const sandbox: ThreadStartParams['sandbox'] =
       options.permissionMode === 'bypass-all' ? 'danger-full-access' : 'workspace-write';
 
+    // Do not collapse `ultra` (or any currently advertised effort) to a
+    // guessed lower tier. The dynamic Codex catalog is authoritative.
     const effortLevel = options.raw?.effortLevel as string | undefined;
-    const reasoningEffortRaw = effortLevel === 'max' ? 'xhigh' : (effortLevel ?? 'high');
+    const reasoningEffortRaw = effortLevel ?? 'high';
 
     const systemPrompt = (options.raw?.systemPrompt as string | undefined) ?? options.systemPrompt;
     const additionalDirectories = Array.isArray(options.raw?.additionalDirectories)

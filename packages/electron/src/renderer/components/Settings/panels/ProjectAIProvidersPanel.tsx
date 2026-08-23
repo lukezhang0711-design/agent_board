@@ -25,6 +25,27 @@ interface Model {
   provider: string;
 }
 
+interface ModelCatalogStatus {
+  modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
+  verified?: boolean;
+  lastSuccessAt?: number | null;
+  lastError?: { message?: string } | null;
+}
+
+function formatCatalogWarning(provider: string, status: ModelCatalogStatus | undefined): string | null {
+  if (!status) return null;
+  const cachedAt = typeof status.lastSuccessAt === 'number'
+    ? `上次成功获取于 ${new Date(status.lastSuccessAt).toLocaleString()}`
+    : null;
+  if (status.lastError?.message) {
+    return `${provider} 模型目录获取失败：${status.lastError.message}${cachedAt ? `。${cachedAt}` : ''}`;
+  }
+  if (!status.verified || status.modelSource !== 'runtime') {
+    return `${provider} 模型目录未在本次运行中验证，型号不可选择。${cachedAt ? ` ${cachedAt}` : ''}`;
+  }
+  return null;
+}
+
 interface TrackerAutomationOverride {
   enabled?: boolean;
   autoCloseOnCommit?: boolean;
@@ -54,6 +75,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
   const [globalApiKeys, setGlobalApiKeys] = useState<Record<string, string>>({});
   const [projectOverrides, setProjectOverrides] = useState<AIProviderOverrides>({});
   const [availableModels, setAvailableModels] = useState<Record<string, Model[]>>({});
+  const [catalogStatuses, setCatalogStatuses] = useState<Record<string, ModelCatalogStatus>>({});
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
   const [trackerAutomationOverride, setTrackerAutomationOverride] = useState<TrackerAutomationOverride | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -99,6 +121,9 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
         const modelsResult = await window.electronAPI.aiGetAllModels();
         if (modelsResult.success && modelsResult.grouped) {
           setAvailableModels(modelsResult.grouped);
+        }
+        if (modelsResult.catalogStatuses) {
+          setCatalogStatuses(modelsResult.catalogStatuses as Record<string, ModelCatalogStatus>);
         }
       } catch (err) {
         console.error('Failed to load models:', err);
@@ -257,6 +282,20 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
           Enable overrides to use different API keys or models for this project.
         </p>
       </div>
+
+      {(['claude-code', 'openai-codex'] as const)
+        .map((provider) => formatCatalogWarning(provider, catalogStatuses[provider]))
+        .filter((message): message is string => !!message)
+        .map((message) => (
+          <div
+            key={message}
+            className="rounded-lg border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] px-3 py-2 text-xs leading-relaxed text-[var(--nim-error)]"
+            role="alert"
+            data-testid="project-model-catalog-warning"
+          >
+            {message}
+          </div>
+        ))}
 
       <div className="panel-content flex-1 overflow-y-auto">
         <div className="providers-list flex flex-col gap-3">

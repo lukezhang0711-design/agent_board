@@ -18,6 +18,7 @@ vi.mock('@nimbalyst/runtime', () => ({
   AISessionsRepository: {
     create: vi.fn(),
     updateMetadata: vi.fn(),
+    delete: vi.fn(),
     get: vi.fn(),
   },
   AgentMessagesRepository: {},
@@ -42,11 +43,6 @@ vi.mock('@nimbalyst/runtime/ai/server/types', () => ({
       }
       const provider = id.slice(0, i);
       const model = id.slice(i + 1);
-      if (provider === 'claude-code') {
-        if (model === 'opus-4-8') return { provider, model: 'opus', combined: 'claude-code:opus' };
-        if (model === 'opus-4-8-1m') return { provider, model: 'opus-1m', combined: 'claude-code:opus-1m' };
-        if (model === 'unknown') throw new Error(`Unsupported Claude Agent model "${id}"`);
-      }
       return { provider, model, combined: `${provider}:${model}` };
     },
     tryParse: (id: string) => {
@@ -77,13 +73,14 @@ vi.mock('../ai/providerResolution', () => ({
 
 vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] },
-  app: { on: vi.fn(), getAppPath: () => '/', isPackaged: false },
+  app: { on: vi.fn(), getAppPath: () => '/', getPath: () => '/tmp', isPackaged: false },
 }));
 
 vi.mock('../SyncManager', () => ({ getSyncProvider: () => ({ pushChange: vi.fn() }) }));
 vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn(), safeOn: vi.fn() }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
+  isAnalyticsEnabled: () => false,
   store: { get: appStoreMock.get },
 }));
 vi.mock('../../utils/timestampUtils', () => ({ toMillis: (v: unknown) => v }));
@@ -111,6 +108,7 @@ vi.mock('../metaAgentMessageText', () => ({
   extractMessageText: vi.fn(),
   extractUserPrompts: vi.fn(),
 }));
+vi.mock('../../mcp/tools/trackerToolHandlers', () => ({ createBidirectionalLink: vi.fn() }));
 // NIM-828: MetaAgentService statically imports the CLI launcher singleton (to wire
 // the meta-agent port); mock it so node-pty/electron-app don't enter the graph.
 vi.mock('../ai/claudeCliLauncherSingleton', () => ({
@@ -136,20 +134,25 @@ const CLAUDE_PARENT = {
 const CODEX_PARENT = {
   id: 'parent-codex-session',
   provider: 'openai-codex',
-  model: 'openai-codex:gpt-5.4',
+  model: 'openai-codex:gpt-5.6-terra',
 };
 
 
 describe('MetaAgentService child-spawn provider inheritance', () => {
   beforeEach(() => {
     vi.mocked(AISessionsRepository.create).mockReset();
+    vi.mocked(AISessionsRepository.delete).mockReset();
     vi.mocked(AISessionsRepository.get).mockReset();
+    vi.mocked(AISessionsRepository.updateMetadata).mockReset();
   });
 
   it('inherits the gemini parent provider+model when the parent is a chat-only extension agent and no provider is given', async () => {
     const service = MetaAgentService.getInstance();
     // The child-spawn path guards on this.aiService being present.
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
 
     // No explicit model/provider - the default delegated-child case. A gemini
@@ -169,15 +172,19 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
     expect(created.provider).not.toBe('claude-code');
   });
 
-  it('honors an explicit args.provider so the model can deliberately spawn a gemini child from a claude-code parent', async () => {
+  it('honors an explicit provider/model pair so the model can deliberately spawn a gemini child from a claude-code parent', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     // Parent is dev-capable claude-code, but the caller explicitly asks for the
     // chat-only gemini provider. The explicit override must win.
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
 
     await (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {
       provider: 'antigravity-gemini-agent',
+      model: 'antigravity-gemini-agent:gemini-flash-3.5',
     });
 
     const created = vi.mocked(AISessionsRepository.create).mock.calls[0][0] as any;
@@ -186,7 +193,11 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
 
   it('still inherits a dev-capable built-in parent (claude-code) when no provider is given', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    const assertCurrentDynamicModelAvailable = vi.fn(async () => {});
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable,
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
 
     await (service as any).createChildSessionInternal('parent-claude-session', '/workspace/path', {});
@@ -196,23 +207,32 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
     // not fire and the child inherits the parent provider+model unchanged.
     expect(created.provider).toBe('claude-code');
     expect(created.model).toBe('claude-code:opus');
+    expect(assertCurrentDynamicModelAvailable).toHaveBeenCalledWith('claude-code', 'claude-code:opus');
   });
 
   it('still inherits a dev-capable built-in parent (openai-codex) when no provider is given', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    const assertCurrentDynamicModelAvailable = vi.fn(async () => {});
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable,
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CODEX_PARENT as any);
 
     await (service as any).createChildSessionInternal('parent-codex-session', '/workspace/path', {});
 
     const created = vi.mocked(AISessionsRepository.create).mock.calls[0][0] as any;
     expect(created.provider).toBe('openai-codex');
-    expect(created.model).toBe('openai-codex:gpt-5.4');
+    expect(created.model).toBe('openai-codex:gpt-5.6-terra');
+    expect(assertCurrentDynamicModelAvailable).toHaveBeenCalledWith('openai-codex', 'openai-codex:gpt-5.6-terra');
   });
 
   it('still lets an explicit model arg win over the inherited parent', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
 
     await (service as any).createChildSessionInternal('parent-gemini-session', '/workspace/path', {
@@ -226,7 +246,10 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
 
   it('lets a claude-code parent launch an explicit openai-codex child without tripping the claude-code guard', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
 
     // The "Implement in Codex" action: a claude-code originating session
@@ -241,9 +264,12 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
     expect(created.model).toBe('openai-codex:gpt-5.5');
   });
 
-  it('normalizes explicit claude-code opus-4-8 aliases before persisting the child session', async () => {
+  it('passes a dynamically discovered Claude Agent alias to the catalog validator unchanged', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
 
     await (service as any).createChildSessionInternal('parent-gemini-session', '/workspace/path', {
@@ -252,40 +278,82 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
 
     const created = vi.mocked(AISessionsRepository.create).mock.calls[0][0] as any;
     expect(created.provider).toBe('claude-code');
-    expect(created.model).toBe('claude-code:opus-1m');
+    expect(created.model).toBe('claude-code:opus-4-8-1m');
   });
 
-  it('rejects unsupported explicit claude-code variants instead of silently falling back', async () => {
+  it('rejects a Head requested ultra tier when the discovered model does not advertise it', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    const assertCurrentDynamicModelAvailable = vi.fn(async (
+      _provider: string,
+      _model: string,
+      effortLevel?: string,
+    ) => {
+      if (effortLevel === 'ultra') {
+        throw new Error('型号“openai-codex:gpt-5.6-luna”不支持思考档“ultra”。请按当前模型目录重新选择思考档。');
+      }
+    });
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable,
+    };
+    vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
+
+    await expect(
+      (service as any).createChildSessionInternal('parent-gemini-session', '/workspace/path', {
+        model: 'openai-codex:gpt-5.6-luna',
+        effortLevel: 'ultra',
+      }),
+    ).rejects.toThrow('不支持思考档“ultra”');
+    expect(assertCurrentDynamicModelAvailable).toHaveBeenCalledWith(
+      'openai-codex',
+      'openai-codex:gpt-5.6-luna',
+      'ultra',
+    );
+    expect(AISessionsRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unavailable dynamic Claude model before persisting the child session', async () => {
+    const service = MetaAgentService.getInstance();
+    const assertCurrentDynamicModelAvailable = vi.fn(async (_provider: string, model: string) => {
+      if (model === 'claude-code:unknown') {
+        throw new Error('已保存的默认模型“claude-code:unknown”不再属于当前 claude-code 模型目录。请重新选择模型；系统不会自动改为其他型号。');
+      }
+    });
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable,
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
 
     await expect(
       (service as any).createChildSessionInternal('parent-gemini-session', '/workspace/path', {
         model: 'claude-code:unknown',
       })
-    ).rejects.toThrow('Unsupported Claude Agent model');
+    ).rejects.toThrow('不再属于当前 claude-code 模型目录');
+    expect(assertCurrentDynamicModelAvailable).toHaveBeenCalledWith('claude-code', 'claude-code:unknown');
+    expect(AISessionsRepository.create).not.toHaveBeenCalled();
   });
 
-  it('falls back to the hardcoded default for a genuine orphan call (no parent session found)', async () => {
+  it('requires Head to choose from list_models for a genuine orphan call (no parent or configured default)', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(null as any);
 
-    await (service as any).createChildSessionInternal('orphan-session', '/workspace/path', {});
-
-    const created = vi.mocked(AISessionsRepository.create).mock.calls[0][0] as any;
-    // With no parent and getDefaultAIModel() null, the child falls back to the
-    // claude-code provider's default (stored as normalizedModel via
-    // ModelIdentifier.getDefaultModelId('claude-code')). The invariant that
-    // matters: an orphan call still resolves to claude-code, unchanged by the fix.
-    expect(created.provider).toBe('claude-code');
-    expect(created.model).toMatch(/^claude-code:/);
+    await expect(
+      (service as any).createChildSessionInternal('orphan-session', '/workspace/path', {}),
+    ).rejects.toThrow('先调用 list_models');
+    expect(AISessionsRepository.create).not.toHaveBeenCalled();
   });
 
   it('inherits the gemini MODEL via args.model from a gemini parent (spawn_session inheritModel path)', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
 
     // spawn_session with inheritModel passes the parent's gemini model verbatim as
@@ -301,9 +369,99 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
     expect(created.provider).not.toBe('claude-code');
   });
 
+  it('rolls back a newly promoted workstream when the catalog flips red before dispatch', async () => {
+    const service = MetaAgentService.getInstance() as any;
+    const parent = {
+      ...CLAUDE_PARENT,
+      workspacePath: '/workspace/path',
+      title: 'Parent task',
+      sessionType: 'session',
+      parentSessionId: null,
+      worktreeId: null,
+    };
+    vi.mocked(AISessionsRepository.get).mockResolvedValue(parent as any);
+    const assertRouting = vi.fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('codex debug models: command timed out'));
+    const authorize = vi.spyOn(service, 'assertDispatchAuthorized').mockResolvedValue(undefined);
+    const resolveRouting = vi.spyOn(service, 'resolveChildRouting').mockResolvedValue({
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.6-sol',
+    });
+    const routingGate = vi.spyOn(service, 'assertChildRoutingAvailable').mockImplementation(assertRouting);
+    const dispatch = vi.spyOn(service, 'dispatchOrQueueChildSession').mockResolvedValue({ sessionId: 'must-not-create' });
+
+    try {
+      await expect(service.spawnSession('parent-claude-session', '/workspace/path', {
+        prompt: 'delegate safely',
+        model: 'openai-codex:gpt-5.6-sol',
+      })).rejects.toThrow('codex debug models: command timed out');
+
+      expect(assertRouting).toHaveBeenCalledTimes(2);
+      const createdWorkstream = vi.mocked(AISessionsRepository.create).mock.calls
+        .map(([payload]) => payload as any)
+        .find((payload) => payload.sessionType === 'workstream');
+      expect(createdWorkstream?.id).toBeTruthy();
+      expect(AISessionsRepository.updateMetadata).toHaveBeenCalledWith(
+        'parent-claude-session',
+        { parentSessionId: createdWorkstream.id },
+      );
+      expect(AISessionsRepository.updateMetadata).toHaveBeenCalledWith(
+        'parent-claude-session',
+        { parentSessionId: null },
+      );
+      expect(AISessionsRepository.delete).toHaveBeenCalledWith(createdWorkstream.id);
+      expect(dispatch).not.toHaveBeenCalled();
+    } finally {
+      authorize.mockRestore();
+      resolveRouting.mockRestore();
+      routingGate.mockRestore();
+      dispatch.mockRestore();
+    }
+  });
+
+  it('rolls back an Actions-menu workstream promotion when the catalog flips red', async () => {
+    const service = MetaAgentService.getInstance();
+    const assertCurrentDynamicModelAvailable = vi.fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('Codex catalog timed out'));
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable,
+    };
+    const parent = {
+      ...CLAUDE_PARENT,
+      workspacePath: '/workspace/path',
+      title: 'Parent',
+      parentSessionId: null,
+      sessionType: 'session',
+      worktreeId: null,
+    };
+    vi.mocked(AISessionsRepository.get).mockResolvedValue(parent as any);
+
+    await expect(service.launchActionSession(parent.id, '/workspace/path', {
+      prompt: 'Review the implementation',
+      autoSubmit: false,
+    })).rejects.toThrow('Codex catalog timed out');
+
+    // The old action path created a workstream first and left it behind when
+    // its later child-validation failed. A refresh race now restores parent
+    // hierarchy and deletes that short-lived container before returning red.
+    expect(assertCurrentDynamicModelAvailable).toHaveBeenCalledTimes(2);
+    expect(AISessionsRepository.create).toHaveBeenCalledTimes(1);
+    expect(AISessionsRepository.updateMetadata).toHaveBeenCalledWith(
+      parent.id,
+      { parentSessionId: null },
+    );
+    expect(AISessionsRepository.delete).toHaveBeenCalledTimes(1);
+  });
+
   it('honors an explicit gemini provider on a gemini parent (explicit-copy path is no longer forced to claude-code)', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
 
     // A gemini parent that copies its own provider into args.provider must be
@@ -332,7 +490,10 @@ describe('MetaAgentService dispatch limits', () => {
 
   it('reads the global setting for every dispatch so the fifth child is rejected at 4 and allowed at 5', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
     vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '4', total: '4' }] } as any);
 
@@ -353,7 +514,10 @@ describe('MetaAgentService dispatch limits', () => {
 
   it('falls back to the default limit of 4 when the stored setting is missing or invalid', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
     vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '4', total: '4' }] } as any);
 
@@ -369,7 +533,10 @@ describe('MetaAgentService dispatch limits', () => {
 
   it('counts only running children, so 3 running plus 2 waiting still allows one dispatch at limit 4', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
     vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '3', total: '5' }] } as any);
 
@@ -385,7 +552,10 @@ describe('MetaAgentService dispatch limits', () => {
 
   it('clamps a higher override and keeps a lower override effective', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
     appStoreMock.state.metaAgentMaxParallel = 2;
     vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [{ in_flight: '2', total: '2' }] } as any);
@@ -409,7 +579,10 @@ describe('MetaAgentService dispatch limits', () => {
 
   it('keeps the independent lifetime backstop at 50', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(CLAUDE_PARENT as any);
     appStoreMock.state.metaAgentMaxParallel = 50;
     vi.mocked(databaseWorker.query).mockResolvedValue({
@@ -425,17 +598,18 @@ describe('MetaAgentService dispatch limits', () => {
     expect(AISessionsRepository.create).not.toHaveBeenCalled();
   });
 
-  it('never pairs an explicit claude-code provider with the inherited gemini model (consistency guard)', async () => {
+  it('requires an explicit live model when switching an inherited gemini child to claude-code', async () => {
     const service = MetaAgentService.getInstance();
-    (service as any).aiService = { queuePromptForSession: vi.fn() };
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
     vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
-    // A Gemini meta-agent explicitly picks claude-code but passes NO model.
-    // The child must NOT be persisted as claude-code + the inherited gemini
-    // model (which routes to Claude Code, is rejected, and dies with no output).
-    await (service as any).createChildSessionInternal('parent-gemini-session', '/workspace/path', { provider: 'claude-code' });
-    const created = vi.mocked(AISessionsRepository.create).mock.calls[0][0] as any;
-    expect(created.provider).toBe('claude-code');
-    expect(String(created.model)).not.toContain('antigravity-gemini-agent');
-    expect(String(created.model).startsWith('claude-code:')).toBe(true);
+    // A Gemini meta-agent explicitly picks Claude but supplies no matching
+    // model. It must not be paired with Gemini's model or a stale static Opus.
+    await expect(
+      (service as any).createChildSessionInternal('parent-gemini-session', '/workspace/path', { provider: 'claude-code' }),
+    ).rejects.toThrow('先调用 list_models');
+    expect(AISessionsRepository.create).not.toHaveBeenCalled();
   });
 });

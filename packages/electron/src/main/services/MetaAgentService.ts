@@ -69,7 +69,7 @@ const PLAN_APPROVAL_FAST_POLL_WINDOW_MS = 60 * 1000;
 const PLAN_APPROVAL_FAST_POLL_INTERVAL_MS = 100;
 const PLAN_APPROVAL_SLOW_POLL_INTERVAL_MS = 2_000;
 const LIFETIME_BACKSTOP = 50;
-const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max']);
+const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
 const TEXT_APPROVAL_REMINDER = 'Head 正在用文字征求批准——请让它提交正式方案，或点此发送标准指令';
 const WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON = '原指挥官会话已不存在，无法重派';
 
@@ -985,6 +985,7 @@ export class MetaAgentService {
       await this.sessionManager.initialize();
 
       setMetaAgentToolFns({
+        listModels: async () => JSON.stringify(await aiService.getCurrentModelCatalog(), null, 2),
         listWorktrees: (_metaSessionId, workspaceId) =>
           this.listWorktreesJson(workspaceId),
         submitPlan: (metaSessionId, workspaceId, args, signal, mcpCall) =>
@@ -1133,9 +1134,6 @@ export class MetaAgentService {
       throw new Error(`Parent session ${parentSessionId} not found in this workspace`);
     }
 
-    const resolved = await this.resolveOrCreateWorkstream(parent, workspaceId);
-    const workstreamId = resolved.workstreamId;
-
     // Meta-agent children ALWAYS run in the parent's working directory (the
     // shared workspace), never a fresh isolated worktree. The parent synthesizes
     // by reading each child's written deliverable; a child that writes into its
@@ -1148,6 +1146,28 @@ export class MetaAgentService {
     // on "opus") rather than dropping to the global default.
     const effectiveModel = args.model ?? parent.model ?? undefined;
 
+    // Match spawn_session: reject a stale dynamic model before the action
+    // path promotes a parent into a workstream. This is intentionally ahead of
+    // every hierarchy mutation, because a red catalog may not be converted
+    // into a seemingly valid empty workstream.
+    const routing = await this.resolveChildRouting(parentSessionId, {
+      model: effectiveModel,
+    });
+    await this.assertChildRoutingAvailable(routing.provider, routing.model, undefined);
+
+    const resolved = await this.resolveOrCreateWorkstream(parent, workspaceId);
+    const workstreamId = resolved.workstreamId;
+    // A manual refresh can turn the catalog red between the initial check and
+    // promotion. Compensate that sole mutation before returning the failure.
+    try {
+      await this.assertChildRoutingAvailable(routing.provider, routing.model, undefined);
+    } catch (error) {
+      if (resolved.promotedParent && workstreamId) {
+        await this.rollbackPromotedWorkstream(parent, workspaceId, workstreamId);
+      }
+      throw error;
+    }
+
     // Pass prompt only when autoSubmit is true; createChildSessionInternal
     // queues + triggers only when a prompt is supplied. For prefill mode we
     // omit it so nothing runs until the user hits Send in the new session.
@@ -1156,7 +1176,8 @@ export class MetaAgentService {
       prompt: args.autoSubmit ? args.prompt : undefined,
       useWorktree: false,
       worktreeId: inheritedWorktreeId,
-      model: effectiveModel,
+      provider: routing.provider,
+      model: routing.model,
       parentSessionIdOverride: workstreamId,
     });
 
@@ -1388,7 +1409,7 @@ export class MetaAgentService {
 
   private validateEffortLevel(effortLevel: EffortLevel | undefined): void {
     if (effortLevel !== undefined && !VALID_EFFORT_LEVELS.has(effortLevel)) {
-      throw new Error('effortLevel must be one of low, medium, high, xhigh, or max');
+      throw new Error('effortLevel must be one of low, medium, high, xhigh, max, or ultra');
     }
   }
 
@@ -1428,27 +1449,58 @@ export class MetaAgentService {
       // Best-effort lookup; fall through to the configured default.
     }
 
-    const defaultModel =
-      parentModel
-      || normalizeStoredChildModelIdentifier(null, getDefaultAIModel())
-      || 'claude-code:opus';
+    const configuredDefault = normalizeStoredChildModelIdentifier(null, getDefaultAIModel());
     const explicitModelProvider =
       args.provider
       ?? (args.model?.includes(':') ? ModelIdentifier.tryParse(args.model)?.provider ?? null : null)
       ?? parentProvider;
     const explicitModel = normalizeStoredChildModelIdentifier(explicitModelProvider, args.model ?? null);
-    const model = explicitModel || defaultModel;
-    const parsed = ModelIdentifier.tryParse(model);
-    const provider = (args.provider || parsed?.provider || parentProvider || 'claude-code') as AIProviderType;
+    const provider = (
+      args.provider
+      || ModelIdentifier.tryParse(explicitModel ?? '')?.provider
+      || parentProvider
+      || ModelIdentifier.tryParse(configuredDefault ?? '')?.provider
+      || 'claude-code'
+    ) as AIProviderType;
     const parentModelProvider = parentModel
       ? (ModelIdentifier.tryParse(parentModel)?.provider ?? parentProvider)
       : null;
-    const normalizedModel =
-      explicitModel
+    const defaultModelProvider = configuredDefault
+      ? ModelIdentifier.tryParse(configuredDefault)?.provider
+      : null;
+    const normalizedModel = explicitModel
       || (parentModel && parentModelProvider === provider ? parentModel : null)
-      || ModelIdentifier.getDefaultModelId(provider);
+      || (configuredDefault && defaultModelProvider === provider ? configuredDefault : null);
+
+    if (!normalizedModel) {
+      throw new Error(
+        `无法为 ${provider} 静默猜测型号。先调用 list_models，再传入该目录中的 provider 和 model。`,
+      );
+    }
 
     return { provider, model: normalizedModel };
+  }
+
+  /**
+   * Queue placeholders are visible before they run, so validate their route
+   * before persistence as well as at the final send boundary. This prevents a
+   * stale cached model or an unsupported effort tier from becoming a seemingly
+   * runnable queued child.
+   */
+  private async assertChildRoutingAvailable(
+    provider: AIProviderType,
+    model: string,
+    effortLevel: EffortLevel | undefined,
+  ): Promise<void> {
+    const aiService = this.aiService;
+    if (!aiService) {
+      throw new Error('AI service not initialized');
+    }
+    if (effortLevel === undefined) {
+      await aiService.assertCurrentDynamicModelAvailable(provider, model);
+    } else {
+      await aiService.assertCurrentDynamicModelAvailable(provider, model, effortLevel);
+    }
   }
 
   private async getDispatchCounts(
@@ -1678,6 +1730,24 @@ export class MetaAgentService {
             throw error;
           }
         }
+      }
+
+      try {
+        await this.assertChildRoutingAvailable(
+          routing.provider,
+          routing.model,
+          preparedArgs.effortLevel,
+        );
+      } catch (error) {
+        await this.recordDispatchFailure(
+          metaSessionId,
+          workspaceId,
+          preparedArgs,
+          error,
+          requestedAt,
+          title,
+        );
+        throw error;
       }
 
       return this.enqueueChildDispatch(
@@ -2933,14 +3003,13 @@ export class MetaAgentService {
       throw new Error('AI service not initialized');
     }
 
-    // Inherit the calling session's provider+model as the primary fallback so a
-    // non-Claude parent (Gemini, OpenAI-Codex, LM Studio, etc.) spawning a child
-    // via the meta-agent tools without an explicit model does NOT silently land
-    // on the hardcoded Opus default and bill the user's Anthropic pool. Only fall
-    // through to getDefaultAIModel() / the last-resort default when the parent
-    // session cannot be loaded (orphan call) or carries no usable provider+model.
-    // An explicit args.provider/args.model still wins; that is what they are for.
+    // Inherit the calling session's provider+model when it is coherent. If a
+    // caller changes provider or has no saved model, do not guess a static Opus
+    // row: Head must call list_models and pass a verified real-name pair.
     const { provider, model: normalizedModel } = await this.resolveChildRouting(metaSessionId, args);
+    // `list_models` exposes these same IDs to Head. Reject a vanished default
+    // before any worktree/session side effect instead of silently replacing it.
+    await this.assertChildRoutingAvailable(provider, normalizedModel, args.effortLevel);
 
     const callerProvidedTitle = !!args.title?.trim();
     const title = (args.title || this.deriveTitleFromPrompt(args.prompt) || 'Meta Task').trim();
@@ -3143,6 +3212,19 @@ export class MetaAgentService {
       throw new Error(`Parent session ${parentSessionId} not found in this workspace`);
     }
 
+    // Validate routing before sibling-mode can create/promote a workstream.
+    // A rejected dynamic model must leave no hierarchy side effect behind.
+    const requestedModel = args.model
+      ?? (args.inheritModel ? parent.model ?? undefined : undefined);
+    const routing = await this.resolveChildRouting(parentSessionId, {
+      model: requestedModel,
+    });
+    await this.assertChildRoutingAvailable(
+      routing.provider,
+      routing.model,
+      args.effortLevel,
+    );
+
     const isolated = args.isolated === true;
 
     // Sibling mode: resolve (or create) a workstream container so the new
@@ -3156,6 +3238,22 @@ export class MetaAgentService {
       const resolved = await this.resolveOrCreateWorkstream(parent, workspaceId);
       workstreamId = resolved.workstreamId;
       promotedParent = resolved.promotedParent;
+      // A manual catalog refresh can complete between the initial routing
+      // check and workstream promotion. Re-check immediately after promotion;
+      // if it has turned red, compensate the just-created container before a
+      // child/queue row can be persisted beneath it.
+      try {
+        await this.assertChildRoutingAvailable(
+          routing.provider,
+          routing.model,
+          args.effortLevel,
+        );
+      } catch (error) {
+        if (promotedParent && workstreamId) {
+          await this.rollbackPromotedWorkstream(parent, workspaceId, workstreamId);
+        }
+        throw error;
+      }
     }
 
     // Inherit the caller's worktree by default. spawn_session means "continue
@@ -3166,12 +3264,8 @@ export class MetaAgentService {
     const inheritedWorktreeId =
       !args.useWorktree && parent.worktreeId ? parent.worktreeId : undefined;
 
-    // Resolve effective model: explicit `model` wins; otherwise `inheritModel`
-    // copies the caller's model so the new session keeps the same provider/model
-    // (e.g. opus stays on opus). Falling through to undefined lets
-    // createChildSessionInternal use the global default.
-    const effectiveModel =
-      args.model ?? (args.inheritModel ? parent.model ?? undefined : undefined);
+    // `routing` above is now the sole validated provider/model pair passed to
+    // the dispatcher; it is deliberately resolved before workstream mutation.
     const notifyOnComplete = args.notifyOnComplete === true;
 
     const childResult = await this.dispatchOrQueueChildSession(parentSessionId, workspaceId, {
@@ -3179,7 +3273,8 @@ export class MetaAgentService {
       prompt: args.prompt,
       useWorktree: !!args.useWorktree,
       worktreeId: inheritedWorktreeId,
-      model: effectiveModel,
+      provider: routing.provider,
+      model: routing.model,
       effortLevel: args.effortLevel,
       intent: args.intent,
       planId: args.planId,
@@ -3265,6 +3360,36 @@ export class MetaAgentService {
     // pushChange here.
 
     return { workstreamId, promotedParent: true };
+  }
+
+  /** Undo the only hierarchy mutation made before the final catalog recheck. */
+  private async rollbackPromotedWorkstream(
+    parent: { id: string },
+    workspaceId: string,
+    workstreamId: string,
+  ): Promise<void> {
+    try {
+      await AISessionsRepository.updateMetadata(parent.id, { parentSessionId: null });
+      await AISessionsRepository.delete(workstreamId);
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) {
+          window.webContents.send('sessions:refresh-list', {
+            workspacePath: workspaceId,
+            sessionId: parent.id,
+          });
+        }
+      }
+      console.warn(
+        `[MetaAgentService] Rolled back workstream promotion after dynamic model validation failed: ${workstreamId}`,
+      );
+    } catch (rollbackError) {
+      // Preserve the catalog failure as the user-visible cause; the durable
+      // log records any incomplete cleanup for operator follow-up.
+      console.error(
+        '[MetaAgentService] Failed to roll back workstream promotion after catalog validation failure:',
+        rollbackError,
+      );
+    }
   }
 
   private async listWorktreesJson(workspaceId: string): Promise<string> {

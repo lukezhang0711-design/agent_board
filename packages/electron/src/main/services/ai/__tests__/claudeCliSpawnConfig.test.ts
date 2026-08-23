@@ -472,21 +472,21 @@ describe('resolveClaudeCliModelArg', () => {
     expect(resolveClaudeCliModelArg('claude-code:haiku')).toBe('haiku');
   });
 
-  it('collapses pinned opus variants to the CLI `opus` alias (non-extended → no [1m])', () => {
-    expect(resolveClaudeCliModelArg('claude-code-cli:opus-4-7')).toBe('opus');
-    expect(resolveClaudeCliModelArg('claude-code-cli:opus-4-6')).toBe('opus');
+  it('preserves dynamically discovered pinned variants', () => {
+    expect(resolveClaudeCliModelArg('claude-code-cli:opus-4-7')).toBe('opus-4-7');
+    expect(resolveClaudeCliModelArg('claude-code-cli:opus-4-6')).toBe('opus-4-6');
   });
 
-  it('maps explicit 5-series variants to complete CLI model IDs without changing legacy Opus collapse rules', () => {
-    expect(resolveClaudeCliModelArg('claude-code-cli:opus-5')).toBe('claude-opus-5');
-    expect(resolveClaudeCliModelArg('claude-code-cli:opus-5-1m')).toBe('claude-opus-5[1m]');
-    expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5')).toBe('claude-sonnet-5');
-    expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5-1m')).toBe('claude-sonnet-5[1m]');
+  it('converts only the 1M marker for dynamically discovered variants', () => {
+    expect(resolveClaudeCliModelArg('claude-code-cli:opus-5')).toBe('opus-5');
+    expect(resolveClaudeCliModelArg('claude-code-cli:opus-5-1m')).toBe('opus-5[1m]');
+    expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5')).toBe('sonnet-5');
+    expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5-1m')).toBe('sonnet-5[1m]');
   });
 
-  it('passes the fable variant through as the CLI `fable` alias', () => {
+  it('passes the dynamic Fable value through without static pinning', () => {
     expect(resolveClaudeCliModelArg('claude-code-cli:fable')).toBe('fable');
-    expect(resolveClaudeCliModelArg('claude-code-cli:fable-5')).toBe('fable');
+    expect(resolveClaudeCliModelArg('claude-code-cli:fable-5')).toBe('fable-5');
     expect(resolveClaudeCliModelArg('fable')).toBe('fable');
   });
 

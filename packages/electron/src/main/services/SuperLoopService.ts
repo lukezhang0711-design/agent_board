@@ -16,6 +16,7 @@ import { createSuperLoopStore, type SuperLoopStore } from './SuperLoopStore';
 import { createWorktreeStore, type WorktreeStore } from './WorktreeStore';
 import { AISessionsRepository } from '@nimbalyst/runtime/storage/repositories/AISessionsRepository';
 import { AgentMessagesRepository } from '@nimbalyst/runtime/storage/repositories/AgentMessagesRepository';
+import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
 import {
   SUPER_LOOP_DEFAULTS,
   type SuperLoop,
@@ -28,6 +29,7 @@ import {
   type SuperIteration,
 } from '../../shared/types/superLoop';
 import { SuperLoopProgressService } from './SuperLoopProgressService';
+import { assertDynamicModelCatalogSelection } from './ai/modelCatalogValidation';
 
 const logger = log.scope('SuperLoopService');
 
@@ -143,7 +145,12 @@ export class SuperLoopService {
 
     const loopId = ulid();
     const maxIterations = config?.maxIterations ?? SUPER_LOOP_DEFAULTS.maxIterations;
-    const modelId = config?.modelId;
+    const modelId = config?.modelId?.trim();
+    if (!modelId) {
+      throw new Error('请选择已验证的模型；系统不会为 Super Loop 静默使用静态默认型号。');
+    }
+    const selectedProvider = ModelIdentifier.tryParse(modelId)?.provider;
+    await assertDynamicModelCatalogSelection(selectedProvider ?? 'claude-code', modelId);
 
     const loop = await superLoopStore.createLoop(loopId, worktreeId, taskDescription, maxIterations, modelId);
 
@@ -525,9 +532,13 @@ export class SuperLoopService {
 
     // Create the session in the database
     const phaseLabel = phase === 'planning' ? 'Plan' : 'Build';
-    const model = runner.loop.modelId || 'claude-code:opus-1m';
+    const model = runner.loop.modelId;
+    if (!model) {
+      throw new Error('Super Loop 未保存模型。请选择当前目录中的模型后重新创建循环。');
+    }
     // Extract provider from model ID (format is "provider:model")
     const provider = model.includes(':') ? model.split(':')[0] : 'claude-code';
+    await assertDynamicModelCatalogSelection(provider, model);
     await AISessionsRepository.create({
       id: sessionId,
       provider,

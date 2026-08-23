@@ -60,6 +60,27 @@ export interface Model {
   provider: string;
 }
 
+interface ModelCatalogStatus {
+  modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
+  verified?: boolean;
+  lastSuccessAt?: number | null;
+  lastError?: { message?: string } | null;
+}
+
+function formatModelCatalogWarning(status: ModelCatalogStatus | undefined): string | null {
+  if (!status) return null;
+  const cachedAt = typeof status.lastSuccessAt === 'number'
+    ? `上次成功获取于 ${new Date(status.lastSuccessAt).toLocaleString()}`
+    : null;
+  if (status.lastError?.message) {
+    return `模型目录获取失败：${status.lastError.message}${cachedAt ? `。${cachedAt}` : ''}`;
+  }
+  if (!status.verified || status.modelSource !== 'runtime') {
+    return `模型目录尚未在本次运行中验证，暂不提供可选型号。${cachedAt ? ` ${cachedAt}` : ''}`;
+  }
+  return null;
+}
+
 // Note: The ProviderConfig interface has been moved to appSettings.ts
 
 export type SettingsScope = 'user' | 'project';
@@ -295,6 +316,7 @@ export function SettingsView({
 
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [catalogStatuses, setCatalogStatuses] = useState<Record<string, ModelCatalogStatus>>({});
 
   // Ref to track if we need to save (for debounce)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -441,6 +463,9 @@ export function SettingsView({
       if (response.success && response.grouped) {
         setAvailableModels(response.grouped);
       }
+      if (response.catalogStatuses) {
+        setCatalogStatuses(response.catalogStatuses as Record<string, ModelCatalogStatus>);
+      }
     } catch (error) {
       console.error('Failed to fetch initial models:', error);
     }
@@ -535,6 +560,9 @@ export function SettingsView({
       if (response.success && response.grouped) {
         setAvailableModels(response.grouped);
       }
+      if (response.catalogStatuses) {
+        setCatalogStatuses(response.catalogStatuses as Record<string, ModelCatalogStatus>);
+      }
     } catch (error) {
       console.error(`Failed to fetch models for ${provider}:`, error);
     } finally {
@@ -619,6 +647,12 @@ export function SettingsView({
       { enabled: config.enabled, testStatus: config.testStatus }
     ])
   );
+
+  const selectedCatalogWarning = (
+    selectedCategory === 'claude-code' || selectedCategory === 'openai-codex'
+  )
+    ? formatModelCatalogWarning(catalogStatuses[selectedCategory])
+    : null;
 
   const renderPanel = () => {
     // Project panels
@@ -992,6 +1026,15 @@ export function SettingsView({
 
         <main className="settings-view-main flex-1 overflow-y-auto p-6 bg-[var(--nim-bg)] relative z-0">
           <div className="settings-panel-container max-w-[800px]">
+            {selectedCatalogWarning && (
+              <div
+                className="mb-4 rounded-lg border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] px-3 py-2 text-xs leading-relaxed text-[var(--nim-error)]"
+                role="alert"
+                data-testid="settings-model-catalog-warning"
+              >
+                {selectedCatalogWarning}
+              </div>
+            )}
             {renderPanel()}
           </div>
         </main>

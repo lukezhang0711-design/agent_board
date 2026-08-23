@@ -52,6 +52,7 @@ import { ClaudeCodeProvider } from '../ClaudeCodeProvider';
 // because they are blocked.
 const META_AGENT_ALLOWED_TOOLS = [
   'mcp__nimbalyst-meta-agent__list_spawned_sessions',
+  'mcp__nimbalyst-meta-agent__list_models',
   'mcp__nimbalyst-meta-agent__list_worktrees',
   'mcp__nimbalyst-meta-agent__submit_plan',
   'mcp__nimbalyst-meta-agent__create_session',
@@ -197,6 +198,7 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     expect(prompt).toContain('personally verify');
     expect(prompt).toContain('You do not have built-in `Agent` or `Task` tools');
     expect(prompt).toContain('mcp__nimbalyst-meta-agent__create_session');
+    expect(prompt).toContain('mcp__nimbalyst-meta-agent__list_models');
     expect(prompt).toContain('Child Failure Discipline');
     expect(prompt).toContain('exact error text');
     expect(prompt).toContain('wait for the owner\'s instruction before retrying or re-dispatching');

@@ -26,12 +26,12 @@ describe('ModelIdentifier', () => {
       expect(id.isExtendedContext).toBe(true);
     });
 
-    it('normalizes claude-code opus-4-8 alias to canonical opus', () => {
+    it('preserves a dynamically discovered Claude Agent alias', () => {
       const id = ModelIdentifier.parse('claude-code:opus-4-8-1m');
       expect(id.provider).toBe('claude-code');
-      expect(id.model).toBe('opus-1m');
-      expect(id.combined).toBe('claude-code:opus-1m');
-      expect(id.baseVariant).toBe('opus');
+      expect(id.model).toBe('opus-4-8-1m');
+      expect(id.combined).toBe('claude-code:opus-4-8-1m');
+      expect(id.baseVariant).toBe('opus-4-8');
       expect(id.isExtendedContext).toBe(true);
     });
 
@@ -108,15 +108,16 @@ describe('ModelIdentifier', () => {
       expect(id.isExtendedContext).toBe(true);
     });
 
-    it('accepts explicit opus-4-8 alias and normalizes to canonical opus', () => {
+    it('accepts an explicit dynamically discovered Claude Agent alias', () => {
       const id = ModelIdentifier.create('claude-code', 'Opus-4-8');
       expect(id.provider).toBe('claude-code');
-      expect(id.model).toBe('opus');
-      expect(id.combined).toBe('claude-code:opus');
+      expect(id.model).toBe('opus-4-8');
+      expect(id.combined).toBe('claude-code:opus-4-8');
     });
 
-    it('throws on invalid claude-code variant', () => {
-      expect(() => ModelIdentifier.create('claude-code', 'invalid-variant')).toThrow('Invalid Claude Code variant');
+    it('defers Claude Agent model membership to the SDK catalog', () => {
+      expect(ModelIdentifier.create('claude-code', 'new-runtime-alias').combined)
+        .toBe('claude-code:new-runtime-alias');
     });
 
     it('throws on invalid provider', () => {

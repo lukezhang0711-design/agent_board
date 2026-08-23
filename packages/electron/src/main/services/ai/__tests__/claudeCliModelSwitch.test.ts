@@ -1,9 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import {
   buildClaudeCliModelSwitchCommand,
   switchClaudeCliModel,
   MODEL_SWITCH_WRITE_GAP_MS,
 } from '../claudeCliModelSwitch';
+import { setDynamicModelCatalogValidator } from '../modelCatalogValidation';
+
+beforeEach(() => {
+  setDynamicModelCatalogValidator(async () => {});
+});
+
+afterEach(() => {
+  setDynamicModelCatalogValidator(null);
+});
 
 /**
  * NIM-806 — mid-session model switching for claude-code-cli sessions.
@@ -29,8 +38,8 @@ describe('buildClaudeCliModelSwitchCommand', () => {
     expect(buildClaudeCliModelSwitchCommand('claude-code-cli:opus-1m')).toBe('/model opus[1m]');
   });
 
-  it('collapses pinned opus variants to the opus alias', () => {
-    expect(buildClaudeCliModelSwitchCommand('claude-code-cli:opus-4-7')).toBe('/model opus');
+  it('preserves a dynamically discovered pinned variant', () => {
+    expect(buildClaudeCliModelSwitchCommand('claude-code-cli:opus-4-7')).toBe('/model opus-4-7');
   });
 
   it('rejects non-claude combined ids', () => {
@@ -72,6 +81,20 @@ describe('switchClaudeCliModel', () => {
     const { writes, deps } = makeDeps();
     const result = await switchClaudeCliModel({ sessionId: 's1', model: 'openai:gpt-5.5' }, deps);
     expect(result).toEqual({ switched: false });
+    expect(writes).toEqual([]);
+  });
+
+  it('does not touch the PTY when the live catalog rejects a stale model', async () => {
+    setDynamicModelCatalogValidator(async () => {
+      throw new Error('目录拉取超时：claude agent unavailable');
+    });
+    const { writes, deps } = makeDeps();
+
+    await expect(switchClaudeCliModel(
+      { sessionId: 's1', model: 'claude-code-cli:removed-model' },
+      deps,
+    )).rejects.toThrow('目录拉取超时：claude agent unavailable');
+
     expect(writes).toEqual([]);
   });
 });

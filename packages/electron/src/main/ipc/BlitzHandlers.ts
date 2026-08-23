@@ -21,13 +21,9 @@ import { getDatabase } from '../database/initialize';
 import { getQueuedPromptsStore } from '../services/RepositoryManager';
 import { AISessionsRepository } from '@nimbalyst/runtime/storage/repositories/AISessionsRepository';
 import { ModelIdentifier, type AIProviderType } from '@nimbalyst/runtime/ai/server/types';
-import {
-  CLAUDE_CODE_VARIANT_VERSIONS,
-  CLAUDE_CODE_MODEL_LABELS,
-  type ClaudeCodeVariant,
-} from '@nimbalyst/runtime/ai/modelConstants';
 import { AnalyticsService } from '../services/analytics/AnalyticsService';
 import { archiveWorktree } from './WorktreeHandlers';
+import { assertDynamicModelCatalogSelection } from '../services/ai/modelCatalogValidation';
 import type { BlitzCreateResult, WorktreeCreateResult } from '../../shared/ipc/types';
 
 const logger = log.scope('BlitzHandlers');
@@ -36,17 +32,14 @@ const MAX_BLITZ_WORKTREES = 10;
 
 /**
  * Convert a model ID to a human-readable label for blitz session titles.
- * Version/label data comes from the shared `modelConstants` tables so we
- * cannot drift from the picker / session chrome labels.
+ * The model inventory is runtime-discovered, so labels use the selected value
+ * instead of a stale package-local version table.
  */
 function getBlitzSessionModelLabel(model: string): string {
   const parsed = ModelIdentifier.tryParse(model);
   if (parsed && parsed.provider === 'claude-code') {
-    const variant = parsed.baseVariant as ClaudeCodeVariant;
-    const label = CLAUDE_CODE_MODEL_LABELS[variant];
-    const version = CLAUDE_CODE_VARIANT_VERSIONS[variant];
-    if (label && version) return `${label} ${version}`;
-    return variant.charAt(0).toUpperCase() + variant.slice(1);
+    const suffix = parsed.isExtendedContext ? ' (1M)' : '';
+    return `${parsed.baseVariant}${suffix}`;
   }
 
   // For other providers, extract the model part
@@ -153,6 +146,19 @@ export function registerBlitzHandlers(): void {
       }
       if (!modelConfig || modelConfig.length === 0) {
         throw new Error('At least one model must be selected');
+      }
+
+      // Validate every dynamic assignment before creating the parent blitz or
+      // a worktree. The dialog gets the same live catalog, but this protects
+      // automation and stale renderer state from routing to a vanished model.
+      for (const selection of modelConfig) {
+        const parsed = ModelIdentifier.tryParse(selection.model);
+        const provider = parsed?.provider ?? selection.provider;
+        await assertDynamicModelCatalogSelection(provider, selection.model);
+      }
+      if (analysisModel) {
+        const parsed = ModelIdentifier.tryParse(analysisModel);
+        await assertDynamicModelCatalogSelection(parsed?.provider ?? 'claude-code', analysisModel);
       }
 
       const totalWorktrees = modelConfig.reduce((sum, m) => sum + m.count, 0);
@@ -560,10 +566,16 @@ export function registerBlitzHandlers(): void {
       const blitzMetadata = (blitzSession?.metadata ?? {}) as any;
       const originalPrompt = blitzMetadata.prompt ?? '';
 
-      // Use configured analysis model, falling back to claude-code:opus-1m
-      const analysisModelId = blitzMetadata.analysisModel || 'claude-code:opus-1m';
+      // Reuse an already selected child model when the optional analysis
+      // selection is absent. This is a user-selected live ID, not a static
+      // package fallback.
+      const analysisModelId = blitzMetadata.analysisModel || childSessions[0]?.model;
+      if (typeof analysisModelId !== 'string' || !analysisModelId) {
+        return { success: false, error: '没有可用于分析的已验证模型，请重新选择模型后重试。' };
+      }
       const parsedModel = ModelIdentifier.tryParse(analysisModelId);
       const analysisProvider = parsedModel?.provider || 'claude-code';
+      await assertDynamicModelCatalogSelection(analysisProvider, analysisModelId);
 
       // Create the analysis session
       const analysisSessionId = crypto.randomUUID();

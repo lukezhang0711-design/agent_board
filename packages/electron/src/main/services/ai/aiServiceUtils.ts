@@ -16,7 +16,6 @@ import {
 } from '@nimbalyst/runtime/ai/server';
 import {
   ModelIdentifier,
-  CLAUDE_CODE_VARIANTS,
   AI_PROVIDER_TYPES,
   type AIProviderType,
 } from '@nimbalyst/runtime/ai/server/types';
@@ -268,11 +267,6 @@ export function extractModelForProvider(
       return null;
     }
     return parsed.model;
-  }
-
-  if (provider === 'claude' && (CLAUDE_CODE_VARIANTS as readonly string[]).includes(fullModel.toLowerCase())) {
-    logger.main.warn(`[AIService] Session has Claude Code variant "${fullModel}" with claude provider - using default model`);
-    return null;
   }
 
   if ((AI_PROVIDER_TYPES as readonly string[]).includes(fullModel.toLowerCase())) {

@@ -5,162 +5,33 @@ import { ModelIdentifier } from '../../ModelIdentifier';
 const DEFAULT_MODEL = 'claude-code:opus-1m';
 
 describe('resolveClaudeCodeModelVariant', () => {
-  describe('standard variants (no extended context)', () => {
-    it('resolves sonnet variant', () => {
-      expect(resolveClaudeCodeModelVariant('claude-code:sonnet', DEFAULT_MODEL)).toBe('sonnet');
-    });
-
-    it('resolves opus variant', () => {
-      expect(resolveClaudeCodeModelVariant('claude-code:opus', DEFAULT_MODEL)).toBe('opus');
-    });
-
-    it('resolves explicit Opus 5 and Sonnet 5 variants to their full SDK model IDs', () => {
-      expect(resolveClaudeCodeModelVariant('claude-code:opus-5', DEFAULT_MODEL)).toBe('claude-opus-5');
-      expect(resolveClaudeCodeModelVariant('claude-code:sonnet-5', DEFAULT_MODEL)).toBe('claude-sonnet-5');
-    });
-
-    it('allows only the explicit 5-series variants in Claude Agent model identifiers', () => {
-      expect(ModelIdentifier.parse('claude-code:opus-5').baseVariant).toBe('opus-5');
-      expect(ModelIdentifier.parse('claude-code:sonnet-5').baseVariant).toBe('sonnet-5');
-      expect(() => ModelIdentifier.parse('claude-code:not-a-variant')).toThrow('Invalid Claude Code variant');
-    });
-
-    it('resolves haiku variant', () => {
-      expect(resolveClaudeCodeModelVariant('claude-code:haiku', DEFAULT_MODEL)).toBe('haiku');
-    });
-
-    it('resolves fable to the known-good pinned full model id', () => {
-      // BA observed an older SDK rejecting bare `fable`; the newer SDK is not
-      // request-probed by this work order, so retain the full-ID mapping.
-      expect(resolveClaudeCodeModelVariant('claude-code:fable', DEFAULT_MODEL)).toBe('claude-fable-5');
-      expect(resolveClaudeCodeModelVariant('claude-code:fable-5', DEFAULT_MODEL)).toBe('claude-fable-5');
-    });
-
-    it('fable-1m resolves to the pinned id with the [1m] suffix (same shape as pinned opus 1M variants)', () => {
-      expect(resolveClaudeCodeModelVariant('claude-code:fable-1m', DEFAULT_MODEL)).toBe('claude-fable-5[1m]');
-    });
-
-    it('uses default model when config model is undefined', () => {
-      expect(resolveClaudeCodeModelVariant(undefined, DEFAULT_MODEL)).toBe('opus[1m]');
-    });
-
-    it('uses default model when config model is empty string', () => {
-      expect(resolveClaudeCodeModelVariant('', DEFAULT_MODEL)).toBe('opus[1m]');
-    });
+  it('passes a dynamically discovered SDK alias through unchanged', () => {
+    expect(resolveClaudeCodeModelVariant('claude-code:sonnet', DEFAULT_MODEL)).toBe('sonnet');
+    expect(resolveClaudeCodeModelVariant('claude-code:claude-fable-5', DEFAULT_MODEL)).toBe('claude-fable-5');
+    expect(resolveClaudeCodeModelVariant('claude-code:opus-5', DEFAULT_MODEL)).toBe('opus-5');
   });
 
-  describe('extended context (1M) variants', () => {
-    it('explicit Opus 5 and Sonnet 5 1M variants retain their exact model IDs', () => {
-      expect(resolveClaudeCodeModelVariant('claude-code:opus-5-1m', DEFAULT_MODEL)).toBe('claude-opus-5[1m]');
-      expect(resolveClaudeCodeModelVariant('claude-code:sonnet-5-1m', DEFAULT_MODEL)).toBe('claude-sonnet-5[1m]');
-    });
-
-    it('sonnet-1m resolves to sonnet[1m] (Sonnet 4.6)', () => {
-      const result = resolveClaudeCodeModelVariant('claude-code:sonnet-1m', DEFAULT_MODEL);
-      expect(result).toBe('sonnet[1m]');
-    });
-
-    it('opus-1m resolves to opus[1m]', () => {
-      const result = resolveClaudeCodeModelVariant('claude-code:opus-1m', DEFAULT_MODEL);
-      expect(result).toBe('opus[1m]');
-    });
-
-    it('haiku-1m resolves to haiku[1m]', () => {
-      const result = resolveClaudeCodeModelVariant('claude-code:haiku-1m', DEFAULT_MODEL);
-      expect(result).toBe('haiku[1m]');
-    });
-
-    it('opus-4-8-1m alias resolves to opus[1m]', () => {
-      const result = resolveClaudeCodeModelVariant('claude-code:opus-4-8-1m', DEFAULT_MODEL);
-      expect(result).toBe('opus[1m]');
-    });
+  it('converts only the persisted -1m transport suffix back to the SDK [1m] form', () => {
+    expect(resolveClaudeCodeModelVariant('claude-code:opus-1m', DEFAULT_MODEL)).toBe('opus[1m]');
+    expect(resolveClaudeCodeModelVariant('claude-code:claude-opus-5-1m', DEFAULT_MODEL)).toBe('claude-opus-5[1m]');
+    expect(resolveClaudeCodeModelVariant('opus-4-8-1m', DEFAULT_MODEL)).toBe('opus-4-8[1m]');
   });
 
-  describe('SDK compatibility', () => {
-    it('standard variants are valid SDK model values', () => {
-      const validSdkValues = ['sonnet', 'opus', 'haiku'];
-      for (const variant of validSdkValues) {
-        const result = resolveClaudeCodeModelVariant(`claude-code:${variant}`, DEFAULT_MODEL);
-        expect(validSdkValues).toContain(result);
-      }
-    });
-
-    it('1M variants include [1m] suffix that SDK uses for beta auto-detection', () => {
-      // The SDK checks model.includes("[1m]") to auto-add the context-1m-2025-08-07 beta.
-      // This is critical because --betas is ignored for OAuth users.
-      const variants = ['sonnet-1m', 'opus-1m', 'haiku-1m'];
-      for (const variant of variants) {
-        const result = resolveClaudeCodeModelVariant(`claude-code:${variant}`, DEFAULT_MODEL);
-        expect(result).toContain('[1m]');
-      }
-    });
-
-    it('standard variants do NOT include [1m] suffix', () => {
-      const variants = ['sonnet', 'opus', 'haiku'];
-      for (const variant of variants) {
-        const result = resolveClaudeCodeModelVariant(`claude-code:${variant}`, DEFAULT_MODEL);
-        expect(result).not.toContain('[1m]');
-      }
-    });
+  it('does not contain a static Claude Agent allowlist or alias rewrite table', () => {
+    expect(ModelIdentifier.parse('claude-code:not-yet-known-to-this-build').combined)
+      .toBe('claude-code:not-yet-known-to-this-build');
+    expect(resolveClaudeCodeModelVariant('claude-code:not-yet-known-to-this-build', DEFAULT_MODEL))
+      .toBe('not-yet-known-to-this-build');
   });
 
-  describe('pinned-version variants', () => {
-    it('opus-4-8 resolves to the canonical opus SDK alias', () => {
-      const result = resolveClaudeCodeModelVariant('claude-code:opus-4-8', DEFAULT_MODEL);
-      expect(result).toBe('opus');
-    });
-
-    it('opus-4-7 resolves to the full claude-opus-4-7 SDK model ID', () => {
-      // Pinned after the canonical `opus` alias was bumped to 4.8, so users
-      // can keep selecting 4.7 explicitly.
-      const result = resolveClaudeCodeModelVariant('claude-code:opus-4-7', DEFAULT_MODEL);
-      expect(result).toBe('claude-opus-4-7');
-    });
-
-    it('opus-4-7-1m resolves to claude-opus-4-7[1m]', () => {
-      const result = resolveClaudeCodeModelVariant('claude-code:opus-4-7-1m', DEFAULT_MODEL);
-      expect(result).toBe('claude-opus-4-7[1m]');
-    });
-
-    it('opus-4-6 resolves to the full claude-opus-4-6 SDK model ID', () => {
-      // Pinned variants always point at a specific Anthropic model, not
-      // whatever "latest opus" happens to be, so users can stay on 4.6
-      // after the canonical `opus` alias is bumped.
-      const result = resolveClaudeCodeModelVariant('claude-code:opus-4-6', DEFAULT_MODEL);
-      expect(result).toBe('claude-opus-4-6');
-    });
-
-    it('opus-4-6-1m resolves to claude-opus-4-6[1m]', () => {
-      // Opus 4.6 needs the context-1m-2025-08-07 beta header for 1M context;
-      // the SDK adds it when it sees the [1m] suffix.
-      const result = resolveClaudeCodeModelVariant('claude-code:opus-4-6-1m', DEFAULT_MODEL);
-      expect(result).toBe('claude-opus-4-6[1m]');
-    });
+  it('retains the legacy default only when an old session has no model', () => {
+    expect(resolveClaudeCodeModelVariant(undefined, DEFAULT_MODEL)).toBe('opus[1m]');
+    expect(resolveClaudeCodeModelVariant('', DEFAULT_MODEL)).toBe('opus[1m]');
   });
 
-  describe('fallback behavior', () => {
-    it('throws for an unrecognized provider', () => {
-      expect(() => resolveClaudeCodeModelVariant('openai:gpt-4', DEFAULT_MODEL)).toThrow(
-        'Claude Agent requires a claude-code:* model identifier'
-      );
-    });
-
-    it('throws for an unrecognized variant', () => {
-      expect(() => resolveClaudeCodeModelVariant('claude-code:unknown', DEFAULT_MODEL)).toThrow(
-        'Unsupported Claude Agent model'
-      );
-    });
-
-    it('handles raw variant names without provider prefix', () => {
-      expect(resolveClaudeCodeModelVariant('sonnet', DEFAULT_MODEL)).toBe('sonnet');
-    });
-
-    it('handles raw variant names with -1m suffix', () => {
-      expect(resolveClaudeCodeModelVariant('opus-1m', DEFAULT_MODEL)).toBe('opus[1m]');
-    });
-
-    it('accepts raw opus-4-8 alias without provider prefix', () => {
-      expect(resolveClaudeCodeModelVariant('opus-4-8', DEFAULT_MODEL)).toBe('opus');
-    });
+  it('rejects a model for another provider', () => {
+    expect(() => resolveClaudeCodeModelVariant('openai:gpt-5', DEFAULT_MODEL)).toThrow(
+      'Claude Agent requires a claude-code:* model identifier',
+    );
   });
 });

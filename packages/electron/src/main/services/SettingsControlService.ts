@@ -53,6 +53,7 @@ import { updateNativeTheme, updateWindowTitleBars } from '../theme/ThemeManager'
 import { createWindow, findWindowByWorkspace } from '../window/WindowManager';
 import { getWorkspaceWindowState } from '../utils/store';
 import { requestTrackerBackfillForWorkspace } from './TrackerSyncManager';
+import { assertDynamicModelCatalogSelection } from './ai/modelCatalogValidation';
 
 // ─── Allow / deny lists ─────────────────────────────────────────────
 
@@ -429,6 +430,19 @@ export class SettingsControlService {
       return {
         ok: false,
         message: `providerModel must be in the form "provider:model" (e.g. "claude-code:sonnet"). Got "${args.providerModel}".`,
+      };
+    }
+    const provider = args.providerModel.slice(0, args.providerModel.indexOf(':'));
+    try {
+      // A stale global default is dangerous because it can be selected much
+      // later by a new session. Dynamic channels therefore persist only a
+      // model the live engine catalog accepts right now.
+      await assertDynamicModelCatalogSelection(provider, args.providerModel);
+    } catch (error) {
+      return {
+        ok: false,
+        before,
+        message: error instanceof Error ? error.message : String(error),
       };
     }
     storeSetDefaultAIModel(args.providerModel);

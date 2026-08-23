@@ -14,7 +14,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { MaterialSymbol, getProviderIcon } from '@nimbalyst/runtime';
 import { isAgentProvider, shouldBlockStartedSessionProviderSwitch } from '@nimbalyst/runtime/ai/server/types';
 import { getClaudeCodeModelLabel, getClaudeCodeModelShortLabel } from '../../utils/modelUtils';
-import { apiKeysAtom, providersAtom } from '../../store/atoms/appSettings';
+import { apiKeysAtom, providersAtom, setAvailableModelsAtom } from '../../store/atoms/appSettings';
 import { claudeAuthStateAtom } from '../../store/atoms/claudeAuthAtoms';
 import { settingAtom } from '../../store/atoms/settingAtomFamily';
 import { filterVisibleNewSessionModels } from '../../../shared/claudeChannelVisibility';
@@ -31,6 +31,19 @@ interface Model {
   id: string;
   name: string;
   provider: string;
+  description?: string;
+  resolvedModel?: string;
+  supportsEffort?: boolean;
+  supportedEffortLevels?: Array<'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra'>;
+  defaultEffortLevel?: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra';
+  unverifiedPlaceholder?: boolean;
+}
+
+interface CatalogStatus {
+  modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
+  verified?: boolean;
+  lastSuccessAt?: number | null;
+  lastError?: { message?: string } | null;
 }
 
 type ProviderType = 'agent' | 'model';
@@ -69,6 +82,9 @@ export function ModelSelector({
   const apiKeys = useAtomValue(apiKeysAtom);
   const setWindowMode = useSetAtom(setWindowModeAtom);
   const navigateToSettings = useSetAtom(navigateToSettingsAtom);
+  const setAvailableModels = useSetAtom(setAvailableModelsAtom);
+  const [catalogStatuses, setCatalogStatuses] = useState<Record<string, CatalogStatus>>({});
+  const [defaultModelWarning, setDefaultModelWarning] = useState<string | null>(null);
   const { refs, floatingStyles, context } = useFloating({
     open: isOpen,
     onOpenChange: setIsOpen,
@@ -91,6 +107,10 @@ export function ModelSelector({
   // Clear cached models when provider settings change so next dropdown open fetches fresh data
   useEffect(() => {
     setModels({});
+    void loadModels();
+    // The shared available-model atom also drives the effort selector in the
+    // transcript, so fetch once on mount instead of waiting for the first tap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providers, showClaudeCliChannel]);
 
   // Reload when the dropdown opens or when visibility/provider settings change.
@@ -124,6 +144,13 @@ export function ModelSelector({
         };
         if (meta.providerLabels) setProviderLabels(meta.providerLabels);
         if (meta.providerIcons) setProviderIcons(meta.providerIcons);
+        const catalogMeta = response as { catalogStatuses?: Record<string, CatalogStatus> };
+        if (catalogMeta.catalogStatuses) setCatalogStatuses(catalogMeta.catalogStatuses);
+        const defaultMeta = response as { defaultModelWarning?: string | null };
+        setDefaultModelWarning(defaultMeta.defaultModelWarning ?? null);
+        for (const [providerId, providerModels] of Object.entries(response.grouped)) {
+          setAvailableModels({ providerId, models: providerModels as Model[] });
+        }
       }
     } catch (error) {
       console.error('Failed to load models:', error);
@@ -210,6 +237,41 @@ export function ModelSelector({
     }
   };
 
+  const formatCatalogTime = (timestamp: number | null | undefined) => (
+    typeof timestamp === 'number' ? new Date(timestamp).toLocaleString() : null
+  );
+
+  const isDynamicCatalogProvider = (provider: string) => (
+    provider === 'claude-code' || provider === 'claude-code-cli' || provider === 'openai-codex'
+  );
+
+  const renderCatalogNotice = (provider: string) => {
+    const status = catalogStatuses[provider];
+    if (!status || !isDynamicCatalogProvider(provider)) return null;
+    const cachedAt = formatCatalogTime(status.lastSuccessAt);
+    if (status.lastError?.message) {
+      return (
+        <div
+          className="mx-2 mb-1 rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
+          data-testid={`model-catalog-status-${provider}`}
+        >
+          目录获取失败：{status.lastError.message}{cachedAt ? `。上次成功获取于 ${cachedAt}` : ''}。缓存仅供查看，不能创建会话。
+        </div>
+      );
+    }
+    if (!status.verified) {
+      return (
+        <div
+          className="mx-2 mb-1 rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)]"
+          data-testid={`model-catalog-status-${provider}`}
+        >
+          模型目录未验证，正在从引擎读取；此处的占位型号不可用于创建会话。
+        </div>
+      );
+    }
+    return null;
+  };
+
   // Built-in chat-model providers are a small closed set. Built-in agent CLIs
   // are matched by isAgentProvider. Anything left over is an extension-
   // contributed agent provider id (e.g. antigravity-gemini-agent), which we
@@ -290,12 +352,34 @@ export function ModelSelector({
             style={floatingStyles}
             {...getFloatingProps()}
           >
+          {!loading && ['claude-code', 'openai-codex']
+            // First-install placeholders are intentionally filtered out by
+            // the main process so they can never be selected. Still render
+            // their status here; otherwise a picker with other providers
+            // would hide the required “unverified” explanation entirely.
+            .filter((provider) => !models[provider] && (
+              !!catalogStatuses[provider]?.lastError?.message
+              || catalogStatuses[provider]?.verified !== true
+            ))
+            .map((provider) => (
+              <React.Fragment key={`missing-catalog-${provider}`}>
+                {renderCatalogNotice(provider)}
+              </React.Fragment>
+            ))}
           {loading ? (
             <div className="model-selector-loading p-3 text-center text-xs text-[var(--nim-text-faint)]">Loading models...</div>
           ) : Object.keys(models).length === 0 ? (
             <div className="model-selector-empty p-3 text-center text-xs text-[var(--nim-text-faint)]">No models available</div>
           ) : (
             <>
+              {defaultModelWarning && (
+                <div
+                  className="mx-2 mb-1 rounded px-2 py-1.5 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
+                  data-testid="model-default-unavailable"
+                >
+                  {defaultModelWarning}
+                </div>
+              )}
               {/* Agents Section */}
               {groupedProviders.agents && Object.keys(groupedProviders.agents).length > 0 && (
                 <>
@@ -327,10 +411,18 @@ export function ModelSelector({
                           {ALPHA_PROVIDERS.has(provider) && <AlphaBadge size="xs" />}
                         </div>
                       </HelpTooltip>
+                      {renderCatalogNotice(provider)}
                       {providerModels.map(model => {
                         const isCurrent = model.id === currentModel;
-                        const isDisabled = isProviderSwitchDisabled(provider);
-                        const disabledTooltip = 'Start a new session to switch providers after the session has started';
+                        const isUnverifiedPlaceholder = model.unverifiedPlaceholder === true;
+                        const catalogFetchFailed = isDynamicCatalogProvider(provider)
+                          && !!catalogStatuses[provider]?.lastError?.message;
+                        const isDisabled = isProviderSwitchDisabled(provider) || isUnverifiedPlaceholder || catalogFetchFailed;
+                        const disabledTooltip = catalogFetchFailed
+                          ? '模型目录获取失败；上次成功缓存仅供查看，不能创建会话'
+                          : isUnverifiedPlaceholder
+                          ? '模型目录尚未验证，不能用占位型号创建会话'
+                          : 'Start a new session to switch providers after the session has started';
                         return (
                           <button
                             key={model.id}
@@ -338,8 +430,12 @@ export function ModelSelector({
                             onClick={() => !isDisabled && handleModelSelect(model.id)}
                             title={isDisabled ? disabledTooltip : undefined}
                             aria-disabled={isDisabled}
+                            disabled={isDisabled}
                           >
-                            <span className={`model-selector-option-name flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isDisabled ? 'text-[var(--nim-text-faint)]' : ''}`}>{provider === 'claude-code' && !showClaudeCliChannel ? getClaudeCodeModelShortLabel(model.id) : model.name}</span>
+                            <span className={`model-selector-option-name flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isDisabled ? 'text-[var(--nim-text-faint)]' : ''}`} title={model.resolvedModel ? `${model.description ?? ''}\nResolved: ${model.resolvedModel}`.trim() : model.description}>
+                              {model.name}
+                              {model.resolvedModel ? ` → ${model.resolvedModel}` : ''}
+                            </span>
                             {isDisabled ? (
                               <MaterialSymbol icon="block" size={14} className="disabled-icon text-[var(--nim-text-faint)]" />
                             ) : isCurrent ? (
@@ -373,8 +469,11 @@ export function ModelSelector({
                       </div>
                       {providerModels.map(model => {
                         const isCurrent = model.id === currentModel;
-                        const isDisabled = isProviderSwitchDisabled(provider);
-                        const disabledTooltip = 'Start a new session to switch providers after the session has started';
+                        const isUnverifiedPlaceholder = model.unverifiedPlaceholder === true;
+                        const isDisabled = isProviderSwitchDisabled(provider) || isUnverifiedPlaceholder;
+                        const disabledTooltip = isUnverifiedPlaceholder
+                          ? '模型目录尚未验证，不能用占位型号创建会话'
+                          : 'Start a new session to switch providers after the session has started';
                         return (
                           <button
                             key={model.id}
@@ -382,6 +481,7 @@ export function ModelSelector({
                             onClick={() => !isDisabled && handleModelSelect(model.id)}
                             title={isDisabled ? disabledTooltip : undefined}
                             aria-disabled={isDisabled}
+                            disabled={isDisabled}
                           >
                             <span className={`model-selector-option-name flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isDisabled ? 'text-[var(--nim-text-faint)]' : ''}`}>{model.name}</span>
                             {isDisabled ? (

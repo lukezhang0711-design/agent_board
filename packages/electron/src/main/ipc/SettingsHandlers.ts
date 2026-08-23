@@ -50,6 +50,7 @@ import { getRestartSignalPath } from '../utils/appPaths';
 import { TrayManager } from '../tray/TrayManager';
 import { STYTCH_CONFIG } from '@nimbalyst/runtime';
 import { type EffortLevel, parseEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import { assertDynamicModelCatalogSelection } from '../services/ai/modelCatalogValidation';
 
 // Track if we've subscribed to sync status changes
 let syncStatusListenerSetup = false;
@@ -533,7 +534,21 @@ export function registerSettingsHandlers() {
         return getDefaultAIModel();
     });
 
-    safeHandle('settings:set-default-ai-model', (_event, model: string) => {
+    safeHandle('settings:set-default-ai-model', async (_event, model: string) => {
+        if (typeof model !== 'string') {
+            throw new Error('默认模型必须是字符串。');
+        }
+        const trimmedModel = model.trim();
+        if (trimmedModel) {
+            const separator = trimmedModel.indexOf(':');
+            if (separator <= 0) {
+                throw new Error('默认模型必须采用“provider:model”格式。');
+            }
+            await assertDynamicModelCatalogSelection(
+                trimmedModel.slice(0, separator),
+                trimmedModel,
+            );
+        }
         setDefaultAIModel(model);
     });
 

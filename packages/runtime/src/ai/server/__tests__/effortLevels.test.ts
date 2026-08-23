@@ -5,6 +5,7 @@ describe('resolveEffortLevel', () => {
   it('uses the explicit per-session effort when set', () => {
     expect(resolveEffortLevel('low', 'max')).toBe('low');
     expect(resolveEffortLevel('high', 'max')).toBe('high');
+    expect(resolveEffortLevel('ultra', 'max')).toBe('ultra');
   });
 
   it('falls back to the app default when the session has no effort', () => {

@@ -418,6 +418,7 @@ describe('MetaAgentService work-order persistence', () => {
         createdAt: Date.now(),
       })),
       triggerQueuedPromptProcessingForSession: vi.fn().mockResolvedValue(true),
+      assertCurrentDynamicModelAvailable: vi.fn().mockResolvedValue(undefined),
       getPlanApprovalState,
       markPlanApprovalDelivered: vi.fn(async (
         sessionId: string,

@@ -33,6 +33,10 @@ import { setSleepPreventionMode, setSyncConnected, shutdownSleepPrevention, type
 import { reconnectAllTrackerSyncs } from './TrackerSyncManager';
 import { BrowserWindow } from 'electron';
 import { timeStartupPhase } from '../utils/startupTiming';
+import {
+  getDynamicModelCatalogStatuses,
+  type DynamicModelCatalogStatus,
+} from './ai/modelCatalogValidation';
 
 function loadSyncModule() {
   return syncModule;
@@ -1189,7 +1193,41 @@ async function getVoiceModeSettings(): Promise<{ voice?: string; submitDelayMs?:
  * Get available AI models for syncing to mobile.
  * Uses the same filtering logic as the ai:getModels IPC handler.
  */
-async function getAvailableModelsForMobile(): Promise<{ models: Array<{ id: string; name: string; provider: string }>; defaultModel?: string }> {
+type MobileAvailableModel = {
+  id: string;
+  name: string;
+  provider: string;
+  verified?: boolean;
+  unverifiedPlaceholder?: boolean;
+  supportedEffortLevels?: string[];
+};
+
+type MobileModelCatalogStatus = DynamicModelCatalogStatus;
+
+function isVerifiedRuntimeDynamicCatalog(
+  provider: string,
+  statuses: Record<string, MobileModelCatalogStatus>,
+): boolean {
+  // Legacy ACP and the optionally visible Claude CLI are namespace projections
+  // of the same dynamic catalogs. Treating only their primary channels as
+  // dynamic would leak a cache/placeholder row to mobile as a selectable model.
+  if (
+    provider !== 'claude-code'
+    && provider !== 'claude-code-cli'
+    && provider !== 'openai-codex'
+    && provider !== 'openai-codex-acp'
+  ) return true;
+  const status = statuses[provider];
+  return status?.modelSource === 'runtime'
+    && status.verified === true
+    && !status.lastError;
+}
+
+async function getAvailableModelsForMobile(): Promise<{
+  models: MobileAvailableModel[];
+  defaultModel?: string;
+  modelCatalogStatuses: Record<string, MobileModelCatalogStatus>;
+}> {
   try {
     const Store = (await import('electron-store')).default;
     const { ModelRegistry } = await import('@nimbalyst/runtime/ai/server/ModelRegistry');
@@ -1212,8 +1250,16 @@ async function getAvailableModelsForMobile(): Promise<{ models: Array<{ id: stri
     };
     const allModels = await ModelRegistry.getAllModels(modelsConfig, enabledSet as Set<any>);
     // Filter to enabled models (model-level filtering for specific model selection)
+    const catalogStatuses = getDynamicModelCatalogStatuses();
     const enabledModels = allModels.filter(model => {
       const ps = providerSettings[model.provider] as { enabled?: boolean; models?: string[] } | undefined;
+      // Cache and first-install placeholders are display evidence only on the
+      // desktop. Mobile gets the status projection but never receives an
+      // executable dynamic model until this run has a live engine response.
+      if (!isVerifiedRuntimeDynamicCatalog(model.provider, catalogStatuses)) {
+        return false;
+      }
+      if (model.unverifiedPlaceholder === true) return false;
       // If specific models are selected for this provider, filter
       if (ps?.models && ps.models.length > 0) {
         return ps.models.includes(model.id);
@@ -1221,12 +1267,24 @@ async function getAvailableModelsForMobile(): Promise<{ models: Array<{ id: stri
       return true;
     });
 
-    const models = enabledModels.map(m => ({ id: m.id, name: m.name, provider: m.provider }));
-    const defaultModel = getDefaultAIModel() || 'claude-code:opus-1m';
-    return { models, defaultModel };
+    const models = enabledModels.map(m => ({
+      id: m.id,
+      name: m.name,
+      provider: m.provider,
+      verified: isVerifiedRuntimeDynamicCatalog(m.provider, catalogStatuses),
+      unverifiedPlaceholder: m.unverifiedPlaceholder === true,
+      ...(m.supportedEffortLevels ? { supportedEffortLevels: [...m.supportedEffortLevels] } : {}),
+    }));
+    // Do not advertise a package-local Claude default to mobile clients when
+    // the saved default is absent or the dynamic directory has changed.
+    const savedDefaultModel = getDefaultAIModel();
+    const defaultModel = savedDefaultModel && models.some((model) => model.id === savedDefaultModel)
+      ? savedDefaultModel
+      : undefined;
+    return { models, modelCatalogStatuses: catalogStatuses, ...(defaultModel ? { defaultModel } : {}) };
   } catch (err) {
     logger.main.warn('[SyncManager] Failed to fetch models for mobile sync:', err);
-    return { models: [] };
+    return { models: [], modelCatalogStatuses: getDynamicModelCatalogStatuses() };
   }
 }
 
@@ -1255,7 +1313,11 @@ export async function syncSettingsToMobile(openaiApiKey?: string): Promise<void>
   const voiceModeSettings = await getVoiceModeSettings();
 
   // Get available AI models for the mobile model picker
-  const { models: availableModels, defaultModel } = await getAvailableModelsForMobile();
+  const {
+    models: availableModels,
+    defaultModel,
+    modelCatalogStatuses,
+  } = await getAvailableModelsForMobile();
 
   // Whether the desktop "meta-agent" alpha feature is enabled (gates the mobile Meta Agent UI)
   const metaAgentEnabled = getAlphaFeatures()['meta-agent'] ?? false;
@@ -1271,6 +1333,7 @@ export async function syncSettingsToMobile(openaiApiKey?: string): Promise<void>
       } : undefined,
       availableModels,
       defaultModel,
+      modelCatalogStatuses,
       metaAgentEnabled,
       version: settingsVersion,
     });

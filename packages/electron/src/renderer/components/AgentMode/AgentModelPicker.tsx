@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { getClaudeCodeModelLabel } from '../../utils/modelUtils';
@@ -17,6 +17,33 @@ interface AgentModelPickerProps {
   onModelChange: (modelId: string) => void;
   isLoading?: boolean;
   disabled?: boolean;
+}
+
+interface ModelCatalogStatus {
+  modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
+  verified?: boolean;
+  lastSuccessAt?: number | null;
+  lastError?: { message?: string } | null;
+}
+
+function formatCatalogWarnings(catalogs: Record<string, ModelCatalogStatus>): string | null {
+  const messages = ['claude-code', 'openai-codex']
+    .map((provider) => {
+      const status = catalogs[provider];
+      if (!status) return null;
+      const cachedAt = typeof status.lastSuccessAt === 'number'
+        ? `上次成功获取于 ${new Date(status.lastSuccessAt).toLocaleString()}`
+        : null;
+      if (status.lastError?.message) {
+        return `${provider}：${status.lastError.message}${cachedAt ? `。${cachedAt}` : ''}`;
+      }
+      if (!status.verified || status.modelSource !== 'runtime') {
+        return `${provider}：模型目录未在本次运行中验证${cachedAt ? `（${cachedAt}）` : ''}`;
+      }
+      return null;
+    })
+    .filter((message): message is string => !!message);
+  return messages.length > 0 ? messages.join('；') : null;
 }
 
 const providerLabels: Record<string, string> = {
@@ -41,6 +68,18 @@ export function AgentModelPicker({
   disabled = false,
 }: AgentModelPickerProps) {
   const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
+  const [catalogWarning, setCatalogWarning] = useState<string | null>(null);
+  useEffect(() => {
+    let disposed = false;
+    void window.electronAPI?.invoke?.('ai:getModelCatalogStatus')
+      .then((result: { catalogs?: Record<string, ModelCatalogStatus> }) => {
+        if (!disposed) setCatalogWarning(formatCatalogWarnings(result?.catalogs ?? {}));
+      })
+      .catch(() => {
+        if (!disposed) setCatalogWarning('模型目录状态读取失败，暂不提供未验证型号。');
+      });
+    return () => { disposed = true; };
+  }, [models]);
   const selectableModels = useMemo(
     () => models.filter((model) => (
       model.provider !== 'openai-codex-acp'
@@ -90,6 +129,11 @@ export function AgentModelPicker({
           </optgroup>
         ))}
       </select>
+      {catalogWarning && (
+        <p className="m-0 text-[11px] leading-relaxed text-[var(--nim-error)]" role="alert">
+          模型目录不可用：{catalogWarning}
+        </p>
+      )}
     </div>
   );
 }

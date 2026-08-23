@@ -234,6 +234,30 @@ describe('CodexSDKProtocol', () => {
     expect('additionalDirectories' in passedOptions).toBe(false);
   });
 
+  it('forwards the dynamically advertised ultra reasoning effort unchanged', async () => {
+    const startThread = vi.fn((_options?: Record<string, unknown>) => ({
+      id: 'thread-ultra-effort',
+      runStreamed: vi.fn(),
+    }));
+    const protocol = new CodexSDKProtocol(
+      'test-key',
+      async () => ({
+        Codex: class {
+          startThread = startThread;
+          resumeThread = vi.fn();
+        },
+      }) as any,
+    );
+
+    await protocol.createSession({
+      workspacePath: '/projects/main',
+      raw: { effortLevel: 'ultra' },
+    } as any);
+
+    const passedOptions = startThread.mock.calls[0]![0] as Record<string, unknown>;
+    expect(passedOptions.modelReasoningEffort).toBe('ultra');
+  });
+
   it('passes image attachments as structured local_image inputs', async () => {
     const runStreamed = vi.fn(async () => ({
       events: createAsyncEventStream([

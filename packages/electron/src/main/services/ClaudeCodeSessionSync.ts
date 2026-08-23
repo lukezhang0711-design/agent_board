@@ -10,7 +10,6 @@ import * as path from 'path';
 import { homedir } from 'os';
 import type { SessionStore } from '@nimbalyst/runtime';
 import type { AgentMessagesStore } from '@nimbalyst/runtime/storage/repositories/AgentMessagesRepository';
-import { DEFAULT_MODELS } from '@nimbalyst/runtime/ai/modelConstants';
 import { logger } from '../utils/logger';
 import { encodeWorkspaceDir, extractSessionMetadata, type ClaudeCodeEntry, type SessionMetadata } from './ClaudeCodeSessionScanner';
 
@@ -215,23 +214,23 @@ async function loadPersistedOutput(text: string): Promise<string | null> {
 }
 
 /**
- * Map a Claude Code session's per-turn model id to a claude-code variant.
+ * Preserve a Claude Code session's per-turn model id without guessing a
+ * local variant.
  *
  * Claude Code JSONL records the model on each assistant entry (e.g.
  * "claude-opus-4-7", new in 2.1.x). Imports previously stored no model at all,
  * so the renderer fell back to a hardcoded `claude-code:sonnet` and every
  * imported session showed Sonnet regardless of the model actually used (#394).
  * Walk the entries newest-first and return the most recent recognisable model
- * as a `claude-code:<variant>` string; undefined when none carry a model.
+ * as a `claude-code:<engine-model>` string; undefined when none carry a model.
+ * The live SDK catalog is the only authority that may later decide whether
+ * that imported engine id is still selectable.
  */
 export function importedClaudeCodeModel(entries: ClaudeCodeEntry[]): string | undefined {
   for (let i = entries.length - 1; i >= 0; i--) {
     const raw = entries[i]?.message?.model;
     if (typeof raw !== 'string' || raw.length === 0) continue;
-    const id = raw.toLowerCase();
-    if (id.includes('opus')) return 'claude-code:opus';
-    if (id.includes('sonnet')) return 'claude-code:sonnet';
-    if (id.includes('haiku')) return 'claude-code:haiku';
+    return `claude-code:${raw.trim()}`;
   }
   return undefined;
 }
@@ -620,10 +619,11 @@ export async function syncSession(
         id: metadata.sessionId,
         workspaceId: metadata.workspacePath,
         provider: 'claude-code',
-        // Label the imported session with the model actually used (read from the
-        // per-turn model on the JSONL assistant entries), falling back to the
-        // real claude-code default rather than the renderer's hardcoded Sonnet (#394).
-        model: importedClaudeCodeModel(entries) ?? DEFAULT_MODELS['claude-code'],
+        // Preserve the actual per-turn engine id when present. Do not write a
+        // static default for sessions whose JSONL lacks it: the first send
+        // requires a live SDK-catalog selection instead of silently billing a
+        // model which may not exist anymore.
+        model: importedClaudeCodeModel(entries),
         title: metadata.title || 'Imported Session',
         sessionType: 'session',
         providerSessionId: metadata.sessionId, // CRITICAL: Pass the Claude Code session ID so SDK can resume

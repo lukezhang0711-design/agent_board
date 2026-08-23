@@ -388,6 +388,7 @@ describe('AIService.stopSession', () => {
       getNormalizedProviderSettings: () => ({
         'openai-codex': { enabled: true },
       }),
+      getModelCatalogStatuses: () => ({}),
       streamingHandler: { handle: vi.fn() },
     });
     (service as any).setupIpcHandlers();
@@ -396,7 +397,7 @@ describe('AIService.stopSession', () => {
 
     expect(mocks.clearModelCache).toHaveBeenCalledTimes(1);
     expect(manualRetry).not.toHaveBeenCalled();
-    expect(result).toEqual({ success: true, modelRefreshStatus });
+    expect(result).toEqual({ success: true, modelRefreshStatus, catalogStatuses: {} });
   });
 
   afterEach(async () => {
