@@ -65,7 +65,9 @@ export {
 // Re-export host types (for use in SessionTranscript to set the host)
 export type {
   InteractiveWidgetHost,
+  PlanModuleApproval,
   PermissionScope,
+  PlanModuleApprovalStatus,
   SelectedPlanCandidate,
   ToolPermissionResponse,
 } from './InteractiveWidgetHost';

@@ -247,6 +247,13 @@ export interface DurablePlanApprovalViewState {
   requestId: string;
   status: 'submitted' | 'responded' | 'delivered' | 'closed';
   decision?: 'approved' | 'rejected' | 'dismissed';
+  feedback?: string;
+  moduleIndex?: number;
+  moduleApprovals?: Array<{
+    moduleIndex: number;
+    status: 'pending' | 'approved' | 'rejected';
+    feedback?: string;
+  }>;
 }
 
 export interface PlanApprovalStateKey {

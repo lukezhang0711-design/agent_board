@@ -289,6 +289,14 @@ function isOpenCodeAbortConfirmed(interruptResult: unknown): boolean {
 export type PlanApprovalStatus = 'submitted' | 'responded' | 'delivered' | 'closed';
 export type PlanApprovalDecision = 'approved' | 'rejected' | 'dismissed';
 export type PlanApprovalDeliveryMethod = 'direct' | 'revive';
+export type PlanModuleApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface DurablePlanModuleApproval {
+  /** Stable 1-based module position within the submitted plan. */
+  moduleIndex: number;
+  status: PlanModuleApprovalStatus;
+  feedback?: string;
+}
 
 export interface DurablePlanApprovalState {
   requestId: string;
@@ -300,6 +308,9 @@ export interface DurablePlanApprovalState {
   respondedBy?: string;
   deliveryMethod?: PlanApprovalDeliveryMethod;
   planId?: string;
+  /** Stable 1-based module position when one module was rejected. */
+  moduleIndex?: number;
+  moduleApprovals?: DurablePlanModuleApproval[];
 }
 
 export function normalizePlanApprovalRequestId(requestId: string): string {
@@ -326,6 +337,48 @@ function matchesPlanApprovalRequestId(candidate: unknown, requestId: string): bo
     && normalizePlanApprovalRequestId(candidate) === requestId;
 }
 
+function parseDurablePlanModuleApprovals(value: unknown): DurablePlanModuleApproval[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const approvals = value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return [];
+    const record = entry as Record<string, unknown>;
+    const moduleIndex = record.moduleIndex;
+    const status = record.status;
+    if (
+      typeof moduleIndex !== 'number'
+      || !Number.isInteger(moduleIndex)
+      || moduleIndex < 1
+      || (status !== 'pending' && status !== 'approved' && status !== 'rejected')
+    ) {
+      return [];
+    }
+    return [{
+      moduleIndex,
+      status,
+      ...(typeof record.feedback === 'string' && record.feedback ? { feedback: record.feedback } : {}),
+    } satisfies DurablePlanModuleApproval];
+  });
+  return approvals.length > 0 ? approvals : undefined;
+}
+
+function setDurablePlanModuleApproval(
+  approvals: DurablePlanModuleApproval[] | undefined,
+  moduleIndex: number,
+  status: PlanModuleApprovalStatus,
+  feedback?: string,
+): DurablePlanModuleApproval[] {
+  const next = approvals ? [...approvals] : [];
+  const existingIndex = next.findIndex((approval) => approval.moduleIndex === moduleIndex);
+  const value: DurablePlanModuleApproval = {
+    moduleIndex,
+    status,
+    ...(feedback ? { feedback } : {}),
+  };
+  if (existingIndex >= 0) next[existingIndex] = value;
+  else next.push(value);
+  return next.sort((left, right) => left.moduleIndex - right.moduleIndex);
+}
+
 /**
  * Derive the approval state from durable transcript events.
  *
@@ -344,6 +397,8 @@ export function deriveDurablePlanApprovalState(
   let delivery: Record<string, any> | null = null;
   let closed = false;
   let planId: string | undefined;
+  let moduleApprovals: DurablePlanModuleApproval[] | undefined;
+  let moduleIndex: number | undefined;
 
   for (const rawContent of contents) {
     const content = parsePlanApprovalContent(rawContent);
@@ -357,6 +412,13 @@ export function deriveDurablePlanApprovalState(
     ) {
       submitted = true;
       if (typeof content.input?.planId === 'string') planId = content.input.planId;
+      moduleApprovals = parseDurablePlanModuleApprovals(content.input?.moduleApprovals);
+      if (!moduleApprovals && Array.isArray(content.input?.modules) && content.input.modules.length > 1) {
+        moduleApprovals = content.input.modules.map((_module: unknown, index: number) => ({
+          moduleIndex: index + 1,
+          status: 'pending' as const,
+        }));
+      }
       continue;
     }
     if (
@@ -366,6 +428,26 @@ export function deriveDurablePlanApprovalState(
       && response === null
     ) {
       response = content;
+      if (typeof content.moduleIndex === 'number' && Number.isInteger(content.moduleIndex) && content.moduleIndex >= 1) {
+        moduleIndex = content.moduleIndex;
+      }
+      const responseApprovals = parseDurablePlanModuleApprovals(content.moduleApprovals);
+      if (responseApprovals) {
+        moduleApprovals = responseApprovals;
+      } else if (moduleIndex !== undefined && !content.approved) {
+        moduleApprovals = setDurablePlanModuleApproval(
+          moduleApprovals,
+          moduleIndex,
+          'rejected',
+          typeof content.feedback === 'string' ? content.feedback : undefined,
+        );
+      } else if (content.approved && moduleApprovals) {
+        moduleApprovals = moduleApprovals.map((approval) => ({
+          ...approval,
+          status: 'approved' as const,
+          feedback: undefined,
+        }));
+      }
       continue;
     }
     if (
@@ -412,6 +494,8 @@ export function deriveDurablePlanApprovalState(
     ...(typeof response?.respondedBy === 'string' ? { respondedBy: response.respondedBy } : {}),
     ...(delivery?.method ? { deliveryMethod: delivery.method as PlanApprovalDeliveryMethod } : {}),
     ...(planId ? { planId } : {}),
+    ...(moduleIndex !== undefined ? { moduleIndex } : {}),
+    ...(moduleApprovals ? { moduleApprovals } : {}),
   };
 }
 
@@ -1397,6 +1481,8 @@ export class AIService {
         approved: response.approved,
         clearContext: response.clearContext,
         feedback: response.feedback,
+        moduleIndex: response.moduleIndex,
+        moduleApprovals: response.moduleApprovals,
         selectedCandidates: response.selectedCandidates,
         respondedAt: Date.now(),
         respondedBy,
@@ -4057,9 +4143,9 @@ export class AIService {
     });
 
     // Handle ExitPlanMode confirmation response from renderer
-    safeHandle('ai:exitPlanModeConfirmResponse', async (event, requestId: string, sessionId: string, response: { approved: boolean; clearContext?: boolean; feedback?: string; selectedCandidates?: unknown[] }) => {
+    safeHandle('ai:exitPlanModeConfirmResponse', async (event, requestId: string, sessionId: string, response: { approved: boolean; clearContext?: boolean; feedback?: string; moduleIndex?: number; moduleApprovals?: DurablePlanModuleApproval[]; selectedCandidates?: unknown[] }) => {
       const canonicalRequestId = normalizePlanApprovalRequestId(requestId);
-      logger.main.info(`[AIService] ExitPlanMode confirmation response: requestId=${canonicalRequestId}, approved=${response.approved}, clearContext=${response.clearContext}, hasFeedback=${!!response.feedback}`);
+      logger.main.info(`[AIService] ExitPlanMode confirmation response: requestId=${canonicalRequestId}, approved=${response.approved}, moduleIndex=${response.moduleIndex ?? 'all'}, clearContext=${response.clearContext}, hasFeedback=${!!response.feedback}`);
 
       const delivery = await this.respondToInteractivePrompt({
         sessionId,

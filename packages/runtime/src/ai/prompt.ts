@@ -412,11 +412,13 @@ Invalid examples:
 - Chat text: “## 实施方案 … 模块一 … 产出文件 … 等待你的确认。” No card exists; call ${submitPlanTool}.
 - Chat text: “我给你三个方案，批准后我再派发。” This is still text approval; call ${submitPlanTool} once with the selected/revised plan.
 
-Valid example: call ${submitPlanTool} with the title, planItems, workOrderCount, and risks fields above. After rejection, submit the revision as a new ${submitPlanTool} card; never treat a text-only revision as approved. Ordinary questions, investigation findings, status updates, and failure reports do not need a plan card unless the user explicitly asks for implementation planning.
+Valid example: call ${submitPlanTool} with the title, planItems, workOrderCount, and risks fields above. After rejection, resubmit the revision with the same planId so the existing approval card is updated; never treat a text-only revision as approved. Ordinary questions, investigation findings, status updates, and failure reports do not need a plan card unless the user explicitly asks for implementation planning.
 
 ## Structured Plan Card Format
 
 Keep \`planItems\` as a short ordered summary for backward compatibility. Put the useful detail in optional \`modules[]\` fields so the approval card can render it as labels and values instead of relying on Markdown formatting. Each module should include \`title\`, \`outputFiles\` (paths relative to the project root), \`inputs\`, the exact \`provider\`, and the exact full \`model\` ID（实名模型名）, \`effortLevel\`, and a concrete \`doneCriteria\`.
+
+When there are multiple modules, treat each module as parallel work: submit all modules in one planId, and expect the approval surface to render one module card per module beneath a plan header. A module card can be rejected independently. The rejection receipt includes the stable 1-based moduleIndex and the user's original feedback; use that exact moduleIndex to revise the matching module. Keep modules that were already approved unchanged, resubmit the revised plan with the same planId, and never dispatch while any module is rejected. Use the plan header's “全部批准” action when all currently un-rejected modules are ready; it approves them in one step.
 
 When a module has multiple viable approaches, you MUST fill \`modules[].candidates[]\` instead of writing A/B/C/D as serial long paragraphs. Each candidate includes \`name\`, \`approach\` (怎么干), \`pros\`, \`cons\`, \`risks\`, exact \`provider\`, exact \`model\`, and \`effortLevel\`. The user will see one “选这个” control per candidate; after approval, treat the returned \`selectedCandidates\` as authoritative dispatch parameters for the matching child module. Keep plan text concise（方案文字保持简短）; do not write multiple candidate alternatives as serial long paragraphs（不要把多个候选方案写成串行大段落）; details belong in these structured fields.
 

@@ -53,9 +53,21 @@ export interface SelectedPlanCandidate {
   effortLevel: EffortLevel;
 }
 
+export type PlanModuleApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PlanModuleApproval {
+  /** Stable 1-based module position within the submitted plan. */
+  moduleIndex: number;
+  status: PlanModuleApprovalStatus;
+  feedback?: string;
+}
+
 export interface ExitPlanModeResponse {
   approved: boolean;
   feedback?: string;
+  /** Stable 1-based module position for a single-card rejection. */
+  moduleIndex?: number;
+  moduleApprovals?: PlanModuleApproval[];
   startNewSession?: boolean;
   selectedCandidates?: SelectedPlanCandidate[];
 }
@@ -128,7 +140,11 @@ export interface InteractiveWidgetHost {
   /**
    * Approve exiting plan mode and switch to agent mode
    */
-  exitPlanModeApprove(requestId: string, selectedCandidates?: SelectedPlanCandidate[]): Promise<void>;
+  exitPlanModeApprove(
+    requestId: string,
+    selectedCandidates?: SelectedPlanCandidate[],
+    moduleApprovals?: PlanModuleApproval[],
+  ): Promise<void>;
 
   /**
    * Approve and start a new implementation session
@@ -139,7 +155,7 @@ export interface InteractiveWidgetHost {
   /**
    * Deny exit and continue planning, optionally with feedback
    */
-  exitPlanModeDeny(requestId: string, feedback?: string): Promise<void>;
+  exitPlanModeDeny(requestId: string, feedback?: string, moduleIndex?: number): Promise<void>;
 
   /**
    * Cancel the request and stop the session

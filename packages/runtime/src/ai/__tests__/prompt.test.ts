@@ -106,7 +106,7 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('## Plan Card Discipline — No Text Bypass');
     expect(prompt).toContain('Treat a plan written in chat as invalid');
     expect(prompt).toContain('"planItems": ["Bounded module with its deliverable and acceptance check"]');
-    expect(prompt).toContain('After rejection, submit the revision as a new');
+    expect(prompt).toContain('After rejection, resubmit the revision with the same planId');
     expect(prompt).toContain('Ordinary questions, investigation findings, status updates, and failure reports do not need a plan card');
     expect(prompt).toContain('waiting for approval');
   });
@@ -123,5 +123,9 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('selectedCandidates');
     expect(prompt).toContain('方案文字保持简短');
     expect(prompt).toContain('不要把多个候选方案写成串行大段落');
+    expect(prompt).toContain('one module card per module beneath a plan header');
+    expect(prompt).toContain('stable 1-based moduleIndex');
+    expect(prompt).toContain('全部批准');
+    expect(prompt).toContain('same planId');
   });
 });
