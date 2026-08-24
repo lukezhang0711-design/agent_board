@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import type { EffortLevel } from '../../utils/modelUtils';
-import { EFFORT_LEVELS, DEFAULT_EFFORT_LEVEL } from '../../utils/modelUtils';
+import { getEffortLevelLabel } from '../../utils/modelUtils';
 
 interface EffortLevelSelectorProps {
-  level: EffortLevel;
+  level?: EffortLevel;
   onLevelChange: (level: EffortLevel) => void;
   /** Exact values reported by the selected engine model. */
   supportedLevels: EffortLevel[];
@@ -34,10 +34,14 @@ export function EffortLevelSelector({ level, onLevelChange, supportedLevels }: E
     };
   }, [isOpen]);
 
-  const supportedOptions = EFFORT_LEVELS.filter((candidate) => supportedLevels.includes(candidate.key));
+  const supportedOptions = Array.from(new Set(supportedLevels)).map((key) => ({
+    key,
+    label: getEffortLevelLabel(key),
+  }));
   const currentLevel = supportedOptions.find(l => l.key === level)
-    ?? supportedOptions[0]
-    ?? EFFORT_LEVELS.find(l => l.key === DEFAULT_EFFORT_LEVEL)!;
+    ?? supportedOptions[0];
+
+  if (!currentLevel) return null;
 
   return (
     <div className="relative inline-block" ref={dropdownRef}>

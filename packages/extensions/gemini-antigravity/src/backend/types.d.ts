@@ -251,7 +251,10 @@ declare global {
     cleanupSession(sessionId: string): Promise<void> | void;
 
     /** Return the cached agy-backed model list for dynamic host discovery. */
-    listModels(): Promise<Array<{ id: string; name: string; default?: boolean }>>;
+    listModels(): Promise<Array<{ id: string; name: string; default?: boolean; supportedEffortLevels: [] }>>;
+
+    /** Re-run the existing agy discovery path for an explicit picker refresh. */
+    refreshModels(): Promise<Array<{ id: string; name: string; default?: boolean; supportedEffortLevels: [] }>>;
 
     /**
      * Read-only usage/quota probe. Returns the live Antigravity usage snapshot

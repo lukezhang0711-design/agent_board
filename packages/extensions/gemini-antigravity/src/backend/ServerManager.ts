@@ -407,6 +407,22 @@ export class AntigravityServerManager {
     return this.agyModelCatalogPromise;
   }
 
+  /**
+   * Re-run the existing discovery path for an explicit catalog refresh. This
+   * intentionally does not change getAvailableAgyModels' static fallback:
+   * callers that need a live picker result receive the discovery failure and
+   * can show its red state instead of treating cached rows as executable.
+   */
+  async refreshAvailableAgyModels(
+    timeoutMs = 10_000,
+    workspacePath?: string,
+  ): Promise<readonly AgyModelDescriptor[]> {
+    const catalog = await this.loadAgyModelCatalog(timeoutMs, workspacePath);
+    this.agyModelCatalog = catalog;
+    this.agyModelCatalogPromise = Promise.resolve(catalog);
+    return catalog;
+  }
+
   private async loadAgyModelCatalog(
     timeoutMs: number,
     workspacePath?: string,

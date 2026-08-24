@@ -11,7 +11,14 @@ import {
   isExtensionAgentProvider,
   resolveExtensionAgentRef,
 } from './providerResolution';
-import { getAgentProviderRegistry } from '../../extensions/AgentProviderRegistry';
+import {
+  getAgentProviderRegistry,
+  type AgentProviderEntry,
+} from '../../extensions/AgentProviderRegistry';
+import {
+  refreshExtensionAgentProviderModels,
+  type ExtensionAgentCatalogModel,
+} from '../../extensions/extensionAgentBridge';
 import {
   SessionManager,
   ProviderFactory,
@@ -27,7 +34,11 @@ import { ClaudeCodeCliProvider } from '@nimbalyst/runtime/ai/server/providers/Cl
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { parseContextUsageMessage } from '@nimbalyst/runtime/ai/server/utils/contextUsage';
 import { isBedrockToolSearchError } from '@nimbalyst/runtime/ai/server/utils/errorDetection';
-import { resolveEffortLevel, type EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import {
+  parseEffortLevel,
+  resolveDeclaredEffortLevel,
+  type EffortLevel,
+} from '@nimbalyst/runtime/ai/server/effortLevels';
 import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
 import type { SessionStore } from '@nimbalyst/runtime';
 import type {
@@ -82,7 +93,8 @@ import {
   normalizeAIProviderOverrides,
   shouldShowCommunityPopup,
   wasCommunityPopupShownThisLaunch,
-  getDefaultEffortLevel
+  getDefaultEffortLevel,
+  setDefaultEffortLevel,
 } from '../../utils/store';
 import { mergeAISettings, getAIProviderOverridesWithWorktreeFallback } from '../../utils/aiSettingsMerge';
 import { AISessionsRepository, DocumentContextService, type RawDocumentContext, type PreparedDocumentContext } from '@nimbalyst/runtime';
@@ -163,6 +175,7 @@ import {
   setDynamicModelCatalogStatusReader,
   setDynamicModelCatalogSelectionResolver,
   setDynamicModelCatalogValidator,
+  setDynamicModelEffortNormalizer,
   type DynamicModelCatalogStatus,
 } from './modelCatalogValidation';
 import { resolveEquivalentModelIdMigration } from './modelIdMigration';
@@ -183,6 +196,17 @@ type ChannelHealthExtensionProvider = {
   status: string;
   contributionId: string;
   contribution: { displayName?: string };
+};
+
+/**
+ * Live model directory retained for one dynamic extension provider. The
+ * manifest remains descriptive only; a dynamic row becomes selectable solely
+ * after its backend has returned this runtime list.
+ */
+type ExtensionDynamicModelCatalog = {
+  models: AIModel[];
+  status: DynamicModelCatalogStatus;
+  inFlight: Promise<void> | null;
 };
 
 /**
@@ -542,6 +566,7 @@ export class AIService {
   private startupChannelHealthScheduled = false;
   private readonly codexModelRefreshService: CodexModelRefreshService;
   private readonly claudeCodeModelCatalogService: ClaudeCodeModelCatalogService;
+  private readonly extensionDynamicModelCatalogs = new Map<string, ExtensionDynamicModelCatalog>();
 
   constructor(sessionStore: SessionStore) {
     logger.main.info('[AIService] Constructor called');
@@ -590,6 +615,17 @@ export class AIService {
       this.resolveValidatedModelForNewSession(provider, modelId),
     );
     setDynamicModelCatalogStatusReader(() => this.getModelCatalogStatuses());
+    setDynamicModelEffortNormalizer(async ({ provider, modelId, sessionId, sessionEffortLevel }) => {
+      if (!this.isRuntimeDynamicCatalogProvider(provider)) return;
+      await this.awaitModelCatalogForProvider(provider);
+      await this.assertDynamicModelAvailable(provider, modelId);
+      await this.normalizePersistedDynamicSessionEffort(
+        provider,
+        modelId,
+        sessionEffortLevel,
+        sessionId,
+      );
+    });
     this.codexModelRefreshService.registerIpcHandlers();
 
     // Set up persistence callback for DocumentContextService
@@ -648,6 +684,7 @@ export class AIService {
     this.startClaudeCodeModelCatalogIfEnabled(
       this.getNormalizedProviderSettings() as Record<AIProviderType, any>,
     );
+    this.startExtensionDynamicModelCatalogs();
 
     // Clean up any empty messages from existing sessions on startup
     const cleaned = this.sessionManager.cleanupAllSessions();
@@ -1689,6 +1726,121 @@ export class AIService {
     });
   }
 
+  /**
+   * Dynamic extensions may require a consent-backed backend process. Startup
+   * therefore refreshes only already-active extensions; the picker can still
+   * request the first consent-backed refresh explicitly.
+   */
+  private startExtensionDynamicModelCatalogs(): void {
+    for (const entry of getAgentProviderRegistry().list()) {
+      if (entry.status !== 'active' || entry.contribution.modelDiscovery !== 'dynamic') continue;
+      void this.refreshDynamicExtensionCatalog(entry.contributionId).catch((error) => {
+        logger.main.error(
+          `[AIService] ${entry.contributionId} startup model refresh failed:`,
+          error,
+        );
+      });
+    }
+  }
+
+  private getDynamicExtensionProvider(provider: string): AgentProviderEntry | undefined {
+    const entry = getAgentProviderRegistry().findByContributionId(provider);
+    if (!entry || entry.status === 'denied' || entry.contribution.modelDiscovery !== 'dynamic') {
+      return undefined;
+    }
+    return entry;
+  }
+
+  private getExtensionDynamicCatalog(provider: string): ExtensionDynamicModelCatalog {
+    const existing = this.extensionDynamicModelCatalogs.get(provider);
+    if (existing) return existing;
+    const catalog: ExtensionDynamicModelCatalog = {
+      models: [],
+      status: {
+        modelSource: 'none',
+        verified: false,
+        lastSuccessAt: null,
+        lastError: null,
+        inFlight: false,
+      },
+      inFlight: null,
+    };
+    this.extensionDynamicModelCatalogs.set(provider, catalog);
+    return catalog;
+  }
+
+  private mapExtensionDynamicCatalogModel(
+    provider: string,
+    candidate: ExtensionAgentCatalogModel,
+  ): AIModel | null {
+    const rawId = candidate.id.trim();
+    if (!rawId) return null;
+    const id = rawId.includes(':') ? rawId : `${provider}:${rawId}`;
+    if (!id.startsWith(`${provider}:`)) return null;
+    const levels = Array.from(new Set(
+      (candidate.supportedEffortLevels ?? [])
+        .map((level) => level.trim())
+        .filter(Boolean),
+    ));
+    const defaultEffortLevel = candidate.defaultEffortLevel?.trim();
+    return {
+      id,
+      name: candidate.name,
+      provider: provider as AIProviderType,
+      supportsEffort: levels.length > 0,
+      supportedEffortLevels: levels,
+      ...(defaultEffortLevel && levels.includes(defaultEffortLevel)
+        ? { defaultEffortLevel }
+        : {}),
+      ...(candidate.default === true ? { isEngineDefault: true } : {}),
+    };
+  }
+
+  /**
+   * Runs exactly one extension backend refresh and records a red/cache status
+   * on failure. The cache is only visible evidence; the common validation gate
+   * below still refuses it as executable.
+   */
+  private refreshDynamicExtensionCatalog(provider: string): Promise<void> {
+    if (!this.getDynamicExtensionProvider(provider)) return Promise.resolve();
+    const catalog = this.getExtensionDynamicCatalog(provider);
+    if (catalog.inFlight) return catalog.inFlight;
+
+    catalog.status = { ...catalog.status, inFlight: true };
+    const refresh = (async () => {
+      try {
+        const models = (await refreshExtensionAgentProviderModels(provider))
+          .map((candidate) => this.mapExtensionDynamicCatalogModel(provider, candidate))
+          .filter((candidate): candidate is AIModel => candidate !== null);
+        if (models.length === 0) {
+          throw new Error(`${provider} refreshModels returned no valid models.`);
+        }
+        catalog.models = models;
+        catalog.status = {
+          modelSource: 'runtime',
+          verified: true,
+          lastSuccessAt: Date.now(),
+          lastError: null,
+          inFlight: false,
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        catalog.status = {
+          modelSource: catalog.models.length > 0 ? 'cache' : 'none',
+          verified: false,
+          lastSuccessAt: catalog.status.lastSuccessAt ?? null,
+          lastError: { message },
+          inFlight: false,
+        };
+        throw error;
+      } finally {
+        catalog.inFlight = null;
+      }
+    })();
+    catalog.inFlight = refresh;
+    return refresh;
+  }
+
   private async awaitModelCatalogsIfEnabled(
     providerSettings: Record<AIProviderType, any>,
   ): Promise<void> {
@@ -1717,23 +1869,64 @@ export class AIService {
   }
 
   /**
+   * Picker refresh is intentionally explicit: normal message sends only read
+   * the last verified runtime directory and never kick off these probes.
+   */
+  public async refreshModelCatalogsForPicker(): Promise<void> {
+    const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
+    const pending: Promise<unknown>[] = [];
+    if (this.isCodexCatalogConsumed(providerSettings)) {
+      pending.push(this.codexModelRefreshService.manualRetry());
+    }
+    if (this.isClaudeCatalogConsumed(providerSettings)) {
+      pending.push(this.claudeCodeModelCatalogService.manualRetry());
+    }
+    for (const entry of getAgentProviderRegistry().list()) {
+      if (entry.status === 'denied' || entry.contribution.modelDiscovery !== 'dynamic') continue;
+      pending.push(this.refreshDynamicExtensionCatalog(entry.contributionId));
+    }
+    // Each catalog owns its own red state. Resolve after all attempts so the
+    // renderer can keep old rows visible and draw that status in place.
+    await Promise.allSettled(pending);
+  }
+
+  /** Head refreshes the selected child channel immediately before dispatch. */
+  public async refreshModelCatalogForHeadDispatch(provider: string): Promise<void> {
+    if (provider === 'openai-codex' || provider === 'openai-codex-acp') {
+      await this.codexModelRefreshService.manualRetry();
+      return;
+    }
+    if (provider === 'claude-code' || provider === 'claude-code-cli') {
+      await this.claudeCodeModelCatalogService.manualRetry();
+      return;
+    }
+    if (this.getDynamicExtensionProvider(provider)) {
+      await this.refreshDynamicExtensionCatalog(provider);
+    }
+  }
+
+  /**
    * An old CLI/ACP session can outlive its visible provider toggle. Before it
    * sends anything, force its shared engine catalog to leave disk-cache state
    * through the same startup fetch used by the primary channel.
    */
-  private async awaitModelCatalogForProvider(provider: AIProviderType): Promise<void> {
+  private async awaitModelCatalogForProvider(provider: string): Promise<void> {
     if (provider === 'openai-codex' || provider === 'openai-codex-acp') {
       await this.codexModelRefreshService.start();
       return;
     }
     if (provider === 'claude-code' || provider === 'claude-code-cli') {
       await this.claudeCodeModelCatalogService.start();
+      return;
+    }
+    if (this.getDynamicExtensionProvider(provider)) {
+      await this.extensionDynamicModelCatalogs.get(provider)?.inFlight;
     }
   }
 
   private getModelCatalogStatuses(): Record<string, DynamicModelCatalogStatus> {
     const claudeStatus = this.claudeCodeModelCatalogService.getStatus();
-    return {
+    const statuses: Record<string, DynamicModelCatalogStatus> = {
       'claude-code': claudeStatus,
       // The CLI provider is a namespace projection of the same SDK catalog.
       'claude-code-cli': claudeStatus,
@@ -1742,6 +1935,10 @@ export class AIService {
       // the same Codex catalog gate before they can execute.
       'openai-codex-acp': this.codexModelRefreshService.getStatus(),
     };
+    for (const [provider, catalog] of this.extensionDynamicModelCatalogs) {
+      statuses[provider] = { ...catalog.status };
+    }
+    return statuses;
   }
 
   /**
@@ -1750,7 +1947,7 @@ export class AIService {
    * so every IPC payload applies the same runtime-only rule.
    */
   private isCurrentDynamicCatalogModel(model: AIModel): boolean {
-    if (!this.isRuntimeDynamicCatalogProviderName(model.provider)) return true;
+    if (!this.isRuntimeDynamicCatalogProvider(model.provider)) return true;
     const status = this.getModelCatalogStatuses()[model.provider];
     return model.unverifiedPlaceholder !== true
       && status?.modelSource === 'runtime'
@@ -1807,6 +2004,13 @@ export class AIService {
     if (providerSettings['openai-codex']?.enabled === true && codexStatus.verified && !codexStatus.lastError) {
       models.push(...this.codexModelRefreshService.getModels());
     }
+    for (const entry of getAgentProviderRegistry().list()) {
+      if (entry.status === 'denied' || entry.contribution.modelDiscovery !== 'dynamic') continue;
+      const status = this.getModelCatalogStatuses()[entry.contributionId];
+      if (status?.modelSource === 'runtime' && status.verified && !status.lastError) {
+        models.push(...this.getDynamicCatalogModels(entry.contributionId));
+      }
+    }
     return {
       models: models.map((model) => ({
         id: model.id,
@@ -1824,9 +2028,9 @@ export class AIService {
 
   /** Used by Head before it persists a child session; no fallback substitution. */
   public async assertCurrentDynamicModelAvailable(
-    provider: AIProviderType,
+    provider: string,
     modelId: string,
-    requestedEffort?: EffortLevel,
+    requestedEffort?: unknown,
   ): Promise<void> {
     await this.awaitModelCatalogForProvider(provider);
     await this.assertDynamicModelAvailable(provider, modelId, requestedEffort);
@@ -1842,7 +2046,7 @@ export class AIService {
     provider: string,
     sessionModel?: string,
     providerConfigModel?: string,
-    requestedEffort?: EffortLevel,
+    sessionEffortLevel?: unknown,
     sessionId?: string,
   ): Promise<string | undefined> {
     if (!this.isRuntimeDynamicCatalogProviderName(provider)) {
@@ -1851,9 +2055,18 @@ export class AIService {
 
     const suppliedModel = sessionModel || providerConfigModel;
     const requestedModelId = this.normalizeDynamicModelIdentifier(provider, suppliedModel);
-    await this.awaitModelCatalogForProvider(provider as AIProviderType);
+    await this.awaitModelCatalogForProvider(provider);
     const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, requestedModelId);
-    await this.assertDynamicModelAvailable(provider, catalogModelId, requestedEffort);
+    // Keep the model identity gate intact. Effort is intentionally resolved
+    // after identity validation because it is a model capability, never a
+    // reason to reject the user's message.
+    await this.assertDynamicModelAvailable(provider, catalogModelId);
+    await this.normalizePersistedDynamicSessionEffort(
+      provider,
+      catalogModelId,
+      sessionEffortLevel,
+      sessionId,
+    );
 
     // ACP validates against the shared Codex catalog, but the persisted ACP
     // namespace is transport-significant and must never be rewritten to the
@@ -1966,25 +2179,26 @@ export class AIService {
     return model;
   }
 
-  private isRuntimeDynamicCatalogProvider(provider: AIProviderType): boolean {
+  public isRuntimeDynamicCatalogProvider(provider: string): boolean {
     return this.isRuntimeDynamicCatalogProviderName(provider);
   }
 
-  private isRuntimeDynamicCatalogProviderName(provider: string): provider is 'openai-codex' | 'openai-codex-acp' | 'claude-code' | 'claude-code-cli' {
+  private isRuntimeDynamicCatalogProviderName(provider: string): boolean {
     return provider === 'openai-codex'
       || provider === 'openai-codex-acp'
       || provider === 'claude-code'
-      || provider === 'claude-code-cli';
+      || provider === 'claude-code-cli'
+      || this.getDynamicExtensionProvider(provider) !== undefined;
   }
 
   /** A legacy providerConfig may contain only the unprefixed engine value. */
-  private normalizeDynamicModelIdentifier(provider: AIProviderType, modelId: string | undefined): string | undefined {
+  private normalizeDynamicModelIdentifier(provider: string, modelId: string | undefined): string | undefined {
     const trimmed = modelId?.trim();
     if (!trimmed) return undefined;
     return trimmed.includes(':') ? trimmed : `${provider}:${trimmed}`;
   }
 
-  private getDynamicCatalogModels(provider: AIProviderType): AIModel[] {
+  private getDynamicCatalogModels(provider: string): AIModel[] {
     if (provider === 'openai-codex' || provider === 'openai-codex-acp') {
       return this.codexModelRefreshService.getModels();
     }
@@ -1994,7 +2208,7 @@ export class AIService {
     if (provider === 'claude-code') {
       return this.claudeCodeModelCatalogService.getModels();
     }
-    return [];
+    return this.extensionDynamicModelCatalogs.get(provider)?.models ?? [];
   }
 
   /**
@@ -2003,7 +2217,7 @@ export class AIService {
    * no family-name substring or static alias is ever inferred.
    */
   private resolveDynamicCatalogModelIdentifier(
-    provider: AIProviderType,
+    provider: string,
     modelId: string | undefined,
   ): string | undefined {
     if (!modelId) return undefined;
@@ -2033,22 +2247,15 @@ export class AIService {
     return catalogModelId;
   }
 
-  private getEngineRecommendedDynamicModel(provider: AIProviderType): string | undefined {
+  private getEngineRecommendedDynamicModel(provider: string): string | undefined {
     const models = this.getDynamicCatalogModels(provider);
     return models.find((model) => model.isEngineDefault === true && !model.unverifiedPlaceholder)?.id;
   }
 
-  private async assertDynamicCatalogReady(provider: AIProviderType): Promise<void> {
-    const service = provider === 'openai-codex' || provider === 'openai-codex-acp'
-      ? this.codexModelRefreshService
-      : provider === 'claude-code' || provider === 'claude-code-cli'
-        ? this.claudeCodeModelCatalogService
-        : null;
-    if (!service) return;
-
-    const status = service.getStatus();
-    if (!status.verified || status.lastError) {
-      const detail = status.lastError?.message
+  private async assertDynamicCatalogReady(provider: string): Promise<void> {
+    const status = this.getModelCatalogStatuses()[provider];
+    if (!status?.verified || status.lastError) {
+      const detail = status?.lastError?.message
         ? ` 原因：${status.lastError.message}`
         : ' 模型目录仍未验证。';
       throw new Error(`${provider} 模型目录不可用，无法静默选择默认模型。请重试目录拉取后重新选择模型。${detail}`);
@@ -2056,16 +2263,11 @@ export class AIService {
   }
 
   private async assertDynamicModelAvailable(
-    provider: AIProviderType,
+    provider: string,
     modelId: string | undefined,
-    requestedEffort?: EffortLevel,
+    requestedEffort?: unknown,
   ): Promise<void> {
-    const service = provider === 'openai-codex' || provider === 'openai-codex-acp'
-      ? this.codexModelRefreshService
-      : provider === 'claude-code' || provider === 'claude-code-cli'
-        ? this.claudeCodeModelCatalogService
-        : null;
-    if (!service) return;
+    if (!this.isRuntimeDynamicCatalogProvider(provider)) return;
 
     // A retained cache is useful evidence for the user, but it is not proof
     // that a model remains available now. The failure must therefore block
@@ -2081,42 +2283,97 @@ export class AIService {
     if (!model) {
       throw new Error(`已保存的模型“${modelId}”不再属于当前 ${provider} 模型目录。请重新选择模型；系统不会自动改为其他型号。`);
     }
-    if (requestedEffort && (
-      model.supportsEffort !== true
-      || !model.supportedEffortLevels?.includes(requestedEffort)
-    )) {
-      throw new Error(`型号“${model.id}”不支持思考档“${requestedEffort}”。请按当前模型目录重新选择思考档。`);
+    if (requestedEffort !== undefined) {
+      this.logEffortGateResolution(
+        model.id,
+        resolveDeclaredEffortLevel(
+          requestedEffort,
+          model.supportsEffort === true ? model.supportedEffortLevels : [],
+          model.defaultEffortLevel,
+        ),
+      );
     }
   }
 
   /**
-   * A saved session-level effort is an explicit request and is rejected by the
-   * send gate when unsupported. The app-wide default is only a preference: if
-   * a newly selected model lacks it, use that model's first advertised tier so
-   * the backend matches the selector's capability-aware fallback.
+   * Resolve effort from the exact live row. No provider vocabulary appears in
+   * this function: future values remain raw and a model with no declaration
+   * simply receives no effort parameter.
    */
   public resolveCompatibleDynamicSessionEffortLevel(
-    provider: AIProviderType,
+    provider: string,
     modelId: string | undefined,
     sessionEffortLevel: unknown,
   ): EffortLevel | undefined {
-    if (!this.isRuntimeDynamicCatalogProvider(provider)) {
-      return resolveEffortLevel(sessionEffortLevel, getDefaultEffortLevel());
-    }
-    const hasExplicitSessionEffort = sessionEffortLevel != null && sessionEffortLevel !== '';
-    const requested = resolveEffortLevel(
-      sessionEffortLevel,
-      hasExplicitSessionEffort ? undefined : getDefaultEffortLevel(),
-    );
-    if (!requested || !modelId) return undefined;
+    if (!this.isRuntimeDynamicCatalogProvider(provider)) return undefined;
+    return this.resolveDynamicSessionEffort(provider, modelId, sessionEffortLevel).resolution.effortLevel;
+  }
+
+  private resolveDynamicSessionEffort(
+    provider: string,
+    modelId: string | undefined,
+    sessionEffortLevel: unknown,
+  ) {
+    const explicitEffort = parseEffortLevel(sessionEffortLevel);
+    const appDefaultEffort = explicitEffort ? undefined : getDefaultEffortLevel();
+    const requestedEffort = explicitEffort ?? appDefaultEffort;
     const models = this.getDynamicCatalogModels(provider);
     const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, modelId);
     const model = models.find((candidate) => candidate.id === catalogModelId);
-    if (model?.supportsEffort !== true || !model.supportedEffortLevels?.length) {
-      return undefined;
+    return {
+      explicitEffort,
+      appDefaultEffort,
+      resolution: resolveDeclaredEffortLevel(
+        requestedEffort,
+        model?.supportsEffort === true ? model.supportedEffortLevels : [],
+        model?.defaultEffortLevel,
+      ),
+    };
+  }
+
+  private logEffortGateResolution(
+    modelId: string,
+    resolution: ReturnType<typeof resolveDeclaredEffortLevel>,
+  ): void {
+    if (resolution.outcome === 'dropped' && resolution.requestedEffort) {
+      logger.main.info(
+        `[EffortGate] dropped unsupported effort requested=${resolution.requestedEffort} model=${modelId}`,
+      );
     }
-    if (model.supportedEffortLevels.includes(requested)) return requested;
-    return hasExplicitSessionEffort ? undefined : model.supportedEffortLevels[0];
+    if (resolution.outcome === 'fallback' && resolution.requestedEffort) {
+      logger.main.info(
+        `[EffortGate] fell back unsupported effort requested=${resolution.requestedEffort} effective=${resolution.effortLevel} model=${modelId}`,
+      );
+    }
+  }
+
+  /** Persist a correction only after the live model identity was proven. */
+  private async normalizePersistedDynamicSessionEffort(
+    provider: string,
+    modelId: string | undefined,
+    sessionEffortLevel: unknown,
+    sessionId?: string,
+  ): Promise<EffortLevel | undefined> {
+    const { explicitEffort, appDefaultEffort, resolution } = this.resolveDynamicSessionEffort(
+      provider,
+      modelId,
+      sessionEffortLevel,
+    );
+    this.logEffortGateResolution(modelId ?? `${provider}:unknown`, resolution);
+
+    if (explicitEffort) {
+      if (sessionId && resolution.effortLevel !== explicitEffort) {
+        await AISessionsRepository.updateMetadata(sessionId, {
+          metadata: { effortLevel: resolution.effortLevel ?? null },
+        });
+      }
+      return resolution.effortLevel;
+    }
+
+    if (appDefaultEffort && resolution.effortLevel !== appDefaultEffort) {
+      setDefaultEffortLevel(resolution.effortLevel);
+    }
+    return resolution.effortLevel;
   }
 
   /**
@@ -2204,7 +2461,7 @@ export class AIService {
       'claude-code',
       session.model,
       session.providerConfig?.model,
-      undefined,
+      (session.metadata as Record<string, unknown> | undefined)?.effortLevel,
       session.id,
     );
     const effortLevel = this.resolveCompatibleDynamicSessionEffortLevel(
@@ -4982,11 +5239,24 @@ export class AIService {
       // Append extension-contributed agent provider models (see ai:getModels).
       for (const agentEntry of getAgentProviderRegistry().list()) {
         if (agentEntry.status === 'denied') continue;
-        for (const m of agentEntry.contribution.models ?? []) {
+        const extensionModels: AIModel[] = agentEntry.contribution.modelDiscovery === 'dynamic'
+          ? this.getDynamicCatalogModels(agentEntry.contributionId)
+              .filter((model) => this.isCurrentDynamicCatalogModel(model))
+          : (agentEntry.contribution.models ?? []).map((model) => ({
+              id: model.id,
+              name: model.name,
+              provider: agentEntry.contributionId as AIProviderType,
+              isEngineDefault: model.default === true,
+            }));
+        for (const m of extensionModels) {
           allModels.push({
             id: m.id,
             name: m.name,
             provider: agentEntry.contributionId as AIProviderType,
+            supportsEffort: m.supportsEffort,
+            supportedEffortLevels: m.supportedEffortLevels,
+            defaultEffortLevel: m.defaultEffortLevel,
+            isEngineDefault: m.isEngineDefault,
           });
         }
       }
@@ -5019,6 +5289,14 @@ export class AIService {
       success: true,
       catalogs: this.getModelCatalogStatuses(),
     }));
+
+    // The picker invokes this explicitly when it opens. It is intentionally
+    // separate from ai:getModels so routine rendering and message sends never
+    // turn into discovery traffic.
+    safeHandle('ai:refreshModelCatalogs', async () => {
+      await this.refreshModelCatalogsForPicker();
+      return { success: true, catalogs: this.getModelCatalogStatuses() };
+    });
 
     safeHandle('ai:refreshSessionProvider', async (_event, sessionId: string) => {
       ProviderFactory.destroyProvider(sessionId);
@@ -5092,7 +5370,9 @@ export class AIService {
       const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
       this.startCodexModelRefreshIfEnabled(providerSettings);
       this.startClaudeCodeModelCatalogIfEnabled(providerSettings);
-      await this.awaitModelCatalogsIfEnabled(providerSettings);
+      // Do not await here: opening the picker must retain the last list while
+      // a manual refresh marks it as in-flight. Session sends never call this
+      // IPC path, so they cannot trigger a catalog probe.
       const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
       const claudeCodeSettings = providerSettings['claude-code'] || {};
       const showClaudeCliChannel = getSettingsService().get('ai.showClaudeCliChannel') === true;
@@ -5202,11 +5482,24 @@ export class AIService {
         if (agentEntry.contribution.icon) {
           providerIcons[agentEntry.contributionId] = agentEntry.contribution.icon;
         }
-        for (const m of agentEntry.contribution.models ?? []) {
+        const extensionModels: AIModel[] = agentEntry.contribution.modelDiscovery === 'dynamic'
+          ? this.getDynamicCatalogModels(agentEntry.contributionId)
+              .filter((model) => this.isCurrentDynamicCatalogModel(model))
+          : (agentEntry.contribution.models ?? []).map((model) => ({
+              id: model.id,
+              name: model.name,
+              provider: agentEntry.contributionId as AIProviderType,
+              isEngineDefault: model.default === true,
+            }));
+        for (const m of extensionModels) {
           enabledModels.push({
             id: m.id,
             name: m.name,
             provider: agentEntry.contributionId as AIProviderType,
+            supportsEffort: m.supportsEffort,
+            supportedEffortLevels: m.supportedEffortLevels,
+            defaultEffortLevel: m.defaultEffortLevel,
+            isEngineDefault: m.isEngineDefault,
           });
         }
       }
@@ -5724,6 +6017,7 @@ export class AIService {
     setDynamicModelCatalogValidator(null);
     setDynamicModelCatalogSelectionResolver(null);
     setDynamicModelCatalogStatusReader(null);
+    setDynamicModelEffortNormalizer(null);
     OpenAICodexProvider.setModelRefreshSnapshotResolver(null);
     OpenAICodexProvider.setModelCatalogPathResolver(null);
     ClaudeCodeProvider.setModelCatalogSnapshotResolver(null);

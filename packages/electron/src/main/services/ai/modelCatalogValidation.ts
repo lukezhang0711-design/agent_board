@@ -10,6 +10,13 @@ type DynamicModelCatalogSelectionResolver = (
   modelId: string | undefined,
 ) => Promise<string | undefined>;
 
+type DynamicModelEffortNormalizer = (input: {
+  provider: string;
+  modelId: string;
+  sessionId: string;
+  sessionEffortLevel: unknown;
+}) => Promise<void>;
+
 /**
  * Read-only projection for persistence-only consumers such as mobile sync.
  * Keep this intentionally structural: the catalog services remain the single
@@ -18,6 +25,8 @@ type DynamicModelCatalogSelectionResolver = (
 export interface DynamicModelCatalogStatus {
   modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
   verified?: boolean;
+  /** A manual picker/Head refresh is running; retained runtime rows stay visible. */
+  inFlight?: boolean;
   lastSuccessAt?: number | null;
   lastError?: { message?: string } | null;
 }
@@ -27,6 +36,7 @@ type DynamicModelCatalogStatusReader = () => Record<string, DynamicModelCatalogS
 let validator: DynamicModelCatalogValidator | null = null;
 let selectionResolver: DynamicModelCatalogSelectionResolver | null = null;
 let statusReader: DynamicModelCatalogStatusReader | null = null;
+let effortNormalizer: DynamicModelEffortNormalizer | null = null;
 
 function needsDynamicCatalog(provider: string): provider is AIProviderType {
   return provider === 'claude-code'
@@ -66,6 +76,27 @@ export function setDynamicModelCatalogStatusReader(
   next: DynamicModelCatalogStatusReader | null,
 ): void {
   statusReader = next;
+}
+
+/**
+ * A model switch can expose an old per-session/default effort value as
+ * unsupported. The live catalog owner installs this narrow correction hook so
+ * persistence stays capability-safe without giving session IPC a second model
+ * directory.
+ */
+export function setDynamicModelEffortNormalizer(
+  next: DynamicModelEffortNormalizer | null,
+): void {
+  effortNormalizer = next;
+}
+
+export async function normalizeDynamicModelEffortAfterModelSwitch(input: {
+  provider: string;
+  modelId: string;
+  sessionId: string;
+  sessionEffortLevel: unknown;
+}): Promise<void> {
+  await effortNormalizer?.(input);
 }
 
 export function getDynamicModelCatalogStatuses(): Record<string, DynamicModelCatalogStatus> {

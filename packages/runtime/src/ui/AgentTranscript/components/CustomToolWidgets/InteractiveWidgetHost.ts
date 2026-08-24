@@ -50,7 +50,8 @@ export interface SelectedPlanCandidate {
   risks: string | string[];
   provider: string;
   model: string;
-  effortLevel: EffortLevel;
+  /** Omitted when the selected model has no independent effort dimension. */
+  effortLevel?: EffortLevel;
 }
 
 export type PlanModuleApprovalStatus = 'pending' | 'approved' | 'rejected';

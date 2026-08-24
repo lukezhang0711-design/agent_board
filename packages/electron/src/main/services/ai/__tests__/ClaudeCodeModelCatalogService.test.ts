@@ -39,13 +39,13 @@ const SDK_MODELS = [
     supportsEffort: false,
   },
   {
-    // The public SDK declaration promises only this boolean. Its optional
-    // runtime `supportedEffortLevels` detail may be absent.
+    // Future engine values must survive without a product-side enum update.
     value: 'sonnet',
     resolvedModel: 'claude-sonnet-5',
     displayName: 'Sonnet',
     description: 'Routine work',
     supportsEffort: true,
+    supportedEffortLevels: ['deep', 'turbo'],
   },
 ];
 
@@ -100,7 +100,7 @@ describe('ClaudeCodeModelCatalogService', () => {
       expect.objectContaining({
         id: 'claude-code:sonnet',
         supportsEffort: true,
-        supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+        supportedEffortLevels: ['deep', 'turbo'],
       }),
     ]);
   });
@@ -129,7 +129,11 @@ describe('ClaudeCodeModelCatalogService', () => {
       expect.objectContaining({ id: 'claude-code:default', isEngineDefault: true }),
       expect.objectContaining({ id: 'claude-code:opus-1m' }),
       expect.anything(),
-      expect.objectContaining({ id: 'claude-code:sonnet', supportsEffort: true }),
+      expect.objectContaining({
+        id: 'claude-code:sonnet',
+        supportsEffort: true,
+        supportedEffortLevels: ['deep', 'turbo'],
+      }),
     ]);
     expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining('refresh attempt'),

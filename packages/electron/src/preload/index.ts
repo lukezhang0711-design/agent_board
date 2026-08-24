@@ -528,6 +528,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('ai:testConnection', provider, workspacePath),
   aiGetModels: () => ipcRenderer.invoke('ai:getModels'),
   aiGetAllModels: () => ipcRenderer.invoke('ai:getAllModels'),
+  aiRefreshModelCatalogs: () => ipcRenderer.invoke('ai:refreshModelCatalogs'),
   aiClearModelCache: () => ipcRenderer.invoke('ai:clearModelCache'),
   aiRefreshSessionProvider: (sessionId: string) => ipcRenderer.invoke('ai:refreshSessionProvider', sessionId),
 

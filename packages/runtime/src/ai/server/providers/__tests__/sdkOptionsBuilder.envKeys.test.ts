@@ -33,7 +33,6 @@ vi.mock('../../../../electron/claudeCodeEnvironment', () => ({
 
 import { buildSdkOptions } from '../claudeCode/sdkOptionsBuilder';
 import { resolveClaudeCodeModelVariant } from '../../types';
-import { DEFAULT_EFFORT_LEVEL } from '../../effortLevels';
 
 function makeDeps(overrides: Partial<Parameters<typeof buildSdkOptions>[0]> = {}) {
   return {
@@ -164,17 +163,42 @@ describe('buildSdkOptions env-key hardening', () => {
     expect(options.env.CLAUDE_CODE_EFFORT_LEVEL).toBe('max');
   });
 
-  it('omits the effort environment variable for the default level on a new model', async () => {
+  it('carries the exact declared effort environment variable, including a model default', async () => {
     const selectedModel = 'claude-code:sonnet-5';
     const { options } = await buildSdkOptions(
       makeDeps({
-        config: { model: selectedModel, effortLevel: DEFAULT_EFFORT_LEVEL },
+        config: { model: selectedModel, effortLevel: 'high' },
         resolveModelVariant: () => resolveClaudeCodeModelVariant(selectedModel, 'claude-code:opus'),
       }),
       makeParams(),
     );
 
     expect(options.model).toBe('sonnet-5');
-    expect(options.env).not.toHaveProperty('CLAUDE_CODE_EFFORT_LEVEL');
+    expect(options.env.CLAUDE_CODE_EFFORT_LEVEL).toBe('high');
+  });
+
+  it('forwards a future engine-declared effort value without consulting a global vocabulary', async () => {
+    const { options } = await buildSdkOptions(
+      makeDeps({
+        config: { model: 'claude-code:sonnet-5', effortLevel: 'turbo' },
+        resolveModelVariant: () => 'sonnet-5',
+      }),
+      makeParams(),
+    );
+
+    expect(options.env.CLAUDE_CODE_EFFORT_LEVEL).toBe('turbo');
+  });
+
+  it('does not pass an effort environment variable when the live model gate dropped Haiku effort', async () => {
+    const { options } = await buildSdkOptions(
+      makeDeps({
+        config: { model: 'claude-code:haiku' },
+        resolveModelVariant: () => 'haiku',
+      }),
+      makeParams(),
+    );
+
+    expect(options.model).toBe('haiku');
+    expect(options.env.CLAUDE_CODE_EFFORT_LEVEL).toBeUndefined();
   });
 });

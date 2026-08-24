@@ -572,6 +572,70 @@ const bridge: ExtensionAgentBridge = {
   },
 };
 
+/** Raw model declaration returned by a dynamic extension-agent backend. */
+export interface ExtensionAgentCatalogModel {
+  id: string;
+  name: string;
+  default?: boolean;
+  supportedEffortLevels?: string[];
+  defaultEffortLevel?: string;
+}
+
+/**
+ * Explicit picker/Head refresh for a dynamic extension provider. This uses the
+ * same consent and broker path as a real session, but deliberately requires a
+ * backend refreshModels implementation so a stale manifest/cache cannot become
+ * an executable model list after a live probe failure.
+ */
+export async function refreshExtensionAgentProviderModels(
+  contributionId: string,
+): Promise<ExtensionAgentCatalogModel[]> {
+  const entry = getAgentProviderRegistry().findByContributionId(contributionId);
+  if (!entry) {
+    throw new BridgeError(
+      'extension-agent-unknown',
+      `No extension-agent provider registered for ${contributionId}.`,
+    );
+  }
+  const workspacePath = resolveWorkspacePath();
+  await ensureModuleStarted(entry, workspacePath);
+  const { backendModuleId } = findBackendModule(entry);
+  const response = await getPrivilegedExtensionHost().request({
+    extensionId: entry.extensionId,
+    moduleId: backendModuleId,
+    workspacePath,
+    method: 'refreshModels',
+    params: {},
+    requiredPermission: null,
+  });
+  if (!Array.isArray(response)) {
+    throw new Error(`${contributionId} refreshModels returned a non-array catalog.`);
+  }
+  return response.flatMap((candidate): ExtensionAgentCatalogModel[] => {
+    if (!candidate || typeof candidate !== 'object') return [];
+    const record = candidate as Record<string, unknown>;
+    const id = typeof record.id === 'string' ? record.id.trim() : '';
+    const name = typeof record.name === 'string' ? record.name.trim() : '';
+    if (!id || !name) return [];
+    const supportedEffortLevels = Array.isArray(record.supportedEffortLevels)
+      ? Array.from(new Set(record.supportedEffortLevels
+        .filter((level): level is string => typeof level === 'string' && level.trim().length > 0)
+        .map((level) => level.trim())))
+      : [];
+    const defaultEffortLevel = typeof record.defaultEffortLevel === 'string'
+      && supportedEffortLevels.includes(record.defaultEffortLevel.trim())
+      ? record.defaultEffortLevel.trim()
+      : undefined;
+    return [{
+      id,
+      name,
+      ...(record.default === true ? { default: true } : {}),
+      supportedEffortLevels,
+      ...(defaultEffortLevel ? { defaultEffortLevel } : {}),
+    }];
+  });
+}
+
 // ---------------------------------------------------------------------------
 // In-flight stream registry (for abort + destroy)
 // ---------------------------------------------------------------------------

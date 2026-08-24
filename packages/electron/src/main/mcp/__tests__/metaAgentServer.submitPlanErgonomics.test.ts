@@ -127,19 +127,19 @@ describe('submit_plan ergonomics', () => {
     expect(schema.properties.modules).toMatchObject({
       type: 'array',
       items: {
-        required: ['title', 'outputFiles', 'inputs', 'provider', 'model', 'effortLevel', 'doneCriteria'],
+        required: ['title', 'outputFiles', 'inputs', 'provider', 'model', 'doneCriteria'],
         properties: {
           title: { type: 'string' },
           outputFiles: { type: 'array' },
           inputs: { type: 'array' },
           provider: { type: 'string' },
           model: { type: 'string' },
-          effortLevel: { enum: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'] },
+          effortLevel: { type: 'string', minLength: 1 },
           doneCriteria: { type: 'string' },
           candidates: {
             type: 'array',
             items: {
-              required: ['name', 'approach', 'pros', 'cons', 'risks', 'provider', 'model', 'effortLevel'],
+              required: ['name', 'approach', 'pros', 'cons', 'risks', 'provider', 'model'],
             },
           },
         },
@@ -245,6 +245,33 @@ describe('submit_plan ergonomics', () => {
         }],
       }],
     });
+  });
+
+  it('keeps an unknown model-declared effort and accepts Gemini-style modules without one', () => {
+    expect(normalizeSubmitPlanArgs({
+      title: 'Raw effort declaration',
+      planItems: ['Use the engine catalog'],
+      risks: [],
+      modules: [{
+        title: 'Claude future tier',
+        outputFiles: ['report.md'],
+        inputs: ['live catalog'],
+        provider: 'claude-code',
+        model: 'claude-code:sonnet',
+        effortLevel: 'turbo',
+        doneCriteria: 'The raw tier survives.',
+      }, {
+        title: 'Gemini embedded tier',
+        outputFiles: ['gemini.md'],
+        inputs: ['agy models'],
+        provider: 'antigravity-gemini-agent',
+        model: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+        doneCriteria: 'No invented independent effort field.',
+      }],
+    }).modules).toEqual([
+      expect.objectContaining({ effortLevel: 'turbo' }),
+      expect.not.objectContaining({ effortLevel: expect.anything() }),
+    ]);
   });
 
   it('derives an omitted workOrderCount from planItems', async () => {

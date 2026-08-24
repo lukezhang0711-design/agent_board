@@ -82,4 +82,13 @@ describe('AntigravityServerManager.getModelResponse retry', () => {
     await expect(m.getModelResponse('p', 'MODEL_TEST', 1000)).rejects.toThrow(/timed out/);
     expect(rpc).toHaveBeenCalledTimes(2);
   });
+
+  it('GREEN FB-116: lets an explicit picker refresh surface discovery failure instead of silently substituting static rows', async () => {
+    const m = freshManager();
+    const discover = vi.spyOn(m as never, 'loadAgyModelCatalog')
+      .mockRejectedValue(new Error('agy models unavailable'));
+
+    await expect(m.refreshAvailableAgyModels()).rejects.toThrow('agy models unavailable');
+    expect(discover).toHaveBeenCalledOnce();
+  });
 });

@@ -11,6 +11,11 @@ const mocks = vi.hoisted(() => ({
   takeClaudeCliTurnSummary: vi.fn(),
   getDefaultAIModel: vi.fn(),
   setDefaultAIModel: vi.fn(),
+  getDefaultEffortLevel: vi.fn(),
+  setDefaultEffortLevel: vi.fn(),
+  logInfo: vi.fn(),
+  agentProviderList: vi.fn(),
+  findAgentProvider: vi.fn(),
   getAllWindows: vi.fn(),
   updateSessionMetadata: vi.fn(),
   terminalManager: {
@@ -41,6 +46,15 @@ vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn(), on: vi.fn(), listenerCount: vi.fn(() => 0) },
 }));
 vi.mock('../../../utils/ipcRegistry', () => ({ safeHandle: vi.fn(), safeOn: vi.fn() }));
+vi.mock('../../../extensions/AgentProviderRegistry', () => ({
+  getAgentProviderRegistry: () => ({
+    list: mocks.agentProviderList,
+    findByContributionId: mocks.findAgentProvider,
+  }),
+}));
+vi.mock('../../../extensions/extensionAgentBridge', () => ({
+  refreshExtensionAgentProviderModels: vi.fn(),
+}));
 vi.mock('../tools', () => ({ ToolExecutor: class {}, toolRegistry: { register: vi.fn() }, BUILT_IN_TOOLS: [] }));
 vi.mock('../MessageStreamingHandler', () => ({ MessageStreamingHandler: class {} }));
 vi.mock('../HooklessAgentFileWatcher', () => ({ HooklessAgentFileWatcher: class {} }));
@@ -51,7 +65,7 @@ vi.mock('../../../database/PGLiteDatabaseWorker', () => ({ database: {} }));
 vi.mock('../../../tray/TrayManager', () => ({ TrayManager: { getInstance: vi.fn() } }));
 vi.mock('../../analytics/AnalyticsService.ts', () => ({ AnalyticsService: { getInstance: () => ({ sendEvent: vi.fn() }) } }));
 vi.mock('../../SettingsService', () => ({ getSettingsService: () => ({ get: vi.fn(), set: vi.fn() }) }));
-vi.mock('../../../utils/logger', () => ({ logger: { main: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } } }));
+vi.mock('../../../utils/logger', () => ({ logger: { main: { info: mocks.logInfo, warn: vi.fn(), error: vi.fn(), debug: vi.fn() } } }));
 vi.mock('../../../utils/store', () => ({
   getAIProviderOverrides: vi.fn(),
   saveAIProviderOverrides: vi.fn(),
@@ -64,7 +78,8 @@ vi.mock('../../../utils/store', () => ({
   normalizeAIProviderOverrides: vi.fn(),
   shouldShowCommunityPopup: vi.fn(),
   wasCommunityPopupShownThisLaunch: vi.fn(),
-  getDefaultEffortLevel: vi.fn(),
+  getDefaultEffortLevel: mocks.getDefaultEffortLevel,
+  setDefaultEffortLevel: mocks.setDefaultEffortLevel,
 }));
 vi.mock('../claudeCliLauncherSingleton', () => ({
   ensureClaudeCliSession: mocks.ensureClaudeCliSession,
@@ -130,6 +145,9 @@ describe('AIService channel-health Claude CLI transport', () => {
     mocks.terminalManager.isTerminalActive.mockReturnValue(true);
     mocks.terminalManager.getClaudeCliLiveTurnState.mockResolvedValue('idle');
     mocks.getDefaultAIModel.mockReturnValue(undefined);
+    mocks.getDefaultEffortLevel.mockReturnValue(undefined);
+    mocks.agentProviderList.mockReturnValue([]);
+    mocks.findAgentProvider.mockReturnValue(undefined);
     mocks.getAllWindows.mockReturnValue([]);
     mocks.updateSessionMetadata.mockResolvedValue(undefined);
   });
@@ -206,7 +224,6 @@ describe('AIService channel-health Claude CLI transport', () => {
     expect(validate).toHaveBeenCalledWith(
       'claude-code',
       'claude-code:claude-fable-5-1m',
-      undefined,
     );
     expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('legacy-session', {
       model: 'claude-code:claude-fable-5-1m',
@@ -278,7 +295,7 @@ describe('AIService channel-health Claude CLI transport', () => {
       'acp-session',
     )).resolves.toBe('openai-codex-acp:gpt-5.5');
     expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
-    expect(validate).toHaveBeenCalledWith('openai-codex-acp', 'openai-codex:gpt-5.5', undefined);
+    expect(validate).toHaveBeenCalledWith('openai-codex-acp', 'openai-codex:gpt-5.5');
   });
 
   it('does not persist a candidate default until the live catalog validates it', async () => {
@@ -349,5 +366,164 @@ describe('AIService channel-health Claude CLI transport', () => {
     );
     expect(validate).toHaveBeenCalledWith('openai-codex', 'openai-codex:gpt-5.6');
     expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
+  });
+
+  it('GREEN FB-114: drops an unsupported saved Haiku effort, persists the correction, and keeps the send model usable', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    const awaitCatalog = vi.fn(async () => {});
+    const validate = vi.fn(async () => {});
+    Object.assign(service, {
+      awaitModelCatalogForProvider: awaitCatalog,
+      assertDynamicModelAvailable: validate,
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:haiku',
+        supportsEffort: false,
+        supportedEffortLevels: [],
+      }],
+    });
+
+    await expect(service.resolveCurrentDynamicSessionModel(
+      'claude-code',
+      'claude-code:haiku',
+      undefined,
+      'high',
+      'haiku-session',
+    )).resolves.toBe('claude-code:haiku');
+
+    expect(awaitCatalog).toHaveBeenCalledWith('claude-code');
+    expect(validate).toHaveBeenCalledWith('claude-code', 'claude-code:haiku');
+    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('haiku-session', {
+      metadata: { effortLevel: null },
+    });
+    expect(mocks.logInfo).toHaveBeenCalledWith(
+      '[EffortGate] dropped unsupported effort requested=high model=claude-code:haiku',
+    );
+  });
+
+  it('GREEN FB-115: falls back only to the model-declared tier and persists that correction', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      awaitModelCatalogForProvider: vi.fn(async () => {}),
+      assertDynamicModelAvailable: vi.fn(async () => {}),
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:sonnet',
+        supportsEffort: true,
+        supportedEffortLevels: ['turbo', 'deep'],
+        defaultEffortLevel: 'deep',
+      }],
+    });
+
+    await expect(service.resolveCurrentDynamicSessionModel(
+      'claude-code',
+      'claude-code:sonnet',
+      undefined,
+      'ultra',
+      'fallback-session',
+    )).resolves.toBe('claude-code:sonnet');
+
+    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('fallback-session', {
+      metadata: { effortLevel: 'deep' },
+    });
+    expect(mocks.logInfo).toHaveBeenCalledWith(
+      '[EffortGate] fell back unsupported effort requested=ultra effective=deep model=claude-code:sonnet',
+    );
+  });
+
+  it('GREEN FB-116: corrects an incompatible app-wide effort default without refreshing a normal send catalog', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    const pickerRefresh = vi.fn();
+    const headRefresh = vi.fn();
+    mocks.getDefaultEffortLevel.mockReturnValue('low');
+    Object.assign(service, {
+      awaitModelCatalogForProvider: vi.fn(async () => {}),
+      assertDynamicModelAvailable: vi.fn(async () => {}),
+      refreshModelCatalogsForPicker: pickerRefresh,
+      refreshModelCatalogForHeadDispatch: headRefresh,
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:haiku',
+        supportsEffort: false,
+        supportedEffortLevels: [],
+      }],
+    });
+
+    await expect(service.resolveCurrentDynamicSessionModel(
+      'claude-code',
+      'claude-code:haiku',
+      undefined,
+      undefined,
+      'default-effort-session',
+    )).resolves.toBe('claude-code:haiku');
+
+    expect(mocks.setDefaultEffortLevel).toHaveBeenCalledWith(undefined);
+    expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
+    expect(pickerRefresh).not.toHaveBeenCalled();
+    expect(headRefresh).not.toHaveBeenCalled();
+  });
+
+  it('GREEN FB-116: picker refresh probes Codex, Claude, and a dynamic Gemini provider together', async () => {
+    const gemini = {
+      extensionId: 'gemini-antigravity',
+      contributionId: 'antigravity-gemini-agent',
+      extensionPath: '/extensions/gemini-antigravity',
+      status: 'active',
+      contribution: { modelDiscovery: 'dynamic' },
+    } as any;
+    mocks.agentProviderList.mockReturnValue([gemini]);
+    mocks.findAgentProvider.mockImplementation((id) => (
+      id === 'antigravity-gemini-agent' ? gemini : undefined
+    ));
+    const codexRefresh = vi.fn(async () => {});
+    const claudeRefresh = vi.fn(async () => {});
+    const geminiRefresh = vi.fn(async () => {});
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      getNormalizedProviderSettings: () => ({
+        'openai-codex': { enabled: true },
+        'claude-code': { enabled: true },
+      }),
+      codexModelRefreshService: { manualRetry: codexRefresh },
+      claudeCodeModelCatalogService: { manualRetry: claudeRefresh },
+      refreshDynamicExtensionCatalog: geminiRefresh,
+    });
+
+    await service.refreshModelCatalogsForPicker();
+
+    expect(codexRefresh).toHaveBeenCalledOnce();
+    expect(claudeRefresh).toHaveBeenCalledOnce();
+    expect(geminiRefresh).toHaveBeenCalledWith('antigravity-gemini-agent');
+  });
+
+  it('GREEN FB-116: Head dispatch refreshes only the selected engine catalog', async () => {
+    const gemini = {
+      extensionId: 'gemini-antigravity',
+      contributionId: 'antigravity-gemini-agent',
+      extensionPath: '/extensions/gemini-antigravity',
+      status: 'active',
+      contribution: { modelDiscovery: 'dynamic' },
+    } as any;
+    mocks.findAgentProvider.mockImplementation((id) => (
+      id === 'antigravity-gemini-agent' ? gemini : undefined
+    ));
+    const codexRefresh = vi.fn(async () => {});
+    const claudeRefresh = vi.fn(async () => {});
+    const geminiRefresh = vi.fn(async () => {});
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      codexModelRefreshService: { manualRetry: codexRefresh },
+      claudeCodeModelCatalogService: { manualRetry: claudeRefresh },
+      refreshDynamicExtensionCatalog: geminiRefresh,
+    });
+
+    await service.refreshModelCatalogForHeadDispatch('openai-codex');
+    expect(codexRefresh).toHaveBeenCalledOnce();
+    expect(claudeRefresh).not.toHaveBeenCalled();
+    expect(geminiRefresh).not.toHaveBeenCalled();
+
+    await service.refreshModelCatalogForHeadDispatch('claude-code');
+    expect(claudeRefresh).toHaveBeenCalledOnce();
+    expect(geminiRefresh).not.toHaveBeenCalled();
+
+    await service.refreshModelCatalogForHeadDispatch('antigravity-gemini-agent');
+    expect(geminiRefresh).toHaveBeenCalledWith('antigravity-gemini-agent');
   });
 });

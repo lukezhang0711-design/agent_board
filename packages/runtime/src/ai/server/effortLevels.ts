@@ -2,12 +2,22 @@
  * Effort level constants for adaptive reasoning (Opus 4.6 and Sonnet 4.6).
  * Matches the Claude Code CLI's /model effort slider and CLAUDE_CODE_EFFORT_LEVEL env var.
  *
- * Levels: low, medium, high (default), xhigh, max, ultra
+ * Historical labels are listed below for display only. Engine catalogs own
+ * which values exist for a particular model.
  */
 
-export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra';
+/**
+ * An effort level is owned by an engine/model catalog, not by the app. Keep
+ * the raw value end-to-end so a newly introduced engine level needs no
+ * Nimbalyst release before it can be selected and sent back to that engine.
+ */
+export type EffortLevel = string;
 
-export const EFFORT_LEVELS: { key: EffortLevel; label: string }[] = [
+/**
+ * Known labels are presentation sugar only. This must never be used to decide
+ * which values a model supports; that comes solely from supportedEffortLevels.
+ */
+export const EFFORT_LEVELS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'low', label: 'Low' },
   { key: 'medium', label: 'Medium' },
   { key: 'high', label: 'High' },
@@ -16,18 +26,65 @@ export const EFFORT_LEVELS: { key: EffortLevel; label: string }[] = [
   { key: 'ultra', label: 'Ultra' },
 ];
 
-export const DEFAULT_EFFORT_LEVEL: EffortLevel = 'high';
+/** Preserve any non-empty raw engine value without translating it. */
+export function parseEffortLevel(value: unknown): EffortLevel | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
+}
 
-const VALID_EFFORT_LEVELS = new Set<string>(['low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
+/** Return a friendly known label while leaving future engine values untouched. */
+export function getEffortLevelLabel(level: EffortLevel): string {
+  return EFFORT_LEVELS.find((entry) => entry.key === level)?.label ?? level;
+}
+
+export type DeclaredEffortResolution = {
+  effortLevel: EffortLevel | undefined;
+  outcome: 'accepted' | 'fallback' | 'dropped' | 'none';
+  requestedEffort: EffortLevel | undefined;
+};
 
 /**
- * Validate and return a valid EffortLevel, or the default if invalid.
+ * Resolve only against the selected model's own declaration. The caller owns
+ * persistence/logging; this pure helper deliberately knows nothing about any
+ * provider vocabulary or global default.
  */
-export function parseEffortLevel(value: unknown): EffortLevel {
-  if (typeof value === 'string' && VALID_EFFORT_LEVELS.has(value)) {
-    return value as EffortLevel;
+export function resolveDeclaredEffortLevel(
+  requestedEffort: unknown,
+  supportedEffortLevels: readonly unknown[] | undefined,
+  defaultEffortLevel?: unknown,
+): DeclaredEffortResolution {
+  const requested = parseEffortLevel(requestedEffort);
+  const supported = Array.from(new Set((supportedEffortLevels ?? [])
+    .map(parseEffortLevel)
+    .filter((level): level is EffortLevel => level !== undefined)));
+
+  if (supported.length === 0) {
+    return {
+      effortLevel: undefined,
+      outcome: requested ? 'dropped' : 'none',
+      requestedEffort: requested,
+    };
   }
-  return DEFAULT_EFFORT_LEVEL;
+  if (!requested) {
+    return {
+      effortLevel: undefined,
+      outcome: 'none',
+      requestedEffort: undefined,
+    };
+  }
+  if (supported.includes(requested)) {
+    return { effortLevel: requested, outcome: 'accepted', requestedEffort: requested };
+  }
+  const declaredDefault = parseEffortLevel(defaultEffortLevel);
+  const fallback = declaredDefault && supported.includes(declaredDefault)
+    ? declaredDefault
+    : supported[0]!;
+  return {
+    effortLevel: fallback,
+    outcome: 'fallback',
+    requestedEffort: requested,
+  };
 }
 
 /**
@@ -46,8 +103,5 @@ export function resolveEffortLevel(
   sessionEffortLevel: unknown,
   appDefaultEffortLevel: EffortLevel | undefined
 ): EffortLevel | undefined {
-  if (sessionEffortLevel != null && sessionEffortLevel !== '') {
-    return parseEffortLevel(sessionEffortLevel);
-  }
-  return appDefaultEffortLevel;
+  return parseEffortLevel(sessionEffortLevel) ?? parseEffortLevel(appDefaultEffortLevel);
 }

@@ -34,14 +34,15 @@ interface Model {
   description?: string;
   resolvedModel?: string;
   supportsEffort?: boolean;
-  supportedEffortLevels?: Array<'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra'>;
-  defaultEffortLevel?: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra';
+  supportedEffortLevels?: string[];
+  defaultEffortLevel?: string;
   unverifiedPlaceholder?: boolean;
 }
 
 interface CatalogStatus {
   modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
   verified?: boolean;
+  inFlight?: boolean;
   lastSuccessAt?: number | null;
   lastError?: { message?: string } | null;
 }
@@ -114,10 +115,10 @@ export function ModelSelector({
   }, [providers, showClaudeCliChannel]);
 
   // Reload when the dropdown opens or when visibility/provider settings change.
-  // The main process applies the same filter; this renderer pass also prevents
-  // a stale response from leaking a hidden CLI row.
+  // Opening explicitly starts a live probe; the first read remains non-blocking
+  // so any previous model list stays in place with a refresh status.
   useEffect(() => {
-    if (isOpen) void loadModels();
+    if (isOpen) void refreshModelsOnOpen();
     // loadModels is intentionally kept as the local IPC boundary below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, providers, showClaudeCliChannel]);
@@ -156,6 +157,29 @@ export function ModelSelector({
       console.error('Failed to load models:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshModelsOnOpen = async () => {
+    // Start first, then read immediately: the main process has already marked
+    // each catalog in-flight before this second invoke is handled.
+    const refreshCatalogs = window.electronAPI.aiRefreshModelCatalogs;
+    if (!refreshCatalogs) {
+      // A renderer/preload mismatch during an app upgrade must not make the
+      // picker unusable. Current builds always expose the explicit refresh IPC.
+      await loadModels();
+      return;
+    }
+    const refresh = refreshCatalogs();
+    await loadModels();
+    try {
+      await refresh;
+    } catch (error) {
+      // The main response normally resolves with per-provider red states, but
+      // keep the previous list visible if the IPC transport itself fails.
+      console.error('Failed to refresh model catalogs:', error);
+    } finally {
+      await loadModels();
     }
   };
 
@@ -241,14 +265,22 @@ export function ModelSelector({
     typeof timestamp === 'number' ? new Date(timestamp).toLocaleString() : null
   );
 
-  const isDynamicCatalogProvider = (provider: string) => (
-    provider === 'claude-code' || provider === 'claude-code-cli' || provider === 'openai-codex'
-  );
+  const isDynamicCatalogProvider = (provider: string) => catalogStatuses[provider] !== undefined;
 
   const renderCatalogNotice = (provider: string) => {
     const status = catalogStatuses[provider];
     if (!status || !isDynamicCatalogProvider(provider)) return null;
     const cachedAt = formatCatalogTime(status.lastSuccessAt);
+    if (status.inFlight) {
+      return (
+        <div
+          className="mx-2 mb-1 rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)]"
+          data-testid={`model-catalog-refreshing-${provider}`}
+        >
+          正在刷新模型目录；显示上次成功清单。{status.lastError?.message ? ` 上次失败：${status.lastError.message}` : ''}
+        </div>
+      );
+    }
     if (status.lastError?.message) {
       return (
         <div
@@ -352,11 +384,12 @@ export function ModelSelector({
             style={floatingStyles}
             {...getFloatingProps()}
           >
-          {!loading && ['claude-code', 'openai-codex']
+          {Object.keys(catalogStatuses)
             // First-install placeholders are intentionally filtered out by
             // the main process so they can never be selected. Still render
             // their status here; otherwise a picker with other providers
             // would hide the required “unverified” explanation entirely.
+            .filter((provider) => provider !== 'openai-codex-acp' && provider !== 'claude-code-cli')
             .filter((provider) => !models[provider] && (
               !!catalogStatuses[provider]?.lastError?.message
               || catalogStatuses[provider]?.verified !== true
@@ -366,10 +399,12 @@ export function ModelSelector({
                 {renderCatalogNotice(provider)}
               </React.Fragment>
             ))}
-          {loading ? (
+          {Object.keys(models).length === 0 ? (
+            loading ? (
             <div className="model-selector-loading p-3 text-center text-xs text-[var(--nim-text-faint)]">Loading models...</div>
-          ) : Object.keys(models).length === 0 ? (
+            ) : (
             <div className="model-selector-empty p-3 text-center text-xs text-[var(--nim-text-faint)]">No models available</div>
+            )
           ) : (
             <>
               {defaultModelWarning && (

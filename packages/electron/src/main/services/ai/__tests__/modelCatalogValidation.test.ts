@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   assertDynamicModelCatalogSelection,
   getDynamicModelCatalogStatuses,
+  normalizeDynamicModelEffortAfterModelSwitch,
   resolveDynamicModelCatalogSelection,
   setDynamicModelCatalogStatusReader,
+  setDynamicModelEffortNormalizer,
   setDynamicModelCatalogSelectionResolver,
   setDynamicModelCatalogValidator,
 } from '../modelCatalogValidation';
@@ -12,6 +14,7 @@ afterEach(() => {
   setDynamicModelCatalogValidator(null);
   setDynamicModelCatalogSelectionResolver(null);
   setDynamicModelCatalogStatusReader(null);
+  setDynamicModelEffortNormalizer(null);
 });
 
 describe('new-session dynamic model catalog bridge', () => {
@@ -77,6 +80,25 @@ describe('new-session dynamic model catalog bridge', () => {
         lastSuccessAt: 1_723_456_789_000,
         lastError: { message: 'codex debug models: command not found' },
       },
+    });
+  });
+
+  it('delegates a persisted model switch to the live effort normalizer', async () => {
+    const normalize = vi.fn(async () => {});
+    setDynamicModelEffortNormalizer(normalize);
+
+    await normalizeDynamicModelEffortAfterModelSwitch({
+      sessionId: 'switched-session',
+      provider: 'claude-code',
+      modelId: 'claude-code:haiku',
+      sessionEffortLevel: 'high',
+    });
+
+    expect(normalize).toHaveBeenCalledWith({
+      sessionId: 'switched-session',
+      provider: 'claude-code',
+      modelId: 'claude-code:haiku',
+      sessionEffortLevel: 'high',
     });
   });
 });

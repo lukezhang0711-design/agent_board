@@ -14,7 +14,8 @@ import { requireMcpAuth } from "./mcpAuth";
 import { resolveProjectPath } from "../utils/workspaceDetection";
 
 type SessionIntent = "investigation" | "implementation";
-export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
+/** Raw engine-declared value; providers must not be translated to a product enum. */
+export type EffortLevel = string;
 type CompletionCriteria = {
   outputFiles?: string[];
 };
@@ -29,7 +30,7 @@ export type PlanCandidate = {
   risks: StructuredPlanText;
   provider: string;
   model: string;
-  effortLevel: EffortLevel;
+  effortLevel?: EffortLevel;
 };
 
 export type PlanModule = {
@@ -38,7 +39,7 @@ export type PlanModule = {
   inputs: string[];
   provider: string;
   model: string;
-  effortLevel: EffortLevel;
+  effortLevel?: EffortLevel;
   doneCriteria: string;
   candidates?: PlanCandidate[];
 };
@@ -135,8 +136,8 @@ const SUBMIT_PLAN_DESCRIPTION = [
   "planItems is a non-empty array of non-empty strings and is required.",
   "workOrderCount is an optional non-negative integer; omit it to use planItems.length.",
   "risks is a required array of strings and may be empty; [] means no risks were declared.",
-  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, exact full model ID, effortLevel, and doneCriteria.",
-  "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, and effortLevel; do not write serial comparison paragraphs.",
+  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, exact full model ID, optional model-declared effortLevel, and doneCriteria.",
+  "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, and optional effortLevel; do not write serial comparison paragraphs.",
 ].join("\n");
 
 function submitPlanValidationError(message: string, example: string): Error {
@@ -215,8 +216,6 @@ export function normalizeSubmitPlanArgs(value: Record<string, unknown> | undefin
   };
 }
 
-const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
-
 function normalizeNonEmptyString(value: unknown, fieldName: string): string {
   if (typeof value !== 'string' || value.trim() === '') {
     throw submitPlanValidationError(
@@ -249,12 +248,11 @@ function normalizeStructuredText(value: unknown, fieldName: string): StructuredP
   return normalizeStringList(value, fieldName);
 }
 
-function normalizeEffortLevel(value: unknown, fieldName: string): EffortLevel {
-  if (typeof value === 'string' && VALID_EFFORT_LEVELS.has(value as EffortLevel)) {
-    return value as EffortLevel;
-  }
+function normalizeOptionalEffortLevel(value: unknown, fieldName: string): EffortLevel | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'string' && value.trim()) return value.trim();
   throw submitPlanValidationError(
-    `${fieldName} must be one of low, medium, high, xhigh, max, or ultra`,
+    `${fieldName} must be an engine-declared non-empty string when provided`,
     JSON.stringify(SUBMIT_PLAN_EXAMPLE),
   );
 }
@@ -267,6 +265,10 @@ function normalizePlanCandidate(value: unknown, moduleIndex: number, candidateIn
     );
   }
   const candidate = value as Record<string, unknown>;
+  const effortLevel = normalizeOptionalEffortLevel(
+    candidate.effortLevel,
+    `modules[${moduleIndex}].candidates[${candidateIndex}].effortLevel`,
+  );
   return {
     name: normalizeNonEmptyString(candidate.name, `modules[${moduleIndex}].candidates[${candidateIndex}].name`),
     approach: normalizeNonEmptyString(candidate.approach, `modules[${moduleIndex}].candidates[${candidateIndex}].approach`),
@@ -275,7 +277,7 @@ function normalizePlanCandidate(value: unknown, moduleIndex: number, candidateIn
     risks: normalizeStructuredText(candidate.risks, `modules[${moduleIndex}].candidates[${candidateIndex}].risks`),
     provider: normalizeNonEmptyString(candidate.provider, `modules[${moduleIndex}].candidates[${candidateIndex}].provider`),
     model: normalizeNonEmptyString(candidate.model, `modules[${moduleIndex}].candidates[${candidateIndex}].model`),
-    effortLevel: normalizeEffortLevel(candidate.effortLevel, `modules[${moduleIndex}].candidates[${candidateIndex}].effortLevel`),
+    ...(effortLevel ? { effortLevel } : {}),
   };
 }
 
@@ -303,13 +305,17 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
         JSON.stringify(SUBMIT_PLAN_EXAMPLE),
       );
     }
+    const effortLevel = normalizeOptionalEffortLevel(
+      module.effortLevel,
+      `modules[${moduleIndex}].effortLevel`,
+    );
     return {
       title: normalizeNonEmptyString(module.title, `modules[${moduleIndex}].title`),
       outputFiles: normalizeStringList(module.outputFiles, `modules[${moduleIndex}].outputFiles`),
       inputs: normalizeStringList(module.inputs, `modules[${moduleIndex}].inputs`),
       provider: normalizeNonEmptyString(module.provider, `modules[${moduleIndex}].provider`),
       model: normalizeNonEmptyString(module.model, `modules[${moduleIndex}].model`),
-      effortLevel: normalizeEffortLevel(module.effortLevel, `modules[${moduleIndex}].effortLevel`),
+      ...(effortLevel ? { effortLevel } : {}),
       doneCriteria: normalizeNonEmptyString(module.doneCriteria, `modules[${moduleIndex}].doneCriteria`),
       ...(rawCandidates === undefined
         ? {}
@@ -521,7 +527,7 @@ const META_AGENT_TOOL_DEFS: Array<{
               inputs: { type: "array", items: { type: "string", minLength: 1 }, description: "Inputs/materials used by the module." },
               provider: { type: "string", minLength: 1, description: "Provider ID for this module." },
               model: { type: "string", minLength: 1, description: "Exact model ID, not a display nickname." },
-              effortLevel: { type: "string", enum: ["low", "medium", "high", "xhigh", "max", "ultra"], description: "Thinking effort for this module." },
+              effortLevel: { type: "string", minLength: 1, description: "Optional exact raw effort value declared by this model in list_models; omit when its list is empty." },
               doneCriteria: { type: "string", minLength: 1, description: "Concrete completion standard." },
               candidates: {
                 type: "array",
@@ -536,13 +542,13 @@ const META_AGENT_TOOL_DEFS: Array<{
                     risks: { oneOf: [{ type: "string", minLength: 1 }, { type: "array", items: { type: "string", minLength: 1 } }] },
                     provider: { type: "string", minLength: 1 },
                     model: { type: "string", minLength: 1, description: "Exact model ID." },
-                    effortLevel: { type: "string", enum: ["low", "medium", "high", "xhigh", "max", "ultra"] },
+                    effortLevel: { type: "string", minLength: 1, description: "Optional exact raw model-declared effort value." },
                   },
-                  required: ["name", "approach", "pros", "cons", "risks", "provider", "model", "effortLevel"],
+                  required: ["name", "approach", "pros", "cons", "risks", "provider", "model"],
                 },
               },
             },
-            required: ["title", "outputFiles", "inputs", "provider", "model", "effortLevel", "doneCriteria"],
+            required: ["title", "outputFiles", "inputs", "provider", "model", "doneCriteria"],
           },
         },
       },
@@ -571,9 +577,8 @@ const META_AGENT_TOOL_DEFS: Array<{
         },
         effortLevel: {
           type: "string",
-          enum: ["low", "medium", "high", "xhigh", "max", "ultra"],
           description:
-            "Optional per-session thinking effort. Use high or above for difficult delegated work; prefer a smaller model instead of lowering effort to save cost.",
+            "Optional exact raw value from the selected model's list_models supportedEffortLevels. Omit it when the model has no independent effort dimension.",
         },
         prompt: {
           type: "string",
@@ -670,9 +675,8 @@ const META_AGENT_TOOL_DEFS: Array<{
         },
         effortLevel: {
           type: "string",
-          enum: ["low", "medium", "high", "xhigh", "max", "ultra"],
           description:
-            "Optional per-session thinking effort. Use high or above for difficult delegated work; prefer a smaller model instead of lowering effort to save cost.",
+            "Optional exact raw value from the selected model's list_models supportedEffortLevels. Omit it when the model has no independent effort dimension.",
         },
         inheritModel: {
           type: "boolean",

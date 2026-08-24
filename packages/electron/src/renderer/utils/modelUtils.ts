@@ -20,9 +20,14 @@ import {
   OPENAI_MODELS,
 } from '@nimbalyst/runtime/ai/modelConstants';
 import { ModelIdentifier, isClaudeCodeFamily } from '@nimbalyst/runtime/ai/server/types';
-import { EFFORT_LEVELS, type EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import { type EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 
-export { type EffortLevel, EFFORT_LEVELS, DEFAULT_EFFORT_LEVEL, parseEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+export {
+  type EffortLevel,
+  EFFORT_LEVELS,
+  getEffortLevelLabel,
+  parseEffortLevel,
+} from '@nimbalyst/runtime/ai/server/effortLevels';
 
 export function getSupportedEffortLevelsForModel(
   availableModels: Record<string, Array<{
@@ -35,18 +40,7 @@ export function getSupportedEffortLevelsForModel(
   const model = Object.values(availableModels)
     .flat()
     .find((candidate) => candidate.id === currentModel);
-  if (model?.supportedEffortLevels?.length) return [...model.supportedEffortLevels];
-
-  // The live Claude catalog can omit the exact list (and older rows can even
-  // carry supportsEffort=false) for Haiku. The product contract still exposes
-  // the current effort control for that model, so keep the selector visible
-  // with the shared effort vocabulary instead of dropping the user's current
-  // tier from the input bar.
-  const isClaudeHaiku = /(?:^|:)haiku(?:-|$)/i.test(model?.id ?? currentModel ?? '');
-  if (model?.supportsEffort === true || isClaudeHaiku) {
-    return EFFORT_LEVELS.map(({ key }) => key);
-  }
-  return [];
+  return model?.supportedEffortLevels ? [...model.supportedEffortLevels] : [];
 }
 
 interface ModelInfo {
