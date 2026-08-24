@@ -41,6 +41,20 @@ type SubmittedPlan = {
   completion: Promise<unknown>;
 };
 
+type PlanSubmissionArgs = {
+  title: string;
+  planItems: string[];
+  workOrderCount: number;
+  risks: string | string[];
+  modules?: Array<Record<string, unknown>>;
+};
+
+type PlanApprovalVisualRoute = {
+  provider: string;
+  model: string;
+  effortLevel: string;
+};
+
 type PlanApprovalState = {
   requestId: string;
   status: 'submitted' | 'responded' | 'delivered' | 'closed';
@@ -86,6 +100,10 @@ let workspacePath: string;
 let scriptedProvider: ScriptedCollaborationProvider;
 let originalAlphaFeatures: Record<string, boolean> | null = null;
 const mcpClients: MetaAgentMcpClient[] = [];
+const PLAN_APPROVAL_SCREENSHOT_DIR = path.resolve(
+  __dirname,
+  '../../../../e2e_test_output/plan-approval-layout',
+);
 
 async function invokeElectron<T>(targetPage: Page, channel: string, ...args: unknown[]): Promise<T> {
   return await targetPage.evaluate(
@@ -225,7 +243,7 @@ async function startPlanSubmission(
   client: MetaAgentMcpClient,
   sessionId: string,
   knownRequestIds: Set<string>,
-  args: { title: string; planItems: string[]; workOrderCount: number; risks: string },
+  args: PlanSubmissionArgs,
   signal?: AbortSignal,
 ): Promise<SubmittedPlan> {
   const completion = signal
@@ -243,6 +261,217 @@ async function startPlanSubmission(
   }
   knownRequestIds.add(submitted.requestId);
   return { ...submitted, completion };
+}
+
+async function getPlanApprovalVisualRoute(): Promise<PlanApprovalVisualRoute> {
+  const routes = await page.evaluate(async () => {
+    const response = await (window as any).electronAPI.aiGetModels();
+    const grouped = response?.grouped;
+    if (!response?.success || !grouped || typeof grouped !== 'object') {
+      return [];
+    }
+    return Object.entries(grouped as Record<string, unknown>).flatMap(
+      ([groupedProvider, models]) => Array.isArray(models)
+        ? models.flatMap((model) => {
+            if (!model || typeof model !== 'object') return [];
+            const record = model as Record<string, unknown>;
+            const provider = typeof record.provider === 'string'
+              ? record.provider
+              : groupedProvider;
+            const id = typeof record.id === 'string' ? record.id : '';
+            const effortLevels = Array.isArray(record.supportedEffortLevels)
+              ? record.supportedEffortLevels.filter((level): level is string =>
+                  typeof level === 'string',
+                )
+              : [];
+            return provider && id.startsWith(`${provider}:`) && effortLevels.length > 0
+              ? [{ provider, model: id, effortLevels }]
+              : [];
+          })
+        : [],
+    );
+  });
+  const route = routes.find((candidate) => candidate.effortLevels.includes('high'))
+    ?? routes[0];
+  if (!route) {
+    throw new Error(
+      `No live plan-approval model route with a supported effort level: ${JSON.stringify(routes)}`,
+    );
+  }
+  return {
+    provider: route.provider,
+    model: route.model,
+    effortLevel: route.effortLevels.includes('high') ? 'high' : route.effortLevels[0]!,
+  };
+}
+
+async function setPlanApprovalCardWidth(card: Locator, width: number): Promise<void> {
+  await card.evaluate((element, targetWidth) => {
+    const renderedCard = element as HTMLElement;
+    renderedCard.style.width = `${targetWidth}px`;
+    renderedCard.style.maxWidth = `${targetWidth}px`;
+  }, width);
+  await expect(card).toHaveCSS('width', `${width}px`);
+}
+
+async function expectPlanModuleFieldsNotToOverlap(
+  card: Locator,
+  moduleIndex: number,
+): Promise<void> {
+  const overlapPairs = await card
+    .getByTestId(`plan-module-fields-${moduleIndex}`)
+    .evaluate((element) => {
+      const boxes = Array.from(element.children).map((child, index) => {
+        const rect = child.getBoundingClientRect();
+        return {
+          index,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+        };
+      });
+      const overlaps: string[] = [];
+      for (let left = 0; left < boxes.length; left += 1) {
+        for (let right = left + 1; right < boxes.length; right += 1) {
+          const first = boxes[left]!;
+          const second = boxes[right]!;
+          if (
+            first.left < second.right
+            && first.right > second.left
+            && first.top < second.bottom
+            && first.bottom > second.top
+          ) {
+            overlaps.push(`${first.index}:${second.index}`);
+          }
+        }
+      }
+      return overlaps;
+    });
+  expect(overlapPairs).toEqual([]);
+}
+
+async function expectPlanModuleFieldsToFollowContainerWidth(
+  card: Locator,
+  moduleIndex: number,
+  expectedColumns: 1 | 2,
+): Promise<void> {
+  const layout = await card
+    .getByTestId(`plan-module-fields-${moduleIndex}`)
+    .evaluate((element) => {
+      const [first, second] = Array.from(element.children);
+      if (!first || !second) {
+        throw new Error('Plan module must render output and input fields');
+      }
+      const firstRect = first.getBoundingClientRect();
+      const secondRect = second.getBoundingClientRect();
+      const moduleCard = element.closest('.plan-module-card');
+      return {
+        containerType: moduleCard
+          ? getComputedStyle(moduleCard).containerType
+          : null,
+        first: { top: firstRect.top, bottom: firstRect.bottom, left: firstRect.left },
+        second: { top: secondRect.top, bottom: secondRect.bottom, left: secondRect.left },
+      };
+    });
+
+  expect(layout.containerType).toBe('inline-size');
+  if (expectedColumns === 1) {
+    expect(layout.second.top).toBeGreaterThanOrEqual(layout.first.bottom);
+  } else {
+    expect(layout.second.top).toBeCloseTo(layout.first.top, 1);
+    expect(layout.second.left).toBeGreaterThan(layout.first.left);
+  }
+}
+
+/**
+ * Keep the visual evidence focused on the actual paginated module region.
+ * The outer approval widget also includes the surrounding chat-message frame,
+ * which is intentionally much taller than the plan card in the live shell.
+ */
+async function capturePlanApprovalEvidence(
+  card: Locator,
+  screenshotPath: string,
+): Promise<void> {
+  const moduleRegion = card.getByTestId('plan-approval-modules');
+  await moduleRegion.evaluate((element) => {
+    element.scrollIntoView({ block: 'start', inline: 'nearest' });
+    let ancestor = element.parentElement;
+    while (ancestor) {
+      if (ancestor.scrollHeight > ancestor.clientHeight) {
+        const elementTop = element.getBoundingClientRect().top;
+        const ancestorTop = ancestor.getBoundingClientRect().top;
+        ancestor.scrollTop += elementTop - ancestorTop - 16;
+      }
+      ancestor = ancestor.parentElement;
+    }
+  });
+  const headerBottom = await card
+    .getByTestId('plan-approval-header')
+    .evaluate((element) => element.getBoundingClientRect().bottom);
+  await moduleRegion.evaluate((element, targetTop) => {
+    let ancestor = element.parentElement;
+    while (ancestor) {
+      const overflowY = getComputedStyle(ancestor).overflowY;
+      if (
+        ancestor.scrollHeight > ancestor.clientHeight
+        && (overflowY === 'auto' || overflowY === 'scroll')
+      ) {
+        ancestor.scrollTop += element.getBoundingClientRect().top - targetTop;
+        return;
+      }
+      ancestor = ancestor.parentElement;
+    }
+  }, headerBottom + 12);
+  const boundingBox = await moduleRegion.boundingBox();
+  if (!boundingBox) {
+    throw new Error('Plan approval module region has no visible bounding box');
+  }
+  await page.screenshot({ path: screenshotPath, clip: boundingBox });
+}
+
+function visualSmokeModules(
+  route: PlanApprovalVisualRoute,
+): Array<Record<string, unknown>> {
+  return [1, 2, 3].map((moduleIndex) => ({
+    title: `模块 ${moduleIndex}：翻页布局验收`,
+    outputFiles: [
+      `packages/electron/src/renderer/components/UnifiedAI/very-long-module-${moduleIndex}-output-file-name-that-must-wrap-without-overlap.tsx`,
+    ],
+    inputs: [
+      `模块 ${moduleIndex} 的原料说明：在窄对话列里保持单列展示，不能与产出文件重叠。`,
+    ],
+    provider: route.provider,
+    model: route.model,
+    effortLevel: route.effortLevel,
+    doneCriteria: `模块 ${moduleIndex} 的字段、下拉和审批动作在任意卡片宽度下均可读。`,
+    ...(moduleIndex === 1
+      ? {
+          candidates: [
+            {
+              name: '方案 A',
+              approach: '保留横向矩阵以便同一模块内比较。',
+              pros: ['字段横向对齐'],
+              cons: '窄宽度时横向滚动',
+              risks: ['未选择候选方案'],
+              provider: route.provider,
+              model: route.model,
+              effortLevel: 'low',
+            },
+            {
+              name: '方案 B',
+              approach: '使用另一条候选路线。',
+              pros: ['视觉对比清楚'],
+              cons: '需要横向查看',
+              risks: ['需要确认选择'],
+              provider: route.provider,
+              model: route.model,
+              effortLevel: route.effortLevel,
+            },
+          ],
+        }
+      : {}),
+  }));
 }
 
 async function getPlanApprovalState(sessionId: string, requestId: string): Promise<PlanApprovalState | null> {
@@ -587,6 +816,94 @@ test('creates a real meta-agent session from the New Meta Agent renderer entry p
     [workspacePath],
   );
   expect(createdRows[0]).toMatchObject({ agent_role: 'meta-agent' });
+});
+
+test('captures paginated plan approval layouts across narrow, medium, and wide card containers', async () => {
+  const headSessionId = await createMetaAgentSession('Plan approval visual smoke Head');
+  const client = await createMetaAgentClient(headSessionId);
+  const submittedRequestIds = new Set<string>();
+  await fs.mkdir(PLAN_APPROVAL_SCREENSHOT_DIR, { recursive: true });
+  await electronApp.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(1440, 1600);
+  });
+  await expect.poll(
+    async () => await page.evaluate(() => window.innerWidth),
+  ).toBeGreaterThanOrEqual(1200);
+  const route = await getPlanApprovalVisualRoute();
+
+  const plan = await startPlanSubmission(client, headSessionId, submittedRequestIds, {
+    title: '三模块翻页方案卡装包烟测',
+    planItems: ['逐页审阅模块', '只打回当前模块', '确认全部批准入口常驻'],
+    workOrderCount: 3,
+    risks: ['第 2 个模块需要修改时不得影响第 1 和第 3 个模块。'],
+    modules: visualSmokeModules(route),
+  });
+  const card = await waitForPendingApprovalCard(headSessionId);
+  const firstModule = card.getByTestId('plan-module-card-1');
+
+  await expect(card.getByTestId('plan-module-pagination')).toContainText('第 1 个 / 共 3 个');
+  await expect(firstModule).toBeVisible();
+  await expect(card.getByTestId('plan-module-card-2')).toHaveCount(0);
+  await expect(card.getByTestId('plan-module-model-select-1')).toHaveValue(route.model);
+  await expect(card.getByTestId('plan-module-effort-select-1')).toHaveValue(route.effortLevel);
+
+  for (const width of [360, 480, 720]) {
+    await setPlanApprovalCardWidth(card, width);
+    await expectPlanModuleFieldsNotToOverlap(card, 1);
+    await expectPlanModuleFieldsToFollowContainerWidth(
+      card,
+      1,
+      width === 720 ? 2 : 1,
+    );
+    const screenshotPath = path.join(
+      PLAN_APPROVAL_SCREENSHOT_DIR,
+      `plan-card-${width}-page-1.png`,
+    );
+    await capturePlanApprovalEvidence(card, screenshotPath);
+    expect((await fs.stat(screenshotPath)).size).toBeGreaterThan(0);
+  }
+
+  // The evidence captures intentionally exceed the live chat column; return
+  // to its interactive 360px width before using the visible paginator.
+  await setPlanApprovalCardWidth(card, 360);
+  await card.getByTestId('plan-module-next').click();
+  await expect(card.getByTestId('plan-module-pagination')).toContainText('第 2 个 / 共 3 个');
+  await expect(card.getByTestId('plan-module-card-1')).toHaveCount(0);
+  await expect(card.getByTestId('plan-module-card-2')).toBeVisible();
+  await expect(card.getByTestId('plan-module-status-dot-2')).toHaveAttribute('data-current', 'true');
+
+  await card.getByTestId('plan-module-request-changes-2').click();
+  await card
+    .getByTestId('plan-module-feedback-input-2')
+    .fill('第 2 个模块需要修订后再派发。');
+  await card.getByTestId('plan-module-submit-changes-2').click();
+  const rejectedCard = page.getByTestId('plan-approval-widget').last();
+  await expect(rejectedCard.getByTestId('plan-module-status-dot-1')).toHaveAttribute('data-status', 'pending');
+  await expect(rejectedCard.getByTestId('plan-module-status-dot-2')).toHaveAttribute('data-status', 'rejected');
+  await expect(rejectedCard.getByTestId('plan-module-status-dot-3')).toHaveAttribute('data-status', 'pending');
+  await expect(rejectedCard.getByTestId('plan-approval-revision-warning')).toContainText('1 个模块待修订');
+  await setPlanApprovalCardWidth(rejectedCard, 480);
+  await expectPlanModuleFieldsNotToOverlap(rejectedCard, 2);
+  const rejectedScreenshotPath = path.join(
+    PLAN_APPROVAL_SCREENSHOT_DIR,
+    'plan-card-480-page-2-rejected.png',
+  );
+  await capturePlanApprovalEvidence(rejectedCard, rejectedScreenshotPath);
+  expect((await fs.stat(rejectedScreenshotPath)).size).toBeGreaterThan(0);
+
+  const rejectedPlanResult = parseMcpToolResult<{
+    approved: boolean;
+    feedback?: string;
+  }>(await plan.completion);
+  expect(rejectedPlanResult).toMatchObject({
+    approved: false,
+    feedback: '第 2 个模块需要修订后再派发。',
+  });
+  await assertApprovalLifecycle(headSessionId, plan.requestId, {
+    decision: 'rejected',
+    method: 'direct',
+    feedback: '第 2 个模块需要修订后再派发。',
+  });
 });
 
 test('replays the approved collaboration chain through real IPC, durable state, dispatch gates, and renderer events', async () => {

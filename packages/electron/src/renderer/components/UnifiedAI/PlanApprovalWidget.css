@@ -1,0 +1,35 @@
+.plan-approval-widget {
+  container-type: inline-size;
+  container-name: plan-approval;
+}
+
+.plan-module-card {
+  container-type: inline-size;
+  container-name: plan-module;
+}
+
+.plan-module-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.plan-module-request-changes {
+  width: 100%;
+}
+
+@container plan-module (min-width: 560px) {
+  .plan-module-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan-module-model-field,
+  .plan-module-effort-field,
+  .plan-module-done-criteria {
+    grid-column: 1 / -1;
+  }
+
+  .plan-module-request-changes {
+    width: auto;
+  }
+}
