@@ -269,94 +269,189 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getAllByText('选这个').length).toBe(2);
   });
 
-  it('renders a multi-module plan as one card per module under a plan header', () => {
+  it("green FB-113: pages a multi-module plan one module at a time with synchronized status dots", () => {
     renderWidget(multiModulePlanArguments);
 
-    const header = screen.getByTestId('plan-approval-header');
+    const header = screen.getByTestId("plan-approval-header");
     expect(header).toBeTruthy();
-    expect(header.className).toContain('sticky');
+    expect(header.className).toContain("sticky");
     expect(
-      header.querySelector('[data-testid="plan-approval-approve-all"]'),
-    ).toBeTruthy();
+      header.querySelector('[data-testid="plan-approval-approve-all"]')
+    ).toBeNull();
     expect(
-      screen.getByTestId('plan-approval-module-count').textContent,
-    ).toContain('3 个模块');
-    expect(screen.getAllByTestId(/^plan-module-card-/)).toHaveLength(3);
-    expect(screen.getByTestId('plan-module-card-1').textContent).toContain(
-      '模块 1',
+      screen.getByTestId("plan-approval-module-count").textContent
+    ).toContain("3 个模块");
+    expect(screen.getByTestId("plan-module-pagination").textContent).toContain(
+      "第 1 个 / 共 3 个"
     );
-    expect(screen.getByTestId('plan-module-card-2').textContent).toContain(
-      '模块 2',
+    expect(screen.getAllByTestId(/^plan-module-card-/)).toHaveLength(1);
+    expect(screen.getByTestId("plan-module-card-1").textContent).toContain(
+      "模块 1"
     );
-    expect(screen.getByTestId('plan-module-card-3').textContent).toContain(
-      '模块 3',
+    expect(screen.queryByTestId("plan-module-card-2")).toBeNull();
+    expect(
+      screen.getByTestId("plan-module-previous").hasAttribute("disabled")
+    ).toBe(true);
+    expect(
+      screen.getByTestId("plan-module-next").hasAttribute("disabled")
+    ).toBe(false);
+    expect(
+      screen.getByTestId("plan-module-status-dot-1").getAttribute("data-status")
+    ).toBe("pending");
+    expect(
+      screen
+        .getByTestId("plan-module-status-dot-1")
+        .getAttribute("data-current")
+    ).toBe("true");
+    expect(
+      screen
+        .getByTestId("plan-module-status-dot-2")
+        .getAttribute("data-current")
+    ).toBe("false");
+    fireEvent.click(screen.getByTestId("plan-module-next"));
+    fireEvent.click(screen.getByTestId("plan-module-next"));
+    expect(screen.getByTestId("plan-module-pagination").textContent).toContain(
+      "第 3 个 / 共 3 个"
     );
-    expect(screen.getByRole('button', { name: '全部批准' })).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: '打回这一条' })).toHaveLength(
-      3,
+    expect(screen.getByTestId("plan-module-card-3")).toBeTruthy();
+    expect(
+      screen.getByTestId("plan-module-previous").hasAttribute("disabled")
+    ).toBe(false);
+    expect(
+      screen.getByTestId("plan-module-next").hasAttribute("disabled")
+    ).toBe(true);
+    expect(screen.getByRole("button", { name: "全部批准" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "打回这一条" })).toHaveLength(
+      1
     );
+    const actions = screen.getByTestId("plan-approval-actions");
+    expect(actions.className).toContain("sticky");
+    expect(actions.className).toContain("bottom-0");
+    expect(
+      screen.getByRole("button", { name: "全部批准" }).className
+    ).not.toContain("w-full");
   });
 
-  it('rejects only module two and preserves the other module card states', async () => {
+  it("green FB-113b: rejects only the currently paged module and keeps every dot state accurate", async () => {
     const exitPlanModeDeny = vi.fn().mockResolvedValue(undefined);
     renderWidget(multiModulePlanArguments, { exitPlanModeDeny });
 
-    fireEvent.click(screen.getByTestId('plan-module-request-changes-2'));
-    fireEvent.change(screen.getByTestId('plan-module-feedback-input-2'), {
-      target: { value: '模块二需要补充回滚验收。' },
+    fireEvent.click(screen.getByTestId("plan-module-next"));
+    expect(screen.getByTestId("plan-module-pagination").textContent).toContain(
+      "第 2 个 / 共 3 个"
+    );
+    expect(screen.getAllByTestId(/^plan-module-card-/)).toHaveLength(1);
+    expect(screen.getByTestId("plan-module-card-2").textContent).toContain(
+      "模块 2"
+    );
+
+    fireEvent.click(screen.getByTestId("plan-module-request-changes-2"));
+    fireEvent.change(screen.getByTestId("plan-module-feedback-input-2"), {
+      target: { value: "模块二需要补充回滚验收。" },
     });
-    fireEvent.click(screen.getByTestId('plan-module-submit-changes-2'));
+    fireEvent.click(screen.getByTestId("plan-module-submit-changes-2"));
 
     await waitFor(() => {
       expect(exitPlanModeDeny).toHaveBeenCalledWith(
         compositeRequestId,
-        '模块二需要补充回滚验收。',
-        2,
+        "模块二需要补充回滚验收。",
+        2
       );
     });
-    expect(screen.getByTestId('plan-module-status-2').textContent).toContain(
-      '已打回·待修订',
+    expect(screen.getByTestId("plan-module-status-2").textContent).toContain(
+      "已打回·待修订"
     );
-    expect(screen.getByTestId('plan-module-feedback-2').textContent).toContain(
-      '模块二需要补充回滚验收。',
-    );
-    expect(screen.getByTestId('plan-module-status-1').textContent).toContain(
-      '待审批',
-    );
-    expect(screen.getByTestId('plan-module-status-3').textContent).toContain(
-      '待审批',
+    expect(screen.getByTestId("plan-module-feedback-2").textContent).toContain(
+      "模块二需要补充回滚验收。"
     );
     expect(
-      screen.getByTestId('plan-approval-revision-warning').textContent,
-    ).toContain('1 个模块待修订，Head 需重新递交');
+      screen.getByTestId("plan-module-status-dot-1").getAttribute("data-status")
+    ).toBe("pending");
+    expect(
+      screen.getByTestId("plan-module-status-dot-2").getAttribute("data-status")
+    ).toBe("rejected");
+    expect(
+      screen
+        .getByTestId("plan-module-status-dot-2")
+        .getAttribute("data-current")
+    ).toBe("true");
+    expect(
+      screen.getByTestId("plan-module-status-dot-3").getAttribute("data-status")
+    ).toBe("pending");
+    expect(
+      screen.getByTestId("plan-approval-revision-warning").textContent
+    ).toContain("1 个模块待修订，Head 需重新递交");
   });
 
-  it('approves every current module with one all-approve action', async () => {
+  it("green FB-113c: approves every non-rejected module from any page", async () => {
     const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
     installModelCatalog();
     renderWidget(multiModulePlanArguments, { exitPlanModeApprove });
 
     await waitFor(() => {
       expect(
-        (screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement)
-          .options.length,
+        (screen.getByTestId("plan-module-model-select-1") as HTMLSelectElement)
+          .options.length
       ).toBeGreaterThan(1);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: '全部批准' }));
+    fireEvent.click(screen.getByTestId("plan-module-next"));
+    expect(screen.getByTestId("plan-module-card-2")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "全部批准" }));
 
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId);
     });
-    expect(screen.getByTestId('plan-module-status-1').textContent).toContain(
-      '已批准',
+    expect(screen.getByTestId("plan-module-status-2").textContent).toContain(
+      "已批准"
     );
-    expect(screen.getByTestId('plan-module-status-2').textContent).toContain(
-      '已批准',
-    );
-    expect(screen.getByTestId('plan-module-status-3').textContent).toContain(
-      '已批准',
-    );
+    for (const moduleIndex of [1, 2, 3]) {
+      expect(
+        screen
+          .getByTestId(`plan-module-status-dot-${moduleIndex}`)
+          .getAttribute("data-status")
+      ).toBe("approved");
+    }
+  });
+
+  it("green FB-113d: keeps the fields single-column and the route selectors readable at 360px and 480px module widths", async () => {
+    installModelCatalog();
+
+    for (const width of [360, 480]) {
+      const rendered = renderWidget(modelPickerPlanArguments);
+      const card = screen.getByTestId("plan-module-card-1");
+      card.style.width = `${width}px`;
+
+      const modelSelect = screen.getByTestId(
+        "plan-module-model-select-1"
+      ) as HTMLSelectElement;
+      const effortSelect = screen.getByTestId(
+        "plan-module-effort-select-1"
+      ) as HTMLSelectElement;
+      await waitFor(() =>
+        expect(modelSelect.options.length).toBeGreaterThan(1)
+      );
+
+      const fields = screen.getByTestId("plan-module-fields-1");
+      expect(card.className).toContain("plan-module-card");
+      expect(fields.className).toContain("plan-module-fields");
+      expect(fields.className).not.toMatch(/(?:^|\\s)(?:sm|lg|xl):/);
+      expect(
+        screen.getByTestId("plan-module-model-field-1").className
+      ).toContain("plan-module-model-field");
+      expect(
+        screen.getByTestId("plan-module-effort-field-1").className
+      ).toContain("plan-module-effort-field");
+      expect(modelSelect.className).toContain("w-full");
+      expect(modelSelect.options[modelSelect.selectedIndex]?.textContent).toBe(
+        "openai-codex:gpt-5.6-sol"
+      );
+      expect(
+        effortSelect.options[effortSelect.selectedIndex]?.textContent
+      ).toBe("ultra");
+
+      rendered.unmount();
+    }
   });
 
   it('sends the selected candidate with approval', async () => {
@@ -467,41 +562,47 @@ describe('PlanApprovalWidget', () => {
     });
   });
 
-  it('green EJ-3: leaves a missing model unselected and does not disable another module field', async () => {
+  it("green EJ-3: leaves a missing model unselected and does not disable another module field", async () => {
     installModelCatalog();
     renderWidget({
       ...planArguments,
       modules: [
         {
           ...modelPickerPlanArguments.modules[0],
-          title: '型号已消失模块',
-          model: 'openai-codex:retired-model',
+          title: "型号已消失模块",
+          model: "openai-codex:retired-model",
         },
         {
           ...modelPickerPlanArguments.modules[0],
-          title: '仍可审批模块',
-          model: 'claude-code:haiku',
-          provider: 'claude-code',
-          effortLevel: 'low',
+          title: "仍可审批模块",
+          model: "claude-code:haiku",
+          provider: "claude-code",
+          effortLevel: "low",
         },
       ],
     });
 
-    const missingModelSelect = screen.getByTestId(
-      'plan-module-model-select-1',
-    ) as HTMLSelectElement;
+    fireEvent.click(screen.getByTestId("plan-module-next"));
     const validModelSelect = screen.getByTestId(
-      'plan-module-model-select-2',
+      "plan-module-model-select-2"
     ) as HTMLSelectElement;
-    await waitFor(() => expect(validModelSelect.options.length).toBeGreaterThan(1));
+    await waitFor(() =>
+      expect(validModelSelect.options.length).toBeGreaterThan(1)
+    );
 
-    expect(missingModelSelect.value).toBe('');
-    expect(missingModelSelect.options[0]?.textContent).toBe('请选择模型');
-    expect(missingModelSelect.disabled).toBe(false);
-    expect(validModelSelect.value).toBe('claude-code:haiku');
+    expect(validModelSelect.value).toBe("claude-code:haiku");
     expect(validModelSelect.disabled).toBe(false);
+    fireEvent.click(screen.getByTestId("plan-module-previous"));
+    const restoredMissingModelSelect = screen.getByTestId(
+      "plan-module-model-select-1"
+    ) as HTMLSelectElement;
+    expect(restoredMissingModelSelect.value).toBe("");
+    expect(restoredMissingModelSelect.options[0]?.textContent).toBe(
+      "请选择模型"
+    );
+    expect(restoredMissingModelSelect.disabled).toBe(false);
     expect(
-      screen.getByRole('button', { name: '全部批准' }).hasAttribute('disabled'),
+      screen.getByRole("button", { name: "全部批准" }).hasAttribute("disabled")
     ).toBe(true);
   });
 

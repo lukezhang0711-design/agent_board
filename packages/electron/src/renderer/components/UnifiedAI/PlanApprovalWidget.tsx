@@ -25,6 +25,7 @@ import {
   refreshPlanApprovalStateAtom,
 } from '../../store/atoms/sessions';
 import { isImeCompositionActive } from '../../utils/imeEventTrace';
+import './PlanApprovalWidget.css';
 
 interface SubmittedPlanArgs {
   planId: string;
@@ -407,6 +408,21 @@ const SubmittedPlanApprovalCard: React.FC<{
       : null;
   const modules = useMemo(() => parsePlanModules(args.modules), [args.modules]);
   const isMultiModulePlan = modules.length > 1;
+  const [activeModuleIndex, setActiveModuleIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveModuleIndex(0);
+  }, [args.planId]);
+
+  useEffect(() => {
+    setActiveModuleIndex((current) =>
+      Math.min(current, Math.max(modules.length - 1, 0))
+    );
+  }, [modules.length]);
+
+  const visibleModuleIndexes = isMultiModulePlan
+    ? [activeModuleIndex]
+    : modules.map((_module, moduleIndex) => moduleIndex);
   const [selectedCandidateNames, setSelectedCandidateNames] = useState<
     Record<number, string>
   >({});
@@ -1000,24 +1016,6 @@ const SubmittedPlanApprovalCard: React.FC<{
             {rejectedModuleCount} 个模块待修订，Head 需重新递交
           </div>
         )}
-        {isMultiModulePlan &&
-          promptStatus !== 'unavailable' &&
-          !displayResult &&
-          awaitingResponse &&
-          promptStatus === 'available' &&
-          host &&
-          requestId &&
-          !responseSubmitted && (
-            <button
-              type="button"
-              data-testid="plan-approval-approve-all"
-              onClick={() => void handleApprove()}
-              disabled={isSubmitting || hasUnavailableModuleRoute}
-              className="w-full px-4 py-2 rounded-md border-none bg-nim-primary text-white text-[13px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              全部批准
-            </button>
-          )}
       </div>
 
       <div className="p-4">
@@ -1054,11 +1052,88 @@ const SubmittedPlanApprovalCard: React.FC<{
             data-testid="plan-approval-modules"
             className={
               isMultiModulePlan
-                ? 'mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3'
+                ? 'plan-approval-modules mb-4 flex flex-col gap-4'
                 : 'mb-4 flex flex-col gap-4'
             }
           >
-            {modules.map((module, moduleIndex) => {
+            {isMultiModulePlan && (
+              <div
+                data-testid="plan-module-pagination"
+                className="plan-module-pagination flex flex-wrap items-center justify-between gap-3 rounded-md border border-nim bg-nim-secondary px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="shrink-0 text-xs font-medium text-nim">
+                    第 {activeModuleIndex + 1} 个 / 共 {modules.length} 个
+                  </span>
+                  <div
+                    data-testid="plan-module-status-dots"
+                    aria-label="模块审批状态"
+                    className="flex items-center gap-1.5"
+                  >
+                    {moduleApprovalStates.map((approval, moduleIndex) => {
+                      const isCurrentModule = moduleIndex === activeModuleIndex;
+                      const statusClassName =
+                        approval.status === "rejected"
+                          ? "bg-[var(--nim-warning)]"
+                          : approval.status === "approved"
+                          ? "bg-[var(--nim-success)]"
+                          : "bg-[var(--nim-text-faint)]";
+                      return (
+                        <span
+                          key={approval.moduleIndex}
+                          data-testid={`plan-module-status-dot-${approval.moduleIndex}`}
+                          data-status={approval.status}
+                          data-current={isCurrentModule ? "true" : "false"}
+                          aria-label={`模块 ${approval.moduleIndex}：${
+                            approval.status === "rejected"
+                              ? "已打回·待修订"
+                              : approval.status === "approved"
+                              ? "已批准"
+                              : "待审批"
+                          }`}
+                          aria-current={isCurrentModule ? "step" : undefined}
+                          className={`h-2.5 w-2.5 rounded-full ${statusClassName} ${
+                            isCurrentModule
+                              ? "ring-2 ring-[var(--nim-primary)] ring-offset-2 ring-offset-[var(--nim-bg-secondary)]"
+                              : ""
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid="plan-module-previous"
+                    onClick={() =>
+                      setActiveModuleIndex((current) =>
+                        Math.max(0, current - 1)
+                      )
+                    }
+                    disabled={activeModuleIndex === 0}
+                    className="rounded-md border border-nim bg-transparent px-3 py-1.5 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    上一个
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="plan-module-next"
+                    onClick={() =>
+                      setActiveModuleIndex((current) =>
+                        Math.min(modules.length - 1, current + 1)
+                      )
+                    }
+                    disabled={activeModuleIndex === modules.length - 1}
+                    className="rounded-md border border-nim bg-transparent px-3 py-1.5 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    下一个
+                  </button>
+                </div>
+              </div>
+            )}
+            {visibleModuleIndexes.map((moduleIndex) => {
+              const module = modules[moduleIndex]!;
               const stableModuleIndex = moduleIndex + 1;
               const moduleApproval = moduleApprovalStates[moduleIndex];
               const moduleRoute = moduleRoutes[moduleIndex];
@@ -1072,10 +1147,10 @@ const SubmittedPlanApprovalCard: React.FC<{
                 <section
                   key={`${moduleIndex}-${module.title}`}
                   data-testid={`plan-module-card-${stableModuleIndex}`}
-                  className="rounded-md border border-nim bg-nim-tertiary p-3"
+                  className="plan-module-card flex flex-col rounded-md border border-nim bg-nim-tertiary p-3"
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="text-sm font-semibold text-nim">
+                    <div className="min-w-0 break-words text-sm font-semibold text-nim">
                       {module.title}
                     </div>
                     {isMultiModulePlan && (
@@ -1097,7 +1172,10 @@ const SubmittedPlanApprovalCard: React.FC<{
                       </span>
                     )}
                   </div>
-                  <dl className="grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-2">
+                  <dl
+                    data-testid={`plan-module-fields-${stableModuleIndex}`}
+                    className="plan-module-fields text-[13px]"
+                  >
                     <div className="min-w-0">
                       <dt className="text-xs font-semibold text-nim-muted">
                         产出文件
@@ -1107,7 +1185,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           ? module.outputFiles.map((filePath) => (
                               <code
                                 key={filePath}
-                                className="whitespace-nowrap text-[12px]"
+                                className="block max-w-full whitespace-pre-wrap break-all text-[12px]"
                               >
                                 {formatPlanOutputPath(
                                   filePath,
@@ -1128,15 +1206,18 @@ const SubmittedPlanApprovalCard: React.FC<{
                           : '未提供'}
                       </dd>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <dt className="text-xs font-semibold text-nim-muted">
                         提供方
                       </dt>
-                      <dd className="mt-1 text-nim select-text">
+                      <dd className="mt-1 break-words text-nim select-text">
                         {moduleRoute?.provider ?? module.provider}
                       </dd>
                     </div>
-                    <div>
+                    <div
+                      data-testid={`plan-module-model-field-${stableModuleIndex}`}
+                      className="plan-module-model-field min-w-0"
+                    >
                       <dt className="text-xs font-semibold text-nim-muted">
                         模型
                       </dt>
@@ -1155,7 +1236,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           disabled={
                             modelCatalog.status !== 'ready' || isSubmitting
                           }
-                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-[13px] text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">请选择模型</option>
                           {modelCatalog.models.map((model) => (
@@ -1166,7 +1247,10 @@ const SubmittedPlanApprovalCard: React.FC<{
                         </select>
                       </dd>
                     </div>
-                    <div>
+                    <div
+                      data-testid={`plan-module-effort-field-${stableModuleIndex}`}
+                      className="plan-module-effort-field min-w-0"
+                    >
                       <dt className="text-xs font-semibold text-nim-muted">
                         思考强度
                       </dt>
@@ -1183,7 +1267,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             )
                           }
                           disabled={!routeModel || isSubmitting}
-                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-[13px] text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {!routeModel && <option value="">请选择强度</option>}
                           {routeModel?.supportedEffortLevels.map((effortLevel) => (
@@ -1194,7 +1278,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         </select>
                       </dd>
                     </div>
-                    <div className="sm:col-span-2">
+                    <div className="plan-module-done-criteria min-w-0">
                       <dt className="text-xs font-semibold text-nim-muted">
                         完成标准
                       </dt>
@@ -1273,7 +1357,10 @@ const SubmittedPlanApprovalCard: React.FC<{
                     </div>
                   )}
                   {isMultiModulePlan && (
-                    <div className="mt-4 border-t border-nim pt-3">
+                    <div
+                      data-testid={`plan-module-actions-${stableModuleIndex}`}
+                      className="plan-module-actions mt-4 border-t border-nim pt-3"
+                    >
                       {isModuleRejected && moduleApproval.feedback && (
                         <div
                           data-testid={`plan-module-feedback-${stableModuleIndex}`}
@@ -1302,7 +1389,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                               }));
                             }}
                             disabled={isSubmitting}
-                            className="w-full rounded-md border border-nim bg-nim-secondary px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+                            className="plan-module-request-changes rounded-md border border-nim bg-transparent px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             打回这一条
                           </button>
@@ -1373,7 +1460,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                                     moduleFeedback[stableModuleIndex] ?? ''
                                   ).trim() === ''
                                 }
-                                className="rounded-md bg-nim-primary px-3 py-1.5 text-xs text-white hover:bg-nim-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-md border border-[var(--nim-primary)] bg-transparent px-3 py-1.5 text-xs text-[var(--nim-primary)] hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 提交打回
                               </button>
@@ -1409,6 +1496,33 @@ const SubmittedPlanApprovalCard: React.FC<{
             </div>
           </div>
         )}
+
+        {isMultiModulePlan &&
+          promptStatus !== "unavailable" &&
+          !displayResult &&
+          awaitingResponse &&
+          promptStatus === "available" &&
+          host &&
+          requestId &&
+          !responseSubmitted && (
+            <div
+              data-testid="plan-approval-actions"
+              className="plan-approval-actions sticky bottom-0 z-20 -mx-4 -mb-4 mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-nim bg-nim-secondary/95 p-4 backdrop-blur"
+            >
+              <span className="text-xs text-nim-muted">
+                批准所有未被打回的模块
+              </span>
+              <button
+                type="button"
+                data-testid="plan-approval-approve-all"
+                onClick={() => void handleApprove()}
+                disabled={isSubmitting || hasUnavailableModuleRoute}
+                className="inline-flex shrink-0 items-center justify-center rounded-md border-none bg-nim-primary px-4 py-2 text-[13px] font-medium text-white hover:bg-nim-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                全部批准
+              </button>
+            </div>
+          )}
 
         {!isMultiModulePlan &&
           promptStatus !== 'unavailable' &&
