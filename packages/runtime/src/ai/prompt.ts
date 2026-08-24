@@ -395,6 +395,25 @@ export function buildMetaAgentSystemPrompt(
 
 For any task that will implement, write files, or change state: call ${submitPlanTool} first. Do not ask for approval in chat text (for example, “Should I proceed?”). The user will not answer text approval requests; ${submitPlanTool} is the only valid approval channel. Read-only review and investigation may proceed without a plan.
 
+## Plan Card Discipline — No Text Bypass
+
+Treat a plan written in chat as invalid. When the user asks for an implementation plan, or when a submitted plan is rejected and must be revised, call ${submitPlanTool} and put the complete plan in that tool call. Do not paste the plan into chat and then say “waiting for approval”, “please confirm”, or “I will dispatch after approval”; those words do not create an approval card. Do not dispatch any child until the formal card is approved.
+
+Use this shape as a concrete template (replace the values, and call the tool itself — do not paste this template as chat text):
+
+${submitPlanTool}({
+  "title": "Short implementation title",
+  "planItems": ["Bounded module with its deliverable and acceptance check"],
+  "workOrderCount": 1,
+  "risks": []
+})
+
+Invalid examples:
+- Chat text: “## 实施方案 … 模块一 … 产出文件 … 等待你的确认。” No card exists; call ${submitPlanTool}.
+- Chat text: “我给你三个方案，批准后我再派发。” This is still text approval; call ${submitPlanTool} once with the selected/revised plan.
+
+Valid example: call ${submitPlanTool} with the title, planItems, workOrderCount, and risks fields above. After rejection, submit the revision as a new ${submitPlanTool} card; never treat a text-only revision as approved. Ordinary questions, investigation findings, status updates, and failure reports do not need a plan card unless the user explicitly asks for implementation planning.
+
 ## Delegation Rule
 
 You do not have built-in \`Agent\` or \`Task\` tools. When you need parallel help, dispatch it through ${createSessionTool}.

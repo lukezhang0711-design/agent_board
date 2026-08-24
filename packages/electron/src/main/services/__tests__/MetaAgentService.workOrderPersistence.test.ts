@@ -11,6 +11,8 @@ const testState = vi.hoisted(() => ({
   nativeHeadPlanApprovalHandler: null as any,
   maxParallel: 4,
   planAutoApprove: false,
+  headTurnFinalText: null as string | null,
+  headTurnUserPrompts: [] as string[],
   ipcHandlers: new Map<string, (...args: any[]) => any>(),
   /** Every `webContents.send` the service makes, so tests can assert IPC signals. */
   sentIpc: [] as { channel: string; args: unknown[] }[],
@@ -93,8 +95,8 @@ vi.mock('../metaAgentNotificationSignature', () => ({
   computeNotificationSignature: (eventType: string) => eventType,
 }));
 vi.mock('../metaAgentMessageText', () => ({
-  extractMessageText: () => null,
-  extractUserPrompts: () => [],
+  extractMessageText: () => testState.headTurnFinalText,
+  extractUserPrompts: () => testState.headTurnUserPrompts,
 }));
 vi.mock('../ai/claudeCliLauncherSingleton', () => ({
   ClaudeCliLauncherConfig: { setMetaAgentServerPort: vi.fn() },
@@ -383,6 +385,8 @@ describe('MetaAgentService work-order persistence', () => {
     vi.clearAllMocks();
     fs.mkdirSync(workspacePath, { recursive: true });
     testState.planAutoApprove = false;
+    testState.headTurnFinalText = null;
+    testState.headTurnUserPrompts = [];
     dbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nim-work-order-'));
     db = new SQLiteDatabase({
       dbDir,
@@ -402,6 +406,7 @@ describe('MetaAgentService work-order persistence', () => {
     (service as any).notificationSignatures.clear();
     (service as any).interruptedChildSessionIds.clear();
     (service as any).releasedDispatchPromptIdsByHead.clear();
+    (service as any).textPlanGuardLocks.clear();
     await AISessionsRepository.create({
       id: 'head-session',
       provider: 'claude-code',
@@ -412,11 +417,14 @@ describe('MetaAgentService work-order persistence', () => {
     } as any);
     const getPlanApprovalState = vi.fn(readTestPlanApprovalState);
     (service as any).aiService = {
-      queuePromptForSession: vi.fn(async (_sessionId: string, prompt: string) => ({
-        id: 'revived-plan-approval',
-        prompt,
-        createdAt: Date.now(),
-      })),
+      queuePromptForSession: vi.fn(async (_sessionId: string, prompt: string) => {
+        testState.headTurnUserPrompts.push(prompt);
+        return {
+          id: 'revived-plan-approval',
+          prompt,
+          createdAt: Date.now(),
+        };
+      }),
       triggerQueuedPromptProcessingForSession: vi.fn().mockResolvedValue(true),
       assertCurrentDynamicModelAvailable: vi.fn().mockResolvedValue(undefined),
       getPlanApprovalState,
@@ -463,6 +471,217 @@ describe('MetaAgentService work-order persistence', () => {
     await db.close();
     fs.rmSync(dbDir, { recursive: true, force: true });
     fs.rmSync(workspacePath, { recursive: true, force: true });
+  });
+
+  it('green FB-111: a Haiku-style text plan receives a formal submit_plan chase', async () => {
+    testState.headTurnUserPrompts = ['先出方案卡，未经批准不许派发。'];
+    testState.headTurnFinalText = `## 实施方案
+
+1. 模块一：调整回合结算，产出文件 packages/electron/src/main/services/MetaAgentService.ts
+2. 模块二：完成引擎指派与验证
+
+此方案未经批准，不会派发，等待你的确认。`;
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({ type: 'assistant', text: testState.headTurnFinalText }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    const queuePromptForSession = (service as any).aiService.queuePromptForSession as ReturnType<typeof vi.fn>;
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+
+    expect(queuePromptForSession).toHaveBeenCalledTimes(1);
+    expect(queuePromptForSession.mock.calls[0][1]).toContain('submit_plan');
+  });
+
+  it('green FB-111: two failed chases surface the required warning', async () => {
+    testState.headTurnUserPrompts = ['先出方案卡，未经批准不许派发。'];
+    testState.headTurnFinalText = `## 实施方案
+
+1. 模块一：调整回合结算，产出文件 packages/electron/src/main/services/MetaAgentService.ts
+2. 模块二：完成引擎指派与验证
+
+此方案未经批准，不会派发，等待你的确认。`;
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({ type: 'assistant', text: testState.headTurnFinalText }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    const appendTextPlanTurn = async () => {
+      await AgentMessagesRepository.create({
+        sessionId: 'head-session',
+        source: 'claude-code',
+        direction: 'output',
+        content: JSON.stringify({ type: 'assistant', text: testState.headTurnFinalText }),
+        createdAt: new Date(),
+        hidden: false,
+      });
+    };
+
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+    await appendTextPlanTurn();
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+    await appendTextPlanTurn();
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+
+    const { rows } = await db.query<{ content: unknown }>(
+      `SELECT content FROM ai_agent_messages WHERE session_id = $1`,
+      ['head-session'],
+    );
+    expect(rows.some((row) => String(row.content).includes('Head 未按规提交方案卡'))).toBe(true);
+  });
+
+  it('green FB-111: a formal card after the chase stops further chasing', async () => {
+    testState.headTurnUserPrompts = ['先出方案卡，未经批准不许派发。'];
+    testState.headTurnFinalText = `## 实施方案
+
+1. 模块一：调整回合结算，产出文件 packages/electron/src/main/services/MetaAgentService.ts
+2. 模块二：补充测试并完成引擎指派
+
+此方案未经批准，不会派发，等待你的确认。`;
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({ type: 'assistant', text: testState.headTurnFinalText }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    const queuePromptForSession = (service as any).aiService.queuePromptForSession as ReturnType<typeof vi.fn>;
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+    expect(queuePromptForSession).toHaveBeenCalledTimes(1);
+
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status, content, archived, source, source_ref
+      ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'pending', $5, FALSE, 'meta-agent', $6)`,
+      [
+        'formal-plan-card',
+        JSON.stringify(['plan']),
+        JSON.stringify({
+          title: 'Formal plan',
+          status: 'in-review',
+          approvalPromptId: 'formal-plan-request',
+          planItems: ['Formal submission'],
+          workOrderCount: 1,
+          risks: [],
+        }),
+        workspacePath,
+        JSON.stringify({ planItems: ['Formal submission'], workOrderCount: 1, risks: [] }),
+        'meta-agent-submitted-plan:head-session',
+      ],
+    );
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'nimbalyst-meta-agent',
+      direction: 'input',
+      content: JSON.stringify({ prompt: '[Plan submission correction] 请正式提交方案卡。' }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({
+        type: 'tool_use',
+        name: 'submit_plan',
+        id: 'formal-plan-request',
+        input: { planId: 'formal-plan-card' },
+      }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+
+    expect(queuePromptForSession).toHaveBeenCalledTimes(1);
+    const { rows } = await db.query<{ data: unknown }>(
+      `SELECT data FROM tracker_items WHERE id = $1`,
+      ['formal-plan-card'],
+    );
+    expect(parseStoredJson<any>(rows[0].data)).toMatchObject({ status: 'in-review' });
+  });
+
+  it('green FB-111: a text-only revision after rejection receives the same chase', async () => {
+    testState.headTurnUserPrompts = [
+      '[Plan approval response] The user requested changes. Prepare a revised plan and submit a new approval card.',
+    ];
+    testState.headTurnFinalText = `## 修订方案
+
+1. 模块一：拆分实施步骤，产出文件 reports/revised-plan.md
+2. 模块二：完成引擎指派与验证
+
+已根据打回意见修改，等待批准。`;
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status, content, archived, source, source_ref
+      ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'pending', $5, FALSE, 'meta-agent', $6)`,
+      [
+        'rejected-plan-card',
+        JSON.stringify(['plan']),
+        JSON.stringify({
+          title: 'Rejected plan',
+          status: 'in-review',
+          approvalPromptId: 'rejected-plan-request',
+          lastReviewFeedback: '拆分实施步骤后重新提交。',
+        }),
+        workspacePath,
+        JSON.stringify({}),
+        'meta-agent-submitted-plan:head-session',
+      ],
+    );
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({ type: 'assistant', text: testState.headTurnFinalText }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    const queuePromptForSession = (service as any).aiService.queuePromptForSession as ReturnType<typeof vi.fn>;
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+
+    expect(queuePromptForSession).toHaveBeenCalledTimes(1);
+    expect(queuePromptForSession.mock.calls[0][1]).toContain('submit_plan');
+  });
+
+  it.each([
+    ['ordinary question', '为什么这个函数返回 null？', '回答：因为调用方没有传入有效的配置。'],
+    ['investigation report', '调查当前实现并汇报现状，不要改文件。', '调查报告：读取了 3 个文件，现状和失败点如下。'],
+    ['failure report', '失败汇报：引擎不可用，说明失败原因即可。', '失败汇报：子任务没有完成，原因是引擎不可用，未生成产出文件。'],
+  ])('green FB-111: does not chase a %s', async (_label, prompt, response) => {
+    testState.headTurnUserPrompts = [prompt];
+    testState.headTurnFinalText = response;
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({ type: 'assistant', text: response }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    const queuePromptForSession = (service as any).aiService.queuePromptForSession as ReturnType<typeof vi.fn>;
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+
+    expect(queuePromptForSession).not.toHaveBeenCalled();
+    const { rows } = await db.query<{ content: unknown }>(
+      `SELECT content FROM ai_agent_messages WHERE session_id = $1`,
+      ['head-session'],
+    );
+    expect(rows.some((row) => String(row.content).includes('Head 未按规提交方案卡'))).toBe(false);
   });
 
   it('persists one card and both session links when a child is dispatched', async () => {

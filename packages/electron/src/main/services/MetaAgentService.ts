@@ -35,7 +35,15 @@ import {
 import { broadcastMessageLogged } from './ai/claudeCliUserPromptLog';
 import { computeNotificationSignature } from './metaAgentNotificationSignature';
 import { extractMessageText, extractUserPrompts } from './metaAgentMessageText';
-import { shouldShowTextApprovalGuard, TEXT_APPROVAL_CORRECTION } from './metaAgentTextApprovalGuard';
+import {
+  evaluateTextPlanGuard,
+  hasOutstandingPlanRequest,
+  isTextPlanChasePrompt,
+  MAX_TEXT_PLAN_CHASE_COUNT,
+  TEXT_APPROVAL_CORRECTION,
+  TEXT_PLAN_BYPASS_WARNING,
+  TEXT_PLAN_CHASE_PROMPT,
+} from './metaAgentTextApprovalGuard';
 import { ClaudeCliLauncherConfig } from './ai/claudeCliLauncherSingleton';
 import {
   classifyFailureReason,
@@ -70,7 +78,6 @@ const PLAN_APPROVAL_FAST_POLL_INTERVAL_MS = 100;
 const PLAN_APPROVAL_SLOW_POLL_INTERVAL_MS = 2_000;
 const LIFETIME_BACKSTOP = 50;
 const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
-const TEXT_APPROVAL_REMINDER = 'Head 正在用文字征求批准——请让它提交正式方案，或点此发送标准指令';
 const WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON = '原指挥官会话已不存在，无法重派';
 
 class DispatchCapacityError extends Error {
@@ -664,6 +671,106 @@ interface QueuedChildSessionResult {
 
 type ChildDispatchResult = CreatedChildSessionResult | QueuedChildSessionResult;
 
+interface HeadTextPlanMessageRow {
+  id: number | string;
+  direction: string;
+  content: unknown;
+  metadata?: unknown;
+}
+
+interface HeadTextPlanCardState {
+  hasPendingPlanCard: boolean;
+  hasApprovedPlan: boolean;
+  hasRejectedPlan: boolean;
+}
+
+interface HeadTextPlanToolSignals {
+  hasAnyToolCall: boolean;
+  submittedPlan: boolean;
+}
+
+function parseStoredContent(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function parseStoredMetadata(value: unknown): Record<string, unknown> | null {
+  const parsed = parseStoredContent(value);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown>
+    : null;
+}
+
+function isPlanSubmissionToolName(name: string): boolean {
+  const normalized = name.trim().replace(/^mcp__[^_]+(?:_[^_]+)*__/, '');
+  return normalized === 'submit_plan' || normalized === 'ExitPlanMode';
+}
+
+function collectHeadTextPlanToolSignals(
+  value: unknown,
+  signals: HeadTextPlanToolSignals,
+  visited = new Set<object>(),
+): void {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectHeadTextPlanToolSignals(entry, signals, visited);
+    }
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  if (visited.has(value)) return;
+  visited.add(value);
+
+  const record = value as Record<string, unknown>;
+  const type = typeof record.type === 'string' ? record.type : '';
+  const toolLikeType = new Set([
+    'nimbalyst_tool_use',
+    'tool_use',
+    'tool_call',
+    'function_call',
+    'nimbalyst_tool_result',
+    'tool_result',
+    'tool_use_result',
+  ]).has(type);
+  const toolCall = record.toolCall && typeof record.toolCall === 'object'
+    ? record.toolCall as Record<string, unknown>
+    : null;
+  if (toolLikeType || toolCall) {
+    signals.hasAnyToolCall = true;
+    const functionRecord = record.function && typeof record.function === 'object'
+      ? record.function as Record<string, unknown>
+      : null;
+    const name = typeof record.name === 'string'
+      ? record.name
+      : typeof toolCall?.name === 'string'
+        ? toolCall.name
+        : typeof toolCall?.toolName === 'string'
+          ? toolCall.toolName
+          : typeof functionRecord?.name === 'string'
+            ? functionRecord.name
+            : null;
+    if (name && isPlanSubmissionToolName(name)) {
+      signals.submittedPlan = true;
+    }
+  }
+
+  for (const key of ['message', 'content', 'toolCall', 'tool_call', 'function', 'item', 'params', 'output']) {
+    if (key in record) {
+      collectHeadTextPlanToolSignals(record[key], signals, visited);
+    }
+  }
+}
+
+function readPositiveInteger(value: unknown): number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+    ? value
+    : 0;
+}
+
 export class MetaAgentService {
   private static instance: MetaAgentService | null = null;
   private starting: Promise<void> | null = null;
@@ -677,6 +784,7 @@ export class MetaAgentService {
   private activePlanApprovalWaiters = new Set<string>();
   private planApprovalRevivePromises = new Map<string, Promise<DurablePlanApprovalState | null>>();
   private planApprovalSettlementRestore: (() => void) | null = null;
+  private textPlanGuardLocks = new Map<string, Promise<void>>();
   // A completion event arrives before its queued prompt leaves `executing`.
   // Remember that exact prompt so its stale row cannot reclaim a released slot.
   private releasedDispatchPromptIdsByHead = new Map<string, Map<string, Set<string>>>();
@@ -875,51 +983,229 @@ export class MetaAgentService {
     });
   }
 
-  private async persistTextApprovalReminder(sessionId: string, workspacePath: string): Promise<void> {
+  private async persistTextPlanBypassWarning(sessionId: string, workspacePath: string): Promise<void> {
     await AgentMessagesRepository.create({
       sessionId,
       source: 'nimbalyst-meta-agent',
       direction: 'input',
-      content: `<SYSTEM_REMINDER>${TEXT_APPROVAL_REMINDER}</SYSTEM_REMINDER>`,
+      content: `<SYSTEM_REMINDER>${TEXT_PLAN_BYPASS_WARNING}</SYSTEM_REMINDER>`,
       createdAt: new Date(),
       searchable: false,
       metadata: {
         promptType: 'system_reminder',
-        reminderKind: 'text_plan_approval',
+        reminderKind: 'text_plan_approval_warning',
         actionPrompt: TEXT_APPROVAL_CORRECTION,
       },
     });
     broadcastMessageLogged(sessionId, workspacePath);
   }
 
+  private async getHeadTextPlanCardState(
+    sessionId: string,
+    workspacePath: string,
+  ): Promise<HeadTextPlanCardState> {
+    const { rows } = await databaseWorker.query<{ data: unknown }>(
+      `SELECT data
+       FROM tracker_items
+       WHERE workspace = $1
+         AND type = 'plan'
+         AND source_ref = $2
+         AND (archived = FALSE OR archived IS NULL)
+       ORDER BY updated DESC
+       LIMIT 1`,
+      [workspacePath, `meta-agent-submitted-plan:${sessionId}`],
+    );
+    const data = parseWorkOrderData(rows[0]?.data);
+    const status = typeof data.status === 'string' ? data.status : '';
+    if (status === 'ready-for-development') {
+      return { hasPendingPlanCard: false, hasApprovedPlan: true, hasRejectedPlan: false };
+    }
+
+    let approvalState: DurablePlanApprovalState | null = null;
+    const approvalPromptId = readNonEmptyString(data.approvalPromptId);
+    if (approvalPromptId && this.aiService?.getPlanApprovalState) {
+      try {
+        approvalState = await this.aiService.getPlanApprovalState(sessionId, approvalPromptId);
+      } catch (error) {
+        console.warn(
+          `[MetaAgentService] Failed to read durable plan-card state for ${sessionId}:`,
+          error,
+        );
+      }
+    }
+
+    const hasRejectedPlan = Boolean(
+      readNonEmptyString(data.lastReviewFeedback)
+      || approvalState?.decision === 'rejected'
+      || approvalState?.decision === 'dismissed',
+    );
+    const hasPendingPlanCard = status === 'in-review' && !hasRejectedPlan;
+    return {
+      hasPendingPlanCard,
+      hasApprovedPlan: false,
+      hasRejectedPlan,
+    };
+  }
+
+  private async updateHeadTextPlanGuardMetadata(
+    sessionId: string,
+    patch: Record<string, unknown>,
+  ): Promise<void> {
+    await AISessionsRepository.updateMetadata(sessionId, { metadata: patch });
+  }
+
   private async handleHeadTurnCompleted(sessionId: string, workspacePath?: string): Promise<void> {
+    const previous = this.textPlanGuardLocks.get(sessionId) ?? Promise.resolve();
+    const current = previous
+      .catch(() => undefined)
+      .then(() => this.handleHeadTurnCompletedOnce(sessionId, workspacePath));
+    this.textPlanGuardLocks.set(sessionId, current);
+    try {
+      await current;
+    } finally {
+      if (this.textPlanGuardLocks.get(sessionId) === current) {
+        this.textPlanGuardLocks.delete(sessionId);
+      }
+    }
+  }
+
+  private async handleHeadTurnCompletedOnce(sessionId: string, workspacePath?: string): Promise<void> {
     const head = await AISessionsRepository.get(sessionId);
     if (!workspacePath || head?.agentRole !== 'meta-agent') return;
-    const { rows } = await databaseWorker.query<{ direction: string; content: unknown }>(
-      `SELECT direction, content FROM ai_agent_messages WHERE session_id = $1 ORDER BY created_at DESC, id DESC LIMIT 80`,
+    const { rows } = await databaseWorker.query<HeadTextPlanMessageRow>(
+      `SELECT id, direction, content, metadata
+       FROM ai_agent_messages
+       WHERE session_id = $1
+       ORDER BY created_at DESC, id DESC
+       LIMIT 80`,
       [sessionId],
     );
-    const turnRows: Array<{ direction: string; content: unknown }> = [];
+    const turnRows: HeadTextPlanMessageRow[] = [];
     for (const row of rows) {
       if (row.direction === 'input') break;
       turnRows.push(row);
     }
-    const submittedPlanThisTurn = turnRows.some((row) => {
-      try {
-        const value = typeof row.content === 'string' ? JSON.parse(row.content) : row.content as Record<string, unknown>;
-        return value?.type === 'nimbalyst_tool_use' && value.name === 'ExitPlanMode' && !!(value.input as Record<string, unknown> | undefined)?.planId;
-      } catch { return false; }
-    });
-    const finalText = turnRows
-      .map((row) => extractMessageText(typeof row.content === 'string' ? row.content : JSON.stringify(row.content)))
-      .find((text): text is string => !!text) ?? null;
-    const { rows: approvedPlans } = await databaseWorker.query<{ id: string }>(
-      `SELECT id FROM tracker_items WHERE workspace = $1 AND type = 'plan' AND source_ref = $2 AND data->>'status' = 'ready-for-development' LIMIT 1`,
-      [workspacePath, `meta-agent-submitted-plan:${sessionId}`],
-    );
-    if (shouldShowTextApprovalGuard({ finalText, submittedPlanThisTurn, hasApprovedPlan: approvedPlans.length > 0 })) {
-      await this.persistTextApprovalReminder(sessionId, workspacePath);
+    const currentTurnId = turnRows[0] ? String(turnRows[0].id) : null;
+    if (!currentTurnId) return;
+
+    const sessionMetadata = parseStoredMetadata(head.metadata) ?? {};
+    if (sessionMetadata.metaAgentTextPlanGuardLastTurnId === currentTurnId) {
+      return;
     }
+
+    const { rows: inputRows } = await databaseWorker.query<HeadTextPlanMessageRow>(
+      `SELECT id, direction, content, metadata
+       FROM ai_agent_messages
+       WHERE session_id = $1 AND direction = 'input'
+       ORDER BY created_at ASC, id ASC
+       LIMIT 200`,
+      [sessionId],
+    );
+    const userPrompts = extractUserPrompts(inputRows.map((row) => ({
+      direction: row.direction,
+      content: typeof row.content === 'string'
+        ? row.content
+        : JSON.stringify(row.content) ?? '',
+      metadata: parseStoredMetadata(row.metadata),
+    })));
+    const latestUserPrompt = userPrompts[userPrompts.length - 1] ?? null;
+    const chasePromptActive = isTextPlanChasePrompt(latestUserPrompt);
+    const chaseCount = chasePromptActive
+      ? readPositiveInteger(sessionMetadata.metaAgentTextPlanChaseCount)
+      : 0;
+
+    const toolSignals: HeadTextPlanToolSignals = {
+      hasAnyToolCall: false,
+      submittedPlan: false,
+    };
+    for (const row of turnRows) {
+      collectHeadTextPlanToolSignals(parseStoredContent(row.content), toolSignals);
+    }
+    const finalText = turnRows
+      .map((row) => extractMessageText(
+        typeof row.content === 'string'
+          ? row.content
+          : JSON.stringify(row.content) ?? '',
+        parseStoredMetadata(row.metadata),
+      ))
+      .find((text): text is string => !!text) ?? null;
+
+    const cardState = await this.getHeadTextPlanCardState(sessionId, workspacePath);
+    const outstandingPlanRequest = cardState.hasRejectedPlan
+      || (latestUserPrompt ? hasOutstandingPlanRequest([latestUserPrompt]) : false);
+    const decision = evaluateTextPlanGuard({
+      finalText,
+      hasAnyToolCallThisTurn: toolSignals.hasAnyToolCall,
+      submittedPlanThisTurn: toolSignals.submittedPlan,
+      hasPendingPlanCard: cardState.hasPendingPlanCard,
+      hasApprovedPlan: cardState.hasApprovedPlan,
+      hasOutstandingPlanRequest: outstandingPlanRequest,
+      chaseCount,
+    });
+
+    const baseMetadata = {
+      metaAgentTextPlanGuardLastTurnId: currentTurnId,
+    };
+    if (decision.action === 'chase') {
+      await this.updateHeadTextPlanGuardMetadata(sessionId, {
+        ...baseMetadata,
+        metaAgentTextPlanChaseCount: decision.nextChaseCount,
+        metaAgentTextPlanWarning: false,
+      });
+      console.warn(
+        `[MetaAgentService] Text plan chase: sessionId=${sessionId}, attempt=${decision.nextChaseCount}`,
+      );
+      try {
+        await this.sendPromptToSession(
+          sessionId,
+          workspacePath,
+          TEXT_PLAN_CHASE_PROMPT,
+          {
+            forceProcessing: true,
+            origin: 'child_session_event',
+            idempotencyKey: `head-plan-text-chase-${sessionId}-${decision.nextChaseCount}`,
+            // A chase is a real instruction to Head. It must remain queued in
+            // tests too, otherwise the regression test would validate only a
+            // transcript row and not the production prompt path.
+            bypassExecutionForTests: false,
+          },
+        );
+      } catch (error) {
+        console.error(
+          `[MetaAgentService] Failed to inject text plan chase for ${sessionId}:`,
+          error,
+        );
+        await this.updateHeadTextPlanGuardMetadata(sessionId, {
+          ...baseMetadata,
+          metaAgentTextPlanChaseCount: decision.nextChaseCount,
+          metaAgentTextPlanWarning: true,
+        });
+        await this.persistTextPlanBypassWarning(sessionId, workspacePath);
+      }
+      return;
+    }
+
+    if (decision.action === 'warn') {
+      const warningAlreadyShown = sessionMetadata.metaAgentTextPlanWarning === true;
+      await this.updateHeadTextPlanGuardMetadata(sessionId, {
+        ...baseMetadata,
+        metaAgentTextPlanChaseCount: MAX_TEXT_PLAN_CHASE_COUNT,
+        metaAgentTextPlanWarning: true,
+      });
+      console.error(
+        `[MetaAgentService] Text plan bypass warning: sessionId=${sessionId}, chaseCount=${MAX_TEXT_PLAN_CHASE_COUNT}`,
+      );
+      if (!warningAlreadyShown) {
+        await this.persistTextPlanBypassWarning(sessionId, workspacePath);
+      }
+      return;
+    }
+
+    await this.updateHeadTextPlanGuardMetadata(sessionId, {
+      ...baseMetadata,
+      metaAgentTextPlanChaseCount: 0,
+      metaAgentTextPlanWarning: false,
+    });
   }
 
   private broadcastSessionListRefresh(workspacePath: string, sessionId: string): void {
@@ -1079,6 +1365,7 @@ export class MetaAgentService {
     this.interruptedChildSessionIds.clear();
     this.activePlanApprovalWaiters.clear();
     this.planApprovalRevivePromises.clear();
+    this.textPlanGuardLocks.clear();
     this.planApprovalSettlementRestore?.();
     this.planApprovalSettlementRestore = null;
     this.releasedDispatchPromptIdsByHead.clear();
