@@ -25,6 +25,7 @@ import { STOP_CLEAR_QUEUE_STATUS, getStopRequestStatusMessage } from './stopCopy
 import { hasPendingSubmittedPlanApproval, registerPlanApprovalWidget } from './PlanApprovalWidget';
 import type {
   InteractiveWidgetHost,
+  PlanModuleApproval,
   PermissionScope,
   SelectedPlanCandidate,
 } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets/InteractiveWidgetHost';
@@ -2010,6 +2011,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     requestId: string,
     confirmSessionId: string,
     selectedCandidates?: SelectedPlanCandidate[],
+    moduleApprovals?: PlanModuleApproval[],
   ) => {
     try {
       // Use the unified respondToPromptAtom which persists to DB and notifies provider
@@ -2020,6 +2022,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
         response: {
           approved: true,
           ...(selectedCandidates && selectedCandidates.length > 0 ? { selectedCandidates } : {}),
+          ...(moduleApprovals && moduleApprovals.length > 0 ? { moduleApprovals } : {}),
         },
       });
 
@@ -2039,14 +2042,19 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     }
   }, [respondToPrompt, setAiMode, posthog]);
 
-  const handleExitPlanModeDeny = useCallback(async (requestId: string, confirmSessionId: string, feedback?: string) => {
+  const handleExitPlanModeDeny = useCallback(async (
+    requestId: string,
+    confirmSessionId: string,
+    feedback?: string,
+    moduleIndex?: number,
+  ) => {
     try {
       // Use the unified respondToPromptAtom which persists to DB and notifies provider
       const success = await respondToPrompt({
         sessionId: confirmSessionId,
         promptId: requestId,
         promptType: 'exit_plan_mode_request',
-        response: { approved: false, feedback },
+        response: { approved: false, feedback, ...(moduleIndex !== undefined ? { moduleIndex } : {}) },
       });
       if (!success) {
         throw new Error('Failed to persist ExitPlanMode denial');
@@ -2271,14 +2279,18 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       },
 
       // ExitPlanMode operations
-      exitPlanModeApprove: async (requestId: string, selectedCandidates?: SelectedPlanCandidate[]) => {
-        await handleExitPlanModeApprove(requestId, sessionId, selectedCandidates);
+      exitPlanModeApprove: async (
+        requestId: string,
+        selectedCandidates?: SelectedPlanCandidate[],
+        moduleApprovals?: PlanModuleApproval[],
+      ) => {
+        await handleExitPlanModeApprove(requestId, sessionId, selectedCandidates, moduleApprovals);
       },
       exitPlanModeStartNewSession: async (requestId: string, planFilePath: string) => {
         await handleExitPlanModeStartNewSession(requestId, sessionId, planFilePath);
       },
-      exitPlanModeDeny: async (requestId: string, feedback?: string) => {
-        await handleExitPlanModeDeny(requestId, sessionId, feedback);
+      exitPlanModeDeny: async (requestId: string, feedback?: string, moduleIndex?: number) => {
+        await handleExitPlanModeDeny(requestId, sessionId, feedback, moduleIndex);
       },
       exitPlanModeCancel: async (requestId: string) => {
         await handleExitPlanModeCancel(requestId, sessionId);

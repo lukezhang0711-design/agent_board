@@ -255,6 +255,45 @@ describe('AIService.stopSession', () => {
     });
   });
 
+  it('derives the stable rejected module index and original feedback from durable rows', () => {
+    const requestId = 'approval-module-2';
+    const state = deriveDurablePlanApprovalState([
+      {
+        type: 'nimbalyst_tool_use',
+        name: 'ExitPlanMode',
+        id: requestId,
+        input: {
+          planId: 'plan-modules-1',
+          modules: [{ title: '一' }, { title: '二' }, { title: '三' }],
+          moduleApprovals: [
+            { moduleIndex: 1, status: 'pending' },
+            { moduleIndex: 2, status: 'pending' },
+            { moduleIndex: 3, status: 'pending' },
+          ],
+        },
+      },
+      {
+        type: 'exit_plan_mode_response',
+        requestId,
+        approved: false,
+        moduleIndex: 2,
+        feedback: '模块二需要补充回滚验收。',
+      },
+    ], requestId);
+
+    expect(state).toMatchObject({
+      status: 'responded',
+      decision: 'rejected',
+      moduleIndex: 2,
+      feedback: '模块二需要补充回滚验收。',
+      moduleApprovals: [
+        { moduleIndex: 1, status: 'pending' },
+        { moduleIndex: 2, status: 'rejected', feedback: '模块二需要补充回滚验收。' },
+        { moduleIndex: 3, status: 'pending' },
+      ],
+    });
+  });
+
   it('validates workspace scope before exposing durable approval state', async () => {
     mocks.getSession.mockResolvedValue({
       id: 'head-session',
@@ -770,6 +809,7 @@ describe('AIService.stopSession', () => {
 
     await expect(handler?.({} as any, 'approval-43', 'head-session', {
       approved: false,
+      moduleIndex: 2,
       feedback: 'Please split the plan.',
     })).resolves.toEqual({ success: true });
 
@@ -785,6 +825,9 @@ describe('AIService.stopSession', () => {
         false,
       ],
     );
+    const responseInsert = mocks.databaseQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO ai_agent_messages'));
+    expect(responseInsert?.[1]?.[3]).toContain('"moduleIndex":2');
+    expect(responseInsert?.[1]?.[3]).toContain('Please split the plan.');
   });
 
   it('normalizes a Codex composite approval ID before persistence and durable matching', async () => {

@@ -209,6 +209,8 @@ describe('MetaAgentService work-order persistence', () => {
       status: closed ? 'closed' : delivery ? 'delivered' : response ? 'responded' : 'submitted',
       decision,
       feedback: response?.feedback,
+      moduleIndex: response?.moduleIndex,
+      moduleApprovals: response?.moduleApprovals,
       selectedCandidates: response?.selectedCandidates,
       respondedAt: response?.respondedAt,
       respondedBy: response?.respondedBy,
@@ -252,6 +254,7 @@ describe('MetaAgentService work-order persistence', () => {
     approved: boolean,
     feedback?: string,
     selectedCandidates?: unknown[],
+    moduleIndex?: number,
   ): Promise<void> {
     await AgentMessagesRepository.create({
       sessionId: 'head-session',
@@ -262,6 +265,7 @@ describe('MetaAgentService work-order persistence', () => {
         requestId,
         approved,
         feedback,
+        ...(moduleIndex !== undefined ? { moduleIndex } : {}),
         ...(selectedCandidates ? { selectedCandidates } : {}),
         respondedAt: Date.now(),
         respondedBy: 'desktop',
@@ -2366,6 +2370,52 @@ describe('MetaAgentService work-order persistence', () => {
     }
   });
 
+  it('returns the stable rejected module index and preserves feedback in the Head continuation', async () => {
+    const requestId = 'approval-module-2-receipt';
+    await persistPlanApprovalResponse(
+      requestId,
+      false,
+      '模块二需要补充回滚验收。',
+      undefined,
+      2,
+    );
+
+    const startedAt = 1_000;
+    const nowSpy = vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValue(startedAt + (8 * 24 * 60 * 60 * 1000));
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    try {
+      await expect(
+        (service as any).waitForPlanApprovalResponse('head-session', requestId),
+      ).resolves.toMatchObject({
+        approved: false,
+        moduleIndex: 2,
+        feedback: '模块二需要补充回滚验收。',
+      });
+      const continuation = (service as any).buildPlanApprovalContinuation(
+        'plan-modules-1',
+        {
+          approved: false,
+          moduleApprovals: [
+            { moduleIndex: 2, status: 'rejected', feedback: '模块二需要补充回滚验收。' },
+            { moduleIndex: 3, status: 'rejected', feedback: '模块三需要补充失败重试验收。' },
+          ],
+        },
+      ) as string;
+      expect(continuation).toContain('Module index: 2');
+      expect(continuation).toContain('Feedback (verbatim): 模块二需要补充回滚验收。');
+      expect(continuation).toContain('Module index: 3');
+      expect(continuation).toContain('Feedback (verbatim): 模块三需要补充失败重试验收。');
+      expect(continuation).toContain('same planId');
+      expect(continuation).toContain('preserve modules that were already approved');
+    } finally {
+      infoSpy.mockRestore();
+      nowSpy.mockRestore();
+    }
+  });
+
   it('rejects a malformed composite request ID even when its second segment matches', async () => {
     const requestId = '94471805-5eca-4d66-a448-56e438de6ab3';
     await persistPlanApprovalResponse(`nimtc|${requestId}|not-a-timestamp|21431`, true);
@@ -2574,6 +2624,126 @@ describe('MetaAgentService work-order persistence', () => {
       ['head-session', '%"id":"toolu_01V5qt_standard_session"%'],
     );
     expect(Number(rows[0].count)).toBe(0);
+  });
+
+  it('rejects one module, blocks dispatch, then reuses the same plan card for a revision', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const modules = [1, 2, 3].map((moduleIndex) => ({
+      title: `模块 ${moduleIndex}`,
+      outputFiles: [`packages/example/module-${moduleIndex}.ts`],
+      inputs: [`模块 ${moduleIndex} 输入`],
+      provider: 'openai-codex',
+      model: 'gpt-5.4-mini',
+      effortLevel: 'medium',
+      doneCriteria: `模块 ${moduleIndex} 完成`,
+    }));
+    const initialSubmission = submitPlan('head-session', workspacePath, {
+      title: '三模块审批卡',
+      planItems: ['并行处理三个模块'],
+      workOrderCount: 3,
+      risks: [],
+      modules,
+    });
+    const initialPrompt = await waitForPlanApprovalPrompt();
+    expect(initialPrompt.input).toMatchObject({
+      planId: expect.any(String),
+      modules,
+      moduleApprovals: [
+        { moduleIndex: 1, status: 'pending' },
+        { moduleIndex: 2, status: 'pending' },
+        { moduleIndex: 3, status: 'pending' },
+      ],
+    });
+
+    await persistPlanApprovalResponse(
+      initialPrompt.requestId,
+      false,
+      '模块二需要补充回滚验收。',
+      undefined,
+      2,
+    );
+    const rejected = JSON.parse(await initialSubmission);
+    expect(rejected).toMatchObject({
+      approved: false,
+      planId: initialPrompt.input.planId,
+      moduleIndex: 2,
+      feedback: '模块二需要补充回滚验收。',
+      status: 'in-review',
+    });
+
+    const { rows: rejectedRows } = await db.query<{ data: unknown }>(
+      `SELECT data FROM tracker_items WHERE id = $1`,
+      [initialPrompt.input.planId],
+    );
+    expect(parseStoredJson<any>(rejectedRows[0].data)).toMatchObject({
+      status: 'in-review',
+      moduleApprovals: [
+        { moduleIndex: 1, status: 'pending' },
+        { moduleIndex: 2, status: 'rejected', feedback: '模块二需要补充回滚验收。' },
+        { moduleIndex: 3, status: 'pending' },
+      ],
+    });
+    await expect((service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: '不能绕过闸门',
+        prompt: '不可在部分打回时派发。',
+        intent: 'implementation',
+        planId: initialPrompt.input.planId,
+      },
+    )).rejects.toThrow('approved plan');
+
+    const { rows: currentRows } = await db.query<{ data: unknown }>(
+      `SELECT data FROM tracker_items WHERE id = $1`,
+      [initialPrompt.input.planId],
+    );
+    const revisedPlanData = parseStoredJson<any>(currentRows[0].data);
+    revisedPlanData.moduleApprovals = [
+      { moduleIndex: 1, status: 'approved' },
+      { moduleIndex: 2, status: 'rejected', feedback: '模块二需要补充回滚验收。' },
+      { moduleIndex: 3, status: 'approved' },
+    ];
+    await db.query(
+      `UPDATE tracker_items SET data = $1 WHERE id = $2`,
+      [JSON.stringify(revisedPlanData), initialPrompt.input.planId],
+    );
+
+    const revisedSubmission = submitPlan('head-session', workspacePath, {
+      title: '三模块审批卡（修订）',
+      planItems: ['保留已批模块并修订模块二'],
+      workOrderCount: 3,
+      risks: [],
+      modules,
+    });
+    const revisedPrompt = await waitForPlanApprovalPrompt([initialPrompt.requestId]);
+    expect(revisedPrompt.input.planId).toBe(initialPrompt.input.planId);
+    expect(revisedPrompt.input.moduleApprovals).toEqual([
+      { moduleIndex: 1, status: 'approved' },
+      { moduleIndex: 2, status: 'pending' },
+      { moduleIndex: 3, status: 'approved' },
+    ]);
+    await persistPlanApprovalResponse(revisedPrompt.requestId, true);
+    const approved = JSON.parse(await revisedSubmission);
+    expect(approved).toMatchObject({
+      approved: true,
+      planId: initialPrompt.input.planId,
+      status: 'ready-for-development',
+    });
+
+    const { rows: planRows } = await db.query<{ id: string; data: unknown }>(
+      `SELECT id, data FROM tracker_items WHERE source_ref = $1`,
+      ['meta-agent-submitted-plan:head-session'],
+    );
+    expect(planRows).toHaveLength(1);
+    expect(parseStoredJson<any>(planRows[0].data)).toMatchObject({
+      status: 'ready-for-development',
+      moduleApprovals: [
+        { moduleIndex: 1, status: 'approved' },
+        { moduleIndex: 2, status: 'approved' },
+        { moduleIndex: 3, status: 'approved' },
+      ],
+    });
   });
 
   it('persists the approval prompt and allows implementation only after approval', async () => {

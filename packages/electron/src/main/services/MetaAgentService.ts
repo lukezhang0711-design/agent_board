@@ -20,6 +20,7 @@ import {
   AIService,
   normalizePlanApprovalRequestId,
   type DurablePlanApprovalState,
+  type DurablePlanModuleApproval,
   type PlanApprovalDeliveryMethod,
 } from './ai/AIService';
 import { createBidirectionalLink } from '../mcp/tools/trackerToolHandlers';
@@ -117,6 +118,44 @@ function getEffectiveMaxParallel(override: number | undefined): number {
     throw new Error('maxParallelOverride must be a positive safe integer');
   }
   return Math.min(configuredMax, override);
+}
+
+function parsePlanModuleApprovals(value: unknown): DurablePlanModuleApproval[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return [];
+    const approval = entry as Record<string, unknown>;
+    const moduleIndex = approval.moduleIndex;
+    const status = approval.status;
+    if (
+      typeof moduleIndex !== 'number'
+      || !Number.isInteger(moduleIndex)
+      || moduleIndex < 1
+      || (status !== 'pending' && status !== 'approved' && status !== 'rejected')
+    ) {
+      return [];
+    }
+    return [{
+      moduleIndex,
+      status,
+      ...(typeof approval.feedback === 'string' && approval.feedback ? { feedback: approval.feedback } : {}),
+    } satisfies DurablePlanModuleApproval];
+  }).sort((left, right) => left.moduleIndex - right.moduleIndex);
+}
+
+function buildPlanModuleApprovals(
+  modules: PlanModule[] | undefined,
+  priorData: Record<string, unknown>,
+): DurablePlanModuleApproval[] | undefined {
+  if (!modules || modules.length <= 1) return undefined;
+  const priorApprovals = parsePlanModuleApprovals(priorData.moduleApprovals);
+  return modules.map((_module, index) => {
+    const moduleIndex = index + 1;
+    const previous = priorApprovals.find((approval) => approval.moduleIndex === moduleIndex);
+    return previous?.status === 'approved'
+      ? { moduleIndex, status: 'approved' as const }
+      : { moduleIndex, status: 'pending' as const };
+  });
 }
 
 interface PendingInteractivePrompt {
@@ -481,6 +520,7 @@ interface NativeHeadPlanApprovalResult {
   approved: boolean;
   planId: string;
   feedback?: string;
+  moduleIndex?: number;
   deliveryMethod: 'direct' | 'revive';
 }
 
@@ -500,6 +540,8 @@ interface PlanApprovalResponse {
   approved: boolean;
   decision?: 'approved' | 'rejected' | 'dismissed';
   feedback?: string;
+  moduleIndex?: number;
+  moduleApprovals?: DurablePlanModuleApproval[];
   selectedCandidates?: SelectedPlanCandidate[];
   respondedAt?: number;
   respondedBy?: string;
@@ -2610,6 +2652,7 @@ export class MetaAgentService {
       approved: result.approved === true,
       planId: result.planId,
       feedback: typeof result.feedback === 'string' ? result.feedback : undefined,
+      moduleIndex: typeof result.moduleIndex === 'number' ? result.moduleIndex : undefined,
       deliveryMethod: result.deliveryMethod === 'revive' ? 'revive' : 'direct',
     };
   }
@@ -2643,6 +2686,8 @@ export class MetaAgentService {
           approved: state.decision === 'approved',
           decision: state.decision,
           feedback: state.feedback,
+          moduleIndex: state.moduleIndex,
+          moduleApprovals: state.moduleApprovals,
           ...(Array.isArray(state.selectedCandidates)
             ? { selectedCandidates: state.selectedCandidates as SelectedPlanCandidate[] }
             : {}),
@@ -2745,6 +2790,8 @@ export class MetaAgentService {
         approved: state.decision === 'approved',
         decision: state.decision,
         feedback: state.feedback,
+        moduleIndex: state.moduleIndex,
+        moduleApprovals: state.moduleApprovals,
         ...(state.selectedCandidates ? { selectedCandidates: state.selectedCandidates as SelectedPlanCandidate[] } : {}),
         respondedAt: state.respondedAt,
         respondedBy: state.respondedBy,
@@ -2837,13 +2884,33 @@ export class MetaAgentService {
         'The original approval tool turn ended. Continue with the approved implementation now; do not submit the same plan again.',
       ].join('\n');
     }
+    const rejectedModuleFeedback = new Map<number, string | undefined>();
+    for (const approval of response.moduleApprovals ?? []) {
+      if (approval.status === 'rejected') {
+        rejectedModuleFeedback.set(approval.moduleIndex, approval.feedback);
+      }
+    }
+    if (response.moduleIndex !== undefined) {
+      rejectedModuleFeedback.set(response.moduleIndex, response.feedback);
+    }
+    const rejectedModules = [...rejectedModuleFeedback.entries()].sort(([left], [right]) => left - right);
+    const hasModuleRejection = rejectedModules.length > 0;
     return [
       '[Plan approval response]',
       response.decision === 'dismissed'
         ? `The user dismissed plan ${planId}.`
-        : `The user requested changes to plan ${planId}.`,
-      ...(response.feedback ? [`Feedback: ${response.feedback}`] : []),
-      'The original approval tool turn ended. Prepare a revised plan and submit a new approval card; do not dispatch implementation yet.',
+        : hasModuleRejection
+          ? `The user rejected module${rejectedModules.length > 1 ? 's' : ''} ${rejectedModules.map(([moduleIndex]) => moduleIndex).join(', ')} of plan ${planId}.`
+          : `The user requested changes to plan ${planId}.`,
+      ...(hasModuleRejection
+        ? rejectedModules.flatMap(([moduleIndex, moduleFeedback]) => [
+            `Module index: ${moduleIndex}`,
+            ...(moduleFeedback ? [`Feedback (verbatim): ${moduleFeedback}`] : []),
+          ])
+        : response.feedback ? [`Feedback: ${response.feedback}`] : []),
+      hasModuleRejection
+        ? 'The original approval card is closed. Resubmit the revision with the same planId, update the rejected module in place, preserve modules that were already approved, and do not dispatch while any module is rejected.'
+        : 'The original approval tool turn ended. Prepare a revised plan with the same planId and resubmit the existing approval card; do not dispatch implementation yet.',
     ].join('\n');
   }
 
@@ -2871,12 +2938,36 @@ export class MetaAgentService {
       planData = parseWorkOrderData(rows[0].data);
     }
 
-    const finalStatus = response.approved ? 'ready-for-development' : 'in-review';
+    let moduleApprovals = parsePlanModuleApprovals(planData.moduleApprovals);
+    if (response.moduleApprovals && response.moduleApprovals.length > 0) {
+      moduleApprovals = parsePlanModuleApprovals(response.moduleApprovals);
+    }
+    if (response.moduleIndex !== undefined && !response.approved) {
+      const nextApproval: DurablePlanModuleApproval = {
+        moduleIndex: response.moduleIndex,
+        status: 'rejected',
+        ...(response.feedback ? { feedback: response.feedback } : {}),
+      };
+      const existingIndex = moduleApprovals.findIndex((approval) => approval.moduleIndex === response.moduleIndex);
+      if (existingIndex >= 0) moduleApprovals[existingIndex] = nextApproval;
+      else moduleApprovals.push(nextApproval);
+      moduleApprovals.sort((left, right) => left.moduleIndex - right.moduleIndex);
+    } else if (response.approved && moduleApprovals.length > 0 && !response.moduleApprovals) {
+      moduleApprovals = moduleApprovals.map((approval) => ({
+        moduleIndex: approval.moduleIndex,
+        status: 'approved' as const,
+      }));
+    }
+    const hasRejectedModule = moduleApprovals.some((approval) => approval.status === 'rejected');
+    const finalStatus = response.approved && !hasRejectedModule ? 'ready-for-development' : 'in-review';
     const finalData: Record<string, unknown> = {
       ...planData,
       status: finalStatus,
     };
-    if (response.approved) {
+    if (moduleApprovals.length > 0) {
+      finalData.moduleApprovals = moduleApprovals;
+    }
+    if (response.approved && finalStatus === 'ready-for-development') {
       finalData.approvedAt = new Date(response.respondedAt ?? Date.now()).toISOString();
       if (response.selectedCandidates && response.selectedCandidates.length > 0) {
         finalData.selectedCandidates = response.selectedCandidates;
@@ -3055,6 +3146,10 @@ export class MetaAgentService {
               approved: true,
               planId,
               status: 'approved',
+              ...(response.moduleIndex !== undefined ? { moduleIndex: response.moduleIndex } : {}),
+              ...(response.moduleApprovals && response.moduleApprovals.length > 0
+                ? { moduleApprovals: response.moduleApprovals }
+                : {}),
               ...(response.selectedCandidates && response.selectedCandidates.length > 0
                 ? { selectedCandidates: response.selectedCandidates }
                 : {}),
@@ -3063,7 +3158,11 @@ export class MetaAgentService {
               approved: false,
               planId,
               status: 'continue planning',
+              ...(response.moduleIndex !== undefined ? { moduleIndex: response.moduleIndex } : {}),
               feedback: response.feedback,
+              ...(response.moduleApprovals && response.moduleApprovals.length > 0
+                ? { moduleApprovals: response.moduleApprovals }
+                : {}),
             },
       });
       const closedState = await this.aiService.getPlanApprovalState(metaSessionId, requestId);
@@ -3163,8 +3262,12 @@ export class MetaAgentService {
     };
     if (args.modules !== undefined) {
       planData.modules = args.modules;
+      const moduleApprovals = buildPlanModuleApprovals(args.modules, priorData);
+      if (moduleApprovals) planData.moduleApprovals = moduleApprovals;
+      else delete planData.moduleApprovals;
     } else {
       delete planData.modules;
+      delete planData.moduleApprovals;
     }
     delete planData.selectedCandidates;
     delete planData.approvedAt;
@@ -3180,6 +3283,7 @@ export class MetaAgentService {
           workOrderCount,
           risks,
           ...(args.modules !== undefined ? { modules: args.modules } : {}),
+          ...(planData.moduleApprovals ? { moduleApprovals: planData.moduleApprovals } : {}),
         }), planId],
       );
     } else {
@@ -3199,6 +3303,7 @@ export class MetaAgentService {
             workOrderCount,
             risks,
             ...(args.modules !== undefined ? { modules: args.modules } : {}),
+            ...(planData.moduleApprovals ? { moduleApprovals: planData.moduleApprovals } : {}),
           }),
           sourceRef,
         ],
@@ -3219,6 +3324,7 @@ export class MetaAgentService {
         workOrderCount,
         risks,
         ...(args.modules !== undefined ? { modules: args.modules } : {}),
+        ...(planData.moduleApprovals ? { moduleApprovals: planData.moduleApprovals } : {}),
         ...(options.planSummary?.trim() ? { planSummary: options.planSummary.trim() } : {}),
       },
     });
@@ -3295,7 +3401,11 @@ export class MetaAgentService {
       status: finalStatus,
       deliveryMethod,
       ...(autoApproved ? { autoApproved: true } : {}),
+      ...(response.moduleIndex !== undefined ? { moduleIndex: response.moduleIndex } : {}),
       ...(response.feedback ? { feedback: response.feedback } : {}),
+      ...(response.moduleApprovals && response.moduleApprovals.length > 0
+        ? { moduleApprovals: response.moduleApprovals }
+        : {}),
       ...(response.selectedCandidates && response.selectedCandidates.length > 0
         ? { selectedCandidates: response.selectedCandidates }
         : {}),
