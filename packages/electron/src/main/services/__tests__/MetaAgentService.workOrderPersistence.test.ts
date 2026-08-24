@@ -2342,6 +2342,92 @@ describe('MetaAgentService work-order persistence', () => {
     }
   });
 
+  it('green EJ-2: dispatches the owner-edited module routing and records the original-to-approved route', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const modules = [{
+      title: '方案卡模型改选',
+      outputFiles: ['packages/electron/src/renderer/components/UnifiedAI/PlanApprovalWidget.tsx'],
+      inputs: ['实时模型目录'],
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.4-mini',
+      effortLevel: 'medium',
+      doneCriteria: '按批准后的路由创建子会话。',
+    }];
+    const submission = submitPlan('head-session', workspacePath, {
+      title: '方案卡模型就地改选',
+      planItems: ['按批准卡路由派发实现模块'],
+      workOrderCount: 1,
+      risks: [],
+      modules,
+    });
+    const approvalPrompt = await waitForPlanApprovalPrompt();
+    const selectedCandidates = [{
+      moduleIndex: 0,
+      moduleTitle: '方案卡模型改选',
+      name: '模块路由调整',
+      approach: '老板在方案卡改为 gpt-5.6-sol / ultra。',
+      pros: [],
+      cons: [],
+      risks: [],
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.6-sol',
+      effortLevel: 'ultra',
+    }];
+    await persistPlanApprovalResponse(
+      approvalPrompt.requestId,
+      true,
+      undefined,
+      selectedCandidates,
+    );
+    const approval = JSON.parse(await submission);
+
+    const child = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: '按方案卡改选派发',
+        prompt: '使用批准后的模型和思考强度执行。',
+        intent: 'implementation',
+        planId: approval.planId,
+        moduleIndex: 1,
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        effortLevel: 'low',
+      },
+    ));
+
+    expect(child).toMatchObject({
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.6-sol',
+    });
+    await expect(AISessionsRepository.get(child.sessionId)).resolves.toMatchObject({
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.6-sol',
+      metadata: expect.objectContaining({ effortLevel: 'ultra' }),
+    });
+    const { rows } = await db.query<{ data: unknown }>(
+      `SELECT data
+       FROM tracker_items
+       WHERE source_ref = $1`,
+      [`meta-agent-work-order:${child.sessionId}`],
+    );
+    expect(parseStoredJson<Record<string, unknown>>(rows[0].data)).toMatchObject({
+      moduleIndex: 1,
+      modelSelectionOverride: {
+        original: {
+          provider: 'openai-codex',
+          model: 'openai-codex:gpt-5.4-mini',
+          effortLevel: 'medium',
+        },
+        approved: {
+          provider: 'openai-codex',
+          model: 'openai-codex:gpt-5.6-sol',
+          effortLevel: 'ultra',
+        },
+      },
+    });
+  });
+
   it('matches the Codex transcript composite request ID for rejection feedback', async () => {
     const requestId = '94471805-5eca-4d66-a448-56e438de6ab3';
     await persistPlanApprovalResponse(

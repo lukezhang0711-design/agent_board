@@ -28,6 +28,63 @@ const sessionId = 'plan-approval-session';
 const compositeRequestId =
   'nimtc|94471805-5eca-4d66-a448-56e438de6ab3|1784297999209|21431';
 
+const liveModelCatalog = () => ({
+  success: true,
+  grouped: {
+    'openai-codex': [
+      {
+        id: 'openai-codex:gpt-5.4-mini',
+        name: 'gpt-5.4-mini',
+        provider: 'openai-codex',
+        supportedEffortLevels: ['low', 'medium', 'high'],
+        defaultEffortLevel: 'medium',
+      },
+      {
+        id: 'openai-codex:gpt-5.6-sol',
+        name: 'gpt-5.6-sol',
+        provider: 'openai-codex',
+        supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+        defaultEffortLevel: 'high',
+      },
+    ],
+    'claude-code': [
+      {
+        id: 'claude-code:haiku',
+        name: 'haiku',
+        provider: 'claude-code',
+        supportedEffortLevels: ['low', 'medium', 'high'],
+        defaultEffortLevel: 'low',
+      },
+    ],
+    'antigravity-gemini-agent': [
+      {
+        id: 'antigravity-gemini-agent:gemini-2.5-pro',
+        name: 'gemini-2.5-pro',
+        provider: 'antigravity-gemini-agent',
+        supportedEffortLevels: ['low', 'medium', 'high'],
+        defaultEffortLevel: 'medium',
+      },
+    ],
+  },
+  catalogStatuses: {
+    'openai-codex': { modelSource: 'runtime', verified: true, lastError: null },
+    'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+  },
+});
+
+function installModelCatalog(response: unknown = liveModelCatalog()): void {
+  const rendererWindow = window as unknown as {
+    electronAPI?: Record<string, unknown>;
+  };
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: {
+      ...(rendererWindow.electronAPI ?? {}),
+      aiGetModels: vi.fn().mockResolvedValue(response),
+    },
+  });
+}
+
 function makeMessage(
   arguments_: Record<string, unknown>,
   providerToolCallId: string | null = compositeRequestId,
@@ -136,6 +193,22 @@ const multiModulePlanArguments = {
     effortLevel: 'medium',
     doneCriteria: `模块 ${moduleIndex} 的完成标准`,
   })),
+};
+
+const modelPickerPlanArguments = {
+  ...planArguments,
+  title: '模型就地改选',
+  modules: [
+    {
+      title: '模型可改模块',
+      outputFiles: ['packages/electron/src/renderer/components/UnifiedAI/PlanApprovalWidget.tsx'],
+      inputs: ['实时模型目录'],
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.6-sol',
+      effortLevel: 'ultra',
+      doneCriteria: '按老板改后的模型和强度派发。',
+    },
+  ],
 };
 
 afterEach(() => {
@@ -260,7 +333,15 @@ describe('PlanApprovalWidget', () => {
 
   it('approves every current module with one all-approve action', async () => {
     const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    installModelCatalog();
     renderWidget(multiModulePlanArguments, { exitPlanModeApprove });
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement)
+          .options.length,
+      ).toBeGreaterThan(1);
+    });
 
     fireEvent.click(screen.getByRole('button', { name: '全部批准' }));
 
@@ -280,7 +361,15 @@ describe('PlanApprovalWidget', () => {
 
   it('sends the selected candidate with approval', async () => {
     const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    installModelCatalog();
     renderWidget(structuredPlanArguments, { exitPlanModeApprove });
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement)
+          .options.length,
+      ).toBeGreaterThan(1);
+    });
 
     fireEvent.click(screen.getByTestId('plan-candidate-radio-0-方案 B'));
     fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
@@ -296,11 +385,180 @@ describe('PlanApprovalWidget', () => {
           cons: ['同字段不对齐', '阅读成本高'],
           risks: '窄窗口会难以比较。',
           provider: 'claude-code',
-          model: 'haiku',
+          model: 'claude-code:haiku',
           effortLevel: 'high',
         },
       ]);
     });
+  });
+
+  it('green EJ-1: renders model and effort as selectors sourced from the live catalog', async () => {
+    installModelCatalog();
+    renderWidget(modelPickerPlanArguments);
+
+    const modelSelect = screen.getByTestId(
+      'plan-module-model-select-1',
+    ) as HTMLSelectElement;
+    const effortSelect = screen.getByTestId(
+      'plan-module-effort-select-1',
+    ) as HTMLSelectElement;
+
+    await waitFor(() => {
+      expect(modelSelect.options.length).toBeGreaterThan(1);
+    });
+    expect(modelSelect.value).toBe('openai-codex:gpt-5.6-sol');
+    expect(Array.from(modelSelect.options, (option) => option.value)).toEqual(
+      expect.arrayContaining([
+        'openai-codex:gpt-5.6-sol',
+        'claude-code:haiku',
+        'antigravity-gemini-agent:gemini-2.5-pro',
+      ]),
+    );
+    expect(Array.from(effortSelect.options, (option) => option.value)).toContain(
+      'ultra',
+    );
+
+    fireEvent.change(modelSelect, { target: { value: 'claude-code:haiku' } });
+
+    await waitFor(() => {
+      expect(effortSelect.value).toBe('low');
+    });
+    expect(Array.from(effortSelect.options, (option) => option.value)).not.toContain(
+      'ultra',
+    );
+
+    fireEvent.change(modelSelect, {
+      target: { value: 'openai-codex:gpt-5.6-sol' },
+    });
+    expect(Array.from(effortSelect.options, (option) => option.value)).toContain(
+      'ultra',
+    );
+  });
+
+  it('green EJ-2: approves with the owner-edited provider, model, and effort', async () => {
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    installModelCatalog();
+    renderWidget(modelPickerPlanArguments, { exitPlanModeApprove });
+
+    const modelSelect = screen.getByTestId(
+      'plan-module-model-select-1',
+    ) as HTMLSelectElement;
+    const effortSelect = screen.getByTestId(
+      'plan-module-effort-select-1',
+    ) as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+
+    fireEvent.change(modelSelect, {
+      target: { value: 'openai-codex:gpt-5.4-mini' },
+    });
+    fireEvent.change(effortSelect, { target: { value: 'high' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+
+    await waitFor(() => {
+      expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
+        expect.objectContaining({
+          moduleIndex: 0,
+          moduleTitle: '模型可改模块',
+          provider: 'openai-codex',
+          model: 'openai-codex:gpt-5.4-mini',
+          effortLevel: 'high',
+        }),
+      ]);
+    });
+  });
+
+  it('green EJ-3: leaves a missing model unselected and does not disable another module field', async () => {
+    installModelCatalog();
+    renderWidget({
+      ...planArguments,
+      modules: [
+        {
+          ...modelPickerPlanArguments.modules[0],
+          title: '型号已消失模块',
+          model: 'openai-codex:retired-model',
+        },
+        {
+          ...modelPickerPlanArguments.modules[0],
+          title: '仍可审批模块',
+          model: 'claude-code:haiku',
+          provider: 'claude-code',
+          effortLevel: 'low',
+        },
+      ],
+    });
+
+    const missingModelSelect = screen.getByTestId(
+      'plan-module-model-select-1',
+    ) as HTMLSelectElement;
+    const validModelSelect = screen.getByTestId(
+      'plan-module-model-select-2',
+    ) as HTMLSelectElement;
+    await waitFor(() => expect(validModelSelect.options.length).toBeGreaterThan(1));
+
+    expect(missingModelSelect.value).toBe('');
+    expect(missingModelSelect.options[0]?.textContent).toBe('请选择模型');
+    expect(missingModelSelect.disabled).toBe(false);
+    expect(validModelSelect.value).toBe('claude-code:haiku');
+    expect(validModelSelect.disabled).toBe(false);
+    expect(
+      screen.getByRole('button', { name: '全部批准' }).hasAttribute('disabled'),
+    ).toBe(true);
+  });
+
+  it('green EJ-4: never offers cached models when the real-time catalog is red', async () => {
+    installModelCatalog({
+      success: true,
+      grouped: {
+        'openai-codex': [
+          {
+            id: 'openai-codex:gpt-5.6-sol',
+            name: 'gpt-5.6-sol',
+            provider: 'openai-codex',
+            supportedEffortLevels: ['low', 'medium', 'high', 'ultra'],
+            defaultEffortLevel: 'high',
+          },
+        ],
+      },
+      catalogStatuses: {
+        'openai-codex': {
+          modelSource: 'cache',
+          verified: false,
+          lastError: { message: 'catalog unavailable' },
+        },
+      },
+    });
+    renderWidget(modelPickerPlanArguments);
+
+    const modelSelect = screen.getByTestId(
+      'plan-module-model-select-1',
+    ) as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBe(1));
+
+    expect(modelSelect.value).toBe('');
+    expect(Array.from(modelSelect.options, (option) => option.value)).not.toContain(
+      'openai-codex:gpt-5.6-sol',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Approve plan' }).hasAttribute('disabled'),
+    ).toBe(true);
+  });
+
+  it('green EJ-5: renders no price, cheapness, or warning copy on a model picker card', async () => {
+    installModelCatalog();
+    const rendered = renderWidget(modelPickerPlanArguments);
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement)
+          .options.length,
+      ).toBeGreaterThan(1);
+    });
+
+    const cardText = screen.getByTestId('plan-module-card-1').textContent ?? '';
+    expect(cardText).not.toContain('最贵');
+    expect(cardText).not.toContain('便宜');
+    expect(cardText).not.toContain('警告');
+    expect(cardText).not.toContain('价格');
+    expect(rendered.container.querySelector('[data-testid="plan-model-price-warning"]')).toBeNull();
   });
 
   it('keeps approval actions sticky while a long card scrolls', () => {
