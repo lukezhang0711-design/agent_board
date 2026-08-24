@@ -18,6 +18,7 @@ function catalogResult() {
           { effort: 'ultra', description: 'Maximum reasoning' },
         ],
         visibility: 'list',
+        priority: 1,
       },
       {
         slug: 'gpt-reserve',
@@ -67,6 +68,7 @@ describe('CodexModelRefreshService', () => {
         description: 'Frontier coding model',
         defaultEffortLevel: 'low',
         supportedEffortLevels: ['low', 'ultra'],
+        isEngineDefault: true,
       }),
     ]);
     expect(service.getStatus()).toMatchObject({
@@ -74,6 +76,25 @@ describe('CodexModelRefreshService', () => {
       verified: true,
       lastError: null,
     });
+  });
+
+  it('does not infer a Codex default when the live lowest priority is tied', async () => {
+    const { service } = createHarness(vi.fn().mockResolvedValue({
+      stdout: JSON.stringify({
+        models: [
+          { slug: 'gpt-a', display_name: 'A', visibility: 'list', priority: 1 },
+          { slug: 'gpt-b', display_name: 'B', visibility: 'list', priority: 1 },
+        ],
+      }),
+    }));
+
+    await service.start();
+
+    expect(service.getModels().map((model) => model.id)).toEqual([
+      'openai-codex:gpt-a',
+      'openai-codex:gpt-b',
+    ]);
+    expect(service.getModels().some((model) => model.isEngineDefault === true)).toBe(false);
   });
 
   it('keeps only a timestamped last-success cache when a later discovery fails', async () => {

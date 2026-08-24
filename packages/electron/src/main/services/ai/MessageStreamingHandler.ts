@@ -256,6 +256,7 @@ interface AIServiceInternal {
     sessionModel?: string,
     providerConfigModel?: string,
     requestedEffort?: EffortLevel,
+    sessionId?: string,
   ): Promise<string | undefined>;
   resolveCompatibleDynamicSessionEffortLevel(
     provider: AIProviderType,
@@ -530,6 +531,7 @@ export class MessageStreamingHandler {
           session.model,
           session.providerConfig?.model,
           explicitSessionEffortLevel(session),
+          session.id,
         );
         if (liveModel) session.model = liveModel;
       } catch (error) {

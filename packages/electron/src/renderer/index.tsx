@@ -58,6 +58,10 @@ import {
   hydrateSettingsAtoms,
   registerSettingsChangeListener,
 } from './store/atoms/settingAtomFamily';
+import {
+  applyPendingDefaultModelMigration,
+  initDefaultModelMigrationListeners,
+} from './store/listeners/defaultModelMigrationListeners';
 
 // console.log('[RENDERER] Imports complete at', new Date().toISOString());
 
@@ -137,6 +141,9 @@ try {
 // is the migration target. Domains are being migrated key-by-key (starting
 // with AI providers/keys), so for now we run both pipelines.
 // MUST be awaited to ensure settings are loaded before components mount.
+// Register before hydration: automatic channel health can prove and persist a
+// legacy default while startup IPC is still in flight.
+initDefaultModelMigrationListeners();
 await Promise.allSettled([
   initVoiceModeSettings().then((settings) => {
     store.set(voiceModeSettingsAtom, settings);
@@ -158,6 +165,7 @@ await Promise.allSettled([
   }),
   initAgentModeSettings().then((settings) => {
     store.set(agentModeSettingsAtom, settings);
+    applyPendingDefaultModelMigration();
   }),
   initDeveloperFeatureSettings().then((settings) => {
     store.set(developerFeatureSettingsAtom, settings);

@@ -103,6 +103,7 @@ import { initClaudeAuthListeners } from './store/listeners/claudeAuthListeners';
 import { initClaudeCliTerminalListeners } from './store/listeners/claudeCliTerminalListeners';
 import { initWindowFocusListeners } from './store/listeners/windowFocusListeners';
 import { initCodexUsageListeners } from './store/listeners/codexUsageListeners';
+import { initSessionCreationFailureListeners } from './store/listeners/sessionCreationFailureListeners';
 import { initGeminiUsageListeners } from './store/listeners/geminiUsageListeners';
 import { initFileChangeListeners } from './store/listeners/fileChangeListeners';
 import { initMcpListeners } from './store/listeners/mcpListeners';
@@ -170,6 +171,8 @@ import {
   developerModeAtom,
   setDeveloperFeatureSettingsAtom,
 } from './store/atoms/appSettings';
+import { sessionCreationFailureAtom } from './store/atoms/sessionCreationFailure';
+import { SessionCreationModelRecovery } from './components/ErrorDialog/SessionCreationModelRecovery';
 import {
   agentInsertPlanReferenceRequestAtom,
   closeActiveTabRequestAtom,
@@ -309,6 +312,7 @@ export default function App() {
     const cleanupClaudeCliTerminal = initClaudeCliTerminalListeners();
     const cleanupWindowFocus = initWindowFocusListeners();
     const cleanupCodex = initCodexUsageListeners();
+    const cleanupSessionCreationFailure = initSessionCreationFailureListeners();
     const cleanupGemini = initGeminiUsageListeners();
     const cleanupFileChange = initFileChangeListeners();
     const cleanupMcp = initMcpListeners();
@@ -338,6 +342,7 @@ export default function App() {
       cleanupClaudeCliTerminal?.();
       cleanupWindowFocus?.();
       cleanupCodex?.();
+      cleanupSessionCreationFailure?.();
       cleanupGemini?.();
       cleanupFileChange?.();
       cleanupMcp?.();
@@ -465,6 +470,8 @@ export default function App() {
   const railActivePath = useAtomValue(activeWorkspacePathAtom);
   const addOpenProject = useSetAtom(addOpenProjectAction);
   const setRailActivePath = useSetAtom(activeWorkspacePathAtom);
+  const sessionCreationFailure = useAtomValue(sessionCreationFailureAtom);
+  const setSessionCreationFailure = useSetAtom(sessionCreationFailureAtom);
   // NOTE: fileTree, sidebarWidth, isNewFileDialogOpen, newFileDirectory, isHistoryDialogOpen moved to EditorMode
   // NOTE: Navigation dialogs (QuickOpen, SessionQuickOpen, PromptQuickOpen, ProjectQuickOpen) are now managed by DialogProvider
   // NOTE: isAIChatCollapsed, aiChatWidth moved to EditorMode for workspace mode
@@ -526,6 +533,26 @@ export default function App() {
   const setActiveMode = useSetAtom(setWindowModeAtom);
   const toggleAgentCollapsed = useSetAtom(toggleSessionHistoryCollapsedAtom);
   const updateDeveloperSettings = useSetAtom(setDeveloperFeatureSettingsAtom);
+
+  useEffect(() => {
+    if (!sessionCreationFailure || !dialogRef.current) return;
+
+    dialogRef.current.open<ErrorDialogData>(DIALOG_IDS.ERROR, {
+      title: '创建会话失败',
+      message: sessionCreationFailure.error,
+      recovery: (
+        <SessionCreationModelRecovery
+          currentModel={sessionCreationFailure.model}
+          onResolved={() => dialogRef.current?.close(DIALOG_IDS.ERROR)}
+        />
+      ),
+    });
+    // The dialog owns a snapshot of the failure. Clearing the atom after
+    // opening prevents an Esc/overlay close from resurrecting the same alert
+    // on an unrelated App re-render.
+    setSessionCreationFailure(null);
+  }, [sessionCreationFailure, setSessionCreationFailure]);
+
   // Keep a ref for use in callbacks that might have stale closures
   const activeModeStateRef = useRef<ContentMode>(activeMode);
   useEffect(() => {

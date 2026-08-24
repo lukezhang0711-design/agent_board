@@ -53,7 +53,10 @@ import { updateNativeTheme, updateWindowTitleBars } from '../theme/ThemeManager'
 import { createWindow, findWindowByWorkspace } from '../window/WindowManager';
 import { getWorkspaceWindowState } from '../utils/store';
 import { requestTrackerBackfillForWorkspace } from './TrackerSyncManager';
-import { assertDynamicModelCatalogSelection } from './ai/modelCatalogValidation';
+import {
+  assertDynamicModelCatalogSelection,
+  resolveDynamicModelCatalogSelection,
+} from './ai/modelCatalogValidation';
 
 // ─── Allow / deny lists ─────────────────────────────────────────────
 
@@ -433,11 +436,14 @@ export class SettingsControlService {
       };
     }
     const provider = args.providerModel.slice(0, args.providerModel.indexOf(':'));
+    let modelToPersist = args.providerModel;
     try {
       // A stale global default is dangerous because it can be selected much
       // later by a new session. Dynamic channels therefore persist only a
       // model the live engine catalog accepts right now.
-      await assertDynamicModelCatalogSelection(provider, args.providerModel);
+      modelToPersist = await resolveDynamicModelCatalogSelection(provider, args.providerModel)
+        ?? args.providerModel;
+      await assertDynamicModelCatalogSelection(provider, modelToPersist);
     } catch (error) {
       return {
         ok: false,
@@ -445,9 +451,9 @@ export class SettingsControlService {
         message: error instanceof Error ? error.message : String(error),
       };
     }
-    storeSetDefaultAIModel(args.providerModel);
-    this.audit('ai_set_default_model', sessionId, { before, after: args.providerModel });
-    return { ok: true, before, after: args.providerModel };
+    storeSetDefaultAIModel(modelToPersist);
+    this.audit('ai_set_default_model', sessionId, { before, after: modelToPersist });
+    return { ok: true, before, after: modelToPersist };
   }
 
   async setPreferredAgentLanguage(

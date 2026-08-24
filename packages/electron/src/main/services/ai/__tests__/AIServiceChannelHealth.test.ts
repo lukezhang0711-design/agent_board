@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
   clearClaudeCliChannelHealthSession: vi.fn(),
   clearClaudeCliTurnSummary: vi.fn(),
   takeClaudeCliTurnSummary: vi.fn(),
+  getDefaultAIModel: vi.fn(),
+  setDefaultAIModel: vi.fn(),
+  getAllWindows: vi.fn(),
+  updateSessionMetadata: vi.fn(),
   terminalManager: {
     destroyTerminal: vi.fn(),
     getClaudeCliLiveTurnState: vi.fn(),
@@ -27,13 +31,13 @@ vi.mock('@nimbalyst/runtime/ai/server', () => ({
   OpenAICodexProvider: class {},
 }));
 vi.mock('@nimbalyst/runtime', () => ({
-  AISessionsRepository: {},
+  AISessionsRepository: { updateMetadata: mocks.updateSessionMetadata },
   DocumentContextService: class {},
   SessionFilesRepository: {},
 }));
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => '/mock/path'), on: vi.fn(), once: vi.fn() },
-  BrowserWindow: { getAllWindows: vi.fn(() => []), getFocusedWindow: vi.fn(() => null) },
+  BrowserWindow: { getAllWindows: mocks.getAllWindows, getFocusedWindow: vi.fn(() => null) },
   ipcMain: { handle: vi.fn(), on: vi.fn(), listenerCount: vi.fn(() => 0) },
 }));
 vi.mock('../../../utils/ipcRegistry', () => ({ safeHandle: vi.fn(), safeOn: vi.fn() }));
@@ -48,6 +52,20 @@ vi.mock('../../../tray/TrayManager', () => ({ TrayManager: { getInstance: vi.fn(
 vi.mock('../../analytics/AnalyticsService.ts', () => ({ AnalyticsService: { getInstance: () => ({ sendEvent: vi.fn() }) } }));
 vi.mock('../../SettingsService', () => ({ getSettingsService: () => ({ get: vi.fn(), set: vi.fn() }) }));
 vi.mock('../../../utils/logger', () => ({ logger: { main: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } } }));
+vi.mock('../../../utils/store', () => ({
+  getAIProviderOverrides: vi.fn(),
+  saveAIProviderOverrides: vi.fn(),
+  clearAIProviderOverrides: vi.fn(),
+  getWorkspaceState: vi.fn(),
+  getDefaultAIModel: mocks.getDefaultAIModel,
+  setDefaultAIModel: mocks.setDefaultAIModel,
+  incrementCompletedSessionsWithTools: vi.fn(),
+  markCommunityPopupShown: vi.fn(),
+  normalizeAIProviderOverrides: vi.fn(),
+  shouldShowCommunityPopup: vi.fn(),
+  wasCommunityPopupShownThisLaunch: vi.fn(),
+  getDefaultEffortLevel: vi.fn(),
+}));
 vi.mock('../claudeCliLauncherSingleton', () => ({
   ensureClaudeCliSession: mocks.ensureClaudeCliSession,
   claudeCliSessionSupportsPlugins: vi.fn(),
@@ -111,6 +129,9 @@ describe('AIService channel-health Claude CLI transport', () => {
     mocks.terminalManager.destroyTerminal.mockResolvedValue(undefined);
     mocks.terminalManager.isTerminalActive.mockReturnValue(true);
     mocks.terminalManager.getClaudeCliLiveTurnState.mockResolvedValue('idle');
+    mocks.getDefaultAIModel.mockReturnValue(undefined);
+    mocks.getAllWindows.mockReturnValue([]);
+    mocks.updateSessionMetadata.mockResolvedValue(undefined);
   });
 
   it('RED: waits for the initial idle boundary before injecting the health prompt into the real CLI PTY', async () => {
@@ -159,5 +180,174 @@ describe('AIService channel-health Claude CLI transport', () => {
     })).rejects.toThrow(/exit code 0/);
 
     expect(mocks.submitClaudeCliPromptProduction).not.toHaveBeenCalled();
+  });
+
+  it('migrates a saved session model through the live resolved-model identity before validating it', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    const awaitCatalog = vi.fn(async () => {});
+    const validate = vi.fn(async () => {});
+    Object.assign(service, {
+      awaitModelCatalogForProvider: awaitCatalog,
+      assertDynamicModelAvailable: validate,
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:claude-fable-5-1m',
+        resolvedModel: 'claude-fable-5[1m]',
+      }],
+    });
+
+    await expect(service.resolveCurrentDynamicSessionModel(
+      'claude-code',
+      'claude-code:fable-1m',
+      undefined,
+      undefined,
+      'legacy-session',
+    )).resolves.toBe('claude-code:claude-fable-5-1m');
+    expect(awaitCatalog).toHaveBeenCalledWith('claude-code');
+    expect(validate).toHaveBeenCalledWith(
+      'claude-code',
+      'claude-code:claude-fable-5-1m',
+      undefined,
+    );
+    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('legacy-session', {
+      model: 'claude-code:claude-fable-5-1m',
+    });
+  });
+
+  it('migrates a matching saved global default only after the live catalog proves its exact identity', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    const awaitCatalog = vi.fn(async () => {});
+    const validate = vi.fn(async () => {});
+    mocks.getDefaultAIModel.mockReturnValue('claude-code:fable-1m');
+    Object.assign(service, {
+      awaitModelCatalogForProvider: awaitCatalog,
+      assertCurrentDynamicModelAvailable: validate,
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:claude-fable-5-1m',
+        resolvedModel: 'claude-fable-5[1m]',
+      }],
+    });
+
+    await expect(service.resolveValidatedModelForNewSession('claude-code')).resolves.toBe(
+      'claude-code:claude-fable-5-1m',
+    );
+    expect(awaitCatalog).toHaveBeenCalledWith('claude-code');
+    expect(validate).toHaveBeenCalledWith('claude-code', 'claude-code:claude-fable-5-1m');
+    expect(mocks.setDefaultAIModel).toHaveBeenCalledWith('claude-code:claude-fable-5-1m');
+  });
+
+  it('broadcasts an equivalent default migration only after persistence succeeds', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    const send = vi.fn();
+    mocks.getDefaultAIModel.mockReturnValue('claude-code:fable-1m');
+    mocks.getAllWindows.mockReturnValue([{
+      isDestroyed: () => false,
+      webContents: { isDestroyed: () => false, send },
+    }]);
+    Object.assign(service, {
+      awaitModelCatalogForProvider: vi.fn(async () => {}),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:claude-fable-5-1m',
+        resolvedModel: 'claude-fable-5[1m]',
+      }],
+    });
+
+    await service.resolveValidatedModelForNewSession('claude-code');
+
+    expect(mocks.setDefaultAIModel).toHaveBeenCalledWith('claude-code:claude-fable-5-1m');
+    expect(send).toHaveBeenCalledWith('settings:default-ai-model-migrated', {
+      from: 'claude-code:fable-1m',
+      to: 'claude-code:claude-fable-5-1m',
+    });
+  });
+
+  it('does not rewrite an ACP session to the shared Codex catalog prefix', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    const validate = vi.fn(async () => {});
+    Object.assign(service, {
+      awaitModelCatalogForProvider: vi.fn(async () => {}),
+      assertDynamicModelAvailable: validate,
+      getDynamicCatalogModels: () => [{ id: 'openai-codex:gpt-5.5' }],
+    });
+
+    await expect(service.resolveCurrentDynamicSessionModel(
+      'openai-codex-acp',
+      'openai-codex-acp:gpt-5.5',
+      undefined,
+      undefined,
+      'acp-session',
+    )).resolves.toBe('openai-codex-acp:gpt-5.5');
+    expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
+    expect(validate).toHaveBeenCalledWith('openai-codex-acp', 'openai-codex:gpt-5.5', undefined);
+  });
+
+  it('does not persist a candidate default until the live catalog validates it', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    mocks.getDefaultAIModel.mockReturnValue('claude-code:fable-1m');
+    Object.assign(service, {
+      awaitModelCatalogForProvider: vi.fn(async () => {}),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {
+        throw new Error('claude-code 模型目录不可用');
+      }),
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:claude-fable-5-1m',
+        resolvedModel: 'claude-fable-5[1m]',
+      }],
+    });
+
+    await expect(service.resolveValidatedModelForNewSession('claude-code')).rejects.toThrow(
+      'claude-code 模型目录不可用',
+    );
+    expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
+    expect(mocks.getAllWindows).not.toHaveBeenCalled();
+  });
+
+  it('does not overwrite a user default changed while the live catalog was loading', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    const send = vi.fn();
+    const catalogReady = deferred<void>();
+    mocks.getDefaultAIModel
+      .mockReturnValueOnce('claude-code:fable-1m')
+      .mockReturnValueOnce('claude-code:claude-sonnet-4-5');
+    mocks.getAllWindows.mockReturnValue([{
+      isDestroyed: () => false,
+      webContents: { isDestroyed: () => false, send },
+    }]);
+    Object.assign(service, {
+      awaitModelCatalogForProvider: vi.fn(() => catalogReady.promise),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:claude-fable-5-1m',
+        resolvedModel: 'claude-fable-5[1m]',
+      }],
+    });
+
+    const resolution = service.resolveValidatedModelForNewSession('claude-code');
+    catalogReady.resolve();
+
+    await expect(resolution).resolves.toBe('claude-code:claude-fable-5-1m');
+    expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('does not apply a saved Claude default while resolving the Codex health channel', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    const validate = vi.fn(async () => {});
+    mocks.getDefaultAIModel.mockReturnValue('claude-code:fable-1m');
+    Object.assign(service, {
+      awaitModelCatalogForProvider: vi.fn(async () => {}),
+      assertDynamicCatalogReady: vi.fn(async () => {}),
+      assertCurrentDynamicModelAvailable: validate,
+      getDynamicCatalogModels: () => [{
+        id: 'openai-codex:gpt-5.6',
+        isEngineDefault: true,
+      }],
+    });
+
+    await expect(service.resolveValidatedModelForNewSession('openai-codex')).resolves.toBe(
+      'openai-codex:gpt-5.6',
+    );
+    expect(validate).toHaveBeenCalledWith('openai-codex', 'openai-codex:gpt-5.6');
+    expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
   });
 });

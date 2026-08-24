@@ -76,6 +76,7 @@ import {
   clearAIProviderOverrides,
   getWorkspaceState,
   getDefaultAIModel,
+  setDefaultAIModel,
   incrementCompletedSessionsWithTools,
   markCommunityPopupShown,
   normalizeAIProviderOverrides,
@@ -164,6 +165,7 @@ import {
   setDynamicModelCatalogValidator,
   type DynamicModelCatalogStatus,
 } from './modelCatalogValidation';
+import { resolveEquivalentModelIdMigration } from './modelIdMigration';
 import { database as databaseWorker } from '../../database/PGLiteDatabaseWorker';
 import {
   createTolerantAISettingsWriter,
@@ -1752,6 +1754,7 @@ export class AIService {
     sessionModel?: string,
     providerConfigModel?: string,
     requestedEffort?: EffortLevel,
+    sessionId?: string,
   ): Promise<string | undefined> {
     if (!this.isRuntimeDynamicCatalogProviderName(provider)) {
       return sessionModel || providerConfigModel;
@@ -1763,10 +1766,29 @@ export class AIService {
     const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, requestedModelId);
     await this.assertDynamicModelAvailable(provider, catalogModelId, requestedEffort);
 
+    // ACP validates against the shared Codex catalog, but the persisted ACP
+    // namespace is transport-significant and must never be rewritten to the
+    // shared provider's prefix.
+    const resolvedSessionModel = provider === 'openai-codex-acp'
+      ? requestedModelId
+      : catalogModelId;
+
+    if (resolvedSessionModel && resolvedSessionModel !== requestedModelId) {
+      // A model-ID rewrite is part of the successful migration, not an
+      // in-memory convenience. Persist before the engine starts so a restart
+      // cannot return the user to the same rejected legacy spelling.
+      if (sessionId) {
+        await AISessionsRepository.updateMetadata(sessionId, { model: resolvedSessionModel });
+      }
+      logger.main.info(
+        `[AIService] Migrated equivalent session model ID: ${requestedModelId} -> ${resolvedSessionModel}${sessionId ? ` (sessionId=${sessionId})` : ''}`,
+      );
+    }
+
     // ACP is replay-only for new sessions, but old rows can still stream. Its
     // transport requires its own prefix; validate against the shared Codex
     // catalog without rewriting the legacy provider identifier.
-    return provider === 'openai-codex-acp' ? requestedModelId : catalogModelId;
+    return resolvedSessionModel;
   }
 
   /**
@@ -1778,9 +1800,11 @@ export class AIService {
     provider: AIProviderType,
     requestedModel?: string,
   ): Promise<string | undefined> {
+    const savedDefault = getDefaultAIModel();
+    let pendingDefaultMigration: string | undefined;
+    let canonicalizedFrom: string | undefined;
     let model = requestedModel;
     if (!model) {
-      const savedDefault = getDefaultAIModel();
       const parsedSavedDefault = savedDefault ? ModelIdentifier.tryParse(savedDefault) : null;
       if (parsedSavedDefault?.provider === provider) {
         // A saved dynamic default must remain exact. If it disappeared, the
@@ -1800,7 +1824,56 @@ export class AIService {
         model = await ModelRegistry.getDefaultModel(provider);
       }
     }
+
+    if (provider === 'claude-code') {
+      const requestedModelId = this.normalizeDynamicModelIdentifier(provider, model);
+      await this.awaitModelCatalogForProvider(provider);
+      const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, requestedModelId);
+      if (catalogModelId && catalogModelId !== requestedModelId) {
+        canonicalizedFrom = requestedModelId;
+        const normalizedSavedDefault = this.normalizeDynamicModelIdentifier(provider, savedDefault);
+        if (normalizedSavedDefault === requestedModelId) {
+          pendingDefaultMigration = catalogModelId;
+        }
+        model = catalogModelId;
+      } else {
+        model = requestedModelId;
+      }
+    }
+
     await this.assertCurrentDynamicModelAvailable(provider, model ?? '');
+    if (canonicalizedFrom && model) {
+      logger.main.info(
+        `[AIService] Migrated equivalent new-session model ID: ${canonicalizedFrom} -> ${model}`,
+      );
+    }
+    if (pendingDefaultMigration) {
+      // Catalog refresh and user settings writes are concurrent. Re-read the
+      // preference immediately before writing so an in-flight migration can
+      // never replace a model the user explicitly chose in the meantime.
+      const currentDefault = getDefaultAIModel();
+      if (currentDefault && this.normalizeDynamicModelIdentifier(provider, currentDefault) === canonicalizedFrom) {
+        setDefaultAIModel(pendingDefaultMigration);
+        logger.main.info(
+          `[AIService] Migrated equivalent default model ID: ${currentDefault} -> ${pendingDefaultMigration}`,
+        );
+
+        // The main process owns persistence, while the renderer holds a
+        // separate in-memory default used by the next session button click.
+        // Broadcast only after the live catalog has proven equivalence and
+        // the canonical value has been stored. This is deliberately not a
+        // generic settings:changed event: defaultAIModel is outside that
+        // flat-key registry.
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+            window.webContents.send('settings:default-ai-model-migrated', {
+              from: currentDefault,
+              to: pendingDefaultMigration,
+            });
+          }
+        }
+      }
+    }
     return model;
   }
 
@@ -1850,10 +1923,23 @@ export class AIService {
       ? `openai-codex:${modelId.replace(/^openai-codex-acp:/, '')}`
       : modelId;
     if (models.some((model) => model.id === catalogModelId)) return catalogModelId;
+    // The historic ID ledger is intentionally scoped to the retired
+    // `claude-code:` selectable namespace. CLI identifiers have no proven
+    // equivalent spelling relationship and must retain the normal red light.
     if (provider === 'claude-code') {
+      const migration = resolveEquivalentModelIdMigration(catalogModelId, models);
+      if (migration) {
+        return migration.to;
+      }
+
+      // JSONL imports can retain the concrete engine ID rather than a
+      // selectable ID. That is an equivalence proof only when the live
+      // directory has exactly one row carrying the same resolvedModel.
       const rawModel = catalogModelId.replace(/^claude-code:/, '');
-      const exactResolved = models.find((model) => model.resolvedModel === rawModel);
-      if (exactResolved) return exactResolved.id;
+      const exactResolved = models.filter((model) => model.resolvedModel === rawModel);
+      if (exactResolved.length === 1) {
+        return exactResolved[0]!.id;
+      }
     }
     return catalogModelId;
   }
@@ -2029,6 +2115,8 @@ export class AIService {
       'claude-code',
       session.model,
       session.providerConfig?.model,
+      undefined,
+      session.id,
     );
     const effortLevel = this.resolveCompatibleDynamicSessionEffortLevel(
       'claude-code',
@@ -2276,6 +2364,9 @@ export class AIService {
     const model = await this.resolveCurrentDynamicSessionModel(
       'claude-code-cli',
       session.model ?? undefined,
+      undefined,
+      undefined,
+      sessionId,
     );
     return dispatchQueuedPromptToClaudeCli(
       {

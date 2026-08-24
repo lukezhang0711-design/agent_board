@@ -75,6 +75,23 @@ function trackCreateAISession(provider: AIProviderType, options?: {
     });
 }
 
+function sessionCreateFailureMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+function notifySessionCreateFailure(
+    event: Electron.IpcMainInvokeEvent,
+    error: unknown,
+    provider?: string,
+    model?: string,
+): void {
+    event.sender.send('sessions:create-failed', {
+        error: sessionCreateFailureMessage(error),
+        provider,
+        model,
+    });
+}
+
 function makeSessionFilesCacheKey(workspacePath: string, uncommittedFiles: Set<string>): string {
     if (uncommittedFiles.size === 0) return `${workspacePath}::__empty__`;
     return `${workspacePath}::${Array.from(uncommittedFiles).sort().join('|')}`;
@@ -225,23 +242,30 @@ export async function registerSessionHandlers() {
 
     // Create session (new format for agentic coding)
     safeHandle('sessions:create', async (event, payload: { session: any; workspaceId: string }): Promise<SessionCreateResult> => {
+        let provider: AIProviderType | undefined;
+        let model: string | undefined;
         try {
             const { session, workspaceId } = payload;
 
             // Extract and sync provider from model ID if model follows "provider:model" format
-            let provider = session.provider as AIProviderType;
-            let model = session.model;
+            provider = session.provider as AIProviderType;
+            model = session.model;
 
             if (model) {
                 const modelId = ModelIdentifier.tryParse(model);
                 if (modelId) {
                     provider = modelId.provider;
                 }
-            } else {
-                // Dynamic providers may only use an engine-advertised live
-                // default. Non-catalog providers retain their legacy default.
-                model = await resolveDynamicModelCatalogSelection(provider, undefined)
-                    ?? ModelIdentifier.getDefaultModelId(provider);
+            }
+
+            // Dynamic providers must resolve every supplied ID as well as an
+            // omitted default. The resolver owns the live-catalog-only
+            // equivalent-ID migration, so persistence never writes a legacy
+            // spelling back after it has been accepted.
+            model = await resolveDynamicModelCatalogSelection(provider, model)
+                ?? model
+                ?? ModelIdentifier.getDefaultModelId(provider);
+            if (!session.model) {
                 console.log(`[SessionHandlers] No model provided, using default: ${model}`);
             }
 
@@ -276,7 +300,8 @@ export async function registerSessionHandlers() {
             return { success: true, id: session.id };
         } catch (error) {
             console.error('[SessionHandlers] Error creating session:', error);
-            return { success: false, error: String(error) };
+            notifySessionCreateFailure(event, error, provider, model);
+            return { success: false, error: sessionCreateFailureMessage(error) };
         }
     });
 
@@ -682,6 +707,8 @@ export async function registerSessionHandlers() {
         model?: string;
     }) => {
         console.log('[SessionHandlers] sessions:create-child called with:', JSON.stringify(payload));
+        let provider: string | undefined = payload?.provider ?? 'claude-code';
+        let model: string | undefined = payload?.model;
         try {
             const { parentSessionId, workspacePath, worktreeId, provider: rawProvider = 'claude-code', model: providedModel } = payload;
             // Use crypto.randomUUID() instead of dynamic import to avoid bundling issues
@@ -690,21 +717,20 @@ export async function registerSessionHandlers() {
 
             // Extract and sync provider from model ID if model follows "provider:model" format
             // This prevents mismatches where provider and model come from different sources
-            let provider = rawProvider;
-            let model: string;
+            provider = rawProvider;
+            model = providedModel;
             if (providedModel) {
                 const modelId = ModelIdentifier.tryParse(providedModel);
                 if (modelId) {
                     provider = modelId.provider;
                 }
-                model = providedModel;
-            } else {
-                // A direct child created without a model can only take the
-                // engine's live recommended default; no static Claude/Codex
-                // preset is manufactured here.
-                model = await resolveDynamicModelCatalogSelection(provider, undefined)
-                    ?? ModelIdentifier.getDefaultModelId(provider as AIProviderType);
             }
+
+            // See sessions:create above: explicit dynamic IDs go through the
+            // same live resolver before they are persisted.
+            model = await resolveDynamicModelCatalogSelection(provider, model)
+                ?? model
+                ?? ModelIdentifier.getDefaultModelId(provider as AIProviderType);
 
             await assertDynamicModelCatalogSelection(provider, model);
 
@@ -728,7 +754,8 @@ export async function registerSessionHandlers() {
             return { success: true, sessionId };
         } catch (error) {
             console.error('[SessionHandlers] Failed to create child session:', error);
-            return { success: false, error: String(error) };
+            notifySessionCreateFailure(event, error, provider, model);
+            return { success: false, error: sessionCreateFailureMessage(error) };
         }
     });
 

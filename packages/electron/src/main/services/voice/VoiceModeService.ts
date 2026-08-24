@@ -12,7 +12,10 @@ import { getDatabase } from '../../database/initialize';
 import { getDefaultAIModel } from '../../utils/store';
 import { randomUUID } from 'crypto';
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
-import { assertDynamicModelCatalogSelection } from '../ai/modelCatalogValidation';
+import {
+  assertDynamicModelCatalogSelection,
+  resolveDynamicModelCatalogSelection,
+} from '../ai/modelCatalogValidation';
 
 // Store active voice session info
 interface VoiceSession {
@@ -635,13 +638,14 @@ export function initVoiceModeService() {
             return { success: false, error: '请先选择一个当前可用的模型；系统不会静默使用旧的默认型号。' };
           }
           const provider = parsedModel.provider;
-          await assertDynamicModelCatalogSelection(provider, model);
+          const modelToPersist = await resolveDynamicModelCatalogSelection(provider, model) ?? model;
+          await assertDynamicModelCatalogSelection(provider, modelToPersist);
           const newTitle = title?.trim() || 'New Session';
 
           await AISessionsRepository.create({
             id: newSessionId,
             provider,
-            model,
+            model: modelToPersist,
             title: newTitle,
             workspaceId: wp,
           });

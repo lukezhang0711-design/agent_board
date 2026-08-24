@@ -47,6 +47,7 @@ interface CatalogModel {
   slug?: unknown;
   display_name?: unknown;
   description?: unknown;
+  priority?: unknown;
   default_reasoning_level?: unknown;
   supported_reasoning_levels?: unknown;
   visibility?: unknown;
@@ -216,7 +217,7 @@ function modelEffortLevels(model: CatalogModel): EffortLevel[] {
 }
 
 function mapCatalogModels(catalog: ModelsCatalog): AIModel[] {
-  const mapped = new Map<string, AIModel>();
+  const mapped = new Map<string, { model: AIModel; priority?: number }>();
   for (const model of catalog.models) {
     // `list` is intentional. `hide` AND every unknown visibility must stay out.
     if (model.visibility !== 'list' || typeof model.slug !== 'string' || !model.slug.trim()) continue;
@@ -227,25 +228,48 @@ function mapCatalogModels(catalog: ModelsCatalog): AIModel[] {
     const id = toProviderModelId(model.slug);
     if (mapped.has(id)) continue;
     mapped.set(id, {
-      id,
-      name: typeof model.display_name === 'string' && model.display_name.trim()
-        ? model.display_name
-        : model.slug,
-      provider: 'openai-codex' as AIProviderType,
-      ...(typeof model.description === 'string' && model.description.trim()
-        ? { description: model.description }
-        : {}),
-      ...(typeof model.max_context_window === 'number'
-        ? { contextWindow: model.max_context_window }
-        : typeof model.context_window === 'number'
-          ? { contextWindow: model.context_window }
+      model: {
+        id,
+        name: typeof model.display_name === 'string' && model.display_name.trim()
+          ? model.display_name
+          : model.slug,
+        provider: 'openai-codex' as AIProviderType,
+        ...(typeof model.description === 'string' && model.description.trim()
+          ? { description: model.description }
           : {}),
-      supportsEffort: levels.length > 0,
-      supportedEffortLevels: levels,
-      ...(defaultEffortLevel ? { defaultEffortLevel } : {}),
+        ...(typeof model.max_context_window === 'number'
+          ? { contextWindow: model.max_context_window }
+          : typeof model.context_window === 'number'
+            ? { contextWindow: model.context_window }
+            : {}),
+        supportsEffort: levels.length > 0,
+        supportedEffortLevels: levels,
+        ...(defaultEffortLevel ? { defaultEffortLevel } : {}),
+      },
+      priority: typeof model.priority === 'number' && Number.isFinite(model.priority)
+        ? model.priority
+        : undefined,
     });
   }
-  return Array.from(mapped.values());
+
+  const entries = Array.from(mapped.values());
+  const rankedEntries = entries.filter((entry): entry is { model: AIModel; priority: number } => entry.priority !== undefined);
+  const lowestPriority = rankedEntries.length > 0
+    ? Math.min(...rankedEntries.map((entry) => entry.priority))
+    : undefined;
+  const engineDefault = lowestPriority === undefined
+    ? undefined
+    : rankedEntries.filter((entry) => entry.priority === lowestPriority).length === 1
+      ? rankedEntries.find((entry) => entry.priority === lowestPriority)?.model.id
+      : undefined;
+
+  // Codex's live catalog publishes an upstream ranking, not a static default
+  // ID. Only its unique lowest-priority selectable row can be used for the
+  // first-session recommendation; absent or tied ranking intentionally leaves
+  // the caller on the existing explicit-reselection red path.
+  return entries.map(({ model }) => (
+    model.id === engineDefault ? { ...model, isEngineDefault: true } : model
+  ));
 }
 
 function categoryFor(error: unknown): CodexModelRefreshErrorCategory {
