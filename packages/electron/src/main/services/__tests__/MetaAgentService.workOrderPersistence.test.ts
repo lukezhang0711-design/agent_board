@@ -126,12 +126,13 @@ vi.mock('../TrackerSchemaService', () => ({
   upsertWorkspaceTrackerSchema: vi.fn(),
 }));
 
-import { AgentMessagesRepository, AISessionsRepository } from '@nimbalyst/runtime';
+import { AgentMessagesRepository, AISessionsRepository, SessionFilesRepository } from '@nimbalyst/runtime';
 import { resolveEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
 import { SessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { SQLiteDatabase } from '../../database/sqlite/SQLiteDatabase';
 import { createPGLiteAgentMessagesStore } from '../PGLiteAgentMessagesStore';
+import { createPGLiteSessionFileStore } from '../PGLiteSessionFileStore';
 import { createPGLiteSessionStore } from '../PGLiteSessionStore';
 import { MetaAgentService } from '../MetaAgentService';
 
@@ -154,6 +155,17 @@ describe('MetaAgentService work-order persistence', () => {
         [`meta-agent-work-order:${sessionId}`],
       );
       expect(parseStoredJson<Record<string, unknown>>(rows[0]?.data).status).toBe(status);
+    });
+  }
+
+  async function recordChildOutputFile(sessionId: string, outputFile: string): Promise<void> {
+    await SessionFilesRepository.addFileLink({
+      sessionId,
+      workspaceId: workspacePath,
+      filePath: path.resolve(workspacePath, outputFile),
+      linkType: 'edited',
+      timestamp: Date.now(),
+      metadata: { toolName: 'Write', operation: 'create' },
     });
   }
 
@@ -410,6 +422,7 @@ describe('MetaAgentService work-order persistence', () => {
     replacementServices = [];
     AISessionsRepository.setStore(createPGLiteSessionStore(db));
     AgentMessagesRepository.setStore(createPGLiteAgentMessagesStore(db));
+    SessionFilesRepository.setStore(createPGLiteSessionFileStore(db));
     (service as any).notificationSignatures.clear();
     (service as any).interruptedChildSessionIds.clear();
     (service as any).releasedDispatchPromptIdsByHead.clear();
@@ -472,6 +485,7 @@ describe('MetaAgentService work-order persistence', () => {
     }
     AgentMessagesRepository.clearStore();
     AISessionsRepository.clearStore();
+    SessionFilesRepository.clearStore();
     testState.db = null;
     testState.stateListener = null;
     testState.stateManager = null;
@@ -1499,12 +1513,46 @@ describe('MetaAgentService work-order persistence', () => {
     );
   });
 
-  it('GREEN DZ-094: completes an implementation module when its declared output file exists', async () => {
+  it('RED EK: refuses a declared output written by Head instead of the module child', async () => {
+    const outputFile = 'reports/ek-head-authored.md';
+    const outputPath = path.join(workspacePath, outputFile);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, '# written by Head\n');
+
+    try {
+      const child = await (service as any).createChildSessionInternal(
+        'head-session',
+        workspacePath,
+        {
+          title: '拒绝指挥官垫活',
+          prompt: '完成模块并写出声明的报告',
+          provider: 'claude-code',
+          model: 'claude-code:haiku',
+          intent: 'implementation',
+          planId: 'plan-ek-head-authored',
+          moduleIndex: 1,
+          outputFiles: [outputFile],
+        },
+      );
+
+      await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
+
+      const { rows } = await db.query<any>(
+        `SELECT data FROM tracker_items WHERE source_ref = $1`,
+        [`meta-agent-work-order:${child.sessionId}`],
+      );
+      const data = parseStoredJson<any>(rows[0].data);
+      expect(data.status).toBe('failed');
+      expect(data.acceptanceStatus).toBe('验收不达标');
+      expect(data.failureReason).toBe(`完成标准要求的 ${outputFile} 已存在，但产出物非该子会话所写`);
+    } finally {
+      fs.rmSync(path.join(workspacePath, 'reports'), { recursive: true, force: true });
+    }
+  });
+
+  it('GREEN EK: completes an implementation module when its declared output was written by its child', async () => {
     const outputFile = 'reports/dz-094-present.md';
     const outputPath = path.join(workspacePath, outputFile);
-    fs.mkdirSync(workspacePath, { recursive: true });
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, '# present\n');
 
     try {
       const child = await (service as any).createChildSessionInternal(
@@ -1521,6 +1569,9 @@ describe('MetaAgentService work-order persistence', () => {
           outputFiles: [outputFile],
         },
       );
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      fs.writeFileSync(outputPath, '# present\n');
+      await recordChildOutputFile(child.sessionId, outputFile);
 
       await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
 
@@ -1571,9 +1622,6 @@ describe('MetaAgentService work-order persistence', () => {
     const planId = 'plan-dz-094-module-standard';
     const outputFile = 'reports/dz-094-from-plan.md';
     const outputPath = path.join(workspacePath, outputFile);
-    fs.mkdirSync(workspacePath, { recursive: true });
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, '# from plan\n');
     await db.query(
       `INSERT INTO tracker_items (
         id, type, type_tags, data, workspace, document_path, line_number,
@@ -1606,6 +1654,9 @@ describe('MetaAgentService work-order persistence', () => {
           moduleIndex: 1,
         },
       );
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      fs.writeFileSync(outputPath, '# from plan\n');
+      await recordChildOutputFile(child.sessionId, outputFile);
       await (service as any).handleChildSessionEvent(child.sessionId, 'session:completed');
 
       const { rows } = await db.query<any>(

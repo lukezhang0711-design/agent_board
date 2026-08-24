@@ -192,6 +192,8 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     // Head Agent may investigate on its own (read files, run read-only diagnostics).
     expect(prompt).toContain('read any file');
     expect(prompt).toContain('read-only diagnostics');
+    expect(prompt).toContain('plans, research notes, status updates, hand-off tickets, and reports to the owner');
+    expect(prompt).toContain('Never use those file-writing tools for product code');
 
     // Acceptance upgrade: the Head Agent must personally verify a child's work.
     expect(prompt).toContain("Verify, don't trust the prose");
@@ -253,7 +255,7 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
     expect(config).not.toHaveProperty('nimbalyst-settings');
   });
 
-  it('blocks native delegation and file-writing tools only in Head SDK options', async () => {
+  it('unlocks Head file-writing tools while keeping native delegation tools blocked', async () => {
     const provider = await createMetaAgentProviderProbe();
     const options = await captureClaudeSdkOptions(provider);
 
@@ -262,18 +264,11 @@ describe('Meta Agent capability (Wave 2: role-constrained, full native tools)', 
 
     // Head delegation must go through mcp__nimbalyst-meta-agent__create_session so
     // Nimbalyst retains approval, queue, concurrency, and Tracker control.
-    expect(options.disallowedTools).toEqual([
-      'Agent',
-      'Task',
-      'Write',
-      'Edit',
-      'MultiEdit',
-      'NotebookEdit',
-    ]);
-    // Keep native read/diagnostic tools and the MCP dispatch path available.
-    expect(options.disallowedTools).not.toEqual(
-      expect.arrayContaining(['Read', 'Glob', 'Grep', 'LS', 'Bash']),
-    );
+    expect(options.disallowedTools).toEqual(['Agent', 'Task']);
+    // Head may create coordination documents, while native child-spawning remains blocked.
+    for (const fileTool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+      expect(options.disallowedTools).not.toContain(fileTool);
+    }
     expect(options.allowedTools).toContain('mcp__nimbalyst-meta-agent__create_session');
     expect(options.blockedTools).toBeUndefined();
   });

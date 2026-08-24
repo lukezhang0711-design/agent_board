@@ -1166,13 +1166,12 @@ describe('OpenAICodexProvider', () => {
         'TaskCreate',
         'TodoWrite',
       ]),
-      disallowedTools: expect.arrayContaining([
-        'Read',
-        'Write',
-        'Edit',
-        'Bash',
-      ]),
+      disallowedTools: expect.arrayContaining(['Read', 'Bash', 'Task', 'Agent']),
     }));
+    const sessionOptions = startThread.mock.calls[0]?.[0] as { disallowedTools?: string[] } | undefined;
+    for (const fileTool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+      expect(sessionOptions?.disallowedTools).not.toContain(fileTool);
+    }
   });
 
   it('resumes an existing provider thread when provider session data is restored', async () => {

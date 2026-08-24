@@ -184,7 +184,7 @@ describe('buildClaudeCliSpawnConfig', () => {
     ]);
   });
 
-  it('adds built-in subagent tool restrictions only for the Head CLI session', () => {
+  it('keeps built-in subagent tools restricted while permitting Head coordination-file writes', () => {
     const standard = buildClaudeCliSpawnConfig(base);
     const head = buildClaudeCliSpawnConfig({
       ...base,
@@ -210,15 +210,14 @@ describe('buildClaudeCliSpawnConfig', () => {
       'AskUserQuestion',
       'Agent',
       'Task',
-      'Write',
-      'Edit',
-      'MultiEdit',
-      'NotebookEdit',
     ]);
     expect(standardDisallowed).toEqual(['AskUserQuestion']);
     expect(standardDisallowed).not.toEqual(
       expect.arrayContaining(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']),
     );
+    for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+      expect(headDisallowed).not.toContain(tool);
+    }
     expect(head.args).not.toContain('--tools');
   });
 
