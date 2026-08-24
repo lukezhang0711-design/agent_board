@@ -14,9 +14,33 @@ import { requireMcpAuth } from "./mcpAuth";
 import { resolveProjectPath } from "../utils/workspaceDetection";
 
 type SessionIntent = "investigation" | "implementation";
-type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
+export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
 type CompletionCriteria = {
   outputFiles?: string[];
+};
+
+export type StructuredPlanText = string | string[];
+
+export type PlanCandidate = {
+  name: string;
+  approach: string;
+  pros: StructuredPlanText;
+  cons: StructuredPlanText;
+  risks: StructuredPlanText;
+  provider: string;
+  model: string;
+  effortLevel: EffortLevel;
+};
+
+export type PlanModule = {
+  title: string;
+  outputFiles: string[];
+  inputs: string[];
+  provider: string;
+  model: string;
+  effortLevel: EffortLevel;
+  doneCriteria: string;
+  candidates?: PlanCandidate[];
 };
 
 type CreateSessionArgs = {
@@ -63,12 +87,14 @@ type SpawnSessionArgs = {
   isolated?: boolean;
 };
 
-type SubmitPlanArgs = {
+export type SubmitPlanArgs = {
   title: string;
   planItems: string[];
   workOrderCount: number;
   /** New calls use a list; the string form remains accepted for old callers. */
   risks: string | string[];
+  /** Optional structured fields for the productized approval card. */
+  modules?: PlanModule[];
 };
 
 const SUBMIT_PLAN_EXAMPLE = {
@@ -76,6 +102,29 @@ const SUBMIT_PLAN_EXAMPLE = {
   planItems: ["Inspect the current workspace"],
   workOrderCount: 1,
   risks: [],
+  modules: [
+    {
+      title: "Approval card",
+      outputFiles: ["packages/electron/src/renderer/components/UnifiedAI/PlanApprovalWidget.tsx"],
+      inputs: ["Existing approval-card behavior"],
+      provider: "openai-codex",
+      model: "gpt-5.4-mini",
+      effortLevel: "medium",
+      doneCriteria: "The card renders the fields and the approval test passes.",
+      candidates: [
+        {
+          name: "方案 A",
+          approach: "Render candidates as aligned matrix columns.",
+          pros: ["Same fields share one row", "Easy to compare"],
+          cons: "Narrow windows need horizontal scrolling.",
+          risks: ["A stale choice could be approved."],
+          provider: "openai-codex",
+          model: "gpt-5.4-mini",
+          effortLevel: "low",
+        },
+      ],
+    },
+  ],
 };
 
 const SUBMIT_PLAN_DESCRIPTION = [
@@ -86,6 +135,8 @@ const SUBMIT_PLAN_DESCRIPTION = [
   "planItems is a non-empty array of non-empty strings and is required.",
   "workOrderCount is an optional non-negative integer; omit it to use planItems.length.",
   "risks is a required array of strings and may be empty; [] means no risks were declared.",
+  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, exact full model ID, effortLevel, and doneCriteria.",
+  "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, and effortLevel; do not write serial comparison paragraphs.",
 ].join("\n");
 
 function submitPlanValidationError(message: string, example: string): Error {
@@ -153,7 +204,118 @@ export function normalizeSubmitPlanArgs(value: Record<string, unknown> | undefin
     );
   }
 
-  return { title, planItems, workOrderCount, risks };
+  const modules = normalizePlanModules(args.modules);
+
+  return {
+    title,
+    planItems,
+    workOrderCount,
+    risks,
+    ...(modules === undefined ? {} : { modules }),
+  };
+}
+
+const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
+
+function normalizeNonEmptyString(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw submitPlanValidationError(
+      `${fieldName} must be a non-empty string`,
+      JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+    );
+  }
+  return value.trim();
+}
+
+function normalizeStringList(value: unknown, fieldName: string): string[] {
+  if (!Array.isArray(value)) {
+    throw submitPlanValidationError(
+      `${fieldName} must be an array of strings`,
+      JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+    );
+  }
+  const normalized = value.map((item) => typeof item === 'string' ? item.trim() : '');
+  if (normalized.some((item) => item.length === 0)) {
+    throw submitPlanValidationError(
+      `${fieldName} must contain only non-empty strings`,
+      JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+    );
+  }
+  return normalized;
+}
+
+function normalizeStructuredText(value: unknown, fieldName: string): StructuredPlanText {
+  if (typeof value === 'string') return normalizeNonEmptyString(value, fieldName);
+  return normalizeStringList(value, fieldName);
+}
+
+function normalizeEffortLevel(value: unknown, fieldName: string): EffortLevel {
+  if (typeof value === 'string' && VALID_EFFORT_LEVELS.has(value as EffortLevel)) {
+    return value as EffortLevel;
+  }
+  throw submitPlanValidationError(
+    `${fieldName} must be one of low, medium, high, xhigh, max, or ultra`,
+    JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+  );
+}
+
+function normalizePlanCandidate(value: unknown, moduleIndex: number, candidateIndex: number): PlanCandidate {
+  if (!value || typeof value !== 'object') {
+    throw submitPlanValidationError(
+      `modules[${moduleIndex}].candidates[${candidateIndex}] must be an object`,
+      JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+    );
+  }
+  const candidate = value as Record<string, unknown>;
+  return {
+    name: normalizeNonEmptyString(candidate.name, `modules[${moduleIndex}].candidates[${candidateIndex}].name`),
+    approach: normalizeNonEmptyString(candidate.approach, `modules[${moduleIndex}].candidates[${candidateIndex}].approach`),
+    pros: normalizeStructuredText(candidate.pros, `modules[${moduleIndex}].candidates[${candidateIndex}].pros`),
+    cons: normalizeStructuredText(candidate.cons, `modules[${moduleIndex}].candidates[${candidateIndex}].cons`),
+    risks: normalizeStructuredText(candidate.risks, `modules[${moduleIndex}].candidates[${candidateIndex}].risks`),
+    provider: normalizeNonEmptyString(candidate.provider, `modules[${moduleIndex}].candidates[${candidateIndex}].provider`),
+    model: normalizeNonEmptyString(candidate.model, `modules[${moduleIndex}].candidates[${candidateIndex}].model`),
+    effortLevel: normalizeEffortLevel(candidate.effortLevel, `modules[${moduleIndex}].candidates[${candidateIndex}].effortLevel`),
+  };
+}
+
+function normalizePlanModules(value: unknown): PlanModule[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw submitPlanValidationError(
+      'modules must be an array of objects',
+      JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+    );
+  }
+
+  return value.map((rawModule, moduleIndex) => {
+    if (!rawModule || typeof rawModule !== 'object') {
+      throw submitPlanValidationError(
+        `modules[${moduleIndex}] must be an object`,
+        JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+      );
+    }
+    const module = rawModule as Record<string, unknown>;
+    const rawCandidates = module.candidates;
+    if (rawCandidates !== undefined && !Array.isArray(rawCandidates)) {
+      throw submitPlanValidationError(
+        `modules[${moduleIndex}].candidates must be an array`,
+        JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+      );
+    }
+    return {
+      title: normalizeNonEmptyString(module.title, `modules[${moduleIndex}].title`),
+      outputFiles: normalizeStringList(module.outputFiles, `modules[${moduleIndex}].outputFiles`),
+      inputs: normalizeStringList(module.inputs, `modules[${moduleIndex}].inputs`),
+      provider: normalizeNonEmptyString(module.provider, `modules[${moduleIndex}].provider`),
+      model: normalizeNonEmptyString(module.model, `modules[${moduleIndex}].model`),
+      effortLevel: normalizeEffortLevel(module.effortLevel, `modules[${moduleIndex}].effortLevel`),
+      doneCriteria: normalizeNonEmptyString(module.doneCriteria, `modules[${moduleIndex}].doneCriteria`),
+      ...(rawCandidates === undefined
+        ? {}
+        : { candidates: rawCandidates.map((candidate, candidateIndex) => normalizePlanCandidate(candidate, moduleIndex, candidateIndex)) }),
+    };
+  });
 }
 
 /**
@@ -347,6 +509,41 @@ const META_AGENT_TOOL_DEFS: Array<{
           minItems: 0,
           items: { type: "string", minLength: 1 },
           description: "REQUIRED. List of string implementation risks and tradeoffs; use [] when none are declared.",
+        },
+        modules: {
+          type: "array",
+          description: "OPTIONAL structured module fields. Omit for legacy planItems-only cards. Use candidates for multiple approaches.",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string", minLength: 1, description: "Module name." },
+              outputFiles: { type: "array", items: { type: "string", minLength: 1 }, description: "Expected output paths relative to the project root." },
+              inputs: { type: "array", items: { type: "string", minLength: 1 }, description: "Inputs/materials used by the module." },
+              provider: { type: "string", minLength: 1, description: "Provider ID for this module." },
+              model: { type: "string", minLength: 1, description: "Exact model ID, not a display nickname." },
+              effortLevel: { type: "string", enum: ["low", "medium", "high", "xhigh", "max", "ultra"], description: "Thinking effort for this module." },
+              doneCriteria: { type: "string", minLength: 1, description: "Concrete completion standard." },
+              candidates: {
+                type: "array",
+                description: "Optional alternative approaches. Required when there is more than one viable approach.",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", minLength: 1 },
+                    approach: { type: "string", minLength: 1 },
+                    pros: { oneOf: [{ type: "string", minLength: 1 }, { type: "array", items: { type: "string", minLength: 1 } }] },
+                    cons: { oneOf: [{ type: "string", minLength: 1 }, { type: "array", items: { type: "string", minLength: 1 } }] },
+                    risks: { oneOf: [{ type: "string", minLength: 1 }, { type: "array", items: { type: "string", minLength: 1 } }] },
+                    provider: { type: "string", minLength: 1 },
+                    model: { type: "string", minLength: 1, description: "Exact model ID." },
+                    effortLevel: { type: "string", enum: ["low", "medium", "high", "xhigh", "max", "ultra"] },
+                  },
+                  required: ["name", "approach", "pros", "cons", "risks", "provider", "model", "effortLevel"],
+                },
+              },
+            },
+            required: ["title", "outputFiles", "inputs", "provider", "model", "effortLevel", "doneCriteria"],
+          },
         },
       },
       required: ["title", "planItems", "risks"],

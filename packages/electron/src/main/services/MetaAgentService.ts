@@ -28,6 +28,7 @@ import {
   setMetaAgentToolFns,
   shutdownMetaAgentServer,
 } from '../mcp/metaAgentServer';
+import type { PlanModule } from '../mcp/metaAgentServer';
 import {
   persistInteractivePromptToolResult,
   persistInteractivePromptToolUse,
@@ -465,6 +466,7 @@ interface SubmitPlanArgs {
   planItems: string[];
   workOrderCount?: number;
   risks: string | string[];
+  modules?: PlanModule[];
 }
 
 interface NativeHeadPlanApprovalRequest {
@@ -498,8 +500,22 @@ interface PlanApprovalResponse {
   approved: boolean;
   decision?: 'approved' | 'rejected' | 'dismissed';
   feedback?: string;
+  selectedCandidates?: SelectedPlanCandidate[];
   respondedAt?: number;
   respondedBy?: string;
+}
+
+interface SelectedPlanCandidate {
+  moduleIndex: number;
+  moduleTitle: string;
+  name: string;
+  approach: string;
+  pros: string | string[];
+  cons: string | string[];
+  risks: string | string[];
+  provider: string;
+  model: string;
+  effortLevel: EffortLevel;
 }
 
 function buildNativeHeadPlanArgs(planSummary: string, planFilePath: string): SubmitPlanArgs {
@@ -2627,6 +2643,9 @@ export class MetaAgentService {
           approved: state.decision === 'approved',
           decision: state.decision,
           feedback: state.feedback,
+          ...(Array.isArray(state.selectedCandidates)
+            ? { selectedCandidates: state.selectedCandidates as SelectedPlanCandidate[] }
+            : {}),
           respondedAt: state.respondedAt,
           respondedBy: state.respondedBy,
         };
@@ -2726,6 +2745,7 @@ export class MetaAgentService {
         approved: state.decision === 'approved',
         decision: state.decision,
         feedback: state.feedback,
+        ...(state.selectedCandidates ? { selectedCandidates: state.selectedCandidates as SelectedPlanCandidate[] } : {}),
         respondedAt: state.respondedAt,
         respondedBy: state.respondedBy,
       };
@@ -2811,6 +2831,9 @@ export class MetaAgentService {
       return [
         '[Plan approval response]',
         `The user approved plan ${planId}.`,
+        ...(response.selectedCandidates && response.selectedCandidates.length > 0
+          ? [`Selected candidates to use as dispatch parameters: ${JSON.stringify(response.selectedCandidates)}`]
+          : []),
         'The original approval tool turn ended. Continue with the approved implementation now; do not submit the same plan again.',
       ].join('\n');
     }
@@ -2855,6 +2878,9 @@ export class MetaAgentService {
     };
     if (response.approved) {
       finalData.approvedAt = new Date(response.respondedAt ?? Date.now()).toISOString();
+      if (response.selectedCandidates && response.selectedCandidates.length > 0) {
+        finalData.selectedCandidates = response.selectedCandidates;
+      }
       delete finalData.lastReviewFeedback;
     } else if (response.feedback) {
       finalData.lastReviewFeedback = response.feedback;
@@ -3025,7 +3051,14 @@ export class MetaAgentService {
         sessionId: metaSessionId,
         toolUseId: requestId,
         result: response.approved
-          ? { approved: true, planId, status: 'approved' }
+          ? {
+              approved: true,
+              planId,
+              status: 'approved',
+              ...(response.selectedCandidates && response.selectedCandidates.length > 0
+                ? { selectedCandidates: response.selectedCandidates }
+                : {}),
+            }
           : {
               approved: false,
               planId,
@@ -3128,6 +3161,12 @@ export class MetaAgentService {
       submittedAt,
       tags: ['meta-agent', 'user-approval'],
     };
+    if (args.modules !== undefined) {
+      planData.modules = args.modules;
+    } else {
+      delete planData.modules;
+    }
+    delete planData.selectedCandidates;
     delete planData.approvedAt;
     delete planData.lastReviewFeedback;
 
@@ -3136,7 +3175,12 @@ export class MetaAgentService {
         `UPDATE tracker_items
          SET data = $1, content = $2, updated = NOW(), last_indexed = NOW()
          WHERE id = $3`,
-        [JSON.stringify(planData), JSON.stringify({ planItems, workOrderCount, risks }), planId],
+        [JSON.stringify(planData), JSON.stringify({
+          planItems,
+          workOrderCount,
+          risks,
+          ...(args.modules !== undefined ? { modules: args.modules } : {}),
+        }), planId],
       );
     } else {
       await databaseWorker.query(
@@ -3150,7 +3194,12 @@ export class MetaAgentService {
           ['plan'],
           JSON.stringify(planData),
           workspaceId,
-          JSON.stringify({ planItems, workOrderCount, risks }),
+          JSON.stringify({
+            planItems,
+            workOrderCount,
+            risks,
+            ...(args.modules !== undefined ? { modules: args.modules } : {}),
+          }),
           sourceRef,
         ],
       );
@@ -3169,6 +3218,7 @@ export class MetaAgentService {
         planItems,
         workOrderCount,
         risks,
+        ...(args.modules !== undefined ? { modules: args.modules } : {}),
         ...(options.planSummary?.trim() ? { planSummary: options.planSummary.trim() } : {}),
       },
     });
@@ -3246,6 +3296,9 @@ export class MetaAgentService {
       deliveryMethod,
       ...(autoApproved ? { autoApproved: true } : {}),
       ...(response.feedback ? { feedback: response.feedback } : {}),
+      ...(response.selectedCandidates && response.selectedCandidates.length > 0
+        ? { selectedCandidates: response.selectedCandidates }
+        : {}),
     }, null, 2);
     const directMcpResult = serializeMcpResult('direct');
     const deliveryMethod = await this.deliverPlanApprovalResponse(

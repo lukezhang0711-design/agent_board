@@ -7,6 +7,7 @@ vi.mock('../../utils/workspaceDetection', () => ({
 import {
   dispatchMetaAgentTool,
   getMetaAgentOpenAITools,
+  normalizeSubmitPlanArgs,
   setMetaAgentToolFns,
 } from '../metaAgentServer';
 
@@ -123,6 +124,27 @@ describe('submit_plan ergonomics', () => {
       },
       required: ['title', 'planItems', 'risks'],
     });
+    expect(schema.properties.modules).toMatchObject({
+      type: 'array',
+      items: {
+        required: ['title', 'outputFiles', 'inputs', 'provider', 'model', 'effortLevel', 'doneCriteria'],
+        properties: {
+          title: { type: 'string' },
+          outputFiles: { type: 'array' },
+          inputs: { type: 'array' },
+          provider: { type: 'string' },
+          model: { type: 'string' },
+          effortLevel: { enum: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'] },
+          doneCriteria: { type: 'string' },
+          candidates: {
+            type: 'array',
+            items: {
+              required: ['name', 'approach', 'pros', 'cons', 'risks', 'provider', 'model', 'effortLevel'],
+            },
+          },
+        },
+      },
+    });
   });
 
   it('keeps an explicit complete call unchanged', async () => {
@@ -135,6 +157,94 @@ describe('submit_plan ergonomics', () => {
 
     await expect(callSubmitPlan(args)).resolves.toBe(JSON.stringify(args));
     expect(submitPlan).toHaveBeenCalledWith('head-session', '/workspace', args);
+  });
+
+  it('accepts structured modules and candidate alternatives without dropping fields', async () => {
+    const args = {
+      title: 'Compare implementation routes',
+      planItems: ['Choose the approved route'],
+      risks: [],
+      modules: [{
+        title: 'Approval card',
+        outputFiles: ['packages/electron/src/renderer/components/UnifiedAI/PlanApprovalWidget.tsx'],
+        inputs: ['Existing approval widget'],
+        provider: 'openai-codex',
+        model: 'gpt-5.4-mini',
+        effortLevel: 'medium',
+        doneCriteria: 'Matrix and approval payload are tested.',
+        candidates: [{
+          name: '方案 A',
+          approach: 'Use a responsive comparison matrix.',
+          pros: ['Aligned fields', 'Easy to scan'],
+          cons: 'Requires horizontal scrolling on narrow windows.',
+          risks: ['Selection payload could be stale.'],
+          provider: 'openai-codex',
+          model: 'gpt-5.4-mini',
+          effortLevel: 'low',
+        }],
+      }],
+    };
+
+    const result = await callSubmitPlan(args);
+    expect(JSON.parse(result)).toEqual({
+      ...args,
+      workOrderCount: 1,
+    });
+    expect(submitPlan).toHaveBeenCalledWith('head-session', '/workspace', {
+      ...args,
+      workOrderCount: 1,
+    });
+  });
+
+  it('normalizes structured fields with the same tolerant string handling as legacy fields', () => {
+    expect(normalizeSubmitPlanArgs({
+      title: '  Structured plan  ',
+      planItems: ['  Keep a short summary  '],
+      risks: ['  One risk  '],
+      modules: [{
+        title: '  Module 1  ',
+        outputFiles: ['  dist/result.md  '],
+        inputs: ['  source brief  '],
+        provider: ' openai-codex ',
+        model: ' gpt-5.4-mini ',
+        effortLevel: 'medium',
+        doneCriteria: '  Result exists.  ',
+        candidates: [{
+          name: '  A  ',
+          approach: '  Do A.  ',
+          pros: ['  Fast  '],
+          cons: '  Narrow scope.  ',
+          risks: ['  None known.  '],
+          provider: ' openai-codex ',
+          model: ' gpt-5.4-mini ',
+          effortLevel: 'low',
+        }],
+      }],
+    })).toEqual({
+      title: 'Structured plan',
+      planItems: ['Keep a short summary'],
+      workOrderCount: 1,
+      risks: ['One risk'],
+      modules: [{
+        title: 'Module 1',
+        outputFiles: ['dist/result.md'],
+        inputs: ['source brief'],
+        provider: 'openai-codex',
+        model: 'gpt-5.4-mini',
+        effortLevel: 'medium',
+        doneCriteria: 'Result exists.',
+        candidates: [{
+          name: 'A',
+          approach: 'Do A.',
+          pros: ['Fast'],
+          cons: 'Narrow scope.',
+          risks: ['None known.'],
+          provider: 'openai-codex',
+          model: 'gpt-5.4-mini',
+          effortLevel: 'low',
+        }],
+      }],
+    });
   });
 
   it('derives an omitted workOrderCount from planItems', async () => {

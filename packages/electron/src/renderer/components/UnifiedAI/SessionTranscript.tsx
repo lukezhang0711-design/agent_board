@@ -23,7 +23,11 @@ import { ClaudeCliTerminalStrip } from './ClaudeCliTerminalStrip';
 import { ClaudeCliNotInstalledNotice } from './ClaudeCliNotInstalledNotice';
 import { STOP_CLEAR_QUEUE_STATUS, getStopRequestStatusMessage } from './stopCopy';
 import { hasPendingSubmittedPlanApproval, registerPlanApprovalWidget } from './PlanApprovalWidget';
-import type { InteractiveWidgetHost, PermissionScope } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets/InteractiveWidgetHost';
+import type {
+  InteractiveWidgetHost,
+  PermissionScope,
+  SelectedPlanCandidate,
+} from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets/InteractiveWidgetHost';
 import type {
   InteractivePromptStatusQuery,
   InteractivePromptStatusResult,
@@ -110,7 +114,11 @@ import {
 import { scrollToTeammateAtom, scrollToMessageAtom, requestOpenSessionAtom } from '../../store/atoms/agentMode';
 import { usePostHog } from 'posthog-js/react';
 import { setAgentModeSettingsAtom, showPromptAdditionsAtom, hasExternalEditorAtom, externalEditorNameAtom, openInExternalEditorAtom, defaultAgentModelAtom, defaultEffortLevelAtom, chatShowToolCallsAtom, availableModelsAtom } from '../../store/atoms/appSettings';
-import { parseEffortLevel, type EffortLevel } from '../../utils/modelUtils';
+import {
+  getSupportedEffortLevelsForModel,
+  parseEffortLevel,
+  type EffortLevel,
+} from '../../utils/modelUtils';
 import { buildPlanImplementationPrompt, resolvePlanFilePath } from '../../utils/pathUtils';
 import { resolveTranscriptClickPath } from '../../utils/resolveTranscriptClickPath';
 import { autoCommitEnabledAtom, setAutoCommitEnabledAtom } from '../../store/atoms/autoCommitAtoms';
@@ -728,10 +736,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   // static list. Before discovery completes we hide the control rather than
   // offering an unsupported level.
   const supportedEffortLevels = useMemo(() => {
-    const model = Object.values(availableModels)
-      .flat()
-      .find((candidate) => candidate.id === currentModel);
-    return model?.supportsEffort === true ? (model.supportedEffortLevels ?? []) : [];
+    return getSupportedEffortLevelsForModel(availableModels, currentModel);
   }, [availableModels, currentModel]);
   const showEffortLevel = supportedEffortLevels.length > 0;
   const effortLevel = useMemo(() => {
@@ -2001,14 +2006,21 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   }, [setDraftInput]);
 
   // Confirmation handlers
-  const handleExitPlanModeApprove = useCallback(async (requestId: string, confirmSessionId: string) => {
+  const handleExitPlanModeApprove = useCallback(async (
+    requestId: string,
+    confirmSessionId: string,
+    selectedCandidates?: SelectedPlanCandidate[],
+  ) => {
     try {
       // Use the unified respondToPromptAtom which persists to DB and notifies provider
       const success = await respondToPrompt({
         sessionId: confirmSessionId,
         promptId: requestId,
         promptType: 'exit_plan_mode_request',
-        response: { approved: true },
+        response: {
+          approved: true,
+          ...(selectedCandidates && selectedCandidates.length > 0 ? { selectedCandidates } : {}),
+        },
       });
 
       if (!success) {
@@ -2259,8 +2271,8 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       },
 
       // ExitPlanMode operations
-      exitPlanModeApprove: async (requestId: string) => {
-        await handleExitPlanModeApprove(requestId, sessionId);
+      exitPlanModeApprove: async (requestId: string, selectedCandidates?: SelectedPlanCandidate[]) => {
+        await handleExitPlanModeApprove(requestId, sessionId, selectedCandidates);
       },
       exitPlanModeStartNewSession: async (requestId: string, planFilePath: string) => {
         await handleExitPlanModeStartNewSession(requestId, sessionId, planFilePath);

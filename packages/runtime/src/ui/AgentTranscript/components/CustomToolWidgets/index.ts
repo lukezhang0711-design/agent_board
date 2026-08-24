@@ -63,7 +63,12 @@ export {
 } from './InteractivePromptStatus';
 
 // Re-export host types (for use in SessionTranscript to set the host)
-export type { InteractiveWidgetHost, PermissionScope, ToolPermissionResponse } from './InteractiveWidgetHost';
+export type {
+  InteractiveWidgetHost,
+  PermissionScope,
+  SelectedPlanCandidate,
+  ToolPermissionResponse,
+} from './InteractiveWidgetHost';
 export { noopInteractiveWidgetHost } from './InteractiveWidgetHost';
 export type {
   InteractivePromptAvailability,

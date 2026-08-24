@@ -209,6 +209,7 @@ describe('MetaAgentService work-order persistence', () => {
       status: closed ? 'closed' : delivery ? 'delivered' : response ? 'responded' : 'submitted',
       decision,
       feedback: response?.feedback,
+      selectedCandidates: response?.selectedCandidates,
       respondedAt: response?.respondedAt,
       respondedBy: response?.respondedBy,
       deliveryMethod: delivery?.method,
@@ -250,6 +251,7 @@ describe('MetaAgentService work-order persistence', () => {
     requestId: string,
     approved: boolean,
     feedback?: string,
+    selectedCandidates?: unknown[],
   ): Promise<void> {
     await AgentMessagesRepository.create({
       sessionId: 'head-session',
@@ -260,6 +262,7 @@ describe('MetaAgentService work-order persistence', () => {
         requestId,
         approved,
         feedback,
+        ...(selectedCandidates ? { selectedCandidates } : {}),
         respondedAt: Date.now(),
         respondedBy: 'desktop',
       }),
@@ -2294,6 +2297,41 @@ describe('MetaAgentService work-order persistence', () => {
       await expect(
         (service as any).waitForPlanApprovalResponse('head-session', requestId),
       ).resolves.toMatchObject({ approved: true, respondedBy: 'desktop' });
+    } finally {
+      infoSpy.mockRestore();
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('returns selected candidates from the durable approval state', async () => {
+    const requestId = 'approval-with-selected-candidate';
+    const selectedCandidates = [{
+      moduleIndex: 0,
+      moduleTitle: '实现模块',
+      name: '稳妥方案',
+      approach: '先补测试，再接入结构化字段',
+      pros: ['可回滚'],
+      cons: ['多一步准备'],
+      risks: ['测试耗时'],
+      provider: 'openai-codex',
+      model: 'gpt-5',
+      effortLevel: 'high',
+    }];
+    await persistPlanApprovalResponse(requestId, true, undefined, selectedCandidates);
+
+    const startedAt = 1_000;
+    const nowSpy = vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValueOnce(startedAt)
+      .mockReturnValue(startedAt + (8 * 24 * 60 * 60 * 1000));
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    try {
+      await expect(
+        (service as any).waitForPlanApprovalResponse('head-session', requestId),
+      ).resolves.toMatchObject({
+        approved: true,
+        selectedCandidates,
+      });
     } finally {
       infoSpy.mockRestore();
       nowSpy.mockRestore();
