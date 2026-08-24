@@ -2197,3 +2197,25 @@ describe('EditorScreenshotWidget', () => {
     expect(img?.getAttribute('src')).toContain('data:image/png;base64,');
   });
 });
+
+describe('SystemReminderCard', () => {
+  it('shows the Head text-plan bypass warning expanded in the session transcript', async () => {
+    const { SystemReminderCard } = await import('../RichTranscriptView');
+    const message = makeMessage({
+      type: 'system_message',
+      text: '<SYSTEM_REMINDER>⚠ Head 未按规提交方案卡，请在对话中要求它正式提交。</SYSTEM_REMINDER>',
+      metadata: {
+        promptType: 'system_reminder',
+        reminderKind: 'text_plan_approval_warning',
+        actionPrompt: '请把上述实施方案用 submit_plan 工具正式提交为方案卡',
+      },
+    });
+
+    render(<SystemReminderCard message={message} />);
+
+    expect(screen.getByTestId('text-plan-bypass-warning')).toBeDefined();
+    expect(screen.getByText(/Head 未按规提交方案卡，请在对话中要求它正式提交/)).toBeDefined();
+    expect(screen.getByRole('button', { name: /Head 方案卡警示/ }).getAttribute('aria-expanded'))
+      .toBe('true');
+  });
+});

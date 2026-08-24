@@ -96,4 +96,18 @@ describe('extension agent self-identification (gemini)', () => {
     expect(codexPrompt).toContain('never use `PromptForUserInput` (server: `nimbalyst-mcp`) or `AskUserQuestion` (server: `nimbalyst-mcp`) to approve a plan');
     expect(claudePrompt).not.toContain('never use `PromptForUserInput` (server: `nimbalyst-mcp`) or `AskUserQuestion` (server: `nimbalyst-mcp`) to approve a plan');
   });
+
+  it('gives low-cost Heads a concrete no-text-bypass plan-card template and counterexamples', () => {
+    const prompt = buildMetaAgentSystemPrompt('claude', 'default', {
+      provider: 'claude-code',
+      model: 'haiku',
+    });
+
+    expect(prompt).toContain('## Plan Card Discipline — No Text Bypass');
+    expect(prompt).toContain('Treat a plan written in chat as invalid');
+    expect(prompt).toContain('"planItems": ["Bounded module with its deliverable and acceptance check"]');
+    expect(prompt).toContain('After rejection, submit the revision as a new');
+    expect(prompt).toContain('Ordinary questions, investigation findings, status updates, and failure reports do not need a plan card');
+    expect(prompt).toContain('waiting for approval');
+  });
 });

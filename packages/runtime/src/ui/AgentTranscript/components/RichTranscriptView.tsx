@@ -373,6 +373,7 @@ const PromptAdditionsInline: React.FC<{
 const REMINDER_KIND_LABELS: Record<string, string> = {
   session_naming: 'Session metadata reminder',
   wakeup_resume: 'Resumed from scheduled wakeup',
+  text_plan_approval_warning: 'Head 方案卡警示',
 };
 
 // Keyed by the known PermissionDeniedReasonType values from the SDK. Typed
@@ -420,10 +421,16 @@ const PermissionDeniedCard: React.FC<{
   );
 };
 
-const SystemReminderCard: React.FC<{
+export const SystemReminderCard: React.FC<{
   message: TranscriptViewMessage;
 }> = ({ message }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const reminderKind =
+    message.systemMessage?.reminderKind ??
+    (typeof message.metadata?.reminderKind === 'string'
+      ? (message.metadata.reminderKind as string)
+      : undefined);
+  const isPlanWarning = reminderKind === 'text_plan_approval_warning';
+  const [isExpanded, setIsExpanded] = useState(isPlanWarning);
 
   const content = (message.text ?? '')
     .replace(/^\s*<SYSTEM_REMINDER>/, '')
@@ -435,20 +442,24 @@ const SystemReminderCard: React.FC<{
     return null;
   }
 
-  const reminderKind =
-    message.systemMessage?.reminderKind ??
-    (typeof message.metadata?.reminderKind === 'string'
-      ? (message.metadata.reminderKind as string)
-      : undefined);
   const label =
     (reminderKind && REMINDER_KIND_LABELS[reminderKind]) ?? 'System Reminder';
 
   return (
-    <div className="rich-transcript-system-reminder ml-6 mb-2 rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] px-3 py-2">
+    <div
+      className={`rich-transcript-system-reminder ml-6 mb-2 rounded-md border px-3 py-2 ${
+        isPlanWarning
+          ? 'border-[var(--nim-warning)] bg-[color-mix(in_srgb,var(--nim-warning)_12%,transparent)]'
+          : 'border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)]'
+      }`}
+      data-testid={isPlanWarning ? 'text-plan-bypass-warning' : undefined}
+    >
       <button
         type="button"
         onClick={() => setIsExpanded(v => !v)}
-        className="flex w-full items-center gap-2 text-left text-xs text-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
+        className={`flex w-full items-center gap-2 text-left text-xs hover:text-[var(--nim-text)] ${
+          isPlanWarning ? 'text-[var(--nim-warning)]' : 'text-[var(--nim-text-muted)]'
+        }`}
         aria-expanded={isExpanded}
       >
         <MaterialSymbol
@@ -456,7 +467,7 @@ const SystemReminderCard: React.FC<{
           size={14}
           className={`shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
         />
-        <MaterialSymbol icon="notification_important" size={14} />
+        <MaterialSymbol icon={isPlanWarning ? 'warning' : 'notification_important'} size={14} />
         <span className="font-medium uppercase tracking-[0.08em]">{label}</span>
         <span className="ml-auto text-[10px] text-[var(--nim-text-faint)]">
           {formatMessageTime(message.createdAt?.getTime() ?? 0)}
@@ -464,7 +475,9 @@ const SystemReminderCard: React.FC<{
       </button>
       {isExpanded && (
         <div className="mt-2">
-          <p className="m-0 text-[0.875rem] leading-relaxed text-[var(--nim-text-muted)] whitespace-normal break-words">{content}</p>
+          <p className={`m-0 text-[0.875rem] leading-relaxed whitespace-normal break-words ${
+            isPlanWarning ? 'text-[var(--nim-text)]' : 'text-[var(--nim-text-muted)]'
+          }`}>{content}</p>
           {typeof message.metadata?.actionPrompt === 'string' && message.metadata.actionPrompt && (
             <button
               type="button"
