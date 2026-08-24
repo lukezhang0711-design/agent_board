@@ -5,6 +5,7 @@ import {
   InteractivePromptStatusCard,
   useInteractivePromptStatus,
   type CustomToolWidgetProps,
+  type SelectedPlanCandidate,
 } from '@nimbalyst/runtime/ui/AgentTranscript/components/CustomToolWidgets';
 import { interactiveWidgetHostAtom } from '@nimbalyst/runtime/store/atoms/interactiveWidgetHost';
 import {
@@ -25,6 +26,31 @@ interface SubmittedPlanArgs {
   workOrderCount?: number;
   risks?: unknown;
   planSummary?: string;
+  modules?: unknown;
+}
+
+type StructuredText = string | string[];
+
+interface RenderCandidate {
+  name: string;
+  approach: string;
+  pros: StructuredText;
+  cons: StructuredText;
+  risks: StructuredText;
+  provider: string;
+  model: string;
+  effortLevel: SelectedPlanCandidate['effortLevel'];
+}
+
+interface RenderModule {
+  title: string;
+  outputFiles: string[];
+  inputs: string[];
+  provider: string;
+  model: string;
+  effortLevel: SelectedPlanCandidate['effortLevel'];
+  doneCriteria: string;
+  candidates: RenderCandidate[];
 }
 
 const PLAN_APPROVAL_WIDGET_SOURCE = 'nimbalyst:electron-plan-approval';
@@ -40,6 +66,86 @@ function getSubmittedPlanArgs(value: unknown): SubmittedPlanArgs | null {
   if (typeof args.planId !== 'string' || args.planId.trim() === '') return null;
   return args as unknown as SubmittedPlanArgs;
 }
+
+function getDisplayString(value: unknown, fallback = '未提供'): string {
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function getDisplayStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+    .map((item) => item.trim());
+}
+
+function getStructuredText(value: unknown): StructuredText {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  const list = getDisplayStringList(value);
+  return list.length > 0 ? list : '未提供';
+}
+
+function getEffortLevel(value: unknown): SelectedPlanCandidate['effortLevel'] {
+  return getDisplayString(value) as SelectedPlanCandidate['effortLevel'];
+}
+
+function parsePlanModules(value: unknown): RenderModule[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((value): value is Record<string, unknown> => !!value && typeof value === 'object')
+    .map((module, moduleIndex) => ({
+      title: getDisplayString(module.title, `模块 ${moduleIndex + 1}`),
+      outputFiles: getDisplayStringList(module.outputFiles),
+      inputs: getDisplayStringList(module.inputs),
+      provider: getDisplayString(module.provider),
+      model: getDisplayString(module.model),
+      effortLevel: getEffortLevel(module.effortLevel),
+      doneCriteria: getDisplayString(module.doneCriteria),
+      candidates: Array.isArray(module.candidates)
+        ? module.candidates
+          .filter((candidate): candidate is Record<string, unknown> => !!candidate && typeof candidate === 'object')
+          .map((candidate) => ({
+            name: getDisplayString(candidate.name, '未命名方案'),
+            approach: getDisplayString(candidate.approach),
+            pros: getStructuredText(candidate.pros),
+            cons: getStructuredText(candidate.cons),
+            risks: getStructuredText(candidate.risks),
+            provider: getDisplayString(candidate.provider),
+            model: getDisplayString(candidate.model),
+            effortLevel: getEffortLevel(candidate.effortLevel),
+          }))
+        : [],
+    }));
+}
+
+export function formatPlanOutputPath(filePath: string, workspacePath?: string): string {
+  const normalizedPath = filePath.replace(/\\/g, '/').replace(/^\.\//, '');
+  const normalizedWorkspace = workspacePath?.replace(/\\/g, '/').replace(/\/+$/, '');
+  if (normalizedWorkspace && normalizedPath.startsWith(`${normalizedWorkspace}/`)) {
+    return normalizedPath.slice(normalizedWorkspace.length + 1);
+  }
+  return normalizedPath.replace(/^\/+/, '');
+}
+
+function renderStructuredText(value: StructuredText): React.ReactNode {
+  const values = Array.isArray(value) ? value : [value];
+  return values.map((item, index) => (
+    <div key={`${index}-${item}`} className="whitespace-pre-wrap break-words">
+      {item}
+    </div>
+  ));
+}
+
+const CANDIDATE_MATRIX_ROWS: Array<{
+  label: string;
+  key: 'approach' | 'pros' | 'cons' | 'risks' | 'model' | 'effortLevel';
+}> = [
+  { label: '怎么干', key: 'approach' },
+  { label: '优势', key: 'pros' },
+  { label: '劣势', key: 'cons' },
+  { label: '风险', key: 'risks' },
+  { label: '模型', key: 'model' },
+  { label: '思考强度', key: 'effortLevel' },
+];
 
 /**
  * The immediate-send control must only defer to the submitted-plan approval
@@ -86,6 +192,19 @@ const SubmittedPlanApprovalCard: React.FC<{
   const planSummary = typeof args.planSummary === 'string' && args.planSummary.trim()
     ? args.planSummary.trim()
     : null;
+  const modules = useMemo(() => parsePlanModules(args.modules), [args.modules]);
+  const [selectedCandidateNames, setSelectedCandidateNames] = useState<Record<number, string>>({});
+  const selectedCandidates = useMemo<SelectedPlanCandidate[]>(() => modules.flatMap((module, moduleIndex) => {
+    const selectedName = selectedCandidateNames[moduleIndex];
+    if (!selectedName) return [];
+    const candidate = module.candidates.find((item) => item.name === selectedName);
+    if (!candidate) return [];
+    return [{
+      moduleIndex,
+      moduleTitle: module.title,
+      ...candidate,
+    }];
+  }), [modules, selectedCandidateNames]);
   const toolResult = toolCall.result ?? '';
   const autoApproved = useMemo(() => {
     try { return JSON.parse(toolResult).autoApproved === true; } catch { return false; }
@@ -114,6 +233,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   const [submittedResponse, setSubmittedResponse] = useState<{
     approved: boolean;
     feedback?: string;
+    selectedCandidates?: SelectedPlanCandidate[];
   } | null>(null);
   const feedbackInputRef = useRef<HTMLTextAreaElement>(null);
   const feedbackCompositionRef = useRef(false);
@@ -207,12 +327,20 @@ const SubmittedPlanApprovalCard: React.FC<{
     return () => window.clearTimeout(timeout);
   }, [awaitingResponse, displayResult, responseSubmitted]);
 
-  const submitResponse = useCallback(async (response: { approved: boolean; feedback?: string }) => {
+  const submitResponse = useCallback(async (response: {
+    approved: boolean;
+    feedback?: string;
+    selectedCandidates?: SelectedPlanCandidate[];
+  }) => {
     if (!host || !requestId || promptStatus !== 'available' || !awaitingResponse || isSubmitting) return;
     setIsSubmitting(true);
     try {
       if (response.approved) {
-        await host.exitPlanModeApprove(requestId);
+        if (response.selectedCandidates && response.selectedCandidates.length > 0) {
+          await host.exitPlanModeApprove(requestId, response.selectedCandidates);
+        } else {
+          await host.exitPlanModeApprove(requestId);
+        }
       } else {
         await host.exitPlanModeDeny(requestId, response.feedback);
       }
@@ -230,8 +358,11 @@ const SubmittedPlanApprovalCard: React.FC<{
 
   const handleApprove = useCallback(async () => {
     if (responseSubmitted) return;
-    await submitResponse({ approved: true });
-  }, [responseSubmitted, submitResponse]);
+    await submitResponse({
+      approved: true,
+      ...(selectedCandidates.length > 0 ? { selectedCandidates } : {}),
+    });
+  }, [responseSubmitted, selectedCandidates, submitResponse]);
 
   const handleRequestChanges = useCallback(async () => {
     const trimmedFeedback = feedback.trim();
@@ -256,7 +387,7 @@ const SubmittedPlanApprovalCard: React.FC<{
       data-testid="plan-approval-widget"
       data-state={promptStatus === 'unavailable' ? 'invalid' : displayResult ?? (isPending ? 'pending' : 'completed')}
       data-agent-role={agentRole ?? 'unverified'}
-      className="plan-approval-widget rounded-lg overflow-hidden border border-nim-primary bg-nim-secondary"
+      className="plan-approval-widget rounded-lg overflow-visible border border-nim-primary bg-nim-secondary"
     >
       <div className="flex items-start gap-3 px-4 py-3 border-b border-nim bg-nim-tertiary">
         <div className="flex-1 min-w-0">
@@ -307,6 +438,114 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         )}
 
+        {modules.length > 0 && (
+          <div data-testid="plan-approval-modules" className="mb-4 flex flex-col gap-4">
+            {modules.map((module, moduleIndex) => (
+              <section
+                key={`${moduleIndex}-${module.title}`}
+                className="rounded-md border border-nim bg-nim-tertiary p-3"
+              >
+                <div className="mb-3 text-sm font-semibold text-nim">{module.title}</div>
+                <dl className="grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <dt className="text-xs font-semibold text-nim-muted">产出文件</dt>
+                    <dd className="mt-1 flex min-w-0 flex-col gap-1 text-nim select-text">
+                      {module.outputFiles.length > 0
+                        ? module.outputFiles.map((filePath) => (
+                          <code
+                            key={filePath}
+                            className="whitespace-nowrap text-[12px]"
+                          >
+                            {formatPlanOutputPath(filePath, effectiveWorkspacePath)}
+                          </code>
+                        ))
+                        : '未提供'}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-semibold text-nim-muted">原料</dt>
+                    <dd className="mt-1 text-nim select-text">
+                      {module.inputs.length > 0 ? renderStructuredText(module.inputs) : '未提供'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold text-nim-muted">提供方</dt>
+                    <dd className="mt-1 text-nim select-text">{module.provider}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold text-nim-muted">模型</dt>
+                    <dd className="mt-1 whitespace-nowrap text-nim select-text">{module.model}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold text-nim-muted">思考强度</dt>
+                    <dd className="mt-1 text-nim select-text">{module.effortLevel}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-semibold text-nim-muted">完成标准</dt>
+                    <dd className="mt-1 whitespace-pre-wrap break-words text-nim select-text">{module.doneCriteria}</dd>
+                  </div>
+                </dl>
+
+                {module.candidates.length > 0 && (
+                  <div data-testid="plan-candidate-matrix" className="mt-4">
+                    <div className="mb-2 text-xs font-semibold text-nim">候选方案对比</div>
+                    <div className="overflow-x-auto pb-2">
+                      <div
+                        className="grid min-w-max text-[13px]"
+                        style={{
+                          gridTemplateColumns: `minmax(76px, 0.35fr) repeat(${module.candidates.length}, minmax(220px, 1fr))`,
+                        }}
+                      >
+                        <div className="sticky left-0 z-10 border-b border-r border-nim bg-nim-tertiary p-2 text-xs font-semibold text-nim-muted">
+                          字段
+                        </div>
+                        {module.candidates.map((candidate) => (
+                          <div
+                            key={candidate.name}
+                            className="border-b border-nim p-2 text-nim"
+                          >
+                            <div className="mb-2 whitespace-nowrap font-semibold">{candidate.name}</div>
+                            <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-nim-muted">
+                              <input
+                                type="radio"
+                                name={`plan-candidate-${args.planId}-${moduleIndex}`}
+                                value={candidate.name}
+                                checked={selectedCandidateNames[moduleIndex] === candidate.name}
+                                onChange={() => setSelectedCandidateNames((current) => ({
+                                  ...current,
+                                  [moduleIndex]: candidate.name,
+                                }))}
+                                data-testid={`plan-candidate-radio-${moduleIndex}-${candidate.name}`}
+                                aria-label={`选这个 ${candidate.name}`}
+                              />
+                              <span>选这个</span>
+                            </label>
+                          </div>
+                        ))}
+                        {CANDIDATE_MATRIX_ROWS.map((row) => (
+                          <React.Fragment key={row.key}>
+                            <div className="sticky left-0 z-10 border-b border-r border-nim bg-nim-tertiary p-2 text-xs font-semibold text-nim-muted">
+                              {row.label}
+                            </div>
+                            {module.candidates.map((candidate) => (
+                              <div
+                                key={`${candidate.name}-${row.key}`}
+                                className={`border-b border-nim p-2 text-nim ${row.key === 'model' ? 'whitespace-nowrap' : 'whitespace-normal break-words'}`}
+                              >
+                                {renderStructuredText(candidate[row.key])}
+                              </div>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
+
         <ol className="m-0 pl-5 space-y-1 text-[13px] text-nim select-text">
           {planItems.map((item, index) => (
             <li key={`${index}-${item}`}>{item}</li>
@@ -325,7 +564,10 @@ const SubmittedPlanApprovalCard: React.FC<{
         </div>
 
         {promptStatus !== 'unavailable' && !displayResult && awaitingResponse && promptStatus === 'available' && host && requestId && !responseSubmitted && (
-          <div className="mt-4 flex flex-col gap-2">
+          <div
+            data-testid="plan-approval-actions"
+            className="sticky bottom-0 z-20 -mx-4 -mb-4 mt-4 flex flex-col gap-2 border-t border-nim bg-nim-secondary/95 p-4 backdrop-blur"
+          >
             <button
               type="button"
               data-testid="plan-approval-approve"

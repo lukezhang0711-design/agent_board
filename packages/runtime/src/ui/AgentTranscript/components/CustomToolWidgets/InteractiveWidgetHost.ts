@@ -22,6 +22,7 @@ export interface AskUserQuestionResponse {
 // ============================================================
 
 import type { RequestUserInputAnswer } from '../../../../ai/server/providers/shared/requestUserInputTypes';
+import type { EffortLevel } from '../../../../ai/server/effortLevels';
 export type {
   InteractivePromptAvailability,
   InteractivePromptStatusQuery,
@@ -39,10 +40,24 @@ export interface RequestUserInputResponse {
 // ExitPlanMode Types
 // ============================================================
 
+export interface SelectedPlanCandidate {
+  moduleIndex: number;
+  moduleTitle: string;
+  name: string;
+  approach: string;
+  pros: string | string[];
+  cons: string | string[];
+  risks: string | string[];
+  provider: string;
+  model: string;
+  effortLevel: EffortLevel;
+}
+
 export interface ExitPlanModeResponse {
   approved: boolean;
   feedback?: string;
   startNewSession?: boolean;
+  selectedCandidates?: SelectedPlanCandidate[];
 }
 
 // ============================================================
@@ -113,7 +128,7 @@ export interface InteractiveWidgetHost {
   /**
    * Approve exiting plan mode and switch to agent mode
    */
-  exitPlanModeApprove(requestId: string): Promise<void>;
+  exitPlanModeApprove(requestId: string, selectedCandidates?: SelectedPlanCandidate[]): Promise<void>;
 
   /**
    * Approve and start a new implementation session

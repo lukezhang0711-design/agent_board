@@ -295,6 +295,7 @@ export interface DurablePlanApprovalState {
   status: PlanApprovalStatus;
   decision?: PlanApprovalDecision;
   feedback?: string;
+  selectedCandidates?: unknown[];
   respondedAt?: number;
   respondedBy?: string;
   deliveryMethod?: PlanApprovalDeliveryMethod;
@@ -406,6 +407,7 @@ export function deriveDurablePlanApprovalState(
     status,
     decision,
     ...(feedback ? { feedback } : {}),
+    ...(Array.isArray(response?.selectedCandidates) ? { selectedCandidates: response.selectedCandidates } : {}),
     ...(typeof response?.respondedAt === 'number' ? { respondedAt: response.respondedAt } : {}),
     ...(typeof response?.respondedBy === 'string' ? { respondedBy: response.respondedBy } : {}),
     ...(delivery?.method ? { deliveryMethod: delivery.method as PlanApprovalDeliveryMethod } : {}),
@@ -1395,6 +1397,7 @@ export class AIService {
         approved: response.approved,
         clearContext: response.clearContext,
         feedback: response.feedback,
+        selectedCandidates: response.selectedCandidates,
         respondedAt: Date.now(),
         respondedBy,
       };
@@ -4054,7 +4057,7 @@ export class AIService {
     });
 
     // Handle ExitPlanMode confirmation response from renderer
-    safeHandle('ai:exitPlanModeConfirmResponse', async (event, requestId: string, sessionId: string, response: { approved: boolean; clearContext?: boolean; feedback?: string }) => {
+    safeHandle('ai:exitPlanModeConfirmResponse', async (event, requestId: string, sessionId: string, response: { approved: boolean; clearContext?: boolean; feedback?: string; selectedCandidates?: unknown[] }) => {
       const canonicalRequestId = normalizePlanApprovalRequestId(requestId);
       logger.main.info(`[AIService] ExitPlanMode confirmation response: requestId=${canonicalRequestId}, approved=${response.approved}, clearContext=${response.clearContext}, hasFeedback=${!!response.feedback}`);
 

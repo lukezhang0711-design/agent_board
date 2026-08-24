@@ -13,6 +13,7 @@ import type { TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/transcr
 import { getTranscriptToolWidget } from '@nimbalyst/runtime/ui/AgentTranscript/contributions';
 import {
   PlanApprovalWidget,
+  formatPlanOutputPath,
   hasPendingSubmittedPlanApproval,
   registerPlanApprovalWidget,
   unregisterPlanApprovalWidget,
@@ -78,6 +79,41 @@ const planArguments = {
   risks: 'A stale response could approve the wrong plan.',
 };
 
+const structuredPlanArguments = {
+  ...planArguments,
+  modules: [{
+    title: '审批卡片',
+    outputFiles: ['/Users/lukezhang/Desktop/project/packages/electron/PlanApprovalWidget.tsx'],
+    inputs: ['现有审批卡片'],
+    provider: 'openai-codex',
+    model: 'gpt-5.4-mini',
+    effortLevel: 'medium',
+    doneCriteria: '矩阵、单选和审批参数均有测试。',
+    candidates: [
+      {
+        name: '方案 A',
+        approach: '用对齐矩阵展示候选方案。',
+        pros: ['字段同一水平线', '窄屏可横向滚动'],
+        cons: '需要增加候选选择状态。',
+        risks: ['旧卡片格式需要继续兼容。'],
+        provider: 'openai-codex',
+        model: 'gpt-5.4-mini',
+        effortLevel: 'low',
+      },
+      {
+        name: '方案 B',
+        approach: '把候选方案堆成串行长段落。',
+        pros: '实现改动小。',
+        cons: ['同字段不对齐', '阅读成本高'],
+        risks: '窄窗口会难以比较。',
+        provider: 'claude-code',
+        model: 'haiku',
+        effortLevel: 'high',
+      },
+    ],
+  }],
+};
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -106,6 +142,74 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getByRole('button', { name: 'Request changes' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Dismiss plan' })).toBeTruthy();
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
+  });
+
+  it('renders structured module fields and an aligned candidate matrix', () => {
+    renderWidget(structuredPlanArguments, { workspacePath: '/Users/lukezhang/Desktop/project' });
+
+    expect(screen.getByTestId('plan-approval-modules')).toBeTruthy();
+    expect(screen.getByText('审批卡片')).toBeTruthy();
+    expect(screen.getByText('packages/electron/PlanApprovalWidget.tsx')).toBeTruthy();
+    expect(screen.getByText('现有审批卡片')).toBeTruthy();
+    expect(screen.getAllByText('gpt-5.4-mini').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('plan-candidate-matrix')).toBeTruthy();
+    expect(screen.getByText('怎么干')).toBeTruthy();
+    expect(screen.getByText('优势')).toBeTruthy();
+    expect(screen.getByText('劣势')).toBeTruthy();
+    expect(screen.getByText('风险')).toBeTruthy();
+    expect(screen.getAllByText('模型').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('思考强度').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('plan-candidate-radio-0-方案 A')).toBeTruthy();
+    expect(screen.getByTestId('plan-candidate-radio-0-方案 B')).toBeTruthy();
+    expect(screen.getAllByText('选这个').length).toBe(2);
+  });
+
+  it('sends the selected candidate with approval', async () => {
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    renderWidget(structuredPlanArguments, { exitPlanModeApprove });
+
+    fireEvent.click(screen.getByTestId('plan-candidate-radio-0-方案 B'));
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+
+    await waitFor(() => {
+      expect(exitPlanModeApprove).toHaveBeenCalledWith(
+        compositeRequestId,
+        [{
+          moduleIndex: 0,
+          moduleTitle: '审批卡片',
+          name: '方案 B',
+          approach: '把候选方案堆成串行长段落。',
+          pros: '实现改动小。',
+          cons: ['同字段不对齐', '阅读成本高'],
+          risks: '窄窗口会难以比较。',
+          provider: 'claude-code',
+          model: 'haiku',
+          effortLevel: 'high',
+        }],
+      );
+    });
+  });
+
+  it('keeps approval actions sticky while a long card scrolls', () => {
+    renderWidget({
+      ...planArguments,
+      planItems: Array.from({ length: 30 }, (_, index) => `Long plan item ${index + 1}`),
+    });
+
+    const actions = screen.getByTestId('plan-approval-actions');
+    expect(actions.className).toContain('sticky');
+    expect(actions.className).toContain('bottom-0');
+    expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Request changes' })).toBeTruthy();
+  });
+
+  it('formats output paths relative to the project root without truncation', () => {
+    expect(formatPlanOutputPath(
+      '/Users/lukezhang/Desktop/project/packages/electron/PlanApprovalWidget.tsx',
+      '/Users/lukezhang/Desktop/project',
+    )).toBe('packages/electron/PlanApprovalWidget.tsx');
+    expect(formatPlanOutputPath('/desktop/generated/result.md', '/Users/lukezhang/Desktop/project'))
+      .toBe('desktop/generated/result.md');
   });
 
   it('renders an unavailable submitted plan as an explicit invalid card', async () => {

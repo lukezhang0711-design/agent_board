@@ -96,4 +96,18 @@ describe('extension agent self-identification (gemini)', () => {
     expect(codexPrompt).toContain('never use `PromptForUserInput` (server: `nimbalyst-mcp`) or `AskUserQuestion` (server: `nimbalyst-mcp`) to approve a plan');
     expect(claudePrompt).not.toContain('never use `PromptForUserInput` (server: `nimbalyst-mcp`) or `AskUserQuestion` (server: `nimbalyst-mcp`) to approve a plan');
   });
+
+  it('teaches Head to submit structured modules and candidates instead of serial prose', () => {
+    const prompt = buildMetaAgentSystemPrompt('codex', 'default', {
+      provider: 'openai-codex',
+      model: 'gpt-5.4-mini',
+    });
+
+    expect(prompt).toContain('modules');
+    expect(prompt).toContain('candidates');
+    expect(prompt).toContain('选这个');
+    expect(prompt).toContain('selectedCandidates');
+    expect(prompt).toContain('方案文字保持简短');
+    expect(prompt).toContain('不要把多个候选方案写成串行大段落');
+  });
 });

@@ -395,6 +395,42 @@ export function buildMetaAgentSystemPrompt(
 
 For any task that will implement, write files, or change state: call ${submitPlanTool} first. Do not ask for approval in chat text (for example, “Should I proceed?”). The user will not answer text approval requests; ${submitPlanTool} is the only valid approval channel. Read-only review and investigation may proceed without a plan.
 
+## Structured Plan Card Format
+
+Keep \`planItems\` as a short ordered summary for backward compatibility. Put the useful detail in optional \`modules[]\` fields so the approval card can render it as labels and values instead of relying on Markdown formatting. Each module should include \`title\`, \`outputFiles\` (paths relative to the project root), \`inputs\`, the exact \`provider\`, and the exact full \`model\` ID（实名模型名）, \`effortLevel\`, and a concrete \`doneCriteria\`.
+
+When a module has multiple viable approaches, you MUST fill \`modules[].candidates[]\` instead of writing A/B/C/D as serial long paragraphs. Each candidate includes \`name\`, \`approach\` (怎么干), \`pros\`, \`cons\`, \`risks\`, exact \`provider\`, exact \`model\`, and \`effortLevel\`. The user will see one “选这个” control per candidate; after approval, treat the returned \`selectedCandidates\` as authoritative dispatch parameters for the matching child module. Keep plan text concise（方案文字保持简短）; do not write multiple candidate alternatives as serial long paragraphs（不要把多个候选方案写成串行大段落）; details belong in these structured fields.
+
+Complete structured example:
+
+\`\`\`json
+{
+  "title": "Implement the approved plan",
+  "planItems": ["Choose and implement the approved route"],
+  "workOrderCount": 1,
+  "risks": [],
+  "modules": [{
+    "title": "Approval card",
+    "outputFiles": ["packages/electron/src/renderer/components/UnifiedAI/PlanApprovalWidget.tsx"],
+    "inputs": ["Existing approval-card behavior"],
+    "provider": "openai-codex",
+    "model": "gpt-5.4-mini",
+    "effortLevel": "medium",
+    "doneCriteria": "The card renders fields and tests the approval payload.",
+    "candidates": [{
+      "name": "方案 A",
+      "approach": "Render candidates as aligned matrix columns.",
+      "pros": ["Same fields share one row"],
+      "cons": ["Narrow windows need horizontal scrolling"],
+      "risks": ["A stale choice could be approved"],
+      "provider": "openai-codex",
+      "model": "gpt-5.4-mini",
+      "effortLevel": "low"
+    }]
+  }]
+}
+\`\`\`
+
 ## Delegation Rule
 
 You do not have built-in \`Agent\` or \`Task\` tools. When you need parallel help, dispatch it through ${createSessionTool}.
