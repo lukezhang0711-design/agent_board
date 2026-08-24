@@ -500,6 +500,17 @@ interface CreateChildSessionArgs {
   maxParallelOverride?: number;
 }
 
+interface ModuleRouting {
+  provider: string;
+  model: string;
+  effortLevel: EffortLevel;
+}
+
+interface ModelSelectionOverride {
+  original: ModuleRouting;
+  approved: ModuleRouting;
+}
+
 interface SubmitPlanArgs {
   title: string;
   planItems: string[];
@@ -657,6 +668,44 @@ function normalizeStoredChildModelIdentifier(
   return normalizedModel;
 }
 
+function normalizeApprovedModuleModel(
+  provider: string,
+  model: string,
+): string | null {
+  const normalizedProvider = provider.trim();
+  const normalizedModel = model.trim();
+  if (!normalizedProvider || !normalizedModel) return null;
+  const prefix = `${normalizedProvider}:`;
+  if (normalizedModel.includes(':')) {
+    return normalizedModel.startsWith(prefix) ? normalizedModel : null;
+  }
+  return `${prefix}${normalizedModel}`;
+}
+
+function readModuleRouting(value: unknown): ModuleRouting | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const provider = readNonEmptyString(record.provider);
+  const rawModel = readNonEmptyString(record.model);
+  const effortLevel = record.effortLevel;
+  if (
+    !provider
+    || !rawModel
+    || typeof effortLevel !== 'string'
+    || !VALID_EFFORT_LEVELS.has(effortLevel as EffortLevel)
+  ) {
+    return null;
+  }
+  const model = normalizeApprovedModuleModel(provider, rawModel);
+  return model ? { provider, model, effortLevel: effortLevel as EffortLevel } : null;
+}
+
+function sameModuleRouting(left: ModuleRouting, right: ModuleRouting): boolean {
+  return left.provider === right.provider
+    && left.model === right.model
+    && left.effortLevel === right.effortLevel;
+}
+
 interface SpawnSessionArgs {
   title?: string;
   prompt: string;
@@ -698,6 +747,8 @@ type InternalCreateChildSessionArgs = CreateChildSessionArgs & {
   workOrderTrackerIdOverride?: string;
   retryReason?: string;
   notifyParent?: boolean;
+  /** Owner-selected card routing retained on the work-order for reconciliation. */
+  modelSelectionOverride?: ModelSelectionOverride;
 };
 
 interface CreatedChildSessionResult {
@@ -1752,6 +1803,63 @@ export class MetaAgentService {
     }
   }
 
+  /**
+   * The approval card persists owner routing choices through the existing
+   * selectedCandidates receipt. Read that durable receipt immediately before
+   * dispatch so a Head cannot accidentally reuse the pre-review route.
+   */
+  private async applyApprovedCardRouting(
+    workspaceId: string,
+    args: CreateChildSessionArgs,
+  ): Promise<InternalCreateChildSessionArgs> {
+    const planId = args.planId?.trim();
+    if (args.intent !== 'implementation' || !planId) return args;
+
+    const { rows } = await databaseWorker.query<{ data: unknown }>(
+      `SELECT data
+       FROM tracker_items
+       WHERE id = $1
+         AND workspace = $2
+         AND type = 'plan'
+         AND (archived = FALSE OR archived IS NULL)
+       LIMIT 1`,
+      [planId, workspaceId],
+    );
+    const planData = parseWorkOrderData(rows[0]?.data);
+    const modules = Array.isArray(planData.modules) ? planData.modules : [];
+    const moduleIndex = readModuleIndex(args.moduleIndex)
+      ?? (modules.length === 1 ? 1 : undefined);
+    if (moduleIndex === undefined) return args;
+
+    const selectedCandidate = Array.isArray(planData.selectedCandidates)
+      ? planData.selectedCandidates.find((candidate) =>
+          candidate
+          && typeof candidate === 'object'
+          && (candidate as Record<string, unknown>).moduleIndex === moduleIndex - 1,
+        )
+      : undefined;
+    if (!selectedCandidate) return args;
+
+    const approved = readModuleRouting(selectedCandidate);
+    const original = readModuleRouting(modules[moduleIndex - 1]);
+    if (!approved || !original) {
+      throw new Error(
+        `Approved routing for module ${moduleIndex} is incomplete; resubmit the plan card before dispatching.`,
+      );
+    }
+
+    return {
+      ...args,
+      moduleIndex,
+      provider: approved.provider,
+      model: approved.model,
+      effortLevel: approved.effortLevel,
+      ...(sameModuleRouting(original, approved)
+        ? {}
+        : { modelSelectionOverride: { original, approved } }),
+    };
+  }
+
   private validateEffortLevel(effortLevel: EffortLevel | undefined): void {
     if (effortLevel !== undefined && !VALID_EFFORT_LEVELS.has(effortLevel)) {
       throw new Error('effortLevel must be one of low, medium, high, xhigh, max, or ultra');
@@ -2133,6 +2241,7 @@ export class MetaAgentService {
         moduleIndex: readModuleIndex(args.moduleIndex),
         outputFiles: args.outputFiles,
         completionCriteria: args.completionCriteria,
+        modelSelectionOverride: args.modelSelectionOverride,
       },
     );
 
@@ -2562,6 +2671,7 @@ export class MetaAgentService {
             moduleIndex: readModuleIndex(args.moduleIndex),
             outputFiles: args.outputFiles,
             completionCriteria: args.completionCriteria,
+            modelSelectionOverride: args.modelSelectionOverride,
           },
         );
       }
@@ -3433,10 +3543,11 @@ export class MetaAgentService {
     args: CreateChildSessionArgs
   ): Promise<string> {
     await this.assertDispatchAuthorized(workspaceId, args);
+    const approvedArgs = await this.applyApprovedCardRouting(workspaceId, args);
     const result = await this.dispatchOrQueueChildSession(
       metaSessionId,
       workspaceId,
-      args,
+      approvedArgs,
       'create_session',
     );
     return JSON.stringify(result, null, 2);
@@ -3584,6 +3695,7 @@ export class MetaAgentService {
             moduleIndex: readModuleIndex(args.moduleIndex),
             outputFiles: args.outputFiles,
             completionCriteria: args.completionCriteria,
+            modelSelectionOverride: args.modelSelectionOverride,
           },
         );
       }
@@ -4911,6 +5023,7 @@ export class MetaAgentService {
       moduleIndex?: number;
       outputFiles?: string[];
       completionCriteria?: WorkOrderCompletionCriteria;
+      modelSelectionOverride?: ModelSelectionOverride;
     } = {},
   ): Promise<string> {
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
@@ -4955,6 +5068,9 @@ export class MetaAgentService {
         if (outputFiles.length > 0) {
           data.outputFiles = outputFiles;
         }
+        if (options.modelSelectionOverride) {
+          data.modelSelectionOverride = options.modelSelectionOverride;
+        }
         // A retry starts a clean current state. Its previous failure remains in
         // `attempts`; only the current top-level receipt/failure is replaced.
         delete data.failureReason;
@@ -4998,6 +5114,9 @@ export class MetaAgentService {
         ...(options.headSessionId ? { headSessionId: options.headSessionId } : {}),
         ...(moduleIndex !== undefined ? { moduleIndex } : {}),
         ...(outputFiles.length > 0 ? { outputFiles } : {}),
+        ...(options.modelSelectionOverride
+          ? { modelSelectionOverride: options.modelSelectionOverride }
+          : {}),
         attempts: options.receipt
           ? [{
               ...options.receipt,

@@ -56,9 +56,40 @@ interface RenderModule {
   inputs: string[];
   provider: string;
   model: string;
-  effortLevel: SelectedPlanCandidate['effortLevel'];
+  effortLevel: SelectedPlanCandidate['effortLevel'] | '';
   doneCriteria: string;
   candidates: RenderCandidate[];
+}
+
+type PlanEffortLevel = SelectedPlanCandidate['effortLevel'];
+
+interface PlanCatalogModel {
+  id: string;
+  provider: string;
+  supportedEffortLevels: PlanEffortLevel[];
+  defaultEffortLevel?: PlanEffortLevel;
+}
+
+interface PlanCatalogStatus {
+  modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
+  verified?: boolean;
+  lastError?: { message?: string } | null;
+}
+
+interface PlanCatalogState {
+  status: 'loading' | 'ready' | 'failed';
+  models: PlanCatalogModel[];
+}
+
+interface ModuleRouteSelection {
+  model: string;
+  effortLevel?: PlanEffortLevel;
+}
+
+interface ResolvedModuleRoute {
+  provider: string;
+  model: string;
+  effortLevel: PlanEffortLevel;
 }
 
 type RenderModuleApprovalStatus = PlanModuleApproval['status'];
@@ -106,6 +137,12 @@ function getEffortLevel(value: unknown): SelectedPlanCandidate['effortLevel'] {
   return getDisplayString(value) as SelectedPlanCandidate['effortLevel'];
 }
 
+function getOptionalEffortLevel(
+  value: unknown,
+): SelectedPlanCandidate['effortLevel'] | '' {
+  return getDisplayString(value, '') as SelectedPlanCandidate['effortLevel'] | '';
+}
+
 function parsePlanModules(value: unknown): RenderModule[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -118,8 +155,8 @@ function parsePlanModules(value: unknown): RenderModule[] {
       outputFiles: getDisplayStringList(module.outputFiles),
       inputs: getDisplayStringList(module.inputs),
       provider: getDisplayString(module.provider),
-      model: getDisplayString(module.model),
-      effortLevel: getEffortLevel(module.effortLevel),
+      model: getDisplayString(module.model, ''),
+      effortLevel: getOptionalEffortLevel(module.effortLevel),
       doneCriteria: getDisplayString(module.doneCriteria),
       candidates: Array.isArray(module.candidates)
         ? module.candidates
@@ -166,6 +203,109 @@ function parseModuleApprovals(value: unknown): RenderModuleApproval[] {
       } satisfies RenderModuleApproval,
     ];
   });
+}
+
+const PLAN_EFFORT_LEVELS: PlanEffortLevel[] = [
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+  'ultra',
+];
+
+function isPlanEffortLevel(value: unknown): value is PlanEffortLevel {
+  return typeof value === 'string' && PLAN_EFFORT_LEVELS.includes(value as PlanEffortLevel);
+}
+
+function toProviderQualifiedModelId(provider: string, model: string): string {
+  const normalizedModel = model.trim();
+  if (!normalizedModel || normalizedModel === '未提供') return '';
+  if (normalizedModel.includes(':')) return normalizedModel;
+  const normalizedProvider = provider.trim();
+  return normalizedProvider && normalizedProvider !== '未提供'
+    ? `${normalizedProvider}:${normalizedModel}`
+    : '';
+}
+
+function isLiveCatalogStatus(status: PlanCatalogStatus | undefined): boolean {
+  if (!status) return true;
+  return status.modelSource === 'runtime'
+    && status.verified === true
+    && !status.lastError;
+}
+
+function parseLiveCatalogModels(value: unknown): PlanCatalogModel[] | null {
+  if (!value || typeof value !== 'object') return null;
+  const response = value as Record<string, unknown>;
+  if (response.success !== true || !response.grouped || typeof response.grouped !== 'object') {
+    return null;
+  }
+  const statuses = response.catalogStatuses && typeof response.catalogStatuses === 'object'
+    ? response.catalogStatuses as Record<string, PlanCatalogStatus>
+    : {};
+  const uniqueModels = new Map<string, PlanCatalogModel>();
+  for (const [groupedProvider, models] of Object.entries(
+    response.grouped as Record<string, unknown>,
+  )) {
+    if (!Array.isArray(models)) {
+      continue;
+    }
+    for (const model of models) {
+      if (!model || typeof model !== 'object') continue;
+      const record = model as Record<string, unknown>;
+      const id = typeof record.id === 'string' ? record.id.trim() : '';
+      const provider = typeof record.provider === 'string'
+        ? record.provider.trim()
+        : groupedProvider;
+      if (!isLiveCatalogStatus(statuses[provider])) continue;
+      const providerPrefix = `${provider}:`;
+      if (!id || !provider || !id.startsWith(providerPrefix)) continue;
+      const supportedEffortLevels = Array.isArray(record.supportedEffortLevels)
+        ? record.supportedEffortLevels.filter(isPlanEffortLevel)
+        : [];
+      const defaultEffortLevel = isPlanEffortLevel(record.defaultEffortLevel)
+        && supportedEffortLevels.includes(record.defaultEffortLevel)
+        ? record.defaultEffortLevel
+        : undefined;
+      uniqueModels.set(id, {
+        id,
+        provider,
+        supportedEffortLevels,
+        ...(defaultEffortLevel ? { defaultEffortLevel } : {}),
+      });
+    }
+  }
+  return [...uniqueModels.values()];
+}
+
+function resolveModuleEffortLevel(
+  model: PlanCatalogModel | undefined,
+  requestedEffort: unknown,
+): PlanEffortLevel | null {
+  if (!model || model.supportedEffortLevels.length === 0) return null;
+  if (
+    isPlanEffortLevel(requestedEffort)
+    && model.supportedEffortLevels.includes(requestedEffort)
+  ) {
+    return requestedEffort;
+  }
+  if (
+    model.defaultEffortLevel
+    && model.supportedEffortLevels.includes(model.defaultEffortLevel)
+  ) {
+    return model.defaultEffortLevel;
+  }
+  return model.supportedEffortLevels[0] ?? null;
+}
+
+function isSameModuleRoute(
+  module: RenderModule,
+  route: ResolvedModuleRoute,
+): boolean {
+  return route.provider === module.provider
+    && route.model === toProviderQualifiedModelId(module.provider, module.model)
+    && route.effortLevel === module.effortLevel;
 }
 
 export function formatPlanOutputPath(
@@ -270,24 +410,103 @@ const SubmittedPlanApprovalCard: React.FC<{
   const [selectedCandidateNames, setSelectedCandidateNames] = useState<
     Record<number, string>
   >({});
+  const [modelCatalog, setModelCatalog] = useState<PlanCatalogState>({
+    status: (
+      window as unknown as {
+        electronAPI?: { aiGetModels?: () => Promise<unknown> };
+      }
+    ).electronAPI?.aiGetModels ? 'loading' : 'failed',
+    models: [],
+  });
+  const [moduleRouteSelections, setModuleRouteSelections] = useState<
+    Record<number, ModuleRouteSelection>
+  >({});
+
+  useEffect(() => {
+    let disposed = false;
+    const loadModels = (
+      window as unknown as {
+        electronAPI?: { aiGetModels?: () => Promise<unknown> };
+      }
+    ).electronAPI?.aiGetModels;
+    if (!loadModels) {
+      return undefined;
+    }
+    setModelCatalog({ status: 'loading', models: [] });
+    void loadModels()
+      .then((response) => {
+        if (disposed) return;
+        const models = parseLiveCatalogModels(response);
+        setModelCatalog(
+          models === null
+            ? { status: 'failed', models: [] }
+            : { status: 'ready', models },
+        );
+      })
+      .catch(() => {
+        if (!disposed) setModelCatalog({ status: 'failed', models: [] });
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [args.planId]);
+
+  const catalogModelsById = useMemo(
+    () => new Map(modelCatalog.models.map((model) => [model.id, model])),
+    [modelCatalog.models],
+  );
+  const moduleRoutes = useMemo<(ResolvedModuleRoute | null)[]>(
+    () =>
+      modules.map((module, moduleIndex) => {
+        const selection = moduleRouteSelections[moduleIndex];
+        const modelId = selection?.model
+          ?? toProviderQualifiedModelId(module.provider, module.model);
+        const model = catalogModelsById.get(modelId);
+        const effortLevel = resolveModuleEffortLevel(
+          model,
+          selection?.effortLevel ?? module.effortLevel,
+        );
+        return model && effortLevel
+          ? {
+              provider: model.provider,
+              model: model.id,
+              effortLevel,
+            }
+          : null;
+      }),
+    [catalogModelsById, moduleRouteSelections, modules],
+  );
+  const hasUnavailableModuleRoute =
+    modules.length > 0
+    && (modelCatalog.status !== 'ready' || moduleRoutes.some((route) => !route));
   const selectedCandidates = useMemo<SelectedPlanCandidate[]>(
     () =>
       modules.flatMap((module, moduleIndex) => {
+        const route = moduleRoutes[moduleIndex];
+        if (!route) return [];
         const selectedName = selectedCandidateNames[moduleIndex];
-        if (!selectedName) return [];
-        const candidate = module.candidates.find(
-          (item) => item.name === selectedName,
-        );
-        if (!candidate) return [];
+        const candidate = selectedName
+          ? module.candidates.find((item) => item.name === selectedName)
+          : undefined;
+        if (!candidate && isSameModuleRoute(module, route)) return [];
         return [
           {
             moduleIndex,
             moduleTitle: module.title,
-            ...candidate,
+            ...(candidate ?? {
+              name: '模块路由调整',
+              approach: module.doneCriteria,
+              pros: [],
+              cons: [],
+              risks: [],
+            }),
+            provider: route.provider,
+            model: route.model,
+            effortLevel: route.effortLevel,
           },
         ];
       }),
-    [modules, selectedCandidateNames],
+    [moduleRoutes, modules, selectedCandidateNames],
   );
   const toolResult = toolCall.result ?? '';
   const autoApproved = useMemo(() => {
@@ -570,8 +789,73 @@ const SubmittedPlanApprovalCard: React.FC<{
     ],
   );
 
+  const handleModuleModelChange = useCallback(
+    (moduleIndex: number, modelId: string) => {
+      const model = catalogModelsById.get(modelId);
+      if (!model) {
+        setModuleRouteSelections((current) => ({
+          ...current,
+          [moduleIndex]: { model: '' },
+        }));
+        return;
+      }
+      const requestedEffort =
+        moduleRoutes[moduleIndex]?.effortLevel
+        ?? modules[moduleIndex]?.effortLevel;
+      const effortLevel = resolveModuleEffortLevel(model, requestedEffort);
+      setModuleRouteSelections((current) => ({
+        ...current,
+        [moduleIndex]: {
+          model: model.id,
+          ...(effortLevel ? { effortLevel } : {}),
+        },
+      }));
+    },
+    [catalogModelsById, moduleRoutes, modules],
+  );
+
+  const handleModuleEffortChange = useCallback(
+    (moduleIndex: number, effortLevel: string) => {
+      const route = moduleRoutes[moduleIndex];
+      const model = route ? catalogModelsById.get(route.model) : undefined;
+      if (!route || !model || !isPlanEffortLevel(effortLevel)) return;
+      if (!model.supportedEffortLevels.includes(effortLevel)) return;
+      setModuleRouteSelections((current) => ({
+        ...current,
+        [moduleIndex]: {
+          model: route.model,
+          effortLevel,
+        },
+      }));
+    },
+    [catalogModelsById, moduleRoutes],
+  );
+
+  const handleCandidateSelection = useCallback(
+    (moduleIndex: number, candidate: RenderCandidate) => {
+      setSelectedCandidateNames((current) => ({
+        ...current,
+        [moduleIndex]: candidate.name,
+      }));
+      const modelId = toProviderQualifiedModelId(
+        candidate.provider,
+        candidate.model,
+      );
+      const model = catalogModelsById.get(modelId);
+      const effortLevel = resolveModuleEffortLevel(model, candidate.effortLevel);
+      setModuleRouteSelections((current) => ({
+        ...current,
+        [moduleIndex]: {
+          model: model?.id ?? '',
+          ...(effortLevel ? { effortLevel } : {}),
+        },
+      }));
+    },
+    [catalogModelsById],
+  );
+
   const handleApprove = useCallback(async () => {
-    if (responseSubmitted) return;
+    if (responseSubmitted || hasUnavailableModuleRoute) return;
     const moduleApprovals =
       isMultiModulePlan && rejectedModuleCount > 0
         ? moduleApprovalStates.map((approval) =>
@@ -598,6 +882,7 @@ const SubmittedPlanApprovalCard: React.FC<{
       );
     }
   }, [
+    hasUnavailableModuleRoute,
     isMultiModulePlan,
     moduleApprovalStates,
     rejectedModuleCount,
@@ -727,7 +1012,7 @@ const SubmittedPlanApprovalCard: React.FC<{
               type="button"
               data-testid="plan-approval-approve-all"
               onClick={() => void handleApprove()}
-              disabled={isSubmitting}
+              disabled={isSubmitting || hasUnavailableModuleRoute}
               className="w-full px-4 py-2 rounded-md border-none bg-nim-primary text-white text-[13px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
             >
               全部批准
@@ -776,6 +1061,10 @@ const SubmittedPlanApprovalCard: React.FC<{
             {modules.map((module, moduleIndex) => {
               const stableModuleIndex = moduleIndex + 1;
               const moduleApproval = moduleApprovalStates[moduleIndex];
+              const moduleRoute = moduleRoutes[moduleIndex];
+              const routeModel = moduleRoute
+                ? catalogModelsById.get(moduleRoute.model)
+                : undefined;
               const isModuleRejected = moduleApproval.status === 'rejected';
               const isModuleFeedbackOpen =
                 activeFeedbackModuleIndex === stableModuleIndex;
@@ -844,23 +1133,65 @@ const SubmittedPlanApprovalCard: React.FC<{
                         提供方
                       </dt>
                       <dd className="mt-1 text-nim select-text">
-                        {module.provider}
+                        {moduleRoute?.provider ?? module.provider}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-xs font-semibold text-nim-muted">
                         模型
                       </dt>
-                      <dd className="mt-1 whitespace-nowrap text-nim select-text">
-                        {module.model}
+                      <dd className="mt-1 min-w-0">
+                        <select
+                          data-testid={`plan-module-model-select-${stableModuleIndex}`}
+                          aria-label={`${module.title} 模型`}
+                          aria-invalid={!moduleRoute}
+                          value={moduleRoute?.model ?? ''}
+                          onChange={(event) =>
+                            handleModuleModelChange(
+                              moduleIndex,
+                              event.target.value,
+                            )
+                          }
+                          disabled={
+                            modelCatalog.status !== 'ready' || isSubmitting
+                          }
+                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-[13px] text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="">请选择模型</option>
+                          {modelCatalog.models.map((model) => (
+                            <option key={model.id} value={model.id}>
+                              {model.id}
+                            </option>
+                          ))}
+                        </select>
                       </dd>
                     </div>
                     <div>
                       <dt className="text-xs font-semibold text-nim-muted">
                         思考强度
                       </dt>
-                      <dd className="mt-1 text-nim select-text">
-                        {module.effortLevel}
+                      <dd className="mt-1 min-w-0">
+                        <select
+                          data-testid={`plan-module-effort-select-${stableModuleIndex}`}
+                          aria-label={`${module.title} 思考强度`}
+                          aria-invalid={!moduleRoute}
+                          value={moduleRoute?.effortLevel ?? ''}
+                          onChange={(event) =>
+                            handleModuleEffortChange(
+                              moduleIndex,
+                              event.target.value,
+                            )
+                          }
+                          disabled={!routeModel || isSubmitting}
+                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-[13px] text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {!routeModel && <option value="">请选择强度</option>}
+                          {routeModel?.supportedEffortLevels.map((effortLevel) => (
+                            <option key={effortLevel} value={effortLevel}>
+                              {effortLevel}
+                            </option>
+                          ))}
+                        </select>
                       </dd>
                     </div>
                     <div className="sm:col-span-2">
@@ -906,10 +1237,10 @@ const SubmittedPlanApprovalCard: React.FC<{
                                     candidate.name
                                   }
                                   onChange={() =>
-                                    setSelectedCandidateNames((current) => ({
-                                      ...current,
-                                      [moduleIndex]: candidate.name,
-                                    }))
+                                    handleCandidateSelection(
+                                      moduleIndex,
+                                      candidate,
+                                    )
                                   }
                                   data-testid={`plan-candidate-radio-${moduleIndex}-${candidate.name}`}
                                   aria-label={`选这个 ${candidate.name}`}
@@ -1096,7 +1427,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                   type="button"
                   data-testid="plan-approval-approve"
                   onClick={() => void handleApprove()}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || hasUnavailableModuleRoute}
                   className="w-full px-4 py-2 rounded-md border-none bg-nim-primary text-white text-[13px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Approve plan

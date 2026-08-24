@@ -127,5 +127,7 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('stable 1-based moduleIndex');
     expect(prompt).toContain('全部批准');
     expect(prompt).toContain('same planId');
+    expect(prompt).toContain("The boss can change a module's provider-qualified model and thinking effort directly on the approval card.");
+    expect(prompt).toContain('Do not debate model choices in plan prose');
   });
 });

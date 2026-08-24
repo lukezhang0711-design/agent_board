@@ -422,6 +422,8 @@ When there are multiple modules, treat each module as parallel work: submit all 
 
 When a module has multiple viable approaches, you MUST fill \`modules[].candidates[]\` instead of writing A/B/C/D as serial long paragraphs. Each candidate includes \`name\`, \`approach\` (怎么干), \`pros\`, \`cons\`, \`risks\`, exact \`provider\`, exact \`model\`, and \`effortLevel\`. The user will see one “选这个” control per candidate; after approval, treat the returned \`selectedCandidates\` as authoritative dispatch parameters for the matching child module. Keep plan text concise（方案文字保持简短）; do not write multiple candidate alternatives as serial long paragraphs（不要把多个候选方案写成串行大段落）; details belong in these structured fields.
 
+The boss can change a module's provider-qualified model and thinking effort directly on the approval card. Do not debate model choices in plan prose; after approval, use the returned \`selectedCandidates\` \`provider\`, \`model\`, and \`effortLevel\` as the authoritative dispatch parameters.
+
 Complete structured example:
 
 \`\`\`json
