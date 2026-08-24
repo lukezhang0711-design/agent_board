@@ -19,7 +19,7 @@ import { atom, type Atom } from 'jotai';
 import posthog from 'posthog-js';
 import { copyToClipboard } from '@nimbalyst/runtime';
 import { store } from '@nimbalyst/runtime/store';
-import { type EffortLevel, DEFAULT_EFFORT_LEVEL, parseEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import { type EffortLevel, parseEffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { AlphaFeatureTag, getDefaultAlphaFeatures } from '../../../shared/alphaFeatures';
 import { BetaFeatureTag } from '../../../shared/betaFeatures';
 import { DeveloperFeatureTag, DEVELOPER_FEATURES, getDefaultDeveloperFeatures, enableAllDeveloperFeatures, disableAllDeveloperFeatures, areAllDeveloperFeaturesEnabled } from '../../../shared/developerFeatures';
@@ -970,8 +970,8 @@ export async function initAIDebugSettings(): Promise<AIDebugSettings> {
 export interface AgentModeSettings {
   /** The last model selected by the user in agent mode, used as default for new sessions */
   defaultModel: string;
-  /** Engine-reported thinking effort (including ultra when supported). */
-  defaultEffortLevel: EffortLevel;
+  /** A raw engine-declared thinking effort, if the selected model has one. */
+  defaultEffortLevel?: EffortLevel;
 }
 
 /**
@@ -982,7 +982,7 @@ const defaultAgentModeSettings: AgentModeSettings = {
   // Main resolves a first-install session only from the engine's own live
   // recommended row; a previously saved model is always validated as-is.
   defaultModel: '',
-  defaultEffortLevel: DEFAULT_EFFORT_LEVEL,
+  defaultEffortLevel: undefined,
 };
 
 /**
@@ -1008,7 +1008,7 @@ function scheduleAgentModePersist(settings: AgentModeSettings): void {
     agentModePersistTimer = null;
     if (typeof window !== 'undefined' && window.electronAPI) {
       await window.electronAPI.invoke('settings:set-default-ai-model', settings.defaultModel);
-      await window.electronAPI.invoke('settings:set-default-effort-level', settings.defaultEffortLevel);
+      await window.electronAPI.invoke('settings:set-default-effort-level', settings.defaultEffortLevel ?? null);
     }
   }, AGENT_MODE_PERSIST_DEBOUNCE_MS);
 }

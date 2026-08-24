@@ -194,12 +194,7 @@ function toProviderModelId(rawId: string): string {
 }
 
 function isEffortLevel(value: unknown): value is EffortLevel {
-  return value === 'low'
-    || value === 'medium'
-    || value === 'high'
-    || value === 'xhigh'
-    || value === 'max'
-    || value === 'ultra';
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function modelEffortLevels(model: CatalogModel): EffortLevel[] {
@@ -211,7 +206,8 @@ function modelEffortLevels(model: CatalogModel): EffortLevel[] {
       : entry && typeof entry === 'object'
         ? (entry as CatalogReasoningLevel).effort
         : undefined;
-    if (isEffortLevel(effort) && !levels.includes(effort)) levels.push(effort);
+    const normalized = isEffortLevel(effort) ? effort.trim() : undefined;
+    if (normalized && !levels.includes(normalized)) levels.push(normalized);
   }
   return levels;
 }
@@ -223,7 +219,8 @@ function mapCatalogModels(catalog: ModelsCatalog): AIModel[] {
     if (model.visibility !== 'list' || typeof model.slug !== 'string' || !model.slug.trim()) continue;
     const levels = modelEffortLevels(model);
     const defaultEffortLevel = isEffortLevel(model.default_reasoning_level)
-      ? model.default_reasoning_level
+      && levels.includes(model.default_reasoning_level.trim())
+      ? model.default_reasoning_level.trim()
       : undefined;
     const id = toProviderModelId(model.slug);
     if (mapped.has(id)) continue;

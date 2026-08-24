@@ -362,6 +362,7 @@ interface ElectronAPI {
   aiTestConnection: (provider: string, workspacePath?: string) => Promise<any>;
   aiGetModels: () => Promise<{ success: boolean; models: any[]; grouped: Record<string, any[]> }>;
   aiGetAllModels: () => Promise<any>;
+  aiRefreshModelCatalogs: () => Promise<{ success: boolean; catalogs: Record<string, unknown> }>;
   aiClearModelCache: () => Promise<void>;
   aiRefreshSessionProvider: (sessionId: string) => Promise<void>;
 

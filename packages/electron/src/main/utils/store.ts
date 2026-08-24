@@ -42,6 +42,8 @@ export interface ExtensionSettings {
 }
 
 interface AppStoreSchema {
+  /** Raw effort token declared by the currently selected engine model. */
+  defaultEffortLevel?: string;
   theme: AppTheme;
   themeIsDark?: boolean; // Whether the current theme is dark (used for extension themes)
   // Set when the active theme disappeared (extension uninstalled/disabled or
@@ -1440,12 +1442,15 @@ export function setDefaultAIModel(model: string): void {
 // Default Effort Level Settings (Opus 4.6 adaptive reasoning)
 export function getDefaultEffortLevel(): EffortLevel | undefined {
   const stored = getAppStore().get('defaultEffortLevel');
-  if (!stored) return undefined;
   return parseEffortLevel(stored);
 }
 
-export function setDefaultEffortLevel(level: EffortLevel): void {
-  getAppStore().set('defaultEffortLevel', level);
+export function setDefaultEffortLevel(level: EffortLevel | undefined): void {
+  if (level) {
+    getAppStore().set('defaultEffortLevel', level);
+  } else {
+    getAppStore().delete('defaultEffortLevel');
+  }
 }
 
 // Analytics Settings

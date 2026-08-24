@@ -15,6 +15,7 @@ function catalogResult() {
         default_reasoning_level: 'low',
         supported_reasoning_levels: [
           { effort: 'low', description: 'Fast' },
+          { effort: 'turbo', description: 'New engine tier' },
           { effort: 'ultra', description: 'Maximum reasoning' },
         ],
         visibility: 'list',
@@ -50,7 +51,7 @@ afterEach(() => {
 });
 
 describe('CodexModelRefreshService', () => {
-  it('uses only `codex debug models`, lists only visibility=list models, and preserves ultra', async () => {
+  it('uses only `codex debug models`, lists only visibility=list models, and preserves unknown engine tiers', async () => {
     const commandRunner = vi.fn().mockResolvedValue({ stdout: catalogResult() });
     const { service } = createHarness(commandRunner);
 
@@ -67,7 +68,7 @@ describe('CodexModelRefreshService', () => {
         name: 'GPT-5.6 Sol',
         description: 'Frontier coding model',
         defaultEffortLevel: 'low',
-        supportedEffortLevels: ['low', 'ultra'],
+        supportedEffortLevels: ['low', 'turbo', 'ultra'],
         isEngineDefault: true,
       }),
     ]);

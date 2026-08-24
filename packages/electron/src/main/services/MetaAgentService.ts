@@ -79,7 +79,6 @@ const PLAN_APPROVAL_FAST_POLL_WINDOW_MS = 60 * 1000;
 const PLAN_APPROVAL_FAST_POLL_INTERVAL_MS = 100;
 const PLAN_APPROVAL_SLOW_POLL_INTERVAL_MS = 2_000;
 const LIFETIME_BACKSTOP = 50;
-const VALID_EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high', 'xhigh', 'max', 'ultra']);
 const WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON = '原指挥官会话已不存在，无法重派';
 
 class DispatchCapacityError extends Error {
@@ -503,7 +502,7 @@ interface CreateChildSessionArgs {
 interface ModuleRouting {
   provider: string;
   model: string;
-  effortLevel: EffortLevel;
+  effortLevel?: EffortLevel;
 }
 
 interface ModelSelectionOverride {
@@ -568,7 +567,7 @@ interface SelectedPlanCandidate {
   risks: string | string[];
   provider: string;
   model: string;
-  effortLevel: EffortLevel;
+  effortLevel?: EffortLevel;
 }
 
 function buildNativeHeadPlanArgs(planSummary: string, planFilePath: string): SubmitPlanArgs {
@@ -687,17 +686,20 @@ function readModuleRouting(value: unknown): ModuleRouting | null {
   const record = value as Record<string, unknown>;
   const provider = readNonEmptyString(record.provider);
   const rawModel = readNonEmptyString(record.model);
-  const effortLevel = record.effortLevel;
+  const effortLevel = typeof record.effortLevel === 'string'
+    ? record.effortLevel.trim()
+    : undefined;
   if (
     !provider
     || !rawModel
-    || typeof effortLevel !== 'string'
-    || !VALID_EFFORT_LEVELS.has(effortLevel as EffortLevel)
+    || (record.effortLevel !== undefined && !effortLevel)
   ) {
     return null;
   }
   const model = normalizeApprovedModuleModel(provider, rawModel);
-  return model ? { provider, model, effortLevel: effortLevel as EffortLevel } : null;
+  return model
+    ? { provider, model, ...(effortLevel ? { effortLevel } : {}) }
+    : null;
 }
 
 function sameModuleRouting(left: ModuleRouting, right: ModuleRouting): boolean {
@@ -1549,14 +1551,14 @@ export class MetaAgentService {
     const routing = await this.resolveChildRouting(parentSessionId, {
       model: effectiveModel,
     });
-    await this.assertChildRoutingAvailable(routing.provider, routing.model, undefined);
+    await this.assertChildRoutingAvailable(routing.provider, routing.model, undefined, false);
 
     const resolved = await this.resolveOrCreateWorkstream(parent, workspaceId);
     const workstreamId = resolved.workstreamId;
     // A manual refresh can turn the catalog red between the initial check and
     // promotion. Compensate that sole mutation before returning the failure.
     try {
-      await this.assertChildRoutingAvailable(routing.provider, routing.model, undefined);
+      await this.assertChildRoutingAvailable(routing.provider, routing.model, undefined, false);
     } catch (error) {
       if (resolved.promotedParent && workstreamId) {
         await this.rollbackPromotedWorkstream(parent, workspaceId, workstreamId);
@@ -1861,8 +1863,8 @@ export class MetaAgentService {
   }
 
   private validateEffortLevel(effortLevel: EffortLevel | undefined): void {
-    if (effortLevel !== undefined && !VALID_EFFORT_LEVELS.has(effortLevel)) {
-      throw new Error('effortLevel must be one of low, medium, high, xhigh, max, or ultra');
+    if (effortLevel !== undefined && !effortLevel.trim()) {
+      throw new Error('effortLevel must be a non-empty engine-declared string');
     }
   }
 
@@ -1944,10 +1946,17 @@ export class MetaAgentService {
     provider: AIProviderType,
     model: string,
     effortLevel: EffortLevel | undefined,
+    refreshCatalog = true,
   ): Promise<void> {
     const aiService = this.aiService;
     if (!aiService) {
       throw new Error('AI service not initialized');
+    }
+    // Refresh only at a Head child-dispatch boundary. A second validation used
+    // to compensate a hierarchy mutation must inspect the result, not launch a
+    // redundant probe; ordinary message sends never reach this method.
+    if (refreshCatalog) {
+      await aiService.refreshModelCatalogForHeadDispatch?.(provider);
     }
     if (effortLevel === undefined) {
       await aiService.assertCurrentDynamicModelAvailable(provider, model);
@@ -3785,6 +3794,7 @@ export class MetaAgentService {
       routing.provider,
       routing.model,
       args.effortLevel,
+      false,
     );
 
     const isolated = args.isolated === true;
@@ -3809,6 +3819,7 @@ export class MetaAgentService {
           routing.provider,
           routing.model,
           args.effortLevel,
+          false,
         );
       } catch (error) {
         if (promotedParent && workstreamId) {

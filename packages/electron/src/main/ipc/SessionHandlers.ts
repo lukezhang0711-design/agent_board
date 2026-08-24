@@ -27,6 +27,7 @@ import { enrichTranscriptMessagesWithToolCallDiffs } from '../services/Transcrip
 import { setSessionPendingPrompt } from '../services/ai/pendingPromptPersistence';
 import {
     assertDynamicModelCatalogSelection,
+    normalizeDynamicModelEffortAfterModelSwitch,
     resolveDynamicModelCatalogSelection,
 } from '../services/ai/modelCatalogValidation';
 
@@ -90,6 +91,29 @@ function notifySessionCreateFailure(
         provider,
         model,
     });
+}
+
+/** Keep a saved effort value compatible when a live-model picker changes rows. */
+async function normalizeEffortAfterModelSwitch(
+    sessionId: string,
+    provider: string,
+    model: string,
+    sessionEffortLevel: unknown,
+): Promise<void> {
+    try {
+        await normalizeDynamicModelEffortAfterModelSwitch({
+            sessionId,
+            provider,
+            modelId: model,
+            sessionEffortLevel,
+        });
+    } catch (error) {
+        // The model selection has already been persisted by this legacy IPC
+        // route. Keep its established behavior; the normal send gate still
+        // rejects a stale model identity, while a later successful send can
+        // correct an effort value without blocking the message.
+        console.warn('[SessionHandlers] Could not normalize effort after model switch:', error);
+    }
 }
 
 function makeSessionFilesCacheKey(workspacePath: string, uncommittedFiles: Set<string>): string {
@@ -334,12 +358,28 @@ export async function registerSessionHandlers() {
 
     // Update session model
     safeHandle('sessions:update-model', async (event, sessionId: string, model: string) => {
+        const currentSession = await AISessionsRepository.get(sessionId);
         await sessionManager.updateSessionModel(sessionId, model);
+        if (currentSession) {
+            await normalizeEffortAfterModelSwitch(
+                sessionId,
+                currentSession.provider,
+                model,
+                (currentSession.metadata as Record<string, unknown> | undefined)?.effortLevel,
+            );
+        }
     });
 
     // Update session provider and model (when switching between providers)
     safeHandle('sessions:update-provider-and-model', async (event, sessionId: string, provider: string, model: string) => {
+        const currentSession = await AISessionsRepository.get(sessionId);
         await sessionManager.updateSessionProviderAndModel(sessionId, provider, model);
+        await normalizeEffortAfterModelSwitch(
+            sessionId,
+            provider,
+            model,
+            (currentSession?.metadata as Record<string, unknown> | undefined)?.effortLevel,
+        );
     });
 
     // Update session draft input
@@ -393,6 +433,16 @@ export async function registerSessionHandlers() {
             }
 
             await AISessionsRepository.updateMetadata(sessionId, updates);
+
+            if (updates.model) {
+                await normalizeEffortAfterModelSwitch(
+                    sessionId,
+                    updates.provider ?? currentSession.provider,
+                    updates.model,
+                    (updates.metadata as Record<string, unknown> | undefined)?.effortLevel
+                        ?? (currentSession.metadata as Record<string, unknown> | undefined)?.effortLevel,
+                );
+            }
 
             // Notify renderer windows so session list state stays in sync without waiting for full refresh.
             // This covers model/provider/title updates from SessionTranscript and similar paths.

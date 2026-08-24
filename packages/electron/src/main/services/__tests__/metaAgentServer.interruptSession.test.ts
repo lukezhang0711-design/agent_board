@@ -67,7 +67,6 @@ describe('interrupt_session meta-agent tool registration', () => {
         planId: { type: 'string' },
         effortLevel: {
           type: 'string',
-          enum: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
         },
         maxParallelOverride: {
           type: 'integer',

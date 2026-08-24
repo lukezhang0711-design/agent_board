@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { resolveEffortLevel, DEFAULT_EFFORT_LEVEL } from '../effortLevels';
+import {
+  getEffortLevelLabel,
+  resolveDeclaredEffortLevel,
+  resolveEffortLevel,
+} from '../effortLevels';
 
 describe('resolveEffortLevel', () => {
   it('uses the explicit per-session effort when set', () => {
@@ -21,7 +25,27 @@ describe('resolveEffortLevel', () => {
     expect(resolveEffortLevel(null, undefined)).toBeUndefined();
   });
 
-  it('coerces an invalid stored session value to the default level', () => {
-    expect(resolveEffortLevel('bogus', 'max')).toBe(DEFAULT_EFFORT_LEVEL);
+  it('preserves a future engine value instead of coercing it to a product enum', () => {
+    expect(resolveEffortLevel('turbo', 'max')).toBe('turbo');
+    expect(getEffortLevelLabel('deep')).toBe('deep');
+  });
+
+  it('uses only the model declaration for unknown future values and fallback', () => {
+    expect(resolveDeclaredEffortLevel('turbo', ['turbo', 'deep'], 'deep')).toMatchObject({
+      effortLevel: 'turbo',
+      outcome: 'accepted',
+    });
+    expect(resolveDeclaredEffortLevel('ultra', ['turbo', 'deep'], 'deep')).toMatchObject({
+      effortLevel: 'deep',
+      outcome: 'fallback',
+    });
+    expect(resolveDeclaredEffortLevel('low', [], undefined)).toMatchObject({
+      effortLevel: undefined,
+      outcome: 'dropped',
+    });
+    expect(resolveDeclaredEffortLevel(undefined, ['turbo', 'deep'], 'deep')).toMatchObject({
+      effortLevel: undefined,
+      outcome: 'none',
+    });
   });
 });

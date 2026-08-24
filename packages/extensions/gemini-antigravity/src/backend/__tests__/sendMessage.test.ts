@@ -61,6 +61,41 @@ describe('gemini-antigravity backend sendMessage', () => {
     );
   });
 
+  it('GREEN FB-116: keeps Gemini tier in the model identity and refreshes it through the existing catalog path', async () => {
+    const cachedModels = [{
+      key: 'gemini-3.7-flash-high',
+      agyModel: 'gemini-3.7-flash-high',
+      displayName: 'Gemini 3.7 Flash High',
+      default: true,
+    }];
+    const refreshedModels = [{
+      key: 'gemini-3.7-pro-deep',
+      agyModel: 'gemini-3.7-pro-deep',
+      displayName: 'Gemini 3.7 Pro Deep',
+    }];
+    const cached = vi.spyOn(AntigravityServerManager.prototype, 'getAvailableAgyModels')
+      .mockResolvedValue(cachedModels);
+    const refreshed = vi.spyOn(AntigravityServerManager.prototype, 'refreshAvailableAgyModels')
+      .mockResolvedValue(refreshedModels);
+
+    const { ctx } = makeCtx();
+    const { methods } = await activate(ctx as never);
+
+    await expect(methods.listModels()).resolves.toEqual([{
+      id: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+      name: 'Gemini 3.7 Flash High',
+      default: true,
+      supportedEffortLevels: [],
+    }]);
+    await expect(methods.refreshModels()).resolves.toEqual([{
+      id: 'antigravity-gemini-agent:gemini-3.7-pro-deep',
+      name: 'Gemini 3.7 Pro Deep',
+      supportedEffortLevels: [],
+    }]);
+    expect(cached).toHaveBeenCalledOnce();
+    expect(refreshed).toHaveBeenCalledOnce();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks(); // remove the prototype spy; the shared() singleton survives across tests
   });

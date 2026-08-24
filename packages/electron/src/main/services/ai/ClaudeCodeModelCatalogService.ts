@@ -4,7 +4,7 @@ import path from 'node:path';
 import { query, type ModelInfo } from '@anthropic-ai/claude-agent-sdk';
 import { resolveClaudeCodeExecutablePath } from '@nimbalyst/runtime/electron/claudeCodeEnvironment';
 import type { AIModel, AIProviderType } from '@nimbalyst/runtime/ai/server/types';
-import { EFFORT_LEVELS, type EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
+import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { logger } from '../../utils/logger';
 
 export type ClaudeCodeModelCatalogPhase = 'normal' | 'retrying' | 'stopped';
@@ -80,8 +80,6 @@ const CACHE_SOURCE = 'claude-agent-sdk:supportedModels' as const;
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 5_000, 30_000];
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
 const DEFAULT_MANUAL_RETRY_DEDUPE_MS = 2_000;
-const DEFAULT_SDK_EFFORT_LEVELS = EFFORT_LEVELS.map(({ key }) => key);
-
 /** First-install UI-only placeholder. It disappears after any failed discovery. */
 const INITIAL_UNVERIFIED_PLACEHOLDER: AIModel[] = [{
   id: 'claude-code:opus-1m',
@@ -95,12 +93,7 @@ function errorMessage(error: unknown): string {
 }
 
 function isEffortLevel(value: unknown): value is EffortLevel {
-  return value === 'low'
-    || value === 'medium'
-    || value === 'high'
-    || value === 'xhigh'
-    || value === 'max'
-    || value === 'ultra';
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 /** Converts the SDK's `opus[1m]` contract into Nimbalyst's persisted `opus-1m`. */
@@ -116,16 +109,12 @@ function mapSupportedModels(models: readonly ClaudeSupportedModel[]): AIModel[] 
     if (!variant) continue;
     const id = `claude-code:${variant}`;
     if (result.has(id)) continue;
-    const supportsEffort = model.supportsEffort === true;
-    const advertisedEffortLevels = (model.supportedEffortLevels ?? []).filter(isEffortLevel);
-    // `supportsEffort` is the documented SDK contract. Newer SDK runtimes may
-    // additionally advertise an exact list; use that when present. If they do
-    // not, the documented boolean must still enable the existing effort
-    // selector instead of making a capable model look unsupported. This is a
-    // UI control vocabulary, not a static model-catalog fallback.
-    const effortLevels = supportsEffort
-      ? (advertisedEffortLevels.length > 0 ? advertisedEffortLevels : [...DEFAULT_SDK_EFFORT_LEVELS])
-      : [];
+    const effortLevels = Array.from(new Set((model.supportedEffortLevels ?? [])
+      .filter(isEffortLevel)
+      .map((level) => level.trim())));
+    // A boolean alone is not a usable declaration: without exact values the
+    // app cannot safely render or transmit an independent effort dimension.
+    const supportsEffort = model.supportsEffort === true && effortLevels.length > 0;
     result.set(id, {
       id,
       name: `Claude Agent · ${model.displayName?.trim() || model.value.trim()}`,

@@ -480,11 +480,24 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
       sessions.delete(sessionId);
     },
 
-    async listModels(): Promise<Array<{ id: string; name: string; default?: boolean }>> {
+    async listModels(): Promise<Array<{ id: string; name: string; default?: boolean; supportedEffortLevels: [] }>> {
       const models = await AntigravityServerManager.shared().getAvailableAgyModels();
       return models.map((model) => ({
         id: `${PROVIDER_ID}:${model.key}`,
         name: model.displayName,
+        // Gemini's selected tier is part of the model key. Do not invent an
+        // independent effort dropdown or combinations the engine never offers.
+        supportedEffortLevels: [],
+        ...(model.default ? { default: true } : {}),
+      }));
+    },
+
+    async refreshModels(): Promise<Array<{ id: string; name: string; default?: boolean; supportedEffortLevels: [] }>> {
+      const models = await AntigravityServerManager.shared().refreshAvailableAgyModels();
+      return models.map((model) => ({
+        id: `${PROVIDER_ID}:${model.key}`,
+        name: model.displayName,
+        supportedEffortLevels: [],
         ...(model.default ? { default: true } : {}),
       }));
     },

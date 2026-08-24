@@ -62,6 +62,7 @@ beforeEach(() => {
         }],
       },
     }),
+    aiRefreshModelCatalogs: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -259,5 +260,57 @@ describe('ModelSelector', () => {
     expect(screen.getByTestId('model-catalog-status-claude-code').textContent)
       .toContain('模型目录未验证');
     expect(screen.queryByText(/Opus \(unverified\)/)).toBeNull();
+  });
+
+  it('GREEN FB-116: keeps the cached Gemini rows selectable-looking while its explicit picker refresh is in flight', async () => {
+    const refresh = (() => {
+      let resolve!: () => void;
+      const promise = new Promise<void>((done) => {
+        resolve = done;
+      });
+      return { promise, resolve };
+    })();
+    let refreshing = false;
+    (window as any).electronAPI.aiGetModels.mockImplementation(async () => ({
+      success: true,
+      grouped: {
+        'antigravity-gemini-agent': [{
+          id: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+          name: 'Gemini 3.7 Flash High',
+          provider: 'antigravity-gemini-agent',
+        }],
+      },
+      catalogStatuses: {
+        'antigravity-gemini-agent': {
+          verified: true,
+          modelSource: 'runtime',
+          inFlight: refreshing,
+          lastSuccessAt: 1,
+          lastError: null,
+        },
+      },
+    }));
+    (window as any).electronAPI.aiRefreshModelCatalogs.mockImplementation(() => {
+      refreshing = true;
+      return refresh.promise;
+    });
+
+    render(
+      <ModelSelector
+        currentModel="antigravity-gemini-agent:gemini-3.7-flash-high"
+        onModelChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('model-picker').textContent).toContain('Gemini 3.7 Flash High'));
+    fireEvent.click(screen.getByTestId('model-picker'));
+
+    await waitFor(() => expect((window as any).electronAPI.aiRefreshModelCatalogs).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.getByTestId('model-catalog-refreshing-antigravity-gemini-agent')).toBeTruthy());
+    expect(screen.getAllByText('Gemini 3.7 Flash High').length).toBeGreaterThanOrEqual(2);
+
+    refreshing = false;
+    refresh.resolve();
+    await waitFor(() => expect(screen.queryByTestId('model-catalog-refreshing-antigravity-gemini-agent')).toBeNull());
   });
 });

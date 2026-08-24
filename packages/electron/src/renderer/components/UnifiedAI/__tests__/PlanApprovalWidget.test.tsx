@@ -43,7 +43,7 @@ const liveModelCatalog = () => ({
         id: 'openai-codex:gpt-5.6-sol',
         name: 'gpt-5.6-sol',
         provider: 'openai-codex',
-        supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+        supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra', 'turbo'],
         defaultEffortLevel: 'high',
       },
     ],
@@ -52,23 +52,22 @@ const liveModelCatalog = () => ({
         id: 'claude-code:haiku',
         name: 'haiku',
         provider: 'claude-code',
-        supportedEffortLevels: ['low', 'medium', 'high'],
-        defaultEffortLevel: 'low',
+        supportedEffortLevels: [],
       },
     ],
     'antigravity-gemini-agent': [
       {
-        id: 'antigravity-gemini-agent:gemini-2.5-pro',
-        name: 'gemini-2.5-pro',
+        id: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+        name: 'gemini-3.7-flash-high',
         provider: 'antigravity-gemini-agent',
-        supportedEffortLevels: ['low', 'medium', 'high'],
-        defaultEffortLevel: 'medium',
+        supportedEffortLevels: [],
       },
     ],
   },
   catalogStatuses: {
     'openai-codex': { modelSource: 'runtime', verified: true, lastError: null },
     'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+    'antigravity-gemini-agent': { modelSource: 'runtime', verified: true, lastError: null },
   },
 });
 
@@ -425,12 +424,12 @@ describe('PlanApprovalWidget', () => {
       const modelSelect = screen.getByTestId(
         "plan-module-model-select-1"
       ) as HTMLSelectElement;
-      const effortSelect = screen.getByTestId(
-        "plan-module-effort-select-1"
-      ) as HTMLSelectElement;
       await waitFor(() =>
         expect(modelSelect.options.length).toBeGreaterThan(1)
       );
+      const effortSelect = screen.getByTestId(
+        "plan-module-effort-select-1"
+      ) as HTMLSelectElement;
 
       const fields = screen.getByTestId("plan-module-fields-1");
       expect(card.className).toContain("plan-module-card");
@@ -481,53 +480,49 @@ describe('PlanApprovalWidget', () => {
           risks: '窄窗口会难以比较。',
           provider: 'claude-code',
           model: 'claude-code:haiku',
-          effortLevel: 'high',
         },
       ]);
     });
   });
 
-  it('green EJ-1: renders model and effort as selectors sourced from the live catalog', async () => {
+  it('green FB-114/115: renders only model controls for Haiku and Gemini, while preserving unknown declared tiers', async () => {
     installModelCatalog();
     renderWidget(modelPickerPlanArguments);
 
     const modelSelect = screen.getByTestId(
       'plan-module-model-select-1',
     ) as HTMLSelectElement;
-    const effortSelect = screen.getByTestId(
-      'plan-module-effort-select-1',
-    ) as HTMLSelectElement;
-
     await waitFor(() => {
       expect(modelSelect.options.length).toBeGreaterThan(1);
     });
+    const effortSelect = screen.getByTestId(
+      'plan-module-effort-select-1',
+    ) as HTMLSelectElement;
     expect(modelSelect.value).toBe('openai-codex:gpt-5.6-sol');
     expect(Array.from(modelSelect.options, (option) => option.value)).toEqual(
       expect.arrayContaining([
         'openai-codex:gpt-5.6-sol',
         'claude-code:haiku',
-        'antigravity-gemini-agent:gemini-2.5-pro',
+        'antigravity-gemini-agent:gemini-3.7-flash-high',
       ]),
     );
     expect(Array.from(effortSelect.options, (option) => option.value)).toContain(
       'ultra',
     );
+    expect(Array.from(effortSelect.options, (option) => option.value)).toContain(
+      'turbo',
+    );
 
     fireEvent.change(modelSelect, { target: { value: 'claude-code:haiku' } });
 
     await waitFor(() => {
-      expect(effortSelect.value).toBe('low');
+      expect(screen.queryByTestId('plan-module-effort-select-1')).toBeNull();
     });
-    expect(Array.from(effortSelect.options, (option) => option.value)).not.toContain(
-      'ultra',
-    );
 
     fireEvent.change(modelSelect, {
-      target: { value: 'openai-codex:gpt-5.6-sol' },
+      target: { value: 'antigravity-gemini-agent:gemini-3.7-flash-high' },
     });
-    expect(Array.from(effortSelect.options, (option) => option.value)).toContain(
-      'ultra',
-    );
+    expect(screen.queryByTestId('plan-module-effort-select-1')).toBeNull();
   });
 
   it('green EJ-2: approves with the owner-edited provider, model, and effort', async () => {
@@ -538,14 +533,17 @@ describe('PlanApprovalWidget', () => {
     const modelSelect = screen.getByTestId(
       'plan-module-model-select-1',
     ) as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
     const effortSelect = screen.getByTestId(
       'plan-module-effort-select-1',
     ) as HTMLSelectElement;
-    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
 
     fireEvent.change(modelSelect, {
       target: { value: 'openai-codex:gpt-5.4-mini' },
     });
+    // Changing model begins at the new row's declared default rather than
+    // carrying a coincidentally named tier from the previous model/engine.
+    expect(effortSelect.value).toBe('medium');
     fireEvent.change(effortSelect, { target: { value: 'high' } });
     fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
 

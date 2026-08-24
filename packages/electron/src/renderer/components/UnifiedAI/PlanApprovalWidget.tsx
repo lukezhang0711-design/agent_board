@@ -48,7 +48,7 @@ interface RenderCandidate {
   risks: StructuredText;
   provider: string;
   model: string;
-  effortLevel: SelectedPlanCandidate['effortLevel'];
+  effortLevel?: SelectedPlanCandidate['effortLevel'];
 }
 
 interface RenderModule {
@@ -62,7 +62,7 @@ interface RenderModule {
   candidates: RenderCandidate[];
 }
 
-type PlanEffortLevel = SelectedPlanCandidate['effortLevel'];
+type PlanEffortLevel = NonNullable<SelectedPlanCandidate['effortLevel']>;
 
 interface PlanCatalogModel {
   id: string;
@@ -90,7 +90,7 @@ interface ModuleRouteSelection {
 interface ResolvedModuleRoute {
   provider: string;
   model: string;
-  effortLevel: PlanEffortLevel;
+  effortLevel?: PlanEffortLevel;
 }
 
 type RenderModuleApprovalStatus = PlanModuleApproval['status'];
@@ -134,8 +134,10 @@ function getStructuredText(value: unknown): StructuredText {
   return list.length > 0 ? list : '未提供';
 }
 
-function getEffortLevel(value: unknown): SelectedPlanCandidate['effortLevel'] {
-  return getDisplayString(value) as SelectedPlanCandidate['effortLevel'];
+function getEffortLevel(value: unknown): SelectedPlanCandidate['effortLevel'] | undefined {
+  return typeof value === 'string' && value.trim()
+    ? value.trim() as SelectedPlanCandidate['effortLevel']
+    : undefined;
 }
 
 function getOptionalEffortLevel(
@@ -173,7 +175,9 @@ function parsePlanModules(value: unknown): RenderModule[] {
               risks: getStructuredText(candidate.risks),
               provider: getDisplayString(candidate.provider),
               model: getDisplayString(candidate.model),
-              effortLevel: getEffortLevel(candidate.effortLevel),
+              ...(getEffortLevel(candidate.effortLevel)
+                ? { effortLevel: getEffortLevel(candidate.effortLevel) }
+                : {}),
             }))
         : [],
     }));
@@ -206,17 +210,8 @@ function parseModuleApprovals(value: unknown): RenderModuleApproval[] {
   });
 }
 
-const PLAN_EFFORT_LEVELS: PlanEffortLevel[] = [
-  'low',
-  'medium',
-  'high',
-  'xhigh',
-  'max',
-  'ultra',
-];
-
 function isPlanEffortLevel(value: unknown): value is PlanEffortLevel {
-  return typeof value === 'string' && PLAN_EFFORT_LEVELS.includes(value as PlanEffortLevel);
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function toProviderQualifiedModelId(provider: string, model: string): string {
@@ -263,7 +258,9 @@ function parseLiveCatalogModels(value: unknown): PlanCatalogModel[] | null {
       const providerPrefix = `${provider}:`;
       if (!id || !provider || !id.startsWith(providerPrefix)) continue;
       const supportedEffortLevels = Array.isArray(record.supportedEffortLevels)
-        ? record.supportedEffortLevels.filter(isPlanEffortLevel)
+        ? Array.from(new Set(record.supportedEffortLevels
+          .filter(isPlanEffortLevel)
+          .map((level) => level.trim())))
         : [];
       const defaultEffortLevel = isPlanEffortLevel(record.defaultEffortLevel)
         && supportedEffortLevels.includes(record.defaultEffortLevel)
@@ -306,7 +303,7 @@ function isSameModuleRoute(
 ): boolean {
   return route.provider === module.provider
     && route.model === toProviderQualifiedModelId(module.provider, module.model)
-    && route.effortLevel === module.effortLevel;
+    && (route.effortLevel ?? '') === module.effortLevel;
 }
 
 export function formatPlanOutputPath(
@@ -482,11 +479,11 @@ const SubmittedPlanApprovalCard: React.FC<{
           model,
           selection?.effortLevel ?? module.effortLevel,
         );
-        return model && effortLevel
+        return model
           ? {
               provider: model.provider,
               model: model.id,
-              effortLevel,
+              ...(effortLevel ? { effortLevel } : {}),
             }
           : null;
       }),
@@ -505,20 +502,32 @@ const SubmittedPlanApprovalCard: React.FC<{
           ? module.candidates.find((item) => item.name === selectedName)
           : undefined;
         if (!candidate && isSameModuleRoute(module, route)) return [];
-        return [
-          {
-            moduleIndex,
-            moduleTitle: module.title,
-            ...(candidate ?? {
+        // The route is the capability-checked source of truth. In particular,
+        // a candidate may carry a historical effort string for a model (such
+        // as Haiku) that declares no independent effort dimension.
+        const candidateDetails = candidate
+          ? {
+              name: candidate.name,
+              approach: candidate.approach,
+              pros: candidate.pros,
+              cons: candidate.cons,
+              risks: candidate.risks,
+            }
+          : {
               name: '模块路由调整',
               approach: module.doneCriteria,
               pros: [],
               cons: [],
               risks: [],
-            }),
+            };
+        return [
+          {
+            moduleIndex,
+            moduleTitle: module.title,
+            ...candidateDetails,
             provider: route.provider,
             model: route.model,
-            effortLevel: route.effortLevel,
+            ...(route.effortLevel ? { effortLevel: route.effortLevel } : {}),
           },
         ];
       }),
@@ -815,10 +824,10 @@ const SubmittedPlanApprovalCard: React.FC<{
         }));
         return;
       }
-      const requestedEffort =
-        moduleRoutes[moduleIndex]?.effortLevel
-        ?? modules[moduleIndex]?.effortLevel;
-      const effortLevel = resolveModuleEffortLevel(model, requestedEffort);
+      // A model change is an engine boundary. Do not translate/reuse a tier
+      // merely because another engine happens to spell it the same; start at
+      // the newly selected model's declared default (or first declaration).
+      const effortLevel = resolveModuleEffortLevel(model, undefined);
       setModuleRouteSelections((current) => ({
         ...current,
         [moduleIndex]: {
@@ -827,7 +836,7 @@ const SubmittedPlanApprovalCard: React.FC<{
         },
       }));
     },
-    [catalogModelsById, moduleRoutes, modules],
+    [catalogModelsById],
   );
 
   const handleModuleEffortChange = useCallback(
@@ -1247,37 +1256,38 @@ const SubmittedPlanApprovalCard: React.FC<{
                         </select>
                       </dd>
                     </div>
-                    <div
-                      data-testid={`plan-module-effort-field-${stableModuleIndex}`}
-                      className="plan-module-effort-field min-w-0"
-                    >
-                      <dt className="text-xs font-semibold text-nim-muted">
-                        思考强度
-                      </dt>
-                      <dd className="mt-1 min-w-0">
-                        <select
-                          data-testid={`plan-module-effort-select-${stableModuleIndex}`}
-                          aria-label={`${module.title} 思考强度`}
-                          aria-invalid={!moduleRoute}
-                          value={moduleRoute?.effortLevel ?? ''}
-                          onChange={(event) =>
-                            handleModuleEffortChange(
-                              moduleIndex,
-                              event.target.value,
-                            )
-                          }
-                          disabled={!routeModel || isSubmitting}
-                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {!routeModel && <option value="">请选择强度</option>}
-                          {routeModel?.supportedEffortLevels.map((effortLevel) => (
-                            <option key={effortLevel} value={effortLevel}>
-                              {effortLevel}
-                            </option>
-                          ))}
-                        </select>
-                      </dd>
-                    </div>
+                    {routeModel && routeModel.supportedEffortLevels.length > 0 && (
+                      <div
+                        data-testid={`plan-module-effort-field-${stableModuleIndex}`}
+                        className="plan-module-effort-field min-w-0"
+                      >
+                        <dt className="text-xs font-semibold text-nim-muted">
+                          思考强度
+                        </dt>
+                        <dd className="mt-1 min-w-0">
+                          <select
+                            data-testid={`plan-module-effort-select-${stableModuleIndex}`}
+                            aria-label={`${module.title} 思考强度`}
+                            aria-invalid={!moduleRoute}
+                            value={moduleRoute?.effortLevel ?? ''}
+                            onChange={(event) =>
+                              handleModuleEffortChange(
+                                moduleIndex,
+                                event.target.value,
+                              )
+                            }
+                            disabled={isSubmitting}
+                            className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {routeModel.supportedEffortLevels.map((effortLevel) => (
+                              <option key={effortLevel} value={effortLevel}>
+                                {effortLevel}
+                              </option>
+                            ))}
+                          </select>
+                        </dd>
+                      </div>
+                    )}
                     <div className="plan-module-done-criteria min-w-0">
                       <dt className="text-xs font-semibold text-nim-muted">
                         完成标准
@@ -1347,7 +1357,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                                       : 'whitespace-normal break-words'
                                   }`}
                                 >
-                                  {renderStructuredText(candidate[row.key])}
+                                  {renderStructuredText(candidate[row.key] ?? '不适用')}
                                 </div>
                               ))}
                             </React.Fragment>
