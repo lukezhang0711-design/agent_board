@@ -54,6 +54,12 @@ async function invokeElectron<T>(page: Page, channel: string, ...args: unknown[]
  * target.
  */
 async function getVerifiedFableCandidate(page: Page): Promise<LiveClaudeCandidate | null> {
+  // Startup can navigate the window mid-poll, destroying the evaluate
+  // context; report "not ready yet" so expect.poll retries instead of failing.
+  return getVerifiedFableCandidateOnce(page).catch(() => null);
+}
+
+async function getVerifiedFableCandidateOnce(page: Page): Promise<LiveClaudeCandidate | null> {
   return page.evaluate(async () => {
     const response = await (window as any).electronAPI.invoke('ai:getModels');
     const status = response?.catalogStatuses?.['claude-code'];
@@ -85,9 +91,22 @@ async function launchWithPreseededUserData(
   workspacePath: string,
   userDataPath: string,
 ): Promise<ElectronApplication> {
-  const rendererResponse = await fetch('http://127.0.0.1:5273', { method: 'HEAD' });
-  if (!rendererResponse.ok) {
-    throw new Error(`Electron renderer server is unavailable: HTTP ${rendererResponse.status}`);
+  // The dev server may bind IPv4 or IPv6 depending on the host — probe both,
+  // matching findDevServerUrl in e2e/helpers.ts.
+  let rendererReachable = false;
+  for (const rendererUrl of ['http://127.0.0.1:5273', 'http://[::1]:5273']) {
+    try {
+      const rendererResponse = await fetch(rendererUrl, { method: 'HEAD' });
+      if (rendererResponse.ok) {
+        rendererReachable = true;
+        break;
+      }
+    } catch {
+      // try the next address family
+    }
+  }
+  if (!rendererReachable) {
+    throw new Error('Electron renderer server is unavailable on 127.0.0.1:5273 and [::1]:5273');
   }
 
   const electronMain = path.resolve(__dirname, '../../out/main/index.js');
