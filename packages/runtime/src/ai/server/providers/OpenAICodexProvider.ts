@@ -795,7 +795,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
         mcpServers,
         ...(isMetaAgent ? {
           allowedTools: BaseAgentProvider.META_AGENT_ALLOWED_TOOLS,
-          disallowedTools: ['Read', 'Write', 'Edit', 'MultiEdit', 'Glob', 'Grep', 'LS', 'Bash', 'WebFetch', 'WebSearch', 'Task', 'Agent'].filter(t => !BaseAgentProvider.META_AGENT_ALLOWED_TOOLS.includes(t)),
+          disallowedTools: ['Read', 'Glob', 'Grep', 'LS', 'Bash', 'WebFetch', 'WebSearch', 'Task', 'Agent'].filter(t => !BaseAgentProvider.META_AGENT_ALLOWED_TOOLS.includes(t)),
         } : {}),
         raw: {
           systemPrompt,

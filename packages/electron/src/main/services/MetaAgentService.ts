@@ -5254,6 +5254,47 @@ export class MetaAgentService {
     }
   }
 
+  /**
+   * A completion receipt can only credit an artifact that the currently bound
+   * child session actually edited. Files on disk alone are not evidence: the
+   * Head can now write its own coordination documents, but may not pad an
+   * implementation module by creating that module's declared deliverable.
+   */
+  private async workOrderOutputFileWasEditedByChild(
+    workspacePath: unknown,
+    childSessionId: unknown,
+    outputFile: string,
+  ): Promise<boolean> {
+    if (
+      typeof workspacePath !== 'string'
+      || !workspacePath.trim()
+      || typeof childSessionId !== 'string'
+      || !childSessionId.trim()
+    ) {
+      return false;
+    }
+
+    const expectedPath = path.resolve(workspacePath, outputFile);
+    try {
+      const editedFiles = await SessionFilesRepository.getFilesBySession(childSessionId, 'edited');
+      return editedFiles.some((file) => {
+        if (typeof file.filePath !== 'string' || !file.filePath.trim()) return false;
+        const editedPath = path.isAbsolute(file.filePath)
+          ? path.normalize(file.filePath)
+          : path.resolve(workspacePath, file.filePath);
+        return editedPath === expectedPath;
+      });
+    } catch (error) {
+      // Failing closed is intentional: without the child-attribution record,
+      // the file cannot be used to settle this implementation work-order.
+      console.warn(
+        `[WorkOrderGuard] Unable to verify child artifact provenance for ${childSessionId}:`,
+        error,
+      );
+      return false;
+    }
+  }
+
   private async updateWorkOrderStatusBySourceRef(
     sourceRef: string,
     status: WorkOrderStatus,
@@ -5295,12 +5336,29 @@ export class MetaAgentService {
       && normalizedSettlement?.receipt?.outcome === 'success'
       && data.intent === 'implementation'
     ) {
-      const missingOutputFile = readWorkOrderOutputFiles(data).find(
+      const outputFiles = readWorkOrderOutputFiles(data);
+      const missingOutputFile = outputFiles.find(
         (outputFile) => !this.workOrderOutputFileExists(row.workspace, outputFile),
       );
       if (missingOutputFile) {
         acceptanceFailureReason = `完成标准要求的 ${missingOutputFile} 不存在`;
         normalizedSettlement.failureReason = acceptanceFailureReason;
+      } else {
+        const outputFileWithoutChildProvenance = (await Promise.all(
+          outputFiles.map(async (outputFile) => ({
+            outputFile,
+            wasEditedByChild: await this.workOrderOutputFileWasEditedByChild(
+              row.workspace,
+              data.childSessionId,
+              outputFile,
+            ),
+          })),
+        )).find(({ wasEditedByChild }) => !wasEditedByChild)?.outputFile;
+        if (outputFileWithoutChildProvenance) {
+          acceptanceFailureReason =
+            `完成标准要求的 ${outputFileWithoutChildProvenance} 已存在，但产出物非该子会话所写`;
+          normalizedSettlement.failureReason = acceptanceFailureReason;
+        }
       }
     }
     // Classify only while the failure is being persisted. The retry gate never

@@ -245,12 +245,10 @@ export async function buildSdkOptions(
     },
     // Head delegation must pass through Nimbalyst's create_session MCP tool so
     // every child is subject to approval, dispatch, concurrency, and tracking.
-    // Head may investigate with native read/diagnostic tools, but product file
-    // writes must come from a child. Standard and dispatched child sessions
-    // retain their native subagent and file-writing tools.
-    ...(isMetaAgent
-      ? { disallowedTools: ['Agent', 'Task', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit'] }
-      : {}),
+    // Head may write its own coordination documents. Product implementation is
+    // still delegated by the system prompt and work-order provenance gate.
+    // Native delegation must pass through Nimbalyst's create_session MCP tool.
+    ...(isMetaAgent ? { disallowedTools: ['Agent', 'Task'] } : {}),
   };
 
   if (currentMode === 'planning') {

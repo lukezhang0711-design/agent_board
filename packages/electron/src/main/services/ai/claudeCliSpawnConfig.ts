@@ -183,14 +183,14 @@ const FORBIDDEN_ENV_KEYS: readonly string[] = [
  */
 const CLAUDE_CLI_DISALLOWED_TOOLS: readonly string[] = ['AskUserQuestion'];
 
-/** Head-only: force delegation and product file writes through child sessions. */
+/**
+ * Head-only: deny Claude's private subagent channel. Head coordination-file
+ * writes stay available; product implementation is delegated by the role
+ * prompt and enforced by the work-order provenance gate.
+ */
 const CLAUDE_CLI_META_AGENT_DISALLOWED_TOOLS: readonly string[] = [
   'Agent',
   'Task',
-  'Write',
-  'Edit',
-  'MultiEdit',
-  'NotebookEdit',
 ];
 
 /** RFC-4122 UUID matcher — the only `--session-id` value the CLI accepts. */
