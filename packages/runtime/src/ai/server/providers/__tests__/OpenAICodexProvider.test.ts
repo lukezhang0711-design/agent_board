@@ -17,6 +17,13 @@ function createAsyncEventStream(events: any[]): AsyncIterable<any> {
   };
 }
 
+type CodexCreateSessionOptions = {
+  model?: unknown;
+  raw: Record<string, unknown> & {
+    codexConfigOverrides?: Record<string, unknown>;
+  };
+};
+
 describe('OpenAICodexProvider', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -36,7 +43,6 @@ describe('OpenAICodexProvider', () => {
     OpenAICodexProvider.setAppServerHostBindings(null);
     OpenAICodexProvider.setCodexAuthGate(null);
     OpenAICodexProvider.setModelRefreshSnapshotResolver(null);
-    OpenAICodexProvider.setModelCatalogPathResolver(null);
 
     // Provide default injected dependencies required by the provider.
     OpenAICodexProvider.setTrustChecker(() => ({ trusted: true, mode: 'allow-all' as any }));
@@ -121,7 +127,7 @@ describe('OpenAICodexProvider', () => {
   });
 
   it('does not expose a static catalog when the host has no verified snapshot', async () => {
-    expect(OpenAICodexProvider.DEFAULT_MODEL).toBe('openai-codex:gpt-5.5');
+    expect(OpenAICodexProvider.getDefaultModel()).toBe('');
 
     await expect(OpenAICodexProvider.getModels()).resolves.toEqual([]);
   });
@@ -144,8 +150,8 @@ describe('OpenAICodexProvider', () => {
     }));
   });
 
-  it('passes the host catalog path in process and SDK config session options', async () => {
-    const createSession = vi.fn(async () => ({
+  it('GREEN EO: never passes a host catalog file into an app-server session', async () => {
+    const createSession = vi.fn(async (_options: CodexCreateSessionOptions) => ({
       id: 'thread-static-model-catalog',
       platform: 'codex-app-server',
       raw: { fake: true },
@@ -163,13 +169,11 @@ describe('OpenAICodexProvider', () => {
       abortSession: vi.fn(),
       cleanupSession: vi.fn(),
     } as any;
-    const catalogPath = '/tmp/nimbalyst model catalog.json';
-    OpenAICodexProvider.setModelCatalogPathResolver(() => catalogPath);
     const provider = new OpenAICodexProvider({}, { protocol, transport: 'app-server' });
     await provider.initialize({ model: 'openai-codex:gpt-5.4' });
 
     for await (const _chunk of provider.sendMessage(
-      'use static catalog',
+      'use native catalog',
       undefined,
       'session-static-model-catalog',
       [],
@@ -181,12 +185,58 @@ describe('OpenAICodexProvider', () => {
     expect(createSession).toHaveBeenCalledTimes(1);
     expect(createSession).toHaveBeenCalledWith(expect.objectContaining({
       raw: expect.objectContaining({
-        codexModelCatalogPath: catalogPath,
         codexConfigOverrides: expect.objectContaining({
-          model_catalog_json: catalogPath,
+          show_raw_agent_reasoning: true,
         }),
       }),
     }));
+    const raw = createSession.mock.calls[0]?.[0]?.raw;
+    if (!raw) throw new Error('expected app-server createSession options');
+    const overrides = raw.codexConfigOverrides;
+    if (!overrides) throw new Error('expected Codex config overrides');
+    expect(raw).not.toHaveProperty('codexModelCatalogPath');
+    expect(overrides).not.toHaveProperty('model_catalog_json');
+  });
+
+  it('GREEN EO: lets the Codex app-server choose its native model and effort when omitted', async () => {
+    const createSession = vi.fn(async (_options: CodexCreateSessionOptions) => ({
+      id: 'thread-native-default',
+      platform: 'codex-app-server',
+      raw: {},
+    }));
+    const protocol = {
+      platform: 'codex-app-server',
+      createSession,
+      resumeSession: vi.fn(),
+      forkSession: vi.fn(),
+      sendMessage: vi.fn(() => createAsyncEventStream([{
+        type: 'complete',
+        content: 'one response',
+        usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+      }])),
+      abortSession: vi.fn(),
+      cleanupSession: vi.fn(),
+    } as any;
+    const provider = new OpenAICodexProvider({}, { protocol, transport: 'app-server' });
+    await provider.initialize({});
+
+    for await (const _chunk of provider.sendMessage(
+      'use native defaults',
+      undefined,
+      'session-native-default',
+      [],
+      process.cwd(),
+    )) {
+      // drain
+    }
+
+    const options = createSession.mock.calls[0]?.[0];
+    if (!options) throw new Error('expected app-server createSession options');
+    const overrides = options.raw.codexConfigOverrides;
+    if (!overrides) throw new Error('expected Codex config overrides');
+    expect(options).not.toHaveProperty('model');
+    expect(overrides).not.toHaveProperty('model_reasoning_effort');
+    expect(options.raw).not.toHaveProperty('effortLevel');
   });
 
   it('normalizes only the provider prefix and never rewrites a missing model', () => {

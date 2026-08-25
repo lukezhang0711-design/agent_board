@@ -297,15 +297,52 @@ export async function buildSdkOptions(
   // the Claude native binary treats the mere presence of that variable as an
   // API-key auth signal, which can shadow a valid OAuth/CLI login and produce
   // "Authentication failed" even though accountInfo() succeeds in settings.
-  const { ANTHROPIC_API_KEY: _envAnthropicKey, OPENAI_API_KEY: _envOpenaiKey, ...sanitizedProcessEnv } = process.env;
-  const { ANTHROPIC_API_KEY: _shellAnthropicKey, OPENAI_API_KEY: _shellOpenaiKey, ...sanitizedShellEnv } = shellEnv;
-  const { ANTHROPIC_API_KEY: _settingsAnthropicKey, OPENAI_API_KEY: _settingsOpenaiKey, ...sanitizedSettingsEnv } = settingsEnv;
+  // OAuth/token variables are equally forbidden: the native credential store
+  // is the source of truth for a subscription session.
+  const {
+    ANTHROPIC_API_KEY: _envAnthropicKey,
+    OPENAI_API_KEY: _envOpenaiKey,
+    ANTHROPIC_AUTH_TOKEN: _envAnthropicAuthToken,
+    CLAUDE_CODE_OAUTH_TOKEN: _envClaudeOauthToken,
+    CLAUDE_CODE_OAUTH_REFRESH_TOKEN: _envClaudeOauthRefreshToken,
+    CLAUDECODE: _envClaudeCode,
+    ...sanitizedProcessEnv
+  } = process.env;
+  const {
+    ANTHROPIC_API_KEY: _shellAnthropicKey,
+    OPENAI_API_KEY: _shellOpenaiKey,
+    ANTHROPIC_AUTH_TOKEN: _shellAnthropicAuthToken,
+    CLAUDE_CODE_OAUTH_TOKEN: _shellClaudeOauthToken,
+    CLAUDE_CODE_OAUTH_REFRESH_TOKEN: _shellClaudeOauthRefreshToken,
+    CLAUDECODE: _shellClaudeCode,
+    ...sanitizedShellEnv
+  } = shellEnv;
+  const {
+    ANTHROPIC_API_KEY: _settingsAnthropicKey,
+    OPENAI_API_KEY: _settingsOpenaiKey,
+    ANTHROPIC_AUTH_TOKEN: _settingsAnthropicAuthToken,
+    CLAUDE_CODE_OAUTH_TOKEN: _settingsClaudeOauthToken,
+    CLAUDE_CODE_OAUTH_REFRESH_TOKEN: _settingsClaudeOauthRefreshToken,
+    CLAUDECODE: _settingsClaudeCode,
+    ...sanitizedSettingsEnv
+  } = settingsEnv;
+
+  // macOS keychain entries are keyed by USER, and changing CLAUDE_CONFIG_DIR
+  // changes the credential namespace. Shell/settings overlays must therefore
+  // never replace the identity inherited by Electron's main process.
+  const credentialIdentity = {
+    ...(typeof process.env.USER === 'string' ? { USER: process.env.USER } : {}),
+    ...(typeof process.env.CLAUDE_CONFIG_DIR === 'string'
+      ? { CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR }
+      : {}),
+  };
 
   const enableAgentTeams = sanitizedSettingsEnv.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS === '1';
   const env: any = {
     ...sanitizedProcessEnv,
     ...sanitizedShellEnv,
     ...sanitizedSettingsEnv,
+    ...credentialIdentity,
     // `auto:N` defers MCP tools when their descriptions exceed N% of the
     // context window. With Opus 4.7's 1M-context default, `auto:10` means
     // ~100K tokens of tool descriptions are still loaded upfront — we saw

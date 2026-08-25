@@ -26,9 +26,9 @@ import {
 import { enrichTranscriptMessagesWithToolCallDiffs } from '../services/TranscriptToolCallEnricher';
 import { setSessionPendingPrompt } from '../services/ai/pendingPromptPersistence';
 import {
-    assertDynamicModelCatalogSelection,
     normalizeDynamicModelEffortAfterModelSwitch,
     resolveDynamicModelCatalogSelection,
+    usesDynamicModelCatalog,
 } from '../services/ai/modelCatalogValidation';
 
 // Initialize session manager
@@ -282,18 +282,15 @@ export async function registerSessionHandlers() {
                 }
             }
 
-            // Dynamic providers must resolve every supplied ID as well as an
-            // omitted default. The resolver owns the live-catalog-only
-            // equivalent-ID migration, so persistence never writes a legacy
-            // spelling back after it has been accepted.
+            // Runtime catalogs are advisory. Preserve an explicit raw model;
+            // when it is omitted, allow the native engine to choose its own
+            // default rather than inventing an application fallback.
             model = await resolveDynamicModelCatalogSelection(provider, model)
                 ?? model
-                ?? ModelIdentifier.getDefaultModelId(provider);
+                ?? (usesDynamicModelCatalog(provider) ? undefined : ModelIdentifier.getDefaultModelId(provider));
             if (!session.model) {
                 console.log(`[SessionHandlers] No model provided, using default: ${model}`);
             }
-
-            await assertDynamicModelCatalogSelection(provider, model);
 
             const createPayload = {
                 id: session.id,
@@ -776,13 +773,11 @@ export async function registerSessionHandlers() {
                 }
             }
 
-            // See sessions:create above: explicit dynamic IDs go through the
-            // same live resolver before they are persisted.
+            // See sessions:create above: dynamic engines own their native
+            // default when no model is supplied.
             model = await resolveDynamicModelCatalogSelection(provider, model)
                 ?? model
-                ?? ModelIdentifier.getDefaultModelId(provider as AIProviderType);
-
-            await assertDynamicModelCatalogSelection(provider, model);
+                ?? (usesDynamicModelCatalog(provider) ? undefined : ModelIdentifier.getDefaultModelId(provider as AIProviderType));
 
             const createPayload = {
                 id: sessionId,

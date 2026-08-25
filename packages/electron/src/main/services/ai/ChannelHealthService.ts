@@ -1,9 +1,7 @@
 /**
- * Channel health checks exercise the same request boundary a user would use,
- * but keep their status bookkeeping outside normal conversations.
- *
- * The transport is injected by AIService because the SDK-backed providers and
- * the genuine Claude CLI intentionally have different production send paths.
+ * Channel health checks are login/control-plane probes by default. A real
+ * prompt remains available only as an explicit deep diagnostic; startup and
+ * normal panel checks must not consume inference quota or create a session.
  */
 
 export const CHANNEL_HEALTH_PROMPT = 'Reply with one word: pong';
@@ -17,6 +15,7 @@ export type ChannelHealthState = 'never' | 'healthy' | 'slow' | 'failed' | 'unkn
 export type ChannelHealthFailureKind =
   | 'not_logged_in'
   | 'missing_binary'
+  | 'not_started'
   | 'timeout'
   | 'missing_api_key'
   | 'auth_check_timeout'
@@ -31,12 +30,25 @@ export interface ChannelHealthChannel {
   enabled?: boolean;
 }
 
-export interface ChannelHealthTransportResult {
-  /** Time from request submission to the first observable provider response. */
+export interface ChannelHealthProbeResult {
+  /** A provider may return a neutral state without throwing (e.g. API-key mode). */
+  state?: Exclude<ChannelHealthState, 'never' | 'disabled'>;
+  failureKind?: ChannelHealthFailureKind;
+  /** Time from probe submission to the first observable control-plane receipt. */
   firstResponseMs?: number;
-  /** Time from request submission to the completed turn. */
+  /** Time from probe submission to completion. */
   completionMs?: number;
-  /** A non-empty receipt proves the transport produced a response. */
+  summary?: string;
+  guidance?: string;
+}
+
+/**
+ * Receipt shape for the opt-in deep diagnostic only. It is intentionally not
+ * used by normal/startup health checks.
+ */
+export interface ChannelHealthTransportResult {
+  firstResponseMs?: number;
+  completionMs?: number;
   responseText?: string;
 }
 
@@ -71,6 +83,12 @@ export interface ChannelHealthServiceDeps {
     channel: ChannelHealthChannel;
     event: Electron.IpcMainInvokeEvent;
     workspacePath: string;
+  }) => Promise<ChannelHealthProbeResult>;
+  /** Explicit opt-in only: may send a real prompt and consume inference. */
+  runDeepChannel?: (input: {
+    channel: ChannelHealthChannel;
+    event: Electron.IpcMainInvokeEvent;
+    workspacePath: string;
     prompt: string;
   }) => Promise<ChannelHealthTransportResult>;
   isAutoCheckEnabled: () => boolean;
@@ -79,6 +97,11 @@ export interface ChannelHealthServiceDeps {
   now?: () => number;
   timeoutMs?: number;
 }
+
+type ChannelHealthProbeRunner = (
+  channel: ChannelHealthChannel,
+  context: ChannelHealthRunContext,
+) => Promise<ChannelHealthProbeResult>;
 
 /** Typed errors let production adapters preserve actionable classifications. */
 export class ChannelHealthError extends Error {
@@ -103,6 +126,9 @@ export function classifyChannelHealthError(error: unknown): ChannelHealthFailure
   }
   if (/not installed|missing binary|enoent|command not found|executable.*not found/i.test(message)) {
     return 'missing_binary';
+  }
+  if (/workspace untrusted|not started|not ready|booting|initializ(?:e|ing)|extension-agent-denied/i.test(message)) {
+    return 'not_started';
   }
   if (/timeout|timed out|abort/i.test(message)) {
     return 'timeout';
@@ -136,7 +162,9 @@ export function channelHealthFailureCopy(
       }
       return { summary: '未找到本地引擎', guidance: '请安装或配置该引擎后重试' };
     case 'timeout':
-      return { summary: '请求超时', guidance: '请检查网络或引擎状态后重试' };
+      return { summary: '检测超时', guidance: '引擎状态暂时未知，请稍后重试' };
+    case 'not_started':
+      return { summary: '引擎未就绪', guidance: '请等待工作区和引擎启动完成后重试' };
     case 'missing_api_key':
       return { summary: '未配置密钥', guidance: '在设置中填入 API Key，或不使用此通道可忽略' };
     case 'auth_check_timeout':
@@ -155,8 +183,8 @@ export function channelHealthFailureCopy(
 
 /**
  * Owns the product-level health state and automatic-run throttle. It is
- * deliberately transport-agnostic: callers must supply the real production
- * send path rather than a provider-level shortcut.
+ * deliberately probe-agnostic: callers supply each engine's native,
+ * zero-inference login/control-plane check.
  */
 export class ChannelHealthService {
   private readonly now: () => number;
@@ -194,6 +222,38 @@ export class ChannelHealthService {
     return this.run(context, 'manual');
   }
 
+  /**
+   * A deliberately separate, opt-in diagnostic for troubleshooting a real
+   * model turn. Normal/manual/startup checks must never call this path.
+   */
+  async runDeepManually(
+    context: ChannelHealthRunContext,
+    prompt = CHANNEL_HEALTH_PROMPT,
+  ): Promise<ChannelHealthSnapshot> {
+    if (!this.deps.runDeepChannel) {
+      throw new ChannelHealthError('not_started', 'Deep channel health is not configured');
+    }
+    return this.run(
+      context,
+      'manual',
+      false,
+      async (channel, runContext) => {
+        const receipt = await this.deps.runDeepChannel!({
+          channel,
+          event: runContext.event,
+          workspacePath: runContext.workspacePath,
+          prompt,
+        });
+        return {
+          state: 'healthy',
+          summary: '深度体检通过',
+          firstResponseMs: receipt.firstResponseMs,
+          completionMs: receipt.completionMs,
+        };
+      },
+    );
+  }
+
   async runOnStartup(context: ChannelHealthRunContext): Promise<ChannelHealthSnapshot> {
     if (!this.deps.isAutoCheckEnabled()) {
       this.deps.log('[ChannelHealth] {"event":"startup-skipped","reason":"disabled"}');
@@ -202,15 +262,22 @@ export class ChannelHealthService {
     return this.run(context, 'automatic');
   }
 
+  /** One startup-only retry for an extension backend that was not ready yet. */
+  async retryStartupUnknown(context: ChannelHealthRunContext): Promise<ChannelHealthSnapshot> {
+    return this.run(context, 'automatic', true);
+  }
+
   private async run(
     context: ChannelHealthRunContext,
     trigger: ChannelHealthTrigger,
+    bypassAutomaticThrottle = false,
+    runProbe?: ChannelHealthProbeRunner,
   ): Promise<ChannelHealthSnapshot> {
-    // Avoid launching a second set of model calls when the user clicks while
+    // Avoid launching a second set of probes when the user clicks while
     // the startup pass is still running. The panel will refresh its snapshot.
     if (this.running) return this.running;
 
-    const task = this.runInternal(context, trigger);
+    const task = this.runInternal(context, trigger, bypassAutomaticThrottle, runProbe);
     this.running = task;
     try {
       await task;
@@ -223,6 +290,12 @@ export class ChannelHealthService {
   private async runInternal(
     context: ChannelHealthRunContext,
     trigger: ChannelHealthTrigger,
+    bypassAutomaticThrottle: boolean,
+    runProbe: ChannelHealthProbeRunner = (channel, runContext) => this.deps.runChannel({
+      channel,
+      event: runContext.event,
+      workspacePath: runContext.workspacePath,
+    }),
   ): Promise<ChannelHealthSnapshot> {
     const channels = await this.deps.listEnabledChannels();
     const selectedChannels = context.channelId
@@ -234,6 +307,7 @@ export class ChannelHealthService {
       const now = this.now();
       if (
         trigger === 'automatic'
+        && !bypassAutomaticThrottle
         && now - (this.lastAutomaticAttemptAt.get(channel.id) ?? Number.NEGATIVE_INFINITY)
           < CHANNEL_HEALTH_AUTO_DEDUPE_MS
       ) {
@@ -245,7 +319,7 @@ export class ChannelHealthService {
         continue;
       }
       if (trigger === 'automatic') this.lastAutomaticAttemptAt.set(channel.id, now);
-      await this.runOne(channel, context, trigger);
+      await this.runOne(channel, context, trigger, runProbe);
     }
 
     return this.getSnapshot();
@@ -255,31 +329,31 @@ export class ChannelHealthService {
     channel: ChannelHealthChannel,
     context: ChannelHealthRunContext,
     trigger: ChannelHealthTrigger,
+    runProbe: ChannelHealthProbeRunner,
   ): Promise<void> {
     const startedAt = this.now();
     try {
-      const transportResult = await this.withTimeout(
-        this.deps.runChannel({
-          channel,
-          event: context.event,
-          workspacePath: context.workspacePath,
-          prompt: CHANNEL_HEALTH_PROMPT,
-        }),
+      const probeResult = await this.withTimeout(
+        runProbe(channel, context),
       );
       const completionMs = Math.max(
         0,
-        transportResult.completionMs ?? this.now() - startedAt,
+        probeResult.completionMs ?? this.now() - startedAt,
       );
       const firstResponseMs = Math.max(
         0,
-        transportResult.firstResponseMs ?? completionMs,
+        probeResult.firstResponseMs ?? completionMs,
       );
-      if (!transportResult.responseText?.trim()) {
-        throw new ChannelHealthError('engine_error', 'Channel completed without a response receipt');
-      }
-      const state: ChannelHealthState = completionMs > CHANNEL_HEALTH_SLOW_MS
-        ? 'slow'
-        : 'healthy';
+      const failureKind = probeResult.failureKind;
+      const state: Exclude<ChannelHealthState, 'never' | 'disabled'> = probeResult.state
+        ?? (failureKind
+          ? this.stateForFailure(failureKind)
+          : completionMs > CHANNEL_HEALTH_SLOW_MS
+            ? 'slow'
+            : 'healthy');
+      const copy = failureKind
+        ? channelHealthFailureCopy(channel.id, failureKind)
+        : undefined;
       const result: ChannelHealthResult = {
         ...channel,
         state,
@@ -287,7 +361,9 @@ export class ChannelHealthService {
         trigger,
         firstResponseMs,
         completionMs,
-        summary: state === 'slow' ? '响应较慢' : '通畅',
+        ...(failureKind ? { failureKind } : {}),
+        summary: probeResult.summary ?? copy?.summary ?? (state === 'slow' ? '响应较慢' : state === 'healthy' ? '已登录' : '检测状态未知'),
+        ...(probeResult.guidance ?? copy?.guidance ? { guidance: probeResult.guidance ?? copy?.guidance } : {}),
       };
       this.results.set(channel.id, result);
       this.logResult(result);
@@ -295,9 +371,7 @@ export class ChannelHealthService {
       const failureKind = classifyChannelHealthError(error);
       const exitCode = error instanceof ChannelHealthError ? error.exitCode : undefined;
       const copy = channelHealthFailureCopy(channel.id, failureKind, exitCode);
-      const state: ChannelHealthState = failureKind === 'auth_check_timeout' || failureKind === 'auth_check_unknown'
-        ? 'unknown'
-        : 'failed';
+      const state = this.stateForFailure(failureKind);
       const result: ChannelHealthResult = {
         ...channel,
         state,
@@ -311,6 +385,15 @@ export class ChannelHealthService {
       this.results.set(channel.id, result);
       this.logResult(result);
     }
+  }
+
+  private stateForFailure(failureKind: ChannelHealthFailureKind): 'failed' | 'unknown' {
+    return failureKind === 'timeout'
+      || failureKind === 'auth_check_timeout'
+      || failureKind === 'auth_check_unknown'
+      || failureKind === 'not_started'
+      ? 'unknown'
+      : 'failed';
   }
 
   private async withTimeout<T>(operation: Promise<T>): Promise<T> {

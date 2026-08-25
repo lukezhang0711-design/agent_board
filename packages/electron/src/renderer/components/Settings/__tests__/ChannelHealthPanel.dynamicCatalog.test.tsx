@@ -39,7 +39,7 @@ describe('ChannelHealthPanel dynamic catalog status', () => {
                 modelSource: 'cache',
                 verified: true,
                 lastSuccessAt: 1,
-                lastError: { message: 'codex debug models timed out after 20ms' },
+                lastError: { message: 'codex app-server model/list timed out after 20ms' },
               },
             },
           };
@@ -52,7 +52,7 @@ describe('ChannelHealthPanel dynamic catalog status', () => {
 
     await waitFor(() => expect(screen.getByTestId('model-catalog-health-openai-codex')).toBeTruthy());
     const status = screen.getByTestId('model-catalog-health-openai-codex').textContent ?? '';
-    expect(status).toContain('目录获取失败：codex debug models timed out after 20ms');
+    expect(status).toContain('目录获取失败：codex app-server model/list timed out after 20ms');
     expect(status).toContain('上次成功获取于');
   });
 });

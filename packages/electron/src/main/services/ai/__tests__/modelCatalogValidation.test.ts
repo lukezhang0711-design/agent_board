@@ -31,10 +31,10 @@ describe('new-session dynamic model catalog bridge', () => {
     expect(validate).toHaveBeenNthCalledWith(3, 'openai-codex-acp', 'openai-codex-acp:gpt-5.6-sol');
   });
 
-  it('fails closed instead of inventing a static model when the catalog service is unavailable', async () => {
+  it('GREEN EO: leaves an omitted dynamic model to the native engine when the catalog service is unavailable', async () => {
     await expect(
       assertDynamicModelCatalogSelection('claude-code', undefined),
-    ).rejects.toThrow('模型目录尚未就绪');
+    ).resolves.toBeUndefined();
   });
 
   it('resolves an omitted dynamic model only through the live catalog resolver', async () => {
@@ -50,7 +50,17 @@ describe('new-session dynamic model catalog bridge', () => {
   it('never falls back to a package default when a dynamic resolver is absent', async () => {
     await expect(
       resolveDynamicModelCatalogSelection('openai-codex', undefined),
-    ).rejects.toThrow('模型目录尚未就绪');
+    ).resolves.toBeUndefined();
+  });
+
+  it('RED EO: an explicit model remains pass-through when a live declaration is absent', async () => {
+    await expect(
+      resolveDynamicModelCatalogSelection('openai-codex', 'openai-codex:gpt-user-entered'),
+    ).resolves.toBe('openai-codex:gpt-user-entered');
+
+    await expect(
+      assertDynamicModelCatalogSelection('openai-codex', 'openai-codex:gpt-user-entered'),
+    ).resolves.toBeUndefined();
   });
 
   it('does not alter non-dynamic providers', async () => {
@@ -69,7 +79,7 @@ describe('new-session dynamic model catalog bridge', () => {
         modelSource: 'cache',
         verified: true,
         lastSuccessAt: 1_723_456_789_000,
-        lastError: { message: 'codex debug models: command not found' },
+        lastError: { message: 'codex app-server model/list: command not found' },
       },
     }));
 
@@ -78,7 +88,7 @@ describe('new-session dynamic model catalog bridge', () => {
         modelSource: 'cache',
         verified: true,
         lastSuccessAt: 1_723_456_789_000,
-        lastError: { message: 'codex debug models: command not found' },
+        lastError: { message: 'codex app-server model/list: command not found' },
       },
     });
   });

@@ -740,19 +740,9 @@ export class CodexAppServerProtocol implements AgentProtocol {
     return baseEnv;
   }
 
-  /**
-   * `model_catalog_json` is a process-start-only Codex setting. Supplying it
-   * here makes session children use the host-maintained static catalog instead
-   * of refreshing models over the network during thread creation.
-   */
-  private buildProcessArgs(options: SessionOptions): string[] {
-    const catalogPath = options.raw?.codexModelCatalogPath;
-    const args: string[] = [];
-    if (typeof catalogPath === 'string' && catalogPath.trim().length > 0) {
-      args.push('--config', `model_catalog_json=${JSON.stringify(catalogPath)}`);
-    }
-    args.push('app-server', '--listen', 'stdio://');
-    return args;
+  /** Do not inject a host-maintained model catalog into the native engine. */
+  private buildProcessArgs(_options: SessionOptions): string[] {
+    return ['app-server', '--listen', 'stdio://'];
   }
 
   /**
@@ -763,10 +753,13 @@ export class CodexAppServerProtocol implements AgentProtocol {
     const sandbox: ThreadStartParams['sandbox'] =
       options.permissionMode === 'bypass-all' ? 'danger-full-access' : 'workspace-write';
 
-    // Do not collapse `ultra` (or any currently advertised effort) to a
-    // guessed lower tier. The dynamic Codex catalog is authoritative.
-    const effortLevel = options.raw?.effortLevel as string | undefined;
-    const reasoningEffortRaw = effortLevel ?? 'high';
+    // Codex owns the per-model reasoning vocabulary. Omit this field when
+    // the selected model declares no level instead of inventing a `high`
+    // fallback that can be invalid for a future/empty-array model.
+    const effortLevel = typeof options.raw?.effortLevel === 'string'
+      && options.raw.effortLevel.length > 0
+      ? options.raw.effortLevel
+      : undefined;
 
     const systemPrompt = (options.raw?.systemPrompt as string | undefined) ?? options.systemPrompt;
     const additionalDirectories = Array.isArray(options.raw?.additionalDirectories)
@@ -776,19 +769,21 @@ export class CodexAppServerProtocol implements AgentProtocol {
       : [];
 
     // The free-form `config` object accepts the same dotted-path TOML overrides
-    // the SDK transport sends as `--config` flags. We pass through the
-    // existing host-computed overrides (which include `mcp_servers`,
-    // `model_reasoning_effort`, network access, web_search, etc.) unchanged.
+    // the SDK transport sends as `--config` flags. Keep general host-computed
+    // settings (MCP, network access, web search), while model discovery and
+    // model-specific reasoning stay outside that generic override channel.
     const rawConfig = options.raw?.codexConfigOverrides as Record<string, unknown> | undefined;
-    // Startup-only settings are removed from thread/start. The app-server
-    // process received this value in buildProcessArgs; forwarding it here is
-    // too late and newer Codex versions may reject it as a thread override.
-    const { model_catalog_json: _modelCatalogJson, ...threadConfig } = rawConfig ?? {};
+    // Model discovery is picker-only. It must never become a host-maintained
+    // execution allow-list, and reasoning is derived only from the selected
+    // model's declared level above.
+    const {
+      model_catalog_json: _modelCatalogJson,
+      model_reasoning_effort: _modelReasoningEffort,
+      ...threadConfig
+    } = rawConfig ?? {};
     const config: Record<string, unknown> = {
       ...threadConfig,
-      // Reasoning effort always sets; the host's override map may also set it
-      // but a literal here is fine since codex resolves these later.
-      model_reasoning_effort: reasoningEffortRaw,
+      ...(effortLevel ? { model_reasoning_effort: effortLevel } : {}),
     };
 
     return {

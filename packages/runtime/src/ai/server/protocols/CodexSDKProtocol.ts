@@ -488,19 +488,21 @@ export class CodexSDKProtocol implements AgentProtocol {
       ? 'danger-full-access'
       : 'workspace-write';
 
-    // Keep the engine-reported effort value. `ultra` is newer than the SDK's
-    // declaration but is accepted by the installed Codex CLI; casting remains
-    // local so the UI/catalog type stays exact.
-    const effortLevel = options.raw?.effortLevel as string | undefined;
-    const reasoningEffort = effortLevel || 'high';
+    // The native catalog owns both the default model and its reasoning
+    // vocabulary. Keep a declared raw effort value, but omit both fields when
+    // the host has no explicit value instead of inventing a model or `high`.
+    const rawEffortLevel = options.raw?.effortLevel;
+    const effortLevel = typeof rawEffortLevel === 'string' && rawEffortLevel.length > 0
+      ? rawEffortLevel
+      : undefined;
 
     const baseOptions = {
-      model: options.model || 'gpt-5',
+      ...(options.model ? { model: options.model } : {}),
       workingDirectory: options.workspacePath,
       skipGitRepoCheck: true,
       approvalPolicy: 'never', // Nimbalyst handles approvals
       sandboxMode,
-      modelReasoningEffort: reasoningEffort,
+      ...(effortLevel ? { modelReasoningEffort: effortLevel } : {}),
     };
 
     // Extract systemPrompt from raw options and pass it as developer_instructions

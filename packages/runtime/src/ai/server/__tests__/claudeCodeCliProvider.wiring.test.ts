@@ -79,13 +79,13 @@ describe('claude-code-cli provider wiring (Phase 0)', () => {
       expect(resolveClaudeCodeModelVariant('claude-code-cli:opus', 'opus')).toBe('opus');
     });
 
-    it('appends the [1m] beta marker for extended context', () => {
-      expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-1m', 'opus')).toBe('sonnet[1m]');
+    it('preserves the raw extended-context spelling', () => {
+      expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-1m', 'opus')).toBe('sonnet-1m');
     });
 
-    it('keeps dynamically discovered variants and only converts the 1M suffix', () => {
+    it('keeps dynamically discovered variants byte-for-byte', () => {
       expect(resolveClaudeCodeModelVariant('claude-code-cli:opus-5', 'opus')).toBe('opus-5');
-      expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-5-1m', 'opus')).toBe('sonnet-5[1m]');
+      expect(resolveClaudeCodeModelVariant('claude-code-cli:sonnet-5-1m', 'opus')).toBe('sonnet-5-1m');
     });
   });
 

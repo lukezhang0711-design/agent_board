@@ -34,6 +34,7 @@ export function getSupportedEffortLevelsForModel(
     id: string;
     supportsEffort?: boolean;
     supportedEffortLevels?: EffortLevel[];
+    defaultEffortLevel?: EffortLevel;
   }>>,
   currentModel?: string,
 ): EffortLevel[] {
@@ -41,6 +42,36 @@ export function getSupportedEffortLevelsForModel(
     .flat()
     .find((candidate) => candidate.id === currentModel);
   return model?.supportedEffortLevels ? [...model.supportedEffortLevels] : [];
+}
+
+/**
+ * Returns only the selected engine row's declared effort options and default.
+ * The selected model owns this vocabulary: a missing declaration means no
+ * control, while an undefined current session value falls back to the
+ * engine's default (then its first declared option).
+ */
+export function getEffortConfigurationForModel(
+  availableModels: Record<string, Array<{
+    id: string;
+    supportsEffort?: boolean;
+    supportedEffortLevels?: EffortLevel[];
+    defaultEffortLevel?: EffortLevel;
+  }>>,
+  currentModel?: string,
+): { supportedEffortLevels: EffortLevel[]; defaultEffortLevel?: EffortLevel } {
+  const model = Object.values(availableModels)
+    .flat()
+    .find((candidate) => candidate.id === currentModel);
+  const supportedEffortLevels = model?.supportedEffortLevels
+    ? [...model.supportedEffortLevels]
+    : [];
+  const defaultEffortLevel = model?.defaultEffortLevel;
+  return {
+    supportedEffortLevels,
+    ...(defaultEffortLevel && supportedEffortLevels.includes(defaultEffortLevel)
+      ? { defaultEffortLevel }
+      : {}),
+  };
 }
 
 interface ModelInfo {

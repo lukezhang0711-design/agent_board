@@ -15,12 +15,12 @@ import { logClaudeCliUserPrompt } from './claudeCliUserPromptLog';
 import { submitClaudeCliPrompt, type SubmitClaudeCliPromptInput } from './claudeCliSubmit';
 import { detectInteractiveCliCommand } from './claudeCliInteractiveCommands';
 import { broadcastClaudeCliRevealTerminal } from './claudeCliRevealTerminal';
-import { assertDynamicModelCatalogSelection } from './modelCatalogValidation';
 
 /**
  * The CLI has several input routes (direct composer submit, queued idle flush,
- * and channel health). Put the live directory gate at their shared final PTY
- * boundary so an already-active terminal cannot keep using a stale model.
+ * and channel health). This shared boundary verifies that a live Claude CLI
+ * session exists, but intentionally never catalog-gates its model: explicit
+ * model strings and an omitted model are both native CLI inputs.
  */
 export async function assertClaudeCliSessionModelCanSubmit(sessionId: string): Promise<void> {
   const session = await AISessionsRepository.get(sessionId);
@@ -30,7 +30,6 @@ export async function assertClaudeCliSessionModelCanSubmit(sessionId: string): P
   if (session.provider !== 'claude-code-cli') {
     throw new Error(`会话“${sessionId}”不是 Claude CLI 通道，拒绝向 PTY 写入提示。`);
   }
-  await assertDynamicModelCatalogSelection('claude-code-cli', session.model ?? undefined);
 }
 
 /** Submit a CLI prompt using the real terminal/log/analytics deps. */

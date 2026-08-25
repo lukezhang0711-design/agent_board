@@ -2,7 +2,7 @@
   "id": "gemini-antigravity",
   "name": "Google Gemini (Antigravity)",
   "version": "1.0.0",
-  "description": "Google Gemini Flash via Antigravity desktop language server or the agy command-line engine. Sign in with the existing Antigravity CLI login.",
+  "description": "Models exposed by the local Antigravity engine via its desktop language server or agy command-line engine. Sign in with the existing Antigravity CLI login.",
   "author": "Nimbalyst",
   "main": "dist/index.js",
   "apiVersion": "1.0.0",
@@ -20,21 +20,7 @@
           "image"
         ],
         "modelDiscovery": "dynamic",
-        "models": [
-          {
-            "id": "antigravity-gemini-agent:gemini-3-flash-agent",
-            "name": "Gemini 3.5 Flash (High)",
-            "default": true
-          },
-          {
-            "id": "antigravity-gemini-agent:gemini-3.5-flash-low",
-            "name": "Gemini 3.5 Flash (Medium)"
-          },
-          {
-            "id": "antigravity-gemini-agent:gemini-3.5-flash-extra-low",
-            "name": "Gemini 3.5 Flash (Low)"
-          }
-        ],
+        "models": [],
         "icon": "gemini",
         "settingsPanelComponent": "AntigravityAgentSettings"
       }
@@ -83,10 +69,10 @@
     ],
     "icon": "auto_awesome",
     "featured": true,
-    "tagline": "Google Gemini Flash through Antigravity desktop or agy CLI",
-    "longDescription": "Run Google's Gemini Flash models through the Antigravity desktop language server when installed, or the agy command-line print engine otherwise. Agent provider with tool-loop support. Authentication uses the existing Antigravity CLI OAuth login - no API key required. Tracks per-model quota and account credits so you can avoid rate limits.",
+    "tagline": "Antigravity models through desktop or agy CLI",
+    "longDescription": "Run the models currently exposed by your local Antigravity engine through its desktop language server when installed, or the agy command-line engine otherwise. Agent provider with tool-loop support. Authentication uses the existing Antigravity CLI OAuth login - no API key required. The model list and labels come directly from agy.",
     "highlights": [
-      "Gemini Flash (High / Medium / Low) via the local Antigravity engine",
+      "Raw models and labels from the local Antigravity engine",
       "Agent provider with tool-loop and meta-agent mode",
       "Account credits and per-model quota surfaced in the settings panel",
       "Auth rides your existing Antigravity CLI login - no key entered in Nimbalyst"

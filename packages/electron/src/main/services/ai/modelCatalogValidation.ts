@@ -38,7 +38,7 @@ let selectionResolver: DynamicModelCatalogSelectionResolver | null = null;
 let statusReader: DynamicModelCatalogStatusReader | null = null;
 let effortNormalizer: DynamicModelEffortNormalizer | null = null;
 
-function needsDynamicCatalog(provider: string): provider is AIProviderType {
+export function usesDynamicModelCatalog(provider: string): provider is AIProviderType {
   return provider === 'claude-code'
     || provider === 'claude-code-cli'
     || provider === 'openai-codex'
@@ -107,24 +107,37 @@ export async function resolveDynamicModelCatalogSelection(
   provider: string,
   modelId: string | undefined,
 ): Promise<string | undefined> {
-  if (!needsDynamicCatalog(provider)) return undefined;
+  if (!usesDynamicModelCatalog(provider)) return undefined;
+  // A user-selected identifier is an engine input, not an application
+  // allow-list entry. The live catalog improves the picker, but a missing or
+  // stale declaration must never turn that explicit choice into a creation
+  // error. The engine remains the authority for rejection and wording.
+  if (modelId) return modelId;
   if (!selectionResolver) {
-    throw new Error(`${provider} 模型目录尚未就绪。请等待目录获取完成后重新选择模型。`);
+    return undefined;
   }
-  const resolved = await selectionResolver(provider, modelId);
-  if (!resolved) {
-    throw new Error(`${provider} 模型目录未返回已验证的默认型号。请在模型选择器中明确选择。`);
+  try {
+    // An omitted model may use an engine-declared default if one is available.
+    // No package default is invented when the declaration cannot be read.
+    return await selectionResolver(provider, undefined);
+  } catch {
+    return undefined;
   }
-  return resolved;
 }
 
 export async function assertDynamicModelCatalogSelection(
   provider: string,
   modelId: string | undefined,
 ): Promise<void> {
-  if (!needsDynamicCatalog(provider)) return;
-  if (!validator) {
-    throw new Error(`${provider} 模型目录尚未就绪。请等待目录获取完成后重新选择模型。`);
+  if (!usesDynamicModelCatalog(provider)) return;
+  if (!validator || !modelId) {
+    return;
   }
-  await validator(provider, modelId ?? '');
+  try {
+    await validator(provider, modelId);
+  } catch {
+    // Catalog declarations are advisory at the execution boundary. Do not
+    // reject an explicit model merely because discovery is unavailable or
+    // has not listed it yet; surface the native engine response instead.
+  }
 }

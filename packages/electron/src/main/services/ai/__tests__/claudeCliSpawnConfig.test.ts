@@ -142,16 +142,32 @@ describe('buildClaudeCliSpawnConfig', () => {
     expect(cfg.env.CLAUDECODE).toBeUndefined();
   });
 
+  it('preserves USER and CLAUDE_CONFIG_DIR so the child reads the same keychain entry', () => {
+    const cfg = buildClaudeCliSpawnConfig({
+      ...base,
+      baseEnv: {
+        HOME: '/Users/me',
+        USER: 'me',
+        CLAUDE_CONFIG_DIR: '/Users/me/.claude-work',
+      },
+    });
+
+    expect(cfg.env).toMatchObject({
+      USER: 'me',
+      CLAUDE_CONFIG_DIR: '/Users/me/.claude-work',
+    });
+  });
+
   it('drops undefined env values', () => {
     const cfg = buildClaudeCliSpawnConfig({ ...base, baseEnv: { FOO: undefined, BAR: 'x' } });
     expect('FOO' in cfg.env).toBe(false);
     expect(cfg.env.BAR).toBe('x');
   });
 
-  it('resolves a combined 1M model id to the CLI `[1m]` form (never passes the `-1m` suffix or provider prefix to --model)', () => {
+  it('strips only the provider prefix and preserves the raw 1M spelling for --model', () => {
     const cfg = buildClaudeCliSpawnConfig({ ...base, model: 'claude-code-cli:opus-1m' });
     expect(cfg.args).toContain('--model');
-    expect(cfg.args[cfg.args.indexOf('--model') + 1]).toBe('opus[1m]');
+    expect(cfg.args[cfg.args.indexOf('--model') + 1]).toBe('opus-1m');
   });
 
   // NIM-806: the genuine CLI ships its own built-in AskUserQuestion that renders
@@ -465,8 +481,8 @@ describe('buildClaudeCliSpawnConfig', () => {
 });
 
 describe('resolveClaudeCliModelArg', () => {
-  it('strips the provider prefix and translates -1m to the CLI `[1m]` form (NIM-809)', () => {
-    expect(resolveClaudeCliModelArg('claude-code-cli:opus-1m')).toBe('opus[1m]');
+  it('strips only the provider prefix without rewriting model spellings', () => {
+    expect(resolveClaudeCliModelArg('claude-code-cli:opus-1m')).toBe('opus-1m');
     expect(resolveClaudeCliModelArg('claude-code-cli:sonnet')).toBe('sonnet');
     expect(resolveClaudeCliModelArg('claude-code:haiku')).toBe('haiku');
   });
@@ -476,11 +492,11 @@ describe('resolveClaudeCliModelArg', () => {
     expect(resolveClaudeCliModelArg('claude-code-cli:opus-4-6')).toBe('opus-4-6');
   });
 
-  it('converts only the 1M marker for dynamically discovered variants', () => {
+  it('keeps dynamically discovered variants byte-for-byte', () => {
     expect(resolveClaudeCliModelArg('claude-code-cli:opus-5')).toBe('opus-5');
-    expect(resolveClaudeCliModelArg('claude-code-cli:opus-5-1m')).toBe('opus-5[1m]');
+    expect(resolveClaudeCliModelArg('claude-code-cli:opus-5-1m')).toBe('opus-5-1m');
     expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5')).toBe('sonnet-5');
-    expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5-1m')).toBe('sonnet-5[1m]');
+    expect(resolveClaudeCliModelArg('claude-code-cli:sonnet-5-1m')).toBe('sonnet-5-1m');
   });
 
   it('passes the dynamic Fable value through without static pinning', () => {
@@ -489,15 +505,15 @@ describe('resolveClaudeCliModelArg', () => {
     expect(resolveClaudeCliModelArg('fable')).toBe('fable');
   });
 
-  it('translates fable-1m to the CLI `fable[1m]` form — plain fable is windowed at 200k', () => {
-    expect(resolveClaudeCliModelArg('claude-code-cli:fable-1m')).toBe('fable[1m]');
-    expect(resolveClaudeCliModelArg('fable-1m')).toBe('fable[1m]');
+  it('keeps fable-1m raw', () => {
+    expect(resolveClaudeCliModelArg('claude-code-cli:fable-1m')).toBe('fable-1m');
+    expect(resolveClaudeCliModelArg('fable-1m')).toBe('fable-1m');
   });
 
-  it('passes a bare variant through (normalized), translating -1m to [1m]', () => {
+  it('passes a bare variant through unchanged', () => {
     expect(resolveClaudeCliModelArg('opus')).toBe('opus');
-    expect(resolveClaudeCliModelArg('opus-1m')).toBe('opus[1m]');
-    expect(resolveClaudeCliModelArg('SONNET')).toBe('sonnet');
+    expect(resolveClaudeCliModelArg('opus-1m')).toBe('opus-1m');
+    expect(resolveClaudeCliModelArg('SONNET')).toBe('SONNET');
   });
 
   it('passes an unrecognized bare model name through unchanged (CLI accepts full model names)', () => {

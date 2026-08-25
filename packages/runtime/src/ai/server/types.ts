@@ -204,31 +204,25 @@ export function shouldBlockStartedSessionProviderSwitch(
 }
 
 /**
- * Resolves a dynamically discovered Claude Agent model to the SDK model value.
- * The selector stores `[1m]` SDK values as `-1m`; no provider/model inventory
- * is kept here because `Query.supportedModels()` is the sole catalog source.
+ * Resolve only the host namespace for a Claude SDK model value. The SDK owns
+ * the spelling (including any context suffix), so no case, alias, or suffix
+ * rewriting belongs here.
  */
 export function resolveClaudeCodeModelVariant(configuredModel: string | undefined, defaultModel: string): string {
-  const configured = (configuredModel || defaultModel || '').trim();
+  const configured = configuredModel?.trim() ? configuredModel : defaultModel;
   if (!configured) {
     throw new Error('Claude Agent requires a selected model');
   }
 
-  const parsed = ModelIdentifier.tryParse(configured);
-  if (parsed && isClaudeCodeFamily(parsed.provider)) {
-    return parsed.isExtendedContext ? `${parsed.baseVariant}[1m]` : parsed.baseVariant;
-  }
+  if (configured.startsWith('claude-code:')) return configured.slice('claude-code:'.length);
+  if (configured.startsWith('claude-code-cli:')) return configured.slice('claude-code-cli:'.length);
 
+  const parsed = ModelIdentifier.tryParse(configured);
   if (parsed && !isClaudeCodeFamily(parsed.provider)) {
     throw new Error(`Claude Agent requires a claude-code:* model identifier. Received: ${configured}`);
   }
 
-  // Legacy bare SDK values are accepted only as a format convenience. They are
-  // validated against the dynamic catalog before new sessions are created.
-  const normalized = configured.toLowerCase();
-  return normalized.endsWith('-1m')
-    ? `${normalized.slice(0, -'-1m'.length)}[1m]`
-    : normalized;
+  return configured;
 }
 
 export interface AIModel {

@@ -6,39 +6,39 @@ import { CodexModelRefreshService } from '../CodexModelRefreshService';
 const TEMP_DIRECTORIES: string[] = [];
 
 function catalogResult() {
-  return JSON.stringify({
-    models: [
+  return {
+    data: [
       {
-        slug: 'gpt-5.6-sol',
-        display_name: 'GPT-5.6 Sol',
+        id: 'gpt-5.6-sol',
+        displayName: 'GPT-5.6 Sol',
         description: 'Frontier coding model',
-        default_reasoning_level: 'low',
-        supported_reasoning_levels: [
-          { effort: 'low', description: 'Fast' },
-          { effort: 'turbo', description: 'New engine tier' },
-          { effort: 'ultra', description: 'Maximum reasoning' },
+        defaultReasoningEffort: 'low',
+        supportedReasoningEfforts: [
+          { reasoningEffort: 'low', description: 'Fast' },
+          { reasoningEffort: 'turbo', description: 'New engine tier' },
+          { reasoningEffort: 'ultra', description: 'Maximum reasoning' },
         ],
-        visibility: 'list',
-        priority: 1,
+        hidden: false,
+        isDefault: true,
       },
       {
-        slug: 'gpt-reserve',
-        display_name: 'Reserve',
-        visibility: 'hide',
-        supported_reasoning_levels: [{ effort: 'ultra' }],
+        id: 'gpt-reserve',
+        displayName: 'Reserve',
+        hidden: true,
+        supportedReasoningEfforts: [{ reasoningEffort: 'ultra' }],
       },
     ],
-  });
+  };
 }
 
-function createHarness(commandRunner: (command: string, args: string[]) => Promise<{ stdout: string; stderr?: string }>) {
+function createHarness(fetchCatalog: () => Promise<unknown>) {
   const directory = fs.mkdtempSync(path.join(process.cwd(), '.codex-model-catalog-test-'));
   TEMP_DIRECTORIES.push(directory);
   const log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   const service = new CodexModelRefreshService({
     catalogPath: path.join(directory, 'models.json'),
     retryDelaysMs: [],
-    commandRunner,
+    fetchCatalog,
     logger: log,
   });
   return { directory, log, service };
@@ -51,17 +51,13 @@ afterEach(() => {
 });
 
 describe('CodexModelRefreshService', () => {
-  it('uses only `codex debug models`, lists only visibility=list models, and preserves unknown engine tiers', async () => {
-    const commandRunner = vi.fn().mockResolvedValue({ stdout: catalogResult() });
-    const { service } = createHarness(commandRunner);
+  it('uses current app-server `data`/`hidden` rows only and preserves unknown engine tiers', async () => {
+    const fetchCatalog = vi.fn().mockResolvedValue(catalogResult());
+    const { service } = createHarness(fetchCatalog);
 
     await service.start();
 
-    expect(commandRunner).toHaveBeenCalledWith(
-      expect.any(String),
-      ['debug', 'models'],
-      expect.objectContaining({ timeoutMs: expect.any(Number) }),
-    );
+    expect(fetchCatalog).toHaveBeenCalledWith();
     expect(service.getModels()).toEqual([
       expect.objectContaining({
         id: 'openai-codex:gpt-5.6-sol',
@@ -81,12 +77,10 @@ describe('CodexModelRefreshService', () => {
 
   it('does not infer a Codex default when the live lowest priority is tied', async () => {
     const { service } = createHarness(vi.fn().mockResolvedValue({
-      stdout: JSON.stringify({
         models: [
           { slug: 'gpt-a', display_name: 'A', visibility: 'list', priority: 1 },
           { slug: 'gpt-b', display_name: 'B', visibility: 'list', priority: 1 },
         ],
-      }),
     }));
 
     await service.start();
@@ -99,7 +93,7 @@ describe('CodexModelRefreshService', () => {
   });
 
   it('keeps only a timestamped last-success cache when a later discovery fails', async () => {
-    const first = createHarness(vi.fn().mockResolvedValue({ stdout: catalogResult() }));
+    const first = createHarness(vi.fn().mockResolvedValue(catalogResult()));
     await first.service.start();
     const firstStatus = first.service.getStatus();
 
@@ -107,7 +101,7 @@ describe('CodexModelRefreshService', () => {
     const next = new CodexModelRefreshService({
       catalogPath: path.join(first.directory, 'models.json'),
       retryDelaysMs: [],
-      commandRunner: vi.fn().mockRejectedValue(new Error('spawn codex ENOENT')),
+      fetchCatalog: vi.fn().mockRejectedValue(new Error('app-server transport ENOENT')),
       logger: log,
     });
     await next.start();
@@ -119,20 +113,19 @@ describe('CodexModelRefreshService', () => {
       modelSource: 'cache',
       verified: true,
       lastSuccessAt: firstStatus.lastSuccessAt,
-      lastError: { message: 'spawn codex ENOENT' },
+      lastError: { message: 'app-server transport ENOENT' },
     });
-    // Cache remains UI evidence only; it must never be injected into a new
-    // app-server child while the live refresh is red.
-    expect(next.getCatalogPath()).toBeUndefined();
+    // Cache remains picker evidence only; the app-server protocol has its own
+    // inverse assertion that no host catalog file is ever injected.
     expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining('refresh attempt'),
-      expect.objectContaining({ error: 'spawn codex ENOENT' }),
+      expect.objectContaining({ error: 'app-server transport ENOENT' }),
     );
   });
 
   it('does not silently fall back to a static catalog after the first discovery fails', async () => {
     const { log, service } = createHarness(
-      vi.fn().mockRejectedValue(new Error('codex executable not found')),
+      vi.fn().mockRejectedValue(new Error('app-server transport unavailable')),
     );
 
     await service.start();
@@ -143,18 +136,17 @@ describe('CodexModelRefreshService', () => {
       modelSource: 'none',
       verified: false,
       lastSuccessAt: null,
-      lastError: { message: 'codex executable not found' },
+      lastError: { message: 'app-server transport unavailable' },
     });
     expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining('refresh attempt'),
-      expect.objectContaining({ error: 'codex executable not found' }),
+      expect.objectContaining({ error: 'app-server transport unavailable' }),
     );
-    expect(service.getCatalogPath()).toBeUndefined();
   });
 
-  it('turns a command timeout into a logged red state without exposing a static fallback', async () => {
+  it('turns an app-server timeout into a logged red state without exposing a static fallback', async () => {
     const { log, service } = createHarness(
-      vi.fn().mockRejectedValue(new Error('codex debug models timed out after 20ms')),
+      vi.fn().mockRejectedValue(new Error('codex app-server model/list timed out after 20ms')),
     );
 
     await service.start();
@@ -164,21 +156,12 @@ describe('CodexModelRefreshService', () => {
       phase: 'stopped',
       modelSource: 'none',
       verified: false,
-      lastError: { message: 'codex debug models timed out after 20ms' },
+      lastError: { message: 'codex app-server model/list timed out after 20ms' },
     });
     expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining('refresh attempt'),
-      expect.objectContaining({ error: 'codex debug models timed out after 20ms' }),
+      expect.objectContaining({ error: 'codex app-server model/list timed out after 20ms' }),
     );
   });
 
-  it('exposes a catalog path only for a fresh successful discovery', async () => {
-    const { service } = createHarness(
-      vi.fn().mockResolvedValue({ stdout: catalogResult() }),
-    );
-
-    await service.start();
-
-    expect(service.getCatalogPath()).toMatch(/models\.json$/);
-  });
 });

@@ -10,7 +10,7 @@
  * read on their own startup -- no need to coordinate state in memory.
  */
 
-import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { execFile, execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { BrowserWindow } from 'electron';
 import { JsonRpcClient } from '@nimbalyst/runtime/ai/server/protocols/codexAppServer/jsonRpcClient';
@@ -32,6 +32,7 @@ import type {
 } from '@nimbalyst/runtime/ai/server/protocols/codexAppServer/types';
 import { logger } from '../utils/logger';
 import { getEnhancedPath } from './CLIManager';
+import { classifyCodexCliLoginStatus, type CodexCliLoginStatus } from './codexCliLoginStatus';
 
 export interface CodexAuthStatus {
   account: AccountKind;
@@ -72,6 +73,78 @@ class CodexAuthServiceImpl {
     };
     this.cachedStatus = status;
     return status;
+  }
+
+  /**
+   * Raw app-server model catalog. This is the same control-plane process used
+   * for auth and does not send a model prompt or refresh OAuth credentials.
+   */
+  async getModelList(): Promise<unknown> {
+    const client = await this.ensureChild();
+    // The app-server returns cursor-paginated `data` rows. Request hidden rows
+    // too so the picker can apply the engine's own visibility marker instead
+    // of silently treating a truncated first page as the whole catalog.
+    const rows: unknown[] = [];
+    const seenCursors = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const response = await client.request<unknown>('model/list', {
+        includeHidden: true,
+        limit: 100,
+        ...(cursor ? { cursor } : {}),
+      });
+      if (!response || typeof response !== 'object') return response;
+      const page = response as { data?: unknown; models?: unknown; nextCursor?: unknown };
+      const pageRows = Array.isArray(page.data)
+        ? page.data
+        : Array.isArray(page.models)
+          ? page.models
+          : null;
+      if (!pageRows) return response;
+      rows.push(...pageRows);
+
+      const nextCursor = typeof page.nextCursor === 'string' && page.nextCursor
+        ? page.nextCursor
+        : undefined;
+      if (!nextCursor) break;
+      if (seenCursors.has(nextCursor)) {
+        throw new Error('codex app-server model/list returned a repeated cursor');
+      }
+      seenCursors.add(nextCursor);
+      cursor = nextCursor;
+    } while (cursor);
+
+    // Preserve every raw row. The refresh service reads `data` directly and
+    // decides picker visibility from each row's native `hidden`/`visibility`.
+    return { data: rows };
+  }
+
+  /**
+   * Read-only fallback for a failed app-server account/read probe. It uses no
+   * login subcommand and retains only a normalized auth mode, never stdout.
+   */
+  async getCliLoginStatus(): Promise<CodexCliLoginStatus> {
+    const enhancedPath = getEnhancedPath();
+    const binaryPath = resolveCodexBinaryPath(() => resolvePackagedCodexBinaryPath(), enhancedPath);
+    const env = this.buildEnv(binaryPath);
+    return new Promise((resolve) => {
+      execFile(
+        binaryPath,
+        ['login', 'status'],
+        { env, encoding: 'utf8', timeout: 10_000, maxBuffer: 64 * 1024 },
+        (error, stdout, stderr) => {
+          const errorRecord = error as { code?: unknown; message?: unknown } | null;
+          const exitCode = typeof errorRecord?.code === 'number' ? errorRecord.code : undefined;
+          const status = classifyCodexCliLoginStatus(
+            String(stdout ?? ''),
+            String(stderr ?? ''),
+            exitCode,
+            errorRecord?.message === undefined ? undefined : String(errorRecord.message),
+          );
+          resolve(status);
+        },
+      );
+    });
   }
 
   /** Browser flow: returns the auth URL. Codex emits `account/login/completed` when done. */
@@ -202,6 +275,13 @@ class CodexAuthServiceImpl {
     ])).join(path.delimiter);
     baseEnv.PATH = merged;
     delete baseEnv.Path;
+    // A control-plane probe must use Codex's own persisted identity, never an
+    // ambient API-key/token variable inherited from a shell or .env loader.
+    for (const key of Object.keys(baseEnv)) {
+      if (/(?:api[_-]?key|access[_-]?token|refresh[_-]?token)/i.test(key)) {
+        delete baseEnv[key];
+      }
+    }
     return baseEnv;
   }
 

@@ -8,7 +8,7 @@ import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { logger } from '../../utils/logger';
 
 export type ClaudeCodeModelCatalogPhase = 'normal' | 'retrying' | 'stopped';
-export type ClaudeCodeModelCatalogSource = 'runtime' | 'cache' | 'placeholder' | 'none';
+export type ClaudeCodeModelCatalogSource = 'runtime' | 'cache' | 'none';
 export type ClaudeCodeModelCatalogErrorCategory = 'sdk' | 'timeout' | 'upstream_rejected';
 
 export interface ClaudeCodeModelCatalogError {
@@ -80,14 +80,6 @@ const CACHE_SOURCE = 'claude-agent-sdk:supportedModels' as const;
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 5_000, 30_000];
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
 const DEFAULT_MANUAL_RETRY_DEDUPE_MS = 2_000;
-/** First-install UI-only placeholder. It disappears after any failed discovery. */
-const INITIAL_UNVERIFIED_PLACEHOLDER: AIModel[] = [{
-  id: 'claude-code:opus-1m',
-  name: 'Claude Agent · Opus (unverified)',
-  provider: 'claude-code' as AIProviderType,
-  unverifiedPlaceholder: true,
-}];
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -96,9 +88,9 @@ function isEffortLevel(value: unknown): value is EffortLevel {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-/** Converts the SDK's `opus[1m]` contract into Nimbalyst's persisted `opus-1m`. */
+/** SDK values are opaque; only the host provider prefix is added elsewhere. */
 export function toClaudeCodeCatalogVariant(value: string): string {
-  return value.trim().toLowerCase().replace(/\[1m\]$/i, '-1m');
+  return value;
 }
 
 function mapSupportedModels(models: readonly ClaudeSupportedModel[]): AIModel[] {
@@ -111,17 +103,18 @@ function mapSupportedModels(models: readonly ClaudeSupportedModel[]): AIModel[] 
     if (result.has(id)) continue;
     const effortLevels = Array.from(new Set((model.supportedEffortLevels ?? [])
       .filter(isEffortLevel)
-      .map((level) => level.trim())));
-    // A boolean alone is not a usable declaration: without exact values the
-    // app cannot safely render or transmit an independent effort dimension.
-    const supportsEffort = model.supportsEffort === true && effortLevels.length > 0;
+      .map((level) => level)));
+    const supportsEffort = effortLevels.length > 0;
     result.set(id, {
       id,
-      name: `Claude Agent · ${model.displayName?.trim() || model.value.trim()}`,
+      name: typeof model.displayName === 'string' && model.displayName.trim()
+        ? model.displayName
+        : model.value,
       provider: 'claude-code' as AIProviderType,
-      contextWindow: variant.endsWith('-1m') ? 1_000_000 : 200_000,
       ...(model.description?.trim() ? { description: model.description } : {}),
-      ...(model.resolvedModel?.trim() ? { resolvedModel: model.resolvedModel } : {}),
+      ...(typeof model.resolvedModel === 'string' && model.resolvedModel.trim()
+        ? { resolvedModel: model.resolvedModel }
+        : {}),
       supportsEffort,
       supportedEffortLevels: effortLevels,
       // `default` is an SDK-supplied selectable value (shown by the engine as
@@ -137,7 +130,7 @@ function mapCliModels(models: AIModel[]): AIModel[] {
     ...model,
     id: `claude-code-cli:${model.id.slice('claude-code:'.length)}`,
     provider: 'claude-code-cli' as AIProviderType,
-    name: model.name.replace(/^Claude Agent · /, 'Claude Code CLI · '),
+    name: model.name,
   }));
 }
 
@@ -263,10 +256,10 @@ export class ClaudeCodeModelCatalogService {
     this.log = options.logger ?? logger.main;
 
     const cached = this.readVerifiedCache();
-    this.models = cached?.models ?? INITIAL_UNVERIFIED_PLACEHOLDER.map((model) => ({ ...model }));
+    this.models = cached?.models ?? [];
     this.state = {
       phase: 'normal',
-      modelSource: cached ? 'cache' : 'placeholder',
+      modelSource: cached ? 'cache' : 'none',
       verified: !!cached,
       attempt: 0,
       maxAttempts: this.retryDelaysMs.length + 1,

@@ -18,6 +18,11 @@ const mocks = vi.hoisted(() => ({
   findAgentProvider: vi.fn(),
   getAllWindows: vi.fn(),
   updateSessionMetadata: vi.fn(),
+  probeExtensionLogin: vi.fn(),
+  codexGetStatus: vi.fn(),
+  codexGetCliLoginStatus: vi.fn(),
+  codexGetModelList: vi.fn(),
+  claudeGetState: vi.fn(),
   terminalManager: {
     destroyTerminal: vi.fn(),
     getClaudeCliLiveTurnState: vi.fn(),
@@ -54,6 +59,17 @@ vi.mock('../../../extensions/AgentProviderRegistry', () => ({
 }));
 vi.mock('../../../extensions/extensionAgentBridge', () => ({
   refreshExtensionAgentProviderModels: vi.fn(),
+  probeExtensionAgentProviderLogin: mocks.probeExtensionLogin,
+}));
+vi.mock('../../CodexAuthService', () => ({
+  codexAuthService: {
+    getStatus: mocks.codexGetStatus,
+    getCliLoginStatus: mocks.codexGetCliLoginStatus,
+    getModelList: mocks.codexGetModelList,
+  },
+}));
+vi.mock('../../ClaudeAuthStateService', () => ({
+  claudeAuthStateService: { getState: mocks.claudeGetState },
 }));
 vi.mock('../tools', () => ({ ToolExecutor: class {}, toolRegistry: { register: vi.fn() }, BUILT_IN_TOOLS: [] }));
 vi.mock('../MessageStreamingHandler', () => ({ MessageStreamingHandler: class {} }));
@@ -102,7 +118,7 @@ vi.mock('../claudeCliTurnSummary', () => ({
   takeClaudeCliTurnSummary: mocks.takeClaudeCliTurnSummary,
 }));
 
-import { AIService } from '../AIService';
+import { AIService, listChannelHealthChannels } from '../AIService';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -150,6 +166,11 @@ describe('AIService channel-health Claude CLI transport', () => {
     mocks.findAgentProvider.mockReturnValue(undefined);
     mocks.getAllWindows.mockReturnValue([]);
     mocks.updateSessionMetadata.mockResolvedValue(undefined);
+    mocks.codexGetModelList.mockResolvedValue({ models: [] });
+    mocks.claudeGetState.mockResolvedValue({ status: 'logged-in' });
+    mocks.codexGetStatus.mockResolvedValue({ account: { type: 'chatgpt' }, requiresOpenaiAuth: false });
+    mocks.codexGetCliLoginStatus.mockResolvedValue('unknown');
+    mocks.probeExtensionLogin.mockResolvedValue({ state: 'logged-in', completionMs: 4 });
   });
 
   it('RED: waits for the initial idle boundary before injecting the health prompt into the real CLI PTY', async () => {
@@ -200,7 +221,7 @@ describe('AIService channel-health Claude CLI transport', () => {
     expect(mocks.submitClaudeCliPromptProduction).not.toHaveBeenCalled();
   });
 
-  it('migrates a saved session model through the live resolved-model identity before validating it', async () => {
+  it('RED EO: preserves a saved unlisted Claude model exactly and does not wait on a catalog', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     const awaitCatalog = vi.fn(async () => {});
     const validate = vi.fn(async () => {});
@@ -219,18 +240,13 @@ describe('AIService channel-health Claude CLI transport', () => {
       undefined,
       undefined,
       'legacy-session',
-    )).resolves.toBe('claude-code:claude-fable-5-1m');
-    expect(awaitCatalog).toHaveBeenCalledWith('claude-code');
-    expect(validate).toHaveBeenCalledWith(
-      'claude-code',
-      'claude-code:claude-fable-5-1m',
-    );
-    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('legacy-session', {
-      model: 'claude-code:claude-fable-5-1m',
-    });
+    )).resolves.toBe('claude-code:fable-1m');
+    expect(awaitCatalog).not.toHaveBeenCalled();
+    expect(validate).not.toHaveBeenCalled();
+    expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
   });
 
-  it('migrates a matching saved global default only after the live catalog proves its exact identity', async () => {
+  it('RED EO: preserves a saved global Claude default instead of catalog-rewriting it', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     const awaitCatalog = vi.fn(async () => {});
     const validate = vi.fn(async () => {});
@@ -244,15 +260,15 @@ describe('AIService channel-health Claude CLI transport', () => {
       }],
     });
 
-    await expect(service.resolveValidatedModelForNewSession('claude-code')).resolves.toBe(
-      'claude-code:claude-fable-5-1m',
-    );
-    expect(awaitCatalog).toHaveBeenCalledWith('claude-code');
-    expect(validate).toHaveBeenCalledWith('claude-code', 'claude-code:claude-fable-5-1m');
-    expect(mocks.setDefaultAIModel).toHaveBeenCalledWith('claude-code:claude-fable-5-1m');
+    await expect(service.resolveValidatedModelForNewSession('claude-code')).resolves.toBe('claude-code:fable-1m');
+    expect(awaitCatalog).not.toHaveBeenCalled();
+    // The advisory hook may inspect a declared row, but it must not rewrite
+    // or reject the value merely because it is absent from that row.
+    expect(validate).toHaveBeenCalledWith('claude-code', 'claude-code:fable-1m');
+    expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
   });
 
-  it('broadcasts an equivalent default migration only after persistence succeeds', async () => {
+  it('does not broadcast a synthetic equivalent-model migration', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     const send = vi.fn();
     mocks.getDefaultAIModel.mockReturnValue('claude-code:fable-1m');
@@ -271,14 +287,11 @@ describe('AIService channel-health Claude CLI transport', () => {
 
     await service.resolveValidatedModelForNewSession('claude-code');
 
-    expect(mocks.setDefaultAIModel).toHaveBeenCalledWith('claude-code:claude-fable-5-1m');
-    expect(send).toHaveBeenCalledWith('settings:default-ai-model-migrated', {
-      from: 'claude-code:fable-1m',
-      to: 'claude-code:claude-fable-5-1m',
-    });
+    expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
   });
 
-  it('does not rewrite an ACP session to the shared Codex catalog prefix', async () => {
+  it('does not rewrite or catalog-gate an ACP session model', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     const validate = vi.fn(async () => {});
     Object.assign(service, {
@@ -295,34 +308,29 @@ describe('AIService channel-health Claude CLI transport', () => {
       'acp-session',
     )).resolves.toBe('openai-codex-acp:gpt-5.5');
     expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
-    expect(validate).toHaveBeenCalledWith('openai-codex-acp', 'openai-codex:gpt-5.5');
+    expect(validate).not.toHaveBeenCalled();
   });
 
-  it('does not persist a candidate default until the live catalog validates it', async () => {
+  it('keeps a saved default raw when the catalog has no declaration', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     mocks.getDefaultAIModel.mockReturnValue('claude-code:fable-1m');
     Object.assign(service, {
       awaitModelCatalogForProvider: vi.fn(async () => {}),
-      assertCurrentDynamicModelAvailable: vi.fn(async () => {
-        throw new Error('claude-code 模型目录不可用');
-      }),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
       getDynamicCatalogModels: () => [{
         id: 'claude-code:claude-fable-5-1m',
         resolvedModel: 'claude-fable-5[1m]',
       }],
     });
 
-    await expect(service.resolveValidatedModelForNewSession('claude-code')).rejects.toThrow(
-      'claude-code 模型目录不可用',
-    );
+    await expect(service.resolveValidatedModelForNewSession('claude-code')).resolves.toBe('claude-code:fable-1m');
     expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
     expect(mocks.getAllWindows).not.toHaveBeenCalled();
   });
 
-  it('does not overwrite a user default changed while the live catalog was loading', async () => {
+  it('does not load a catalog or overwrite a user default while resolving an explicit value', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     const send = vi.fn();
-    const catalogReady = deferred<void>();
     mocks.getDefaultAIModel
       .mockReturnValueOnce('claude-code:fable-1m')
       .mockReturnValueOnce('claude-code:claude-sonnet-4-5');
@@ -331,7 +339,7 @@ describe('AIService channel-health Claude CLI transport', () => {
       webContents: { isDestroyed: () => false, send },
     }]);
     Object.assign(service, {
-      awaitModelCatalogForProvider: vi.fn(() => catalogReady.promise),
+      awaitModelCatalogForProvider: vi.fn(async () => {}),
       assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
       getDynamicCatalogModels: () => [{
         id: 'claude-code:claude-fable-5-1m',
@@ -339,10 +347,7 @@ describe('AIService channel-health Claude CLI transport', () => {
       }],
     });
 
-    const resolution = service.resolveValidatedModelForNewSession('claude-code');
-    catalogReady.resolve();
-
-    await expect(resolution).resolves.toBe('claude-code:claude-fable-5-1m');
+    await expect(service.resolveValidatedModelForNewSession('claude-code')).resolves.toBe('claude-code:fable-1m');
     expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
@@ -368,7 +373,7 @@ describe('AIService channel-health Claude CLI transport', () => {
     expect(mocks.setDefaultAIModel).not.toHaveBeenCalled();
   });
 
-  it('GREEN FB-114: drops an unsupported saved Haiku effort, persists the correction, and keeps the send model usable', async () => {
+  it('GREEN EO: forwards a saved Claude Haiku effort raw instead of host-dropping it', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     const awaitCatalog = vi.fn(async () => {});
     const validate = vi.fn(async () => {});
@@ -390,17 +395,15 @@ describe('AIService channel-health Claude CLI transport', () => {
       'haiku-session',
     )).resolves.toBe('claude-code:haiku');
 
-    expect(awaitCatalog).toHaveBeenCalledWith('claude-code');
-    expect(validate).toHaveBeenCalledWith('claude-code', 'claude-code:haiku');
-    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('haiku-session', {
-      metadata: { effortLevel: null },
-    });
-    expect(mocks.logInfo).toHaveBeenCalledWith(
-      '[EffortGate] dropped unsupported effort requested=high model=claude-code:haiku',
-    );
+    expect(awaitCatalog).not.toHaveBeenCalled();
+    expect(validate).not.toHaveBeenCalled();
+    expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
+    expect(service.resolveCompatibleDynamicSessionEffortLevel(
+      'claude-code', 'claude-code:haiku', 'high',
+    )).toBe('high');
   });
 
-  it('GREEN FB-115: falls back only to the model-declared tier and persists that correction', async () => {
+  it('GREEN EO: forwards an undeclared Claude effort raw rather than replacing it', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     Object.assign(service, {
       awaitModelCatalogForProvider: vi.fn(async () => {}),
@@ -421,15 +424,29 @@ describe('AIService channel-health Claude CLI transport', () => {
       'fallback-session',
     )).resolves.toBe('claude-code:sonnet');
 
-    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('fallback-session', {
-      metadata: { effortLevel: 'deep' },
-    });
-    expect(mocks.logInfo).toHaveBeenCalledWith(
-      '[EffortGate] fell back unsupported effort requested=ultra effective=deep model=claude-code:sonnet',
-    );
+    expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
+    expect(service.resolveCompatibleDynamicSessionEffortLevel(
+      'claude-code', 'claude-code:sonnet', 'ultra',
+    )).toBe('ultra');
   });
 
-  it('GREEN FB-116: corrects an incompatible app-wide effort default without refreshing a normal send catalog', async () => {
+  it('GREEN EO: uses the selected Claude model default when session effort is empty', () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    mocks.getDefaultEffortLevel.mockReturnValue('low');
+    Object.assign(service, {
+      getDynamicCatalogModels: () => [{
+        id: 'claude-code:opus',
+        supportedEffortLevels: ['low', 'high'],
+        defaultEffortLevel: 'high',
+      }],
+    });
+
+    expect(service.resolveCompatibleDynamicSessionEffortLevel(
+      'claude-code', 'claude-code:opus', undefined,
+    )).toBe('high');
+  });
+
+  it('GREEN EO: keeps a Claude app-wide effort raw without refreshing a normal send catalog', async () => {
     const service = Object.create(AIService.prototype) as Record<string, any>;
     const pickerRefresh = vi.fn();
     const headRefresh = vi.fn();
@@ -454,10 +471,52 @@ describe('AIService channel-health Claude CLI transport', () => {
       'default-effort-session',
     )).resolves.toBe('claude-code:haiku');
 
-    expect(mocks.setDefaultEffortLevel).toHaveBeenCalledWith(undefined);
+    expect(mocks.setDefaultEffortLevel).not.toHaveBeenCalled();
     expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
     expect(pickerRefresh).not.toHaveBeenCalled();
     expect(headRefresh).not.toHaveBeenCalled();
+  });
+
+  it('GREEN EO: passes an unlisted Codex model through but omits its undeclared effort', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      getDynamicCatalogModels: () => [{
+        id: 'openai-codex:gpt-listed',
+        supportsEffort: true,
+        supportedEffortLevels: ['low', 'high'],
+        defaultEffortLevel: 'low',
+      }],
+    });
+
+    await expect(service.resolveCurrentDynamicSessionModel(
+      'openai-codex',
+      'openai-codex:gpt-user-entered',
+      undefined,
+      'ultra',
+      'unlisted-codex-session',
+    )).resolves.toBe('openai-codex:gpt-user-entered');
+
+    expect(service.resolveCompatibleDynamicSessionEffortLevel(
+      'openai-codex', 'openai-codex:gpt-user-entered', 'ultra',
+    )).toBeUndefined();
+    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('unlisted-codex-session', {
+      metadata: { effortLevel: null },
+    });
+  });
+
+  it('GREEN EO: uses Codex’s declared default, including when only the raw levels array is present', () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      getDynamicCatalogModels: () => [{
+        id: 'openai-codex:gpt-future',
+        supportedEffortLevels: ['low', 'turbo'],
+        defaultEffortLevel: 'turbo',
+      }],
+    });
+
+    expect(service.resolveCompatibleDynamicSessionEffortLevel(
+      'openai-codex', 'openai-codex:gpt-future', undefined,
+    )).toBe('turbo');
   });
 
   it('GREEN FB-116: picker refresh probes Codex, Claude, and a dynamic Gemini provider together', async () => {
@@ -525,5 +584,90 @@ describe('AIService channel-health Claude CLI transport', () => {
 
     await service.refreshModelCatalogForHeadDispatch('antigravity-gemini-agent');
     expect(geminiRefresh).toHaveBeenCalledWith('antigravity-gemini-agent');
+  });
+});
+
+describe('AIService zero-inference channel probes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.claudeGetState.mockResolvedValue({ status: 'logged-in' });
+    mocks.codexGetStatus.mockResolvedValue({ account: { type: 'chatgpt' }, requiresOpenaiAuth: false });
+    mocks.probeExtensionLogin.mockResolvedValue({ state: 'logged-in', completionMs: 4 });
+  });
+
+  function probeService(): Record<string, any> {
+    return Object.create(AIService.prototype) as Record<string, any>;
+  }
+
+  function input(id: string) {
+    return {
+      channel: { id, displayName: id, transport: 'streaming' as const },
+      event: { sender: {} } as Electron.IpcMainInvokeEvent,
+      workspacePath: '/workspace',
+    };
+  }
+
+  it('GREEN EO: runs Claude, Codex, and Gemini through their native probes without a model turn', async () => {
+    const service = probeService();
+
+    await expect(service.runChannelHealthProbe(input('claude-code'))).resolves.toMatchObject({
+      state: 'healthy', summary: '已登录',
+    });
+    await expect(service.runChannelHealthProbe(input('openai-codex'))).resolves.toMatchObject({
+      state: 'healthy', summary: '订阅已登录',
+    });
+    await expect(service.runChannelHealthProbe(input('antigravity-gemini-agent'))).resolves.toMatchObject({
+      state: 'healthy', summary: '已登录',
+    });
+
+    expect(mocks.claudeGetState).toHaveBeenCalledWith({ forceRefresh: true, trigger: 'manual' });
+    expect(mocks.codexGetStatus).toHaveBeenCalledWith(false);
+    expect(mocks.codexGetModelList).not.toHaveBeenCalled();
+    expect(mocks.probeExtensionLogin).toHaveBeenCalledWith('antigravity-gemini-agent');
+  });
+
+  it('reports Codex transport failure as unknown rather than logged out', async () => {
+    mocks.codexGetStatus.mockRejectedValueOnce(new Error('app-server timed out'));
+    const result = await probeService().runChannelHealthProbe(input('openai-codex'));
+
+    expect(result).toMatchObject({ state: 'unknown', failureKind: 'auth_check_unknown' });
+    expect(result.failureKind).not.toBe('not_logged_in');
+  });
+
+  it('GREEN EO: uses only the read-only Codex CLI fallback when account/read transport fails', async () => {
+    mocks.codexGetStatus.mockRejectedValueOnce(new Error('app-server unavailable'));
+    mocks.codexGetCliLoginStatus.mockResolvedValueOnce('chatgpt');
+
+    await expect(probeService().runChannelHealthProbe(input('openai-codex')))
+      .resolves.toMatchObject({ state: 'healthy', summary: '订阅已登录（CLI）' });
+    expect(mocks.codexGetCliLoginStatus).toHaveBeenCalledOnce();
+    expect(mocks.codexGetModelList).not.toHaveBeenCalled();
+  });
+
+  it('labels the API-key account mode without misreporting a subscription login', async () => {
+    mocks.codexGetStatus.mockResolvedValueOnce({ account: { type: 'apiKey' }, requiresOpenaiAuth: false });
+    await expect(probeService().runChannelHealthProbe(input('openai-codex')))
+      .resolves.toMatchObject({ state: 'healthy', summary: 'API key 模式' });
+  });
+
+  it('keeps an untrusted Gemini backend unknown for the startup retry path', async () => {
+    mocks.probeExtensionLogin.mockResolvedValueOnce({ state: 'unknown', reason: 'not_started', completionMs: 1 });
+    await expect(probeService().runChannelHealthProbe(input('antigravity-gemini-agent')))
+      .resolves.toMatchObject({ state: 'unknown', failureKind: 'not_started' });
+  });
+
+  it('GREEN EO: includes a registered Gemini provider in “体检全部” unless explicitly disabled', () => {
+    const registeredGemini = [{
+      status: 'registered',
+      contributionId: 'antigravity-gemini-agent',
+      contribution: { displayName: 'Gemini' },
+    }];
+
+    expect(listChannelHealthChannels({}, registeredGemini).map((channel) => channel.id))
+      .toContain('antigravity-gemini-agent');
+    expect(listChannelHealthChannels({
+      'antigravity-gemini-agent': { enabled: false },
+    }, registeredGemini).find((channel) => channel.id === 'antigravity-gemini-agent'))
+      .toMatchObject({ enabled: false });
   });
 });

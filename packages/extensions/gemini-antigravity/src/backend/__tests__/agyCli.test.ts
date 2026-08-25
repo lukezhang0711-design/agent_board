@@ -10,13 +10,12 @@ vi.mock('fs', async () => {
 
 import { spawn } from 'child_process';
 import {
-  AGY_MODEL_MAP,
   AntigravityAgyModelError,
   AntigravityAgyNotInstalledError,
   AntigravityAgyNotLoggedInError,
   AntigravityAgyTimeoutError,
   AntigravityServerManager,
-  mapAgyModel,
+  probeGeminiOAuthFiles,
 } from '../ServerManager';
 
 type MockChild = ChildProcess & {
@@ -69,23 +68,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('agy CLI model mapping', () => {
-  it('maps the extension model keys to real agy model ids', () => {
-    expect(AGY_MODEL_MAP).toEqual({
-      'gemini-3-flash-agent': 'gemini-3.6-flash-high',
-      'gemini-3.5-flash-low': 'gemini-3.6-flash-medium',
-      'gemini-3.5-flash-extra-low': 'gemini-3.6-flash-low',
-    });
-    expect(mapAgyModel('gemini-3-flash-agent')).toBe('gemini-3.6-flash-high');
-  });
-});
-
 describe('agy CLI dynamic model catalog', () => {
-  it('discovers a new agy model and maps it for a request', async () => {
+  it('discovers a new agy model and forwards that exact value for a request', async () => {
     mockEnvironment({ desktop: false, agy: true });
     spawnMock
       .mockReturnValueOnce(mockChild({
-        stdout: 'Available models:\n  gemini-3.1-flash-low\n',
+        stdout: 'Fetching available models...\ngemini-3.1-flash-low\tGemini 3.1 Flash (Low)\n',
       }))
       .mockImplementationOnce(() => mockChild({
         stdout: JSON.stringify({ result: 'dynamic', conversation_id: 'dynamic-1' }),
@@ -105,6 +93,60 @@ describe('agy CLI dynamic model catalog', () => {
     ]);
   });
 
+  it('RED EO: retains third-party rows exactly as agy returned them instead of filtering or composing a tier', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    spawnMock.mockReturnValue(mockChild({
+      stdout: [
+        'gemini-3.1-pro',
+        'claude-sonnet-4-6',
+        'gpt-oss-120b-medium',
+      ].join('\n'),
+    }));
+
+    const manager = freshManager();
+    const catalog = await manager.getAvailableAgyModels();
+
+    expect(catalog.map((model) => model.agyModel)).toEqual([
+      'gemini-3.1-pro',
+      'claude-sonnet-4-6',
+      'gpt-oss-120b-medium',
+    ]);
+    expect(catalog.map((model) => model.agyModel)).not.toContain('gemini-3.1-pro-medium');
+  });
+
+  it('GREEN EO: presents exactly the 14 raw TSV model rows, excluding the agy progress preamble', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    const rawRows: ReadonlyArray<readonly [string, string]> = [
+      ['gemini-3.7-flash-high', 'Gemini 3.7 Flash (High)'],
+      ['gemini-3.7-flash-medium', 'Gemini 3.7 Flash (Medium)'],
+      ['gemini-3.7-flash-low', 'Gemini 3.7 Flash (Low)'],
+      ['gemini-3.6-flash-high', 'Gemini 3.6 Flash (High)'],
+      ['gemini-3.6-flash-medium', 'Gemini 3.6 Flash (Medium)'],
+      ['gemini-3.6-flash-low', 'Gemini 3.6 Flash (Low)'],
+      ['gemini-3.5-flash-high', 'Gemini 3.5 Flash (High)'],
+      ['gemini-3.5-flash-medium', 'Gemini 3.5 Flash (Medium)'],
+      ['gemini-3.5-flash-low', 'Gemini 3.5 Flash (Low)'],
+      ['gemini-3.1-pro-high', 'Gemini 3.1 Pro (High)'],
+      ['gemini-3.1-pro-low', 'Gemini 3.1 Pro (Low)'],
+      ['claude-sonnet-4-6', 'Claude Sonnet 4.6 (Thinking)'],
+      ['claude-opus-4-6-thinking', 'Claude Opus 4.6 (Thinking)'],
+      ['gpt-oss-120b-medium', 'GPT-OSS 120B (Medium)'],
+    ];
+    spawnMock.mockReturnValue(mockChild({
+      stdout: [
+        'Fetching available models...',
+        ...rawRows.map(([id, name]) => `${id}\t${name}`),
+      ].join('\n'),
+    }));
+
+    const catalog = await freshManager().getAvailableAgyModels();
+
+    expect(catalog.map(({ key, agyModel, displayName }) => ({ key, agyModel, displayName }))).toEqual(
+      rawRows.map(([id, name]) => ({ key: id, agyModel: id, displayName: name })),
+    );
+    expect(catalog.map((model) => model.agyModel)).not.toContain('Fetching available models...');
+  });
+
   it('caches the dynamic catalog for repeated reads', async () => {
     mockEnvironment({ desktop: false, agy: true });
     spawnMock.mockReturnValue(mockChild({
@@ -119,21 +161,31 @@ describe('agy CLI dynamic model catalog', () => {
     expect(spawnMock).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to the existing static catalog when agy models fails', async () => {
+  it('does not fabricate a static catalog when agy models fails', async () => {
     mockEnvironment({ desktop: false, agy: true });
     spawnMock.mockReturnValue(mockChild({ code: 1, stderr: 'agy models unavailable' }));
 
     const manager = freshManager();
-    await expect(manager.getAvailableAgyModels()).resolves.toEqual([
-      expect.objectContaining({ key: 'gemini-3-flash-agent', agyModel: 'gemini-3.6-flash-high' }),
-      expect.objectContaining({ key: 'gemini-3.5-flash-low', agyModel: 'gemini-3.6-flash-medium' }),
-      expect.objectContaining({ key: 'gemini-3.5-flash-extra-low', agyModel: 'gemini-3.6-flash-low' }),
-    ]);
+    await expect(manager.getAvailableAgyModels()).rejects.toThrow('agy models unavailable');
+  });
+
+  it('GREEN EO: probes login with `agy models` only, never a prompt or effort flag', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    spawnMock.mockReturnValue(mockChild({ stdout: 'Gemini 3.7 Flash (High)\n' }));
+
+    const manager = freshManager();
+    await expect(manager.probeAgyLogin()).resolves.toMatchObject({ state: 'logged-in' });
+
+    const [, args, options] = spawnMock.mock.calls[0];
+    expect(args).toEqual(['models']);
+    expect(args).not.toContain('-p');
+    expect(args).not.toContain('--effort');
+    expect(options).toMatchObject({ stdio: ['ignore', 'pipe', 'pipe'] });
   });
 });
 
 describe('agy CLI process boundary', () => {
-  it('detects CLI-only install and sends the mapped one-shot command', async () => {
+  it('detects CLI-only install and sends the raw one-shot model command', async () => {
     mockEnvironment({ desktop: false, agy: true });
     spawnMock.mockReturnValue(mockChild({
       stdout: JSON.stringify({ result: 'pong', conversation_id: 'conv-1' }),
@@ -143,7 +195,7 @@ describe('agy CLI process boundary', () => {
     expect(AntigravityServerManager.isInstalled()).toBe(true);
     const response = await manager.getModelResponse(
       'Reply with one word: pong',
-      'gemini-3-flash-agent',
+      'gemini-3.6-flash-high',
       2_000,
       'session-1',
     );
@@ -167,12 +219,12 @@ describe('agy CLI process boundary', () => {
     }));
 
     const manager = freshManager();
-    await expect(manager.getModelResponse('one', 'gemini-3-flash-agent', 2_000, 'session-2'))
+    await expect(manager.getModelResponse('one', 'gemini-3.6-flash-high', 2_000, 'session-2'))
       .resolves.toBe('first');
     spawnMock.mockReturnValueOnce(mockChild({
       stdout: JSON.stringify({ result: 'second' }),
     }));
-    await expect(manager.getModelResponse('two', 'gemini-3-flash-agent', 2_000, 'session-2'))
+    await expect(manager.getModelResponse('two', 'gemini-3.6-flash-high', 2_000, 'session-2'))
       .resolves.toBe('second');
 
     expect(spawnMock.mock.calls[1][1]).toEqual([
@@ -183,20 +235,22 @@ describe('agy CLI process boundary', () => {
     ]);
   });
 
-  it('does not spawn when the extension model has no agy mapping', async () => {
+  it('RED EO: sends an unlisted explicit model to agy unchanged instead of host-rejecting it', async () => {
     mockEnvironment({ desktop: false, agy: true });
+    spawnMock.mockReturnValue(mockChild({
+      code: 1,
+      stderr: 'Print mode: invalid --model "future-engine-model"',
+    }));
     const manager = freshManager();
 
-    const error = await manager.getModelResponse('one', 'gemini-model-that-does-not-exist')
+    const error = await manager.getModelResponse('one', 'future-engine-model')
       .catch((err) => err);
     expect(error).toBeInstanceOf(AntigravityAgyModelError);
-    expect(error).toHaveProperty(
-      'message',
-      expect.stringContaining(
-        'supported extension models: gemini-3-flash-agent, gemini-3.5-flash-low, gemini-3.5-flash-extra-low',
-      ),
+    expect(spawnMock).toHaveBeenCalledWith(
+      '/fixture/home/.local/bin/agy',
+      expect.arrayContaining(['--model', 'future-engine-model']),
+      expect.any(Object),
     );
-    expect(spawnMock).not.toHaveBeenCalled();
   });
 
   it('does not mistake agy’s invalid-model list for a model reply', async () => {
@@ -207,7 +261,7 @@ describe('agy CLI process boundary', () => {
     }));
     const manager = freshManager();
 
-    const error = await manager.getModelResponse('one', 'gemini-3-flash-agent').catch((err) => err);
+    const error = await manager.getModelResponse('one', 'gemini-3.6-flash-high').catch((err) => err);
     expect(error).toMatchObject({ name: 'AntigravityAgyModelError' });
     expect(error).toHaveProperty('message', expect.stringMatching(/model list is not a response/));
   });
@@ -216,9 +270,9 @@ describe('agy CLI process boundary', () => {
     mockEnvironment({ desktop: false, agy: false });
     const manager = freshManager();
 
-    await expect(manager.getModelResponse('one', 'gemini-3-flash-agent'))
+    await expect(manager.getModelResponse('one', 'gemini-3.6-flash-high'))
       .rejects.toBeInstanceOf(AntigravityAgyNotInstalledError);
-    await expect(manager.getModelResponse('one', 'gemini-3-flash-agent'))
+    await expect(manager.getModelResponse('one', 'gemini-3.6-flash-high'))
       .rejects.toThrow(/未安装/);
     expect(spawnMock).not.toHaveBeenCalled();
   });
@@ -231,7 +285,7 @@ describe('agy CLI process boundary', () => {
     }));
     const manager = freshManager();
 
-    const error = await manager.getModelResponse('one', 'gemini-3-flash-agent').catch((err) => err);
+    const error = await manager.getModelResponse('one', 'gemini-3.6-flash-high').catch((err) => err);
     expect(error).toBeInstanceOf(AntigravityAgyNotLoggedInError);
     expect(error).toHaveProperty('message', expect.stringMatching(/终端登录 antigravity/));
   });
@@ -257,17 +311,21 @@ describe('agy CLI process boundary', () => {
     }
   });
 
-  it('probes the agy OAuth file read-only and rejects an expired access-only token', () => {
-    const tokenPathSuffix = '/.gemini/antigravity-cli/antigravity-oauth-token';
-    existsSyncMock.mockImplementation((candidate) => String(candidate).endsWith(tokenPathSuffix));
-    readFileSyncMock.mockReturnValue(JSON.stringify({
-      token: {
-        access_token: 'redacted-test-token',
+  it('GREEN EO: keeps an expired access token logged in when the Gemini refresh token exists', () => {
+    const values: Record<string, string> = {
+      '/fixture/home/.gemini/settings.json': JSON.stringify({ security: { auth: { selectedType: 'oauth-personal' } } }),
+      '/fixture/home/.gemini/google_accounts.json': JSON.stringify({ active: 'account@example.com' }),
+      '/fixture/home/.gemini/oauth_creds.json': JSON.stringify({
+        access_token: 'expired-access-token',
         expiry: '2020-01-01T00:00:00.000Z',
-      },
-    }));
-    expect(AntigravityServerManager.hasAgyAuth()).toBe(false);
-    expect(readFileSyncMock).toHaveBeenCalledWith(expect.stringContaining(tokenPathSuffix), 'utf8');
+        refresh_token: 'refresh-token-is-long-enough',
+      }),
+    };
+    expect(probeGeminiOAuthFiles({
+      homedir: () => '/fixture/home',
+      existsSync: (candidate) => candidate in values,
+      readFileSync: (candidate) => values[candidate]!,
+    })).toBe('logged-in');
   });
 
   it('does not pass credential environment variables or tokens to agy', async () => {
@@ -281,7 +339,7 @@ describe('agy CLI process boundary', () => {
     process.env.ANTIGRAVITY_ACCESS_TOKEN = 'must-not-cross-boundary';
     try {
       const manager = freshManager();
-      await expect(manager.getModelResponse('one', 'gemini-3-flash-agent'))
+      await expect(manager.getModelResponse('one', 'gemini-3.6-flash-high'))
         .resolves.toBe('pong');
       const options = spawnMock.mock.calls[0][2] as { env?: NodeJS.ProcessEnv };
       expect(options.env?.GOOGLE_API_KEY).toBeUndefined();
@@ -301,7 +359,7 @@ describe('agy CLI process boundary', () => {
     spawnMock.mockReturnValue(child);
     const manager = freshManager();
 
-    const error = await manager.getModelResponse('one', 'gemini-3-flash-agent', 10)
+    const error = await manager.getModelResponse('one', 'gemini-3.6-flash-high', 10)
       .catch((err) => err);
     expect(error).toBeInstanceOf(AntigravityAgyTimeoutError);
     expect(error).toMatchObject({

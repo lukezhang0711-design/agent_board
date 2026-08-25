@@ -258,6 +258,28 @@ describe('CodexSDKProtocol', () => {
     expect(passedOptions.modelReasoningEffort).toBe('ultra');
   });
 
+  it('leaves model and reasoning unset when Codex has no declared selection', async () => {
+    const startThread = vi.fn((_options?: Record<string, unknown>) => ({
+      id: 'thread-native-default',
+      runStreamed: vi.fn(),
+    }));
+    const protocol = new CodexSDKProtocol(
+      'test-key',
+      async () => ({
+        Codex: class {
+          startThread = startThread;
+          resumeThread = vi.fn();
+        },
+      }) as any,
+    );
+
+    await protocol.createSession({ workspacePath: '/projects/main' });
+
+    const passedOptions = startThread.mock.calls[0]![0] as Record<string, unknown>;
+    expect(passedOptions).not.toHaveProperty('model');
+    expect(passedOptions).not.toHaveProperty('modelReasoningEffort');
+  });
+
   it('passes image attachments as structured local_image inputs', async () => {
     const runStreamed = vi.fn(async () => ({
       events: createAsyncEventStream([

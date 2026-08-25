@@ -352,6 +352,8 @@ describe('ClaudeAuthStateService', () => {
       CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN,
       CLAUDE_CODE_OAUTH_REFRESH_TOKEN: process.env.CLAUDE_CODE_OAUTH_REFRESH_TOKEN,
       CLAUDECODE: process.env.CLAUDECODE,
+      USER: process.env.USER,
+      CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR,
     };
     Object.assign(process.env, {
       ANTHROPIC_API_KEY: 'api-key',
@@ -359,6 +361,8 @@ describe('ClaudeAuthStateService', () => {
       CLAUDE_CODE_OAUTH_TOKEN: 'oauth-token',
       CLAUDE_CODE_OAUTH_REFRESH_TOKEN: 'refresh-token',
       CLAUDECODE: '1',
+      USER: 'fixture-user',
+      CLAUDE_CONFIG_DIR: '/fixture/.claude',
     });
     execFileMock.mockImplementation((_file, _args, _options, callback) => {
       callback(null, loggedInJson, '');
@@ -383,6 +387,8 @@ describe('ClaudeAuthStateService', () => {
       expect(options.env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
       expect(options.env.CLAUDE_CODE_OAUTH_REFRESH_TOKEN).toBeUndefined();
       expect(options.env.CLAUDECODE).toBeUndefined();
+      expect(options.env.USER).toBe('fixture-user');
+      expect(options.env.CLAUDE_CONFIG_DIR).toBe('/fixture/.claude');
     } finally {
       for (const [key, value] of Object.entries(previous)) {
         if (value === undefined) delete process.env[key];

@@ -17,6 +17,7 @@ import {
 } from '../../extensions/AgentProviderRegistry';
 import {
   refreshExtensionAgentProviderModels,
+  probeExtensionAgentProviderLogin,
   type ExtensionAgentCatalogModel,
 } from '../../extensions/extensionAgentBridge';
 import {
@@ -93,8 +94,6 @@ import {
   normalizeAIProviderOverrides,
   shouldShowCommunityPopup,
   wasCommunityPopupShownThisLaunch,
-  getDefaultEffortLevel,
-  setDefaultEffortLevel,
 } from '../../utils/store';
 import { mergeAISettings, getAIProviderOverridesWithWorktreeFallback } from '../../utils/aiSettingsMerge';
 import { AISessionsRepository, DocumentContextService, type RawDocumentContext, type PreparedDocumentContext } from '@nimbalyst/runtime';
@@ -130,10 +129,12 @@ import {
 } from './aiServiceUtils';
 import { MessageStreamingHandler } from './MessageStreamingHandler';
 import {
+  CHANNEL_HEALTH_PROMPT,
   CHANNEL_HEALTH_TIMEOUT_MS,
   ChannelHealthError,
   ChannelHealthService,
   type ChannelHealthChannel,
+  type ChannelHealthProbeResult,
   type ChannelHealthRunContext,
   type ChannelHealthTransportResult,
 } from './ChannelHealthService';
@@ -170,6 +171,8 @@ import {
 } from '../PGLiteQueuedPromptsStore';
 import { getQueuedPromptsStore } from '../RepositoryManager';
 import { CodexModelRefreshService } from '../CodexModelRefreshService';
+import { codexAuthService } from '../CodexAuthService';
+import { claudeAuthStateService } from '../ClaudeAuthStateService';
 import { ClaudeCodeModelCatalogService } from './ClaudeCodeModelCatalogService';
 import {
   setDynamicModelCatalogStatusReader,
@@ -178,7 +181,6 @@ import {
   setDynamicModelEffortNormalizer,
   type DynamicModelCatalogStatus,
 } from './modelCatalogValidation';
-import { resolveEquivalentModelIdMigration } from './modelIdMigration';
 import { database as databaseWorker } from '../../database/PGLiteDatabaseWorker';
 import {
   createTolerantAISettingsWriter,
@@ -286,9 +288,10 @@ export function listChannelHealthChannels(
       id: entry.contributionId,
       displayName: entry.contribution.displayName || entry.contributionId,
       transport: 'streaming',
-      // Dynamic provider settings default to false. A disabled runtime extension
-      // remains visible as a gray row, but ChannelHealthService will not send it.
-      enabled: providerSettings[entry.contributionId]?.enabled === true,
+      // Gemini's login probe is local/control-plane only, so an installed
+      // provider participates in “体检全部” by default. An explicit off switch
+      // still leaves its row visible but prevents the probe.
+      enabled: providerSettings[entry.contributionId]?.enabled !== false,
     }));
 
   return [
@@ -574,7 +577,8 @@ export class AIService {
     this.streamingHandler = new MessageStreamingHandler(this);
     this.channelHealthService = new ChannelHealthService({
       listEnabledChannels: () => this.listEnabledChannelHealthChannels(),
-      runChannel: (input) => this.runChannelHealthPrompt(input),
+      runChannel: (input) => this.runChannelHealthProbe(input),
+      runDeepChannel: (input) => this.runChannelHealthPrompt(input),
       isAutoCheckEnabled: () =>
         getSettingsService().get('ai.channelHealth.autoCheckOnStartup') === true,
       log: (line) => logger.main.info(line),
@@ -587,6 +591,7 @@ export class AIService {
         'codex-model-refresh',
         'models.json',
       ),
+      fetchCatalog: () => codexAuthService.getModelList(),
     });
     this.claudeCodeModelCatalogService = new ClaudeCodeModelCatalogService({
       cachePath: path.join(
@@ -598,9 +603,6 @@ export class AIService {
     });
     OpenAICodexProvider.setModelRefreshSnapshotResolver(
       () => this.codexModelRefreshService.getModels(),
-    );
-    OpenAICodexProvider.setModelCatalogPathResolver(
-      () => this.codexModelRefreshService.getCatalogPath(),
     );
     ClaudeCodeProvider.setModelCatalogSnapshotResolver(
       () => this.claudeCodeModelCatalogService.getModels(),
@@ -617,8 +619,6 @@ export class AIService {
     setDynamicModelCatalogStatusReader(() => this.getModelCatalogStatuses());
     setDynamicModelEffortNormalizer(async ({ provider, modelId, sessionId, sessionEffortLevel }) => {
       if (!this.isRuntimeDynamicCatalogProvider(provider)) return;
-      await this.awaitModelCatalogForProvider(provider);
-      await this.assertDynamicModelAvailable(provider, modelId);
       await this.normalizePersistedDynamicSessionEffort(
         provider,
         modelId,
@@ -720,7 +720,19 @@ export class AIService {
         return;
       }
       try {
-        await this.channelHealthService.runOnStartup(context);
+        const snapshot = await this.channelHealthService.runOnStartup(context);
+        // Extensions may register before their trusted workspace backend is
+        // runnable. Retry once rather than turning that boot race into a red
+        // “not logged in” signal.
+        if (snapshot.results.some((result) => (
+          result.state === 'unknown' && result.failureKind === 'not_started'
+        ))) {
+          setTimeout(() => {
+            void this.channelHealthService.retryStartupUnknown(context).catch((error) => {
+              logger.main.error('[ChannelHealth] startup retry failed', error);
+            });
+          }, 1_500);
+        }
       } catch (error) {
         // Health checks are explicitly isolated from normal conversation
         // routing. A scheduler failure is observable but never fatal to boot.
@@ -741,6 +753,122 @@ export class AIService {
         anthropicApiKey: apiKeys.anthropic,
       },
     );
+  }
+
+  /**
+   * Default channel health is deliberately a native login/control-plane
+   * probe. It must never create a session, initialise a model, or send a
+   * prompt. The older real-prompt methods below remain available only for an
+   * explicit deep diagnostic.
+   */
+  private async runChannelHealthProbe(input: {
+    channel: ChannelHealthChannel;
+    event: Electron.IpcMainInvokeEvent;
+    workspacePath: string;
+  }): Promise<ChannelHealthProbeResult> {
+    const startedAt = Date.now();
+    const completion = () => Math.max(0, Date.now() - startedAt);
+    const channelId = input.channel.id;
+
+    if (channelId === 'claude-code' || channelId === 'claude-code-cli') {
+      const state = await claudeAuthStateService.getState({
+        forceRefresh: true,
+        trigger: 'manual',
+      });
+      if (state.status === 'logged-in') {
+        return { state: 'healthy', summary: '已登录', completionMs: completion() };
+      }
+      if (state.status === 'logged-out') {
+        return { state: 'failed', failureKind: 'not_logged_in', completionMs: completion() };
+      }
+      return {
+        state: 'unknown',
+        failureKind: state.error?.toLowerCase().includes('timed out')
+          ? 'auth_check_timeout'
+          : 'auth_check_unknown',
+        completionMs: completion(),
+      };
+    }
+
+    if (channelId === 'openai-codex') {
+      try {
+        // `refreshToken: false` is a read-only app-server account/read. Do
+        // not use the OAuth-refreshing path as a heartbeat.
+        const status = await codexAuthService.getStatus(false);
+        if (status.account?.type === 'chatgpt') {
+          return { state: 'healthy', summary: '订阅已登录', completionMs: completion() };
+        }
+        if (status.account?.type === 'apiKey') {
+          return { state: 'healthy', summary: 'API key 模式', completionMs: completion() };
+        }
+        if (status.account === null && status.requiresOpenaiAuth) {
+          return { state: 'failed', failureKind: 'not_logged_in', completionMs: completion() };
+        }
+        return { state: 'unknown', failureKind: 'auth_check_unknown', completionMs: completion() };
+      } catch {
+        // The app-server transport failure itself is neutral. Its read-only
+        // CLI fallback can still distinguish an explicit local logout.
+        const fallback = await codexAuthService.getCliLoginStatus();
+        if (fallback === 'chatgpt') {
+          return { state: 'healthy', summary: '订阅已登录（CLI）', completionMs: completion() };
+        }
+        if (fallback === 'api-key') {
+          return { state: 'healthy', summary: 'API key 模式（CLI）', completionMs: completion() };
+        }
+        if (fallback === 'logged-out') {
+          return { state: 'failed', failureKind: 'not_logged_in', completionMs: completion() };
+        }
+        return { state: 'unknown', failureKind: 'auth_check_unknown', completionMs: completion() };
+      }
+    }
+
+    if (channelId === 'antigravity-gemini-agent') {
+      try {
+        const probe = await probeExtensionAgentProviderLogin(channelId);
+        if (probe.state === 'logged-in') {
+          return {
+            state: 'healthy',
+            summary: '已登录',
+            completionMs: probe.completionMs ?? completion(),
+          };
+        }
+        if (probe.state === 'logged-out') {
+          return {
+            state: 'failed',
+            failureKind: 'not_logged_in',
+            completionMs: probe.completionMs ?? completion(),
+          };
+        }
+        return {
+          state: 'unknown',
+          failureKind: probe.reason === 'timeout'
+            ? 'timeout'
+            : probe.reason === 'not_started'
+              ? 'not_started'
+              : 'auth_check_unknown',
+          completionMs: probe.completionMs ?? completion(),
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          state: 'unknown',
+          failureKind: /workspace untrusted|not started|not ready/i.test(message)
+            ? 'not_started'
+            : /timeout|timed out/i.test(message)
+              ? 'timeout'
+              : 'auth_check_unknown',
+          completionMs: completion(),
+        };
+      }
+    }
+
+    // Other historical rows have no documented zero-cost auth endpoint. Do
+    // not substitute an inference call; make the limitation explicit.
+    return {
+      state: 'unknown',
+      failureKind: 'not_started',
+      completionMs: completion(),
+    };
   }
 
   private async runChannelHealthPrompt(input: {
@@ -1773,16 +1901,18 @@ export class AIService {
     provider: string,
     candidate: ExtensionAgentCatalogModel,
   ): AIModel | null {
-    const rawId = candidate.id.trim();
-    if (!rawId) return null;
-    const id = rawId.includes(':') ? rawId : `${provider}:${rawId}`;
+    // Keep both id and label byte-for-byte from the extension backend. The
+    // provider prefix is transport framing only, added exactly once when the
+    // backend returned a bare engine identifier.
+    const rawId = candidate.id;
+    if (!rawId || !rawId.trim()) return null;
+    const id = rawId.startsWith(`${provider}:`) ? rawId : `${provider}:${rawId}`;
     if (!id.startsWith(`${provider}:`)) return null;
     const levels = Array.from(new Set(
       (candidate.supportedEffortLevels ?? [])
-        .map((level) => level.trim())
-        .filter(Boolean),
+        .filter((level) => level.trim().length > 0),
     ));
-    const defaultEffortLevel = candidate.defaultEffortLevel?.trim();
+    const defaultEffortLevel = candidate.defaultEffortLevel;
     return {
       id,
       name: candidate.name,
@@ -1798,8 +1928,8 @@ export class AIService {
 
   /**
    * Runs exactly one extension backend refresh and records a red/cache status
-   * on failure. The cache is only visible evidence; the common validation gate
-   * below still refuses it as executable.
+   * on failure. The cache is picker evidence only; explicit model execution
+   * still remains an engine decision.
    */
   private refreshDynamicExtensionCatalog(provider: string): Promise<void> {
     if (!this.getDynamicExtensionProvider(provider)) return Promise.resolve();
@@ -1827,7 +1957,10 @@ export class AIService {
         const message = error instanceof Error ? error.message : String(error);
         catalog.status = {
           modelSource: catalog.models.length > 0 ? 'cache' : 'none',
-          verified: false,
+          // Cached rows were previously returned by the native engine. They
+          // remain visible with the failure notice, never masquerading as a
+          // fresh runtime catalog or becoming a host-side allow-list.
+          verified: catalog.models.length > 0,
           lastSuccessAt: catalog.status.lastSuccessAt ?? null,
           lastError: { message },
           inFlight: false,
@@ -1850,20 +1983,6 @@ export class AIService {
     }
     if (this.isClaudeCatalogConsumed(providerSettings)) {
       pending.push(this.claudeCodeModelCatalogService.start());
-    }
-    await Promise.all(pending);
-  }
-
-  /** A manual channel health run also asks each enabled engine for a fresh catalog. */
-  private async refreshModelCatalogsForHealth(
-    providerSettings: Record<AIProviderType, any>,
-  ): Promise<void> {
-    const pending: Promise<unknown>[] = [];
-    if (this.isCodexCatalogConsumed(providerSettings)) {
-      pending.push(this.codexModelRefreshService.manualRetry());
-    }
-    if (this.isClaudeCatalogConsumed(providerSettings)) {
-      pending.push(this.claudeCodeModelCatalogService.manualRetry());
     }
     await Promise.all(pending);
   }
@@ -1905,25 +2024,6 @@ export class AIService {
     }
   }
 
-  /**
-   * An old CLI/ACP session can outlive its visible provider toggle. Before it
-   * sends anything, force its shared engine catalog to leave disk-cache state
-   * through the same startup fetch used by the primary channel.
-   */
-  private async awaitModelCatalogForProvider(provider: string): Promise<void> {
-    if (provider === 'openai-codex' || provider === 'openai-codex-acp') {
-      await this.codexModelRefreshService.start();
-      return;
-    }
-    if (provider === 'claude-code' || provider === 'claude-code-cli') {
-      await this.claudeCodeModelCatalogService.start();
-      return;
-    }
-    if (this.getDynamicExtensionProvider(provider)) {
-      await this.extensionDynamicModelCatalogs.get(provider)?.inFlight;
-    }
-  }
-
   private getModelCatalogStatuses(): Record<string, DynamicModelCatalogStatus> {
     const claudeStatus = this.claudeCodeModelCatalogService.getStatus();
     const statuses: Record<string, DynamicModelCatalogStatus> = {
@@ -1942,17 +2042,18 @@ export class AIService {
   }
 
   /**
-   * Configuration surfaces may inspect a retained cache, but no surface may
-   * offer it as a selectable model. Keep that policy next to the catalog owner
-   * so every IPC payload applies the same runtime-only rule.
+   * A retained catalog is prior engine output, not a product fallback. Keep it
+   * selectable while clearly marking the refresh failure in the picker: an
+   * explicit model is always an input for the native engine, which remains the
+   * authority on whether it is still accepted. First-install placeholders are
+   * the only rows that may not be offered.
    */
   private isCurrentDynamicCatalogModel(model: AIModel): boolean {
     if (!this.isRuntimeDynamicCatalogProvider(model.provider)) return true;
     const status = this.getModelCatalogStatuses()[model.provider];
     return model.unverifiedPlaceholder !== true
-      && status?.modelSource === 'runtime'
-      && status.verified === true
-      && !status.lastError;
+      && status?.verified === true
+      && (status.modelSource === 'runtime' || status.modelSource === 'cache');
   }
 
   private getMissingDefaultModelWarning(): string | null {
@@ -2026,21 +2127,22 @@ export class AIService {
     };
   }
 
-  /** Used by Head before it persists a child session; no fallback substitution. */
+  /**
+   * Used by creation paths as an advisory catalog check. A missing declaration
+   * never blocks an explicit model: the engine owns the final validation.
+   */
   public async assertCurrentDynamicModelAvailable(
     provider: string,
     modelId: string,
     requestedEffort?: unknown,
   ): Promise<void> {
-    await this.awaitModelCatalogForProvider(provider);
     await this.assertDynamicModelAvailable(provider, modelId, requestedEffort);
   }
 
   /**
-   * Existing sessions must carry an exact, live catalog entry. Unlike a new
-   * session, an imported/legacy session with no model cannot assume an engine
-   * recommendation: require the user to select one rather than revive a
-   * package default that the engine may no longer offer.
+   * Existing sessions pass their persisted model through unchanged. Catalogs
+   * improve selection UI, not execution authority; imported/unlisted values
+   * must reach the native engine and receive its own error if invalid.
    */
   public async resolveCurrentDynamicSessionModel(
     provider: string,
@@ -2055,12 +2157,7 @@ export class AIService {
 
     const suppliedModel = sessionModel || providerConfigModel;
     const requestedModelId = this.normalizeDynamicModelIdentifier(provider, suppliedModel);
-    await this.awaitModelCatalogForProvider(provider);
     const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, requestedModelId);
-    // Keep the model identity gate intact. Effort is intentionally resolved
-    // after identity validation because it is a model capability, never a
-    // reason to reject the user's message.
-    await this.assertDynamicModelAvailable(provider, catalogModelId);
     await this.normalizePersistedDynamicSessionEffort(
       provider,
       catalogModelId,
@@ -2094,9 +2191,9 @@ export class AIService {
   }
 
   /**
-   * Every new-session entry point uses this resolver. A dynamic provider's
-   * persisted default is validated as-is, never replaced with a preset when
-   * that exact model has disappeared from the engine catalog.
+   * Every new-session entry point uses this resolver. An explicit dynamic
+   * value is pass-through; an omitted value may use only an engine-declared
+   * recommendation and otherwise lets the engine choose its own default.
    */
   private async resolveValidatedModelForNewSession(
     provider: AIProviderType,
@@ -2113,15 +2210,9 @@ export class AIService {
         // validation below surfaces a reselection error instead of replacing it.
         model = savedDefault;
       } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
-        // First install has no saved preference. The only automatic selection
-        // permitted is an SDK/CLI row dynamically marked as the engine's own
-        // recommendation; Codex has no such row and therefore asks the user.
-        await this.awaitModelCatalogForProvider(provider);
-        await this.assertDynamicCatalogReady(provider);
+        // No declaration is not a host-side error. Do not replace it with a
+        // package preset; the engine can apply its own default on the turn.
         model = this.getEngineRecommendedDynamicModel(provider);
-        if (!model) {
-          throw new Error(`${provider} 模型目录未声明引擎推荐的默认型号。请在模型选择器中明确选择；系统不会猜测静态型号。`);
-        }
       } else {
         model = await ModelRegistry.getDefaultModel(provider);
       }
@@ -2129,7 +2220,6 @@ export class AIService {
 
     if (provider === 'claude-code') {
       const requestedModelId = this.normalizeDynamicModelIdentifier(provider, model);
-      await this.awaitModelCatalogForProvider(provider);
       const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, requestedModelId);
       if (catalogModelId && catalogModelId !== requestedModelId) {
         canonicalizedFrom = requestedModelId;
@@ -2193,9 +2283,8 @@ export class AIService {
 
   /** A legacy providerConfig may contain only the unprefixed engine value. */
   private normalizeDynamicModelIdentifier(provider: string, modelId: string | undefined): string | undefined {
-    const trimmed = modelId?.trim();
-    if (!trimmed) return undefined;
-    return trimmed.includes(':') ? trimmed : `${provider}:${trimmed}`;
+    if (!modelId || !modelId.trim()) return undefined;
+    return modelId.includes(':') ? modelId : `${provider}:${modelId}`;
   }
 
   private getDynamicCatalogModels(provider: string): AIModel[] {
@@ -2212,54 +2301,21 @@ export class AIService {
   }
 
   /**
-   * A JSONL import records Claude's concrete wire id, while supportedModels()
-   * publishes selectable values plus resolvedModel. Match that value exactly;
-   * no family-name substring or static alias is ever inferred.
+   * The catalog may supply display metadata, but it does not rewrite a model
+   * chosen or persisted by the user. The native engine is the only authority
+   * that may apply an alias (and can report the applied value itself).
    */
   private resolveDynamicCatalogModelIdentifier(
     provider: string,
     modelId: string | undefined,
   ): string | undefined {
     if (!modelId) return undefined;
-    const models = this.getDynamicCatalogModels(provider);
-    const catalogModelId = provider === 'openai-codex-acp'
-      ? `openai-codex:${modelId.replace(/^openai-codex-acp:/, '')}`
-      : modelId;
-    if (models.some((model) => model.id === catalogModelId)) return catalogModelId;
-    // The historic ID ledger is intentionally scoped to the retired
-    // `claude-code:` selectable namespace. CLI identifiers have no proven
-    // equivalent spelling relationship and must retain the normal red light.
-    if (provider === 'claude-code') {
-      const migration = resolveEquivalentModelIdMigration(catalogModelId, models);
-      if (migration) {
-        return migration.to;
-      }
-
-      // JSONL imports can retain the concrete engine ID rather than a
-      // selectable ID. That is an equivalence proof only when the live
-      // directory has exactly one row carrying the same resolvedModel.
-      const rawModel = catalogModelId.replace(/^claude-code:/, '');
-      const exactResolved = models.filter((model) => model.resolvedModel === rawModel);
-      if (exactResolved.length === 1) {
-        return exactResolved[0]!.id;
-      }
-    }
-    return catalogModelId;
+    return modelId;
   }
 
   private getEngineRecommendedDynamicModel(provider: string): string | undefined {
     const models = this.getDynamicCatalogModels(provider);
     return models.find((model) => model.isEngineDefault === true && !model.unverifiedPlaceholder)?.id;
-  }
-
-  private async assertDynamicCatalogReady(provider: string): Promise<void> {
-    const status = this.getModelCatalogStatuses()[provider];
-    if (!status?.verified || status.lastError) {
-      const detail = status?.lastError?.message
-        ? ` 原因：${status.lastError.message}`
-        : ' 模型目录仍未验证。';
-      throw new Error(`${provider} 模型目录不可用，无法静默选择默认模型。请重试目录拉取后重新选择模型。${detail}`);
-    }
   }
 
   private async assertDynamicModelAvailable(
@@ -2269,26 +2325,16 @@ export class AIService {
   ): Promise<void> {
     if (!this.isRuntimeDynamicCatalogProvider(provider)) return;
 
-    // A retained cache is useful evidence for the user, but it is not proof
-    // that a model remains available now. The failure must therefore block
-    // new-session creation (including Head dispatch) until a fresh catalog
-    // succeeds; otherwise cache retention becomes a silent routing fallback.
-    await this.assertDynamicCatalogReady(provider);
     const models = this.getDynamicCatalogModels(provider);
-    if (!modelId) {
-      throw new Error(`${provider} 会话未设置已验证的模型。请在模型选择器中重新选择；系统不会使用静态默认型号。`);
-    }
+    if (!modelId) return;
     const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, modelId);
     const model = models.find((candidate) => candidate.id === catalogModelId);
-    if (!model) {
-      throw new Error(`已保存的模型“${modelId}”不再属于当前 ${provider} 模型目录。请重新选择模型；系统不会自动改为其他型号。`);
-    }
-    if (requestedEffort !== undefined) {
+    if (model && requestedEffort !== undefined) {
       this.logEffortGateResolution(
         model.id,
         resolveDeclaredEffortLevel(
           requestedEffort,
-          model.supportsEffort === true ? model.supportedEffortLevels : [],
+          model.supportedEffortLevels ?? [],
           model.defaultEffortLevel,
         ),
       );
@@ -2315,17 +2361,46 @@ export class AIService {
     sessionEffortLevel: unknown,
   ) {
     const explicitEffort = parseEffortLevel(sessionEffortLevel);
-    const appDefaultEffort = explicitEffort ? undefined : getDefaultEffortLevel();
-    const requestedEffort = explicitEffort ?? appDefaultEffort;
+    // Gemini encodes its tier in the opaque model string. It has no separate
+    // effort parameter and must never receive one.
+    if (provider === 'antigravity-gemini-agent') {
+      return {
+        explicitEffort,
+        resolution: resolveDeclaredEffortLevel(undefined, [], undefined),
+      };
+    }
+
     const models = this.getDynamicCatalogModels(provider);
     const catalogModelId = this.resolveDynamicCatalogModelIdentifier(provider, modelId);
     const model = models.find((candidate) => candidate.id === catalogModelId);
+    const supportedEffortLevels = model?.supportedEffortLevels ?? [];
+    const declaredDefault = parseEffortLevel(model?.defaultEffortLevel);
+    const fallbackEffort = declaredDefault && supportedEffortLevels.includes(declaredDefault)
+      ? declaredDefault
+      : supportedEffortLevels[0];
+
+    // Claude accepts an arbitrary raw effort value and owns any downshift or
+    // retry behaviour. Do not pre-filter it against a stale host declaration.
+    if (provider === 'claude-code' || provider === 'claude-code-cli') {
+      const effortLevel = explicitEffort ?? fallbackEffort;
+      return {
+        explicitEffort,
+        resolution: {
+          effortLevel,
+          outcome: effortLevel ? 'accepted' as const : 'none' as const,
+          requestedEffort: effortLevel,
+        },
+      };
+    }
+    // Codex declares effort per model. A missing row never blocks the model
+    // itself, but does mean the host has no documented separate effort value
+    // to send. `resolveDeclaredEffortLevel` therefore omits it, including for
+    // the protocol-valid empty-array case.
     return {
       explicitEffort,
-      appDefaultEffort,
       resolution: resolveDeclaredEffortLevel(
-        requestedEffort,
-        model?.supportsEffort === true ? model.supportedEffortLevels : [],
+        explicitEffort ?? fallbackEffort,
+        supportedEffortLevels,
         model?.defaultEffortLevel,
       ),
     };
@@ -2354,7 +2429,7 @@ export class AIService {
     sessionEffortLevel: unknown,
     sessionId?: string,
   ): Promise<EffortLevel | undefined> {
-    const { explicitEffort, appDefaultEffort, resolution } = this.resolveDynamicSessionEffort(
+    const { explicitEffort, resolution } = this.resolveDynamicSessionEffort(
       provider,
       modelId,
       sessionEffortLevel,
@@ -2370,9 +2445,6 @@ export class AIService {
       return resolution.effortLevel;
     }
 
-    if (appDefaultEffort && resolution.effortLevel !== appDefaultEffort) {
-      setDefaultEffortLevel(resolution.effortLevel);
-    }
     return resolution.effortLevel;
   }
 
@@ -2476,13 +2548,9 @@ export class AIService {
       ...(effortLevel && { effortLevel }),
     };
 
-    // resolveCurrentDynamicSessionModel rejects an empty, stale, or unverified
-    // value. Keep this guard for the type checker and for any future resolver
-    // change; sending a static fallback here would bypass the catalog red light.
-    if (!fullModel) {
-      throw new Error('claude-code 会话未设置已验证的模型。请重新选择模型。');
-    }
-    config.model = fullModel;
+    // Omit a missing model and let the native SDK select its own default.
+    // Explicit values, including values absent from our catalog, pass through.
+    if (fullModel) config.model = fullModel;
 
     return config;
   }
@@ -3683,9 +3751,7 @@ export class AIService {
         const modelForProvider = extractModelForProvider(model, provider);
         if (modelForProvider !== null) {
           providerConfig.model = modelForProvider;
-        } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
-          throw new Error(`${provider} 型号未通过实时目录校验。请重新选择模型；系统不会使用静态默认型号。`);
-        } else if (provider !== 'claude-code') {
+        } else if (provider !== 'claude-code' && !this.isRuntimeDynamicCatalogProvider(provider)) {
           // extractModelForProvider returned null (invalid model) - fall back to default
           const defaultModel = await ModelRegistry.getDefaultModel(provider);
           if (defaultModel) {
@@ -3696,9 +3762,7 @@ export class AIService {
             }
           }
         }
-      } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
-        throw new Error(`${provider} 未返回已验证的型号。请重新选择模型；系统不会使用静态默认型号。`);
-      } else if (provider !== 'claude-code') {
+      } else if (!this.isRuntimeDynamicCatalogProvider(provider) && provider !== 'claude-code') {
         // For other providers, fall back to settings
         const settingsModel = this.getProviderSetting(provider, 'model');
         if (settingsModel) {
@@ -3788,9 +3852,7 @@ export class AIService {
           const modelForProvider = extractModelForProvider(fullModel, provider);
           if (modelForProvider !== null) {
             initConfig.model = modelForProvider;
-          } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
-            throw new Error(`${provider} 型号未通过实时目录校验。请重新选择模型；系统不会使用静态默认型号。`);
-          } else {
+          } else if (!this.isRuntimeDynamicCatalogProvider(provider)) {
             // extractModelForProvider returned null - fall back to default
             const defaultModel = await ModelRegistry.getDefaultModel(provider);
             if (defaultModel) {
@@ -3802,9 +3864,7 @@ export class AIService {
             }
           }
         }
-      } else if (this.isRuntimeDynamicCatalogProvider(provider)) {
-        throw new Error(`${provider} 未返回已验证的型号。请重新选择模型；系统不会使用静态默认型号。`);
-      } else if (provider !== 'claude-code') {
+      } else if (!this.isRuntimeDynamicCatalogProvider(provider) && provider !== 'claude-code') {
         // No model specified - get default
         const defaultModel = await ModelRegistry.getDefaultModel(provider);
         if (defaultModel) {
@@ -3828,8 +3888,8 @@ export class AIService {
         if (providerSettings?.['claude-code']?.allowedTools) {
           initConfig.allowedTools = providerSettings['claude-code'].allowedTools;
         }
-        // Effort level: explicit session value, else the app-wide default the
-        // selector displays (Opus 4.6 adaptive reasoning).
+        // Effort level: an explicit session value wins; otherwise use the
+        // selected model's declared default/first option.
         const effortLevel = this.resolveCompatibleDynamicSessionEffortLevel(
           provider,
           session.model || session.providerConfig?.model,
@@ -3878,9 +3938,8 @@ export class AIService {
     this.sendMessageHandler = this.streamingHandler.handle;
     safeHandle('ai:sendMessage', this.sendMessageHandler);
 
-    // Product-level channel health dashboard. The health service itself calls
-    // the same send boundaries as ordinary sessions; these handlers only expose
-    // its safe, prompt-free status snapshot to Settings.
+    // Product-level channel health dashboard. Normal checks are native
+    // zero-inference probes; model refresh is intentionally left to the picker.
     safeHandle('channel-health:get', async () => {
       return this.channelHealthService.getSnapshot();
     });
@@ -3895,16 +3954,29 @@ export class AIService {
         if (!resolvedWorkspacePath) {
           throw new Error('Open a workspace before running channel health checks');
         }
-        // Catalog discovery is an adjacent diagnostic only. It must not alter
-        // ChannelHealthService's established three-line pass/fail criteria.
-        await this.refreshModelCatalogsForHealth(
-          this.getNormalizedProviderSettings() as Record<AIProviderType, any>,
-        );
         return this.channelHealthService.runManually({
           event,
           workspacePath: resolvedWorkspacePath,
           channelId: typeof channelId === 'string' ? channelId : undefined,
         });
+      },
+    );
+    safeHandle(
+      'channel-health:run-deep',
+      async (event, workspacePath?: string, channelId?: string) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        const activeWorkspacePath = window
+          ? resolveActiveWorkspacePathForWindowId(getWindowId(window))
+          : undefined;
+        const resolvedWorkspacePath = workspacePath || activeWorkspacePath;
+        if (!resolvedWorkspacePath) {
+          throw new Error('Open a workspace before running deep channel health checks');
+        }
+        return this.channelHealthService.runDeepManually({
+          event,
+          workspacePath: resolvedWorkspacePath,
+          channelId: typeof channelId === 'string' ? channelId : undefined,
+        }, CHANNEL_HEALTH_PROMPT);
       },
     );
 
@@ -5044,15 +5116,8 @@ export class AIService {
     safeHandle('ai:testConnection', async (event, provider: string, workspacePath?: string) => {
       const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
 
-      // Get the appropriate API key based on provider.
-      // Extension-agent providers (aiAgentProviders contributions) handle their
-      // own auth inside the extension's backend module (e.g. Antigravity rides
-      // ~/.gemini OAuth via AntigravityServerManager.hasGeminiAuth). On the host
-      // side we treat them as 'not-required' and return success: the extension's
-      // own backend healthcheck would be the ideal probe, but that contract
-      // sits behind the seed PR's coordinated host scaffolding work. For now,
-      // accepting indicates the extension is installed + the provider is
-      // registered, which is what the user sees the green check confirming.
+      // Get the appropriate API key based on provider. Extension-agent
+      // providers own authentication, so they have no host API key.
       let apiKey: string | undefined;
       if (isExtensionAgentProvider(provider)) {
         apiKey = 'not-required';
@@ -5095,13 +5160,22 @@ export class AIService {
         }
       }
 
-      // Extension-agent providers: skip the per-provider connectivity probes
-      // below and return success directly. The 'try' block below contains
-      // provider-specific connectivity logic (list models, run a real SDK
-      // request, etc.) tied to each built-in id; none of it applies to an
-      // extension-agent and the IDs would all miss the conditional checks.
+      // Extension-agent providers expose their own zero-inference login probe.
+      // Never paint a green “Connected” merely because the extension happens
+      // to be registered: Gemini can be untrusted, not started, or logged out.
       if (isExtensionAgentProvider(provider)) {
-        return { success: true, provider };
+        try {
+          const probe = await probeExtensionAgentProviderLogin(provider);
+          if (probe.state === 'logged-in') {
+            return { success: true, provider };
+          }
+          if (probe.state === 'logged-out') {
+            return { success: false, error: '需登录：请先在终端完成 Antigravity CLI 登录。' };
+          }
+          return { success: false, error: '状态未知：扩展或工作区尚未就绪，请稍后重试。' };
+        } catch {
+          return { success: false, error: '状态未知：扩展或工作区尚未就绪，请稍后重试。' };
+        }
       }
 
       try {
@@ -6019,7 +6093,6 @@ export class AIService {
     setDynamicModelCatalogStatusReader(null);
     setDynamicModelEffortNormalizer(null);
     OpenAICodexProvider.setModelRefreshSnapshotResolver(null);
-    OpenAICodexProvider.setModelCatalogPathResolver(null);
     ClaudeCodeProvider.setModelCatalogSnapshotResolver(null);
     ClaudeCodeCliProvider.setModelCatalogSnapshotResolver(null);
 
