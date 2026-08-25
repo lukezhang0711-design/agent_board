@@ -273,12 +273,16 @@ export function ModelSelector({
 
   const isDynamicCatalogProvider = (provider: string) => catalogStatuses[provider] !== undefined;
 
+  // The wording deliberately stops at “not in the current list”. The engine
+  // still accepts aliases it does not publish (`opus` and `fable` both pass
+  // `set_model` while absent from `supportedModels()`), so claiming it no
+  // longer provides the model would be the host asserting what it cannot know.
   const currentModelUnavailable = (() => {
     if (!currentModel) return false;
     const [provider] = currentModel.split(':');
     const status = catalogStatuses[provider];
     // A first-install/failed discovery has no engine-backed answer. Do not
-    // turn that transient state into a false “engine no longer provides it”
+    // turn that transient state into a false “not in the current list”
     // warning; the existing catalog red/yellow notice covers that condition.
     if (!status?.verified || (status.modelSource !== 'runtime' && status.modelSource !== 'cache')) {
       return false;
@@ -293,7 +297,7 @@ export function ModelSelector({
       className="mt-1 max-w-[260px] rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
       data-testid="model-current-unavailable"
     >
-      这个会话存的型号引擎已经不提供了，请重新选一个
+      这个会话存的型号不在当前模型清单里，请重新选一个
     </div>
   ) : null;
 

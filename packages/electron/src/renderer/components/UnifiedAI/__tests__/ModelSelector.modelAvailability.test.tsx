@@ -88,7 +88,7 @@ describe('ModelSelector persisted model safety valve', () => {
     await waitFor(() => expect(screen.getByTestId('model-current-unavailable')).toBeTruthy());
 
     expect(screen.getByTestId('model-current-unavailable').textContent)
-      .toBe('这个会话存的型号引擎已经不提供了，请重新选一个');
+      .toBe('这个会话存的型号不在当前模型清单里，请重新选一个');
     expect(screen.getByTestId('model-picker').getAttribute('aria-invalid')).toBe('true');
     expect(onModelChange).not.toHaveBeenCalled();
   });
