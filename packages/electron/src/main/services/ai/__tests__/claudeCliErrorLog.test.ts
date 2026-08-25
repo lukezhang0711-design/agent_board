@@ -130,4 +130,26 @@ describe('claude-code-cli error row → real transcript projection', () => {
     expect(err).toBeDefined();
     expect(String(err.text)).toContain('overloaded_error');
   });
+
+  it.each([
+    'claude-code',
+    'openai-codex',
+    'antigravity-gemini-agent',
+  ])('GREEN ES: preserves a rejected model engine message in the %s conversation', async (provider) => {
+    const rawEngineMessage = "Model \"opus-1m\" is not a recognized model id. Did you mean 'opus[1m]'?";
+    const viewMessages = await projectRawMessagesToViewMessages([
+      {
+        id: 2,
+        sessionId: 'raw-engine-rejection',
+        source: provider,
+        direction: 'output',
+        content: JSON.stringify({ type: 'error', error: rawEngineMessage, is_error: true }),
+        createdAt: new Date('2026-08-25T00:00:00Z'),
+      } as RawMessage,
+    ], provider);
+
+    const error = viewMessages.find((message: any) => message?.isError);
+    expect(error).toBeDefined();
+    expect(String((error as any).text)).toContain("Did you mean 'opus[1m]'?");
+  });
 });

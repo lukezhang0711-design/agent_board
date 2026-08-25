@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_MODELS } from '@nimbalyst/runtime/ai/modelConstants';
+import { ClaudeCodeDeps } from '@nimbalyst/runtime/ai/server/providers/claudeCode/dependencyInjection';
 import { ClaudeCodeModelCatalogService } from '../ClaudeCodeModelCatalogService';
 
 const sdkQueryMock = vi.hoisted(() => vi.fn());
@@ -69,6 +71,16 @@ afterEach(() => {
 });
 
 describe('ClaudeCodeModelCatalogService', () => {
+  it('GREEN ES: keeps every built-in Claude default in the engine-owned dynamic catalog', async () => {
+    const { service } = createService(vi.fn().mockResolvedValue(SDK_MODELS));
+
+    await service.start();
+
+    expect(service.getModels().map((model) => model.id)).toContain(DEFAULT_MODELS['claude-code']);
+    expect(service.getCliModels().map((model) => model.id)).toContain(DEFAULT_MODELS['claude-code-cli']);
+    expect(ClaudeCodeDeps.DEFAULT_MODEL).toBe('claude-code:default');
+  });
+
   it('uses supportedModels as the source and preserves raw SDK values, labels, aliases, and effort support', async () => {
     const fetchSupportedModels = vi.fn().mockResolvedValue(SDK_MODELS);
     const { service } = createService(fetchSupportedModels);
