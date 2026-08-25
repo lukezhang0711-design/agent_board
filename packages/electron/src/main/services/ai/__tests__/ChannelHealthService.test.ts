@@ -22,17 +22,21 @@ function event(): Electron.IpcMainInvokeEvent {
 }
 
 describe('ChannelHealthService', () => {
-  it('GREEN: four-channel fixture constructs success, unauthenticated, and timeout states with structured logs', async () => {
+  it('GREEN EO: four-channel fixture runs zero-inference probes and keeps timeout unknown', async () => {
     let fixture: 'success' | 'not_logged_in' | 'timeout' = 'success';
     const logs: string[] = [];
-    const runChannel = vi.fn(async () => {
+    const runChannel = vi.fn(async (_input: {
+      channel: ChannelHealthChannel;
+      event: Electron.IpcMainInvokeEvent;
+      workspacePath: string;
+    }) => {
       if (fixture === 'not_logged_in') {
         throw new ChannelHealthError('not_logged_in');
       }
       if (fixture === 'timeout') {
         throw new ChannelHealthError('timeout');
       }
-      return { firstResponseMs: 12, completionMs: 34, responseText: 'pong' };
+      return { firstResponseMs: 12, completionMs: 34 };
     });
     const service = new ChannelHealthService({
       listEnabledChannels: () => channels,
@@ -41,7 +45,7 @@ describe('ChannelHealthService', () => {
       log: (line) => logs.push(line),
     });
 
-    for (const expected of ['healthy', 'failed', 'failed'] as const) {
+    for (const expected of ['healthy', 'failed', 'unknown'] as const) {
       const snapshot = await service.runManually({ event: event(), workspacePath: '/fixture' });
       expect(snapshot.results).toHaveLength(4);
       expect(snapshot.running).toBe(false);
@@ -59,10 +63,8 @@ describe('ChannelHealthService', () => {
           : 'timeout';
     }
 
-    expect(runChannel).toHaveBeenCalledWith(expect.objectContaining({
-      prompt: CHANNEL_HEALTH_PROMPT,
-      workspacePath: '/fixture',
-    }));
+    expect(runChannel).toHaveBeenCalledWith(expect.objectContaining({ workspacePath: '/fixture' }));
+    expect(runChannel.mock.calls.every(([input]) => !('prompt' in input))).toBe(true);
     expect(logs).toHaveLength(12);
     expect(logs.every((line) => line.startsWith('[ChannelHealth] '))).toBe(true);
     expect(logs.join('\n')).not.toContain(CHANNEL_HEALTH_PROMPT);
@@ -74,7 +76,7 @@ describe('ChannelHealthService', () => {
       trigger: 'manual',
     });
     const parsedLogs = logs.map((line) => JSON.parse(line.slice('[ChannelHealth] '.length)));
-    expect(parsedLogs.filter((entry) => entry.result === 'failed')).toEqual(expect.arrayContaining([
+    expect(parsedLogs.filter((entry) => entry.result === 'failed' || entry.result === 'unknown')).toEqual(expect.arrayContaining([
       expect.objectContaining({ failureClass: 'not_logged_in' }),
       expect.objectContaining({ failureClass: 'timeout' }),
     ]));
@@ -83,7 +85,7 @@ describe('ChannelHealthService', () => {
   it('marks a completed response slower than ten seconds as yellow', async () => {
     const service = new ChannelHealthService({
       listEnabledChannels: () => [channels[0]],
-      runChannel: async () => ({ responseText: 'pong', firstResponseMs: 400, completionMs: 10_001 }),
+      runChannel: async () => ({ firstResponseMs: 400, completionMs: 10_001 }),
       isAutoCheckEnabled: () => true,
       log: vi.fn(),
     });
@@ -104,7 +106,7 @@ describe('ChannelHealthService', () => {
         listEnabledChannels: () => [codex],
         runChannel: () => new Promise((resolve) => {
           setTimeout(() => {
-            resolve({ responseText: 'pong', firstResponseMs: 12_000, completionMs: 25_000 });
+            resolve({ firstResponseMs: 12_000, completionMs: 25_000 });
           }, 25_000);
         }),
         isAutoCheckEnabled: () => true,
@@ -144,7 +146,11 @@ describe('ChannelHealthService', () => {
       transport: 'streaming',
       enabled: false,
     } as ChannelHealthChannel;
-    const runChannel = vi.fn(async () => ({ responseText: 'pong', completionMs: 20 }));
+    const runChannel = vi.fn(async (_input: {
+      channel: ChannelHealthChannel;
+      event: Electron.IpcMainInvokeEvent;
+      workspacePath: string;
+    }) => ({ completionMs: 20 }));
     const service = new ChannelHealthService({
       listEnabledChannels: () => [enabled, disabledExtension],
       runChannel,
@@ -162,6 +168,32 @@ describe('ChannelHealthService', () => {
         summary: '未启用',
       }),
     ]));
+  });
+
+  it('GREEN EO: a normal “体检全部” includes the registered Gemini row', async () => {
+    const runChannel = vi.fn(async (_input: {
+      channel: ChannelHealthChannel;
+      event: Electron.IpcMainInvokeEvent;
+      workspacePath: string;
+    }) => ({ completionMs: 20 }));
+    const service = new ChannelHealthService({
+      listEnabledChannels: () => [
+        { id: 'claude-code', displayName: 'Claude', transport: 'streaming' },
+        { id: 'openai-codex', displayName: 'Codex', transport: 'streaming' },
+        { id: 'antigravity-gemini-agent', displayName: 'Gemini', transport: 'streaming' },
+      ],
+      runChannel,
+      isAutoCheckEnabled: () => true,
+      log: vi.fn(),
+    });
+
+    await service.runManually({ event: event(), workspacePath: '/fixture' });
+
+    expect(runChannel.mock.calls.map(([input]) => input.channel.id)).toEqual([
+      'claude-code',
+      'openai-codex',
+      'antigravity-gemini-agent',
+    ]);
   });
 
   it('RED: surfaces an unavailable Claude auth precheck as a retryable neutral result', async () => {
@@ -182,6 +214,26 @@ describe('ChannelHealthService', () => {
       summary: '检测超时',
     });
     expect(snapshot.results[0].guidance).toContain('重试');
+  });
+
+  it('RED EO: a probe timeout is unknown rather than an inferred logged-out failure', async () => {
+    const service = new ChannelHealthService({
+      listEnabledChannels: () => [channels[2]],
+      runChannel: async () => {
+        throw new ChannelHealthError('timeout');
+      },
+      isAutoCheckEnabled: () => true,
+      log: vi.fn(),
+    });
+
+    const snapshot = await service.runManually({ event: event(), workspacePath: '/fixture' });
+
+    expect(snapshot.results[0]).toMatchObject({
+      id: 'openai-codex',
+      state: 'unknown',
+      failureKind: 'timeout',
+    });
+    expect(snapshot.results[0].summary).not.toBe('未登录');
   });
 
   it('GREEN: preserves a real Claude CLI exit code as safe engine-error guidance', async () => {
@@ -211,7 +263,7 @@ describe('ChannelHealthService', () => {
 
   it('throttles automatic checks for ten minutes but lets manual retries run', async () => {
     let now = 1_000;
-    const runChannel = vi.fn(async () => ({ responseText: 'pong', completionMs: 20 }));
+    const runChannel = vi.fn(async () => ({ completionMs: 20 }));
     const service = new ChannelHealthService({
       listEnabledChannels: () => channels,
       runChannel,
@@ -232,8 +284,33 @@ describe('ChannelHealthService', () => {
     expect(runChannel).toHaveBeenCalledTimes(channels.length * 2 + 1);
   });
 
+  it('keeps the real prompt behind the explicit deep diagnostic only', async () => {
+    const runChannel = vi.fn(async () => ({ completionMs: 3 }));
+    const runDeepChannel = vi.fn(async () => ({ firstResponseMs: 5, completionMs: 8, responseText: 'pong' }));
+    const service = new ChannelHealthService({
+      listEnabledChannels: () => [channels[0]],
+      runChannel,
+      runDeepChannel,
+      isAutoCheckEnabled: () => true,
+      log: vi.fn(),
+    });
+
+    await service.runManually({ event: event(), workspacePath: '/fixture' });
+    expect(runChannel).toHaveBeenCalledOnce();
+    expect(runDeepChannel).not.toHaveBeenCalled();
+
+    await expect(service.runDeepManually({ event: event(), workspacePath: '/fixture' }))
+      .resolves.toMatchObject({
+        results: [expect.objectContaining({ state: 'healthy', summary: '深度体检通过' })],
+      });
+    expect(runDeepChannel).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: CHANNEL_HEALTH_PROMPT,
+      workspacePath: '/fixture',
+    }));
+  });
+
   it('does not automatically run when the startup setting is disabled', async () => {
-    const runChannel = vi.fn(async () => ({ responseText: 'pong', completionMs: 1 }));
+    const runChannel = vi.fn(async () => ({ completionMs: 1 }));
     const log = vi.fn();
     const service = new ChannelHealthService({
       listEnabledChannels: () => channels,
@@ -253,7 +330,7 @@ describe('ChannelHealthService', () => {
       if (channel.id === 'claude-code') {
         throw new ChannelHealthError('engine_error');
       }
-      return { responseText: 'pong', completionMs: 30 };
+      return { completionMs: 30 };
     });
     const service = new ChannelHealthService({
       listEnabledChannels: () => channels.slice(0, 2),

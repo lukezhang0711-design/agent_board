@@ -126,6 +126,61 @@ describe('buildSdkOptions env-key hardening', () => {
     expect(options.env.SOME_OTHER_FLAG).toBe('1');
   });
 
+  it('preserves Claude credential identity while stripping implicit credentials from every overlay', async () => {
+    const previous = {
+      USER: process.env.USER,
+      CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR,
+      ANTHROPIC_AUTH_TOKEN: process.env.ANTHROPIC_AUTH_TOKEN,
+      CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN,
+      CLAUDE_CODE_OAUTH_REFRESH_TOKEN: process.env.CLAUDE_CODE_OAUTH_REFRESH_TOKEN,
+      CLAUDECODE: process.env.CLAUDECODE,
+    };
+    try {
+      Object.assign(process.env, {
+        USER: 'desktop-owner',
+        CLAUDE_CONFIG_DIR: '/Users/desktop-owner/.claude-custom',
+        ANTHROPIC_AUTH_TOKEN: 'process-token',
+        CLAUDE_CODE_OAUTH_TOKEN: 'process-oauth-token',
+        CLAUDE_CODE_OAUTH_REFRESH_TOKEN: 'process-refresh-token',
+        CLAUDECODE: '1',
+      });
+
+      const { options } = await buildSdkOptions(
+        makeDeps({ config: {} }),
+        makeParams({
+          shellEnv: {
+            USER: 'shell-owner',
+            CLAUDE_CONFIG_DIR: '/tmp/shell-claude',
+            ANTHROPIC_AUTH_TOKEN: 'shell-token',
+            CLAUDE_CODE_OAUTH_TOKEN: 'shell-oauth-token',
+            CLAUDE_CODE_OAUTH_REFRESH_TOKEN: 'shell-refresh-token',
+            CLAUDECODE: 'shell',
+          },
+          settingsEnv: {
+            USER: 'settings-owner',
+            CLAUDE_CONFIG_DIR: '/tmp/settings-claude',
+            ANTHROPIC_AUTH_TOKEN: 'settings-token',
+            CLAUDE_CODE_OAUTH_TOKEN: 'settings-oauth-token',
+            CLAUDE_CODE_OAUTH_REFRESH_TOKEN: 'settings-refresh-token',
+            CLAUDECODE: 'settings',
+          },
+        }),
+      );
+
+      expect(options.env.USER).toBe('desktop-owner');
+      expect(options.env.CLAUDE_CONFIG_DIR).toBe('/Users/desktop-owner/.claude-custom');
+      expect(options.env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+      expect(options.env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
+      expect(options.env.CLAUDE_CODE_OAUTH_REFRESH_TOKEN).toBeUndefined();
+      expect(options.env.CLAUDECODE).toBeUndefined();
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   it('uses the configured API key from provider config when present', async () => {
     process.env.ANTHROPIC_API_KEY = 'sk-ant-leaked-from-shell';
 

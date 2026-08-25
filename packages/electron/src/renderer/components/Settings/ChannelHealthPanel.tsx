@@ -12,6 +12,7 @@ type ChannelHealthState = 'never' | 'healthy' | 'slow' | 'failed' | 'unknown' | 
 type ChannelHealthFailureKind =
   | 'not_logged_in'
   | 'missing_binary'
+  | 'not_started'
   | 'timeout'
   | 'missing_api_key'
   | 'auth_check_timeout'
@@ -80,7 +81,11 @@ export function ChannelHealthRow({
   const status = result.state === 'disabled'
     ? { icon: 'pause_circle', className: 'text-[var(--nim-text-faint)]', text: '未启用' }
     : result.state === 'healthy'
-      ? { icon: 'check_circle', className: 'text-[var(--nim-success)]', text: `通畅 · ${formatMs(result.completionMs)}` }
+      ? {
+        icon: 'check_circle',
+        className: 'text-[var(--nim-success)]',
+        text: `${result.summary || '通畅'} · ${formatMs(result.completionMs)}`,
+      }
       : result.state === 'slow'
         ? { icon: 'warning', className: 'text-[var(--nim-warning)]', text: `较慢 · ${formatMs(result.completionMs)}` }
         : result.state === 'failed'
@@ -176,7 +181,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
     return () => window.clearInterval(timer);
   }, [refresh, snapshot.running]);
 
-  const run = useCallback(async (channelId?: string) => {
+  const run = useCallback(async (channelId?: string, deep = false) => {
     if (channelId === 'claude-code-cli' && showClaudeCliChannel !== true) return;
     if (!workspacePath) {
       setRequestError('请先打开项目，再运行通道体检。');
@@ -186,7 +191,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
     setSnapshot((current) => ({ ...current, running: true }));
     try {
       const next = await window.electronAPI.invoke(
-        'channel-health:run',
+        deep ? 'channel-health:run-deep' : 'channel-health:run',
         workspacePath,
         channelId,
       ) as ChannelHealthSnapshotView;
@@ -199,7 +204,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
       };
       if (catalogResult?.catalogs) setCatalogs(catalogResult.catalogs);
     } catch {
-      setRequestError('体检启动失败，请检查项目和引擎配置后重试。');
+      setRequestError(`${deep ? '深度体检' : '体检'}启动失败，请检查项目和引擎配置后重试。`);
       await refresh();
     }
   }, [refresh, showClaudeCliChannel, workspacePath]);
@@ -216,18 +221,30 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
           <div>
             <h3 className="provider-panel-title m-0 text-xl font-semibold text-[var(--nim-text)]">通道体检</h3>
             <p className="provider-panel-description mt-2 mb-0 text-sm leading-relaxed text-[var(--nim-text-muted)]">
-              用各通道现有发送链路发送固定的一句话，确认壳层没有让引擎哑火。
+              默认使用各引擎原生登录/控制面探测，不发送模型提示、不消耗推理额度。
             </p>
           </div>
-          <button
-            type="button"
-            className="rounded bg-[var(--nim-primary)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => void run()}
-            disabled={snapshot.running || !workspacePath}
-            data-testid="channel-health-run-all"
-          >
-            {snapshot.running ? '体检中…' : '体检全部'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded bg-[var(--nim-primary)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => void run()}
+              disabled={snapshot.running || !workspacePath}
+              data-testid="channel-health-run-all"
+            >
+              {snapshot.running ? '体检中…' : '体检全部'}
+            </button>
+            <button
+              type="button"
+              className="rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] px-3 py-2 text-xs font-medium text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => void run(undefined, true)}
+              disabled={snapshot.running || !workspacePath}
+              data-testid="channel-health-run-deep"
+              title="会向每个已启用通道发送一句固定提示"
+            >
+              深度体检（发送一句话）
+            </button>
+          </div>
         </div>
       </div>
 
@@ -240,7 +257,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
       />
 
       <p className="my-3 text-xs text-[var(--nim-text-muted)]">
-        每次体检会向每个已启用通道发送固定极短提示，并消耗极少量引擎额度。
+        默认体检只检查登录或控制面状态；仅“深度体检”会发送固定一句话。
       </p>
 
       {(['claude-code', 'openai-codex'] as const).map((provider) => {

@@ -20,34 +20,19 @@
 import { ModelIdentifier, isClaudeCodeFamily } from '@nimbalyst/runtime/ai/server/types';
 
 /**
- * Resolve a Nimbalyst model id to the alias the genuine `claude` CLI accepts for
- * `--model` (an SDK-discovered model value, with an optional `[1m]` suffix).
- *
- * Nimbalyst stores the combined `provider:variant` form (e.g.
- * `claude-code-cli:opus-1m`); the provider prefix and Nimbalyst's internal `-1m`
- * suffix are not valid `claude --model` values. For extended-context variants we
- * translate `-1m` to the CLI's own `[1m]` form (e.g. `opus[1m]`) so the launched
- * session actually runs at 1M context — the CLI strips `[1m]` before sending the
- * model id, same as the Agent SDK (see `resolveClaudeCodeModelVariant`). Dropping
- * the suffix instead silently downgraded 1M selections to 200k (NIM-809).
- *
- * Returns `undefined` when there's nothing usable (let the CLI default). A bare
- * full model name (no recognizable variant) passes through unchanged since the
- * CLI also accepts full Anthropic model IDs.
+ * Resolve only the host's provider namespace before passing a selected value to
+ * the genuine `claude --model` flag. SDK/CLI model values are opaque: no
+ * lowercasing, [1m] conversion, alias rewriting, parsing, or allow-list check
+ * belongs at this boundary.
  */
 export function resolveClaudeCliModelArg(model: string | undefined): string | undefined {
   if (!model) return undefined;
-  const trimmed = model.trim();
-  if (!trimmed) return undefined;
-
-  // Combined "provider:variant" id → take the variant part; bare value → itself.
-  const parsed = ModelIdentifier.tryParse(trimmed);
+  if (!model.trim()) return undefined;
+  if (model.startsWith('claude-code-cli:')) return model.slice('claude-code-cli:'.length);
+  if (model.startsWith('claude-code:')) return model.slice('claude-code:'.length);
+  const parsed = ModelIdentifier.tryParse(model);
   if (parsed && !isClaudeCodeFamily(parsed.provider)) return undefined;
-  const isExtended = parsed ? parsed.isExtendedContext : /-1m$/i.test(trimmed);
-  const variant = parsed ? parsed.baseVariant : trimmed.replace(/-1m$/i, '').toLowerCase();
-  // Dynamic SDK discovery decides the usable values. The launcher only converts
-  // Nimbalyst's persisted 1M suffix back to the CLI contract.
-  return isExtended ? `${variant}[1m]` : variant;
+  return model;
 }
 
 export interface ClaudeCliSpawnInput {

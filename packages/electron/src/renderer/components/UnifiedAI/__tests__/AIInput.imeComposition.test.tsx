@@ -16,6 +16,7 @@ vi.mock('jotai', async (importOriginal) => {
 
 vi.mock('@nimbalyst/runtime', () => ({
   readClipboard: vi.fn(async () => ''),
+  MaterialSymbol: () => null,
 }));
 
 vi.mock('../../Typeahead/GenericTypeahead', () => ({
@@ -124,6 +125,22 @@ function ModeToggleHarness({ disabled = false, onModeChange = vi.fn() }: { disab
       disableModeToggle={disabled}
       workspacePath="/workspace"
       testId="mode-toggle-input"
+    />
+  );
+}
+
+function EffortFallbackHarness({ levels = ['low', 'high'] }: { levels?: string[] }) {
+  const Input = AIInput as React.ComponentType<any>;
+  return (
+    <Input
+      value=""
+      onChange={() => {}}
+      onSend={() => {}}
+      workspacePath="/workspace"
+      showEffortLevel
+      onEffortLevelChange={vi.fn()}
+      supportedEffortLevels={levels}
+      testId="effort-fallback-input"
     />
   );
 }
@@ -241,6 +258,31 @@ describe('AIInput resolved model receipt', () => {
   it('shows the actual model resolved by the provider without requiring another user action', () => {
     render(<ResolvedModelHarness />);
     expect(screen.getByTestId('resolved-model-receipt').textContent).toBe('Model: claude-opus-5');
+  });
+});
+
+describe('AIInput effort control', () => {
+  beforeEach(() => {
+    (window as any).electronAPI = { invoke: vi.fn(() => new Promise(() => {})) };
+    vi.stubGlobal('requestAnimationFrame', () => 1);
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    delete (window as any).electronAPI;
+  });
+
+  it('GREEN EO: shows a declared effort control even when the current value is absent', () => {
+    render(<EffortFallbackHarness />);
+    expect(screen.getByTestId('effort-level-selector').getAttribute('aria-label'))
+      .toBe('Effort level: Low');
+  });
+
+  it('GREEN EO: hides the control for Gemini-style models without a separate effort dimension', () => {
+    render(<EffortFallbackHarness levels={[]} />);
+    expect(screen.queryByTestId('effort-level-selector')).toBeNull();
   });
 });
 

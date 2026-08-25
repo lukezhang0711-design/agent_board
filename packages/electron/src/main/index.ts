@@ -1807,16 +1807,15 @@ app.whenReady().then(async () => {
     // any real auth issue mid-stream as before, so we never block a turn on a
     // gate that itself broke.
     //
-    // We force `refreshToken: true` so codex re-reads ~/.codex/auth.json (and
-    // refreshes the OAuth token if expired) before answering. Without this the
-    // long-lived child can stay cached on a "not signed in" view it loaded
-    // before the user completed the browser flow. We treat `account === null`
-    // as the only valid "not signed in" signal -- `requiresOpenaiAuth` can be
-    // true on signed-in-but-no-codex-access plans, which is a different state
-    // and should surface as a 401 mid-turn, not as a sign-in prompt.
+    // Keep this read-only (`refreshToken: false`): a preflight must not rewrite
+    // credentials or become a token-refresh heartbeat. We treat
+    // `account === null` as the only valid "not signed in" signal --
+    // `requiresOpenaiAuth` can be true on signed-in-but-no-codex-access plans,
+    // which is a different state and should surface as a 401 mid-turn, not as
+    // a sign-in prompt.
     OpenAICodexProvider.setCodexAuthGate(async () => {
       try {
-        const status = await codexAuthService.getStatus(true);
+        const status = await codexAuthService.getStatus(false);
         return { requiresOpenaiAuth: status.account === null };
       } catch (err) {
         console.warn('[CODEX] codexAuthService.getStatus() failed in auth gate:', err);

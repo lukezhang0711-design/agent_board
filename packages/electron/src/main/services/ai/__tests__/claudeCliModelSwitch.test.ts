@@ -1,18 +1,9 @@
-import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   buildClaudeCliModelSwitchCommand,
   switchClaudeCliModel,
   MODEL_SWITCH_WRITE_GAP_MS,
 } from '../claudeCliModelSwitch';
-import { setDynamicModelCatalogValidator } from '../modelCatalogValidation';
-
-beforeEach(() => {
-  setDynamicModelCatalogValidator(async () => {});
-});
-
-afterEach(() => {
-  setDynamicModelCatalogValidator(null);
-});
 
 /**
  * NIM-806 — mid-session model switching for claude-code-cli sessions.
@@ -23,19 +14,19 @@ afterEach(() => {
  * claudeCliSubmit, since a single `text + \r` write can leave the Ink TUI
  * showing the text without consuming Enter). Values reuse
  * resolveClaudeCliModelArg so the picker's combined ids map to the CLI's own
- * aliases (`fable`, `opus[1m]`, ...).
+ * raw engine values (`fable`, `opus-1m`, ...).
  */
 describe('buildClaudeCliModelSwitchCommand', () => {
   it('maps the fable combined id to /model fable', () => {
     expect(buildClaudeCliModelSwitchCommand('claude-code-cli:fable')).toBe('/model fable');
   });
 
-  it('maps fable-1m to the CLI 1M form', () => {
-    expect(buildClaudeCliModelSwitchCommand('claude-code-cli:fable-1m')).toBe('/model fable[1m]');
+  it('keeps fable-1m raw', () => {
+    expect(buildClaudeCliModelSwitchCommand('claude-code-cli:fable-1m')).toBe('/model fable-1m');
   });
 
-  it('maps opus-1m to the CLI 1M alias', () => {
-    expect(buildClaudeCliModelSwitchCommand('claude-code-cli:opus-1m')).toBe('/model opus[1m]');
+  it('keeps opus-1m raw', () => {
+    expect(buildClaudeCliModelSwitchCommand('claude-code-cli:opus-1m')).toBe('/model opus-1m');
   });
 
   it('preserves a dynamically discovered pinned variant', () => {
@@ -84,17 +75,14 @@ describe('switchClaudeCliModel', () => {
     expect(writes).toEqual([]);
   });
 
-  it('does not touch the PTY when the live catalog rejects a stale model', async () => {
-    setDynamicModelCatalogValidator(async () => {
-      throw new Error('目录拉取超时：claude agent unavailable');
-    });
+  it('GREEN EO: forwards a stale explicit model without a catalog gate', async () => {
     const { writes, deps } = makeDeps();
 
     await expect(switchClaudeCliModel(
       { sessionId: 's1', model: 'claude-code-cli:removed-model' },
       deps,
-    )).rejects.toThrow('目录拉取超时：claude agent unavailable');
+    )).resolves.toEqual({ switched: true, cliArg: 'removed-model' });
 
-    expect(writes).toEqual([]);
+    expect(writes).toEqual(['/model removed-model', '\r']);
   });
 });

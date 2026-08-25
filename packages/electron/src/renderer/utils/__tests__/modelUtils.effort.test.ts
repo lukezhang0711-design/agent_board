@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getSupportedEffortLevelsForModel } from '../modelUtils';
+import { getEffortConfigurationForModel, getSupportedEffortLevelsForModel } from '../modelUtils';
 
 describe('getSupportedEffortLevelsForModel', () => {
   it('keeps the Effort control visible when a model advertises levels without the legacy flag', () => {
@@ -32,5 +32,29 @@ describe('getSupportedEffortLevelsForModel', () => {
     expect(getSupportedEffortLevelsForModel({
       codex: [{ id: 'openai-codex:future', supportedEffortLevels: ['turbo', 'deep'] }],
     }, 'openai-codex:future')).toEqual(['turbo', 'deep']);
+  });
+
+  it('GREEN EO: returns the selected model default with its declared options', () => {
+    expect(getEffortConfigurationForModel({
+      codex: [{
+        id: 'openai-codex:gpt-5.6-sol',
+        supportedEffortLevels: ['low', 'turbo'],
+        defaultEffortLevel: 'turbo',
+      }],
+    }, 'openai-codex:gpt-5.6-sol')).toEqual({
+      supportedEffortLevels: ['low', 'turbo'],
+      defaultEffortLevel: 'turbo',
+    });
+  });
+
+  it('GREEN EO: Gemini rows with no separate declaration expose no effort control', () => {
+    expect(getEffortConfigurationForModel({
+      gemini: [{
+        id: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+        supportedEffortLevels: [],
+      }],
+    }, 'antigravity-gemini-agent:gemini-3.7-flash-high')).toEqual({
+      supportedEffortLevels: [],
+    });
   });
 });

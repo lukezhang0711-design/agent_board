@@ -73,6 +73,20 @@ describe('ChannelHealthPanel rows', () => {
     expect(screen.getByTestId('channel-health-guidance-claude-code-cli').textContent).toContain('请运行 claude /login 后重试');
   });
 
+  it('renders a healthy Codex API-key session as API key mode', () => {
+    renderRow({
+      id: 'openai-codex-api-key',
+      displayName: 'Codex',
+      transport: 'streaming',
+      state: 'healthy',
+      summary: 'API key 模式',
+      completionMs: 120,
+    });
+
+    expect(screen.getByTestId('channel-health-status-openai-codex-api-key').textContent)
+      .toContain('API key 模式 · 120 毫秒');
+  });
+
   it('RED: renders API-key and auth-precheck failures with their non-misleading status copy', () => {
     renderRow({
       id: 'claude',

@@ -47,7 +47,9 @@ interface SessionState {
   abortController: AbortController | null;
 }
 
-const DEFAULT_MODEL_KEY = 'gemini-3-flash-agent';
+// No product-side model fallback. When no model was persisted, agy is allowed
+// to apply its own current default instead of Nimbalyst inventing an alias.
+const DEFAULT_MODEL_KEY = '';
 const PROVIDER_ID = 'antigravity-gemini-agent';
 
 /**
@@ -67,7 +69,8 @@ const DEV_AGENT_TOOL_NAMES = new Set<string>(['read_file', 'list_files', 'search
  */
 function extractModelKey(raw: string | undefined): string {
   if (!raw) return DEFAULT_MODEL_KEY;
-  return raw.includes(':') ? raw.split(':').slice(1).join(':') : raw;
+  const providerPrefix = `${PROVIDER_ID}:`;
+  return raw.startsWith(providerPrefix) ? raw.slice(providerPrefix.length) : raw;
 }
 
 /**
@@ -500,6 +503,10 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
         supportedEffortLevels: [],
         ...(model.default ? { default: true } : {}),
       }));
+    },
+
+    async probeLogin(): Promise<{ state: 'logged-in' | 'logged-out' | 'unknown'; reason?: string; completionMs: number }> {
+      return AntigravityServerManager.shared().probeAgyLogin();
     },
 
     async getUsageSnapshot(): Promise<UsageSnapshotResult> {

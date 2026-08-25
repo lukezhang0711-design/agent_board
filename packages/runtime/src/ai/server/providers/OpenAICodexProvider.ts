@@ -2,7 +2,6 @@ import path from 'path';
 import { BaseAgentProvider } from './BaseAgentProvider';
 import { buildUserMessageAddition } from './documentContextUtils';
 import { buildClaudeCodeSystemPrompt, buildMetaAgentSystemPrompt, type MetaAgentWorkflowPreset } from '../../prompt';
-import { DEFAULT_MODELS } from '../../modelConstants';
 import { AIToolCall, AIToolResult } from '../../types';
 import {
   ProviderConfig,
@@ -88,7 +87,6 @@ const PERSISTED_APP_SERVER_NOTIFICATION_METHODS = new Set([
 ]);
 
 export class OpenAICodexProvider extends BaseAgentProvider {
-  static readonly DEFAULT_MODEL = DEFAULT_MODELS['openai-codex'];
   private static readonly CODEX_EXECUTION_PATTERN = 'OpenAICodex(agent-run:*)';
   private static readonly SESSION_NAMING_REMINDER_PROMPT =
     '<SYSTEM_REMINDER>Call the session metadata tool now before continuing. ' +
@@ -282,22 +280,13 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     OpenAICodexProvider.codexAuthGate = gate;
   }
 
-  // Main-process-owned `codex debug models` snapshot. When registered, model
+  // Main-process-owned app-server `model/list` snapshot. When registered, model
   // picker reads are pure in-memory reads; an empty snapshot is deliberately
   // empty rather than silently selecting a stale curated fallback.
   private static modelRefreshSnapshotResolver: (() => AIModel[]) | null = null;
 
   public static setModelRefreshSnapshotResolver(resolver: (() => AIModel[]) | null): void {
     OpenAICodexProvider.modelRefreshSnapshotResolver = resolver;
-  }
-
-  // Absolute host-maintained ModelsResponse file. Both transports receive it
-  // as a process-start config value so session children cannot perform their
-  // own network model refresh.
-  private static modelCatalogPathResolver: (() => string | undefined) | null = null;
-
-  public static setModelCatalogPathResolver(resolver: (() => string | undefined) | null): void {
-    OpenAICodexProvider.modelCatalogPathResolver = resolver;
   }
 
   constructor(config?: { apiKey?: string }, deps?: OpenAICodexProviderDeps) {
@@ -535,7 +524,10 @@ export class OpenAICodexProvider extends BaseAgentProvider {
   }
 
   static getDefaultModel() {
-    return this.DEFAULT_MODEL;
+    // Dynamic Codex engines select their native default when the caller did
+    // not choose a live model. Returning an empty value prevents legacy
+    // callers from manufacturing a package-pinned ID.
+    return '';
   }
 
   static getKnownSlashCommands(): string[] {
@@ -785,11 +777,9 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       const additionalDirectories = OpenAICodexProvider.additionalDirectoriesLoader
         ? OpenAICodexProvider.additionalDirectoriesLoader(workspacePath)
         : [];
-      const codexModelCatalogPath = OpenAICodexProvider.modelCatalogPathResolver?.();
-
       const sessionOptions = {
         workspacePath,
-        model: resolvedModel,
+        ...(resolvedModel ? { model: resolvedModel } : {}),
         abortSignal: abortController.signal,
         ...(permissionDecision.permissionMode ? { permissionMode: permissionDecision.permissionMode } : {}),
         mcpServers,
@@ -799,8 +789,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
         } : {}),
         raw: {
           systemPrompt,
-          codexConfigOverrides: this.buildCodexConfigOverrides(mcpServers, codexModelCatalogPath),
-          ...(codexModelCatalogPath ? { codexModelCatalogPath } : {}),
+          codexConfigOverrides: this.buildCodexConfigOverrides(mcpServers),
           ...(codexEnv ? { codexEnv } : {}),
           ...(this.config?.effortLevel ? { effortLevel: this.config.effortLevel } : {}),
           ...(additionalDirectories.length > 0 ? { additionalDirectories } : {}),
@@ -885,7 +874,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       // them, so we can compare reliability/quality between sdk and app-server
       // during the rollout.
       this._initData = {
-        model: resolvedModel,
+        model: resolvedModel ?? '',
         mcpServerCount: Object.keys(mcpServers).length,
         isResumedThread,
         permissionMode: permissionDecision.permissionMode ?? null,
@@ -1482,13 +1471,13 @@ export class OpenAICodexProvider extends BaseAgentProvider {
     });
   }
 
-  private async getConfiguredModel(): Promise<string> {
-    const configured = this.config?.model || OpenAICodexProvider.DEFAULT_MODEL;
+  private async getConfiguredModel(): Promise<string | undefined> {
+    const configured = this.config?.model;
+    if (!configured) return undefined;
     const parsed = ModelIdentifier.tryParse(configured);
     const resolved = parsed ? parsed.model : configured.replace(/^openai-codex:/, '');
-    // Availability is checked by AIService against the verified debug-models
-    // snapshot before a new session is created. Do not rewrite a vanished
-    // default to a guessed version here.
+    // Picker metadata is advisory. Do not rewrite an explicit engine value,
+    // and let the app-server choose its own default when no value was given.
     return resolved;
   }
 
@@ -1574,7 +1563,6 @@ export class OpenAICodexProvider extends BaseAgentProvider {
 
   private buildCodexConfigOverrides(
     mcpServers: Record<string, unknown>,
-    modelCatalogPath?: string,
   ): Record<string, unknown> | undefined {
     const codexMcpServers: Record<string, Record<string, unknown>> = {};
     const usedServerNames = new Set<string>();
@@ -1601,7 +1589,6 @@ export class OpenAICodexProvider extends BaseAgentProvider {
           ? `"${SHADOWING_CODEX_BROWSER_PLUGIN_ID}"`
           : SHADOWING_CODEX_BROWSER_PLUGIN_ID]: { enabled: false },
       },
-      ...(modelCatalogPath ? { model_catalog_json: modelCatalogPath } : {}),
     };
 
     if (Object.keys(codexMcpServers).length > 0) {

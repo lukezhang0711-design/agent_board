@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => {
     create: vi.fn(),
     updateMetadata: vi.fn(),
     resolveDynamicModelCatalogSelection: vi.fn(),
-    assertDynamicModelCatalogSelection: vi.fn(),
+    usesDynamicModelCatalog: vi.fn(),
     tryParse: vi.fn(),
     getDefaultModelId: vi.fn(),
     sendEvent: vi.fn(),
@@ -104,7 +104,7 @@ vi.mock('../../services/ai/pendingPromptPersistence', () => ({
 
 vi.mock('../../services/ai/modelCatalogValidation', () => ({
   resolveDynamicModelCatalogSelection: mocks.resolveDynamicModelCatalogSelection,
-  assertDynamicModelCatalogSelection: mocks.assertDynamicModelCatalogSelection,
+  usesDynamicModelCatalog: mocks.usesDynamicModelCatalog,
 }));
 
 function registeredHandler(channel: string): (...args: any[]) => Promise<any> | any {
@@ -129,7 +129,7 @@ describe('SessionHandlers session creation failures', () => {
     mocks.create.mockReset().mockResolvedValue(undefined);
     mocks.updateMetadata.mockReset().mockResolvedValue(undefined);
     mocks.resolveDynamicModelCatalogSelection.mockReset().mockResolvedValue(undefined);
-    mocks.assertDynamicModelCatalogSelection.mockReset().mockResolvedValue(undefined);
+    mocks.usesDynamicModelCatalog.mockReset().mockReturnValue(true);
     mocks.tryParse.mockReset().mockImplementation((model: string) => {
       const [provider] = model.split(':');
       return model.includes(':') ? { provider } : null;
@@ -141,62 +141,30 @@ describe('SessionHandlers session creation failures', () => {
     await registerSessionHandlers();
   });
 
-  it('canonicalizes an explicitly supplied historical model through the live resolver before creating a session', async () => {
-    const legacyModel = 'claude-code:fable-1m';
-    const canonicalModel = 'claude-code:claude-fable-5-1m';
-    mocks.resolveDynamicModelCatalogSelection.mockResolvedValue(canonicalModel);
+  it('GREEN EO preserves an explicitly supplied unlisted raw model when creating a session', async () => {
+    const rawModel = 'claude-code:future-native-model';
     const event = createEvent();
 
     const result = await registeredHandler('sessions:create')(event, {
       workspaceId: '/workspace',
       session: {
-        id: 'legacy-default-session',
+        id: 'unlisted-native-session',
         provider: 'claude-code',
-        model: legacyModel,
-        title: 'Legacy default',
+        model: rawModel,
+        title: 'Unlisted native model',
       },
     });
 
-    expect(result).toEqual({ success: true, id: 'legacy-default-session' });
-    expect(mocks.resolveDynamicModelCatalogSelection).toHaveBeenCalledWith('claude-code', legacyModel);
+    expect(result).toEqual({ success: true, id: 'unlisted-native-session' });
+    expect(mocks.resolveDynamicModelCatalogSelection).toHaveBeenCalledWith('claude-code', rawModel);
     expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({
       provider: 'claude-code',
-      model: canonicalModel,
+      model: rawModel,
     }));
   });
 
-  it('sends the original unmappable-model error to the normal creation caller', async () => {
-    const model = 'claude-code:truly-unmappable';
-    const error = new Error(
-      '已保存的模型“claude-code:truly-unmappable”不再属于当前 claude-code 模型目录。请重新选择模型；系统不会自动改为其他型号。',
-    );
-    mocks.assertDynamicModelCatalogSelection.mockRejectedValue(error);
-    const event = createEvent();
-
-    const result = await registeredHandler('sessions:create')(event, {
-      workspaceId: '/workspace',
-      session: {
-        id: 'unmappable-session',
-        provider: 'claude-code',
-        model,
-      },
-    });
-
-    expect(result).toMatchObject({ success: false });
-    expect(mocks.create).not.toHaveBeenCalled();
-    expect(event.sender.send).toHaveBeenCalledWith('sessions:create-failed', {
-      error: error.message,
-      provider: 'claude-code',
-      model,
-    });
-  });
-
-  it('sends the original unmappable-model error to the child-session caller', async () => {
-    const model = 'claude-code:truly-unmappable-child';
-    const error = new Error(
-      '已保存的模型“claude-code:truly-unmappable-child”不再属于当前 claude-code 模型目录。请重新选择模型；系统不会自动改为其他型号。',
-    );
-    mocks.assertDynamicModelCatalogSelection.mockRejectedValue(error);
+  it('GREEN EO preserves an explicitly supplied unlisted raw model when creating a child session', async () => {
+    const model = 'claude-code:future-native-child-model';
     const event = createEvent();
 
     const result = await registeredHandler('sessions:create-child')(event, {
@@ -206,12 +174,11 @@ describe('SessionHandlers session creation failures', () => {
       model,
     });
 
-    expect(result).toMatchObject({ success: false });
-    expect(mocks.create).not.toHaveBeenCalled();
-    expect(event.sender.send).toHaveBeenCalledWith('sessions:create-failed', {
-      error: error.message,
+    expect(result).toMatchObject({ success: true });
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({
       provider: 'claude-code',
       model,
-    });
+    }));
+    expect(event.sender.send).not.toHaveBeenCalledWith('sessions:create-failed', expect.anything());
   });
 });

@@ -114,9 +114,9 @@ import {
 } from '../../store/atoms/terminals';
 import { scrollToTeammateAtom, scrollToMessageAtom, requestOpenSessionAtom } from '../../store/atoms/agentMode';
 import { usePostHog } from 'posthog-js/react';
-import { setAgentModeSettingsAtom, showPromptAdditionsAtom, hasExternalEditorAtom, externalEditorNameAtom, openInExternalEditorAtom, defaultAgentModelAtom, defaultEffortLevelAtom, chatShowToolCallsAtom, availableModelsAtom } from '../../store/atoms/appSettings';
+import { setAgentModeSettingsAtom, showPromptAdditionsAtom, hasExternalEditorAtom, externalEditorNameAtom, openInExternalEditorAtom, defaultAgentModelAtom, chatShowToolCallsAtom, availableModelsAtom } from '../../store/atoms/appSettings';
 import {
-  getSupportedEffortLevelsForModel,
+  getEffortConfigurationForModel,
   parseEffortLevel,
   type EffortLevel,
 } from '../../utils/modelUtils';
@@ -679,7 +679,6 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const sessionChildren = useAtomValue(sessionChildrenAtom(sessionId));
   const sessionParentId = useAtomValue(sessionParentIdAtom(sessionId));
   const defaultModel = useAtomValue(defaultAgentModelAtom);
-  const defaultEffortLevel = useAtomValue(defaultEffortLevelAtom);
   const availableModels = useAtomValue(availableModelsAtom);
 
   const sessionData = useMemo(() => {
@@ -734,15 +733,19 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   ]);
 
   // Effort values are an exact per-model engine capability, not a provider-wide
-  // static list. Before discovery completes we hide the control rather than
-  // offering an unsupported level.
-  const supportedEffortLevels = useMemo(() => {
-    return getSupportedEffortLevelsForModel(availableModels, currentModel);
+  // static list. A declared model default keeps the control usable even when a
+  // legacy session has no persisted value yet.
+  const effortConfiguration = useMemo(() => {
+    return getEffortConfigurationForModel(availableModels, currentModel);
   }, [availableModels, currentModel]);
+  const supportedEffortLevels = effortConfiguration.supportedEffortLevels;
   const showEffortLevel = supportedEffortLevels.length > 0;
   const effortLevel = useMemo(() => {
-    return rawEffortLevel != null ? parseEffortLevel(rawEffortLevel) : defaultEffortLevel;
-  }, [rawEffortLevel, defaultEffortLevel]);
+    return rawEffortLevel != null
+      ? parseEffortLevel(rawEffortLevel)
+      : effortConfiguration.defaultEffortLevel
+        ?? supportedEffortLevels[0];
+  }, [rawEffortLevel, effortConfiguration.defaultEffortLevel, supportedEffortLevels]);
 
   // Memoize the teammate list passed to AgentTranscriptPanel so its memo
   // comparison doesn't see a new array reference on every keystroke. Without

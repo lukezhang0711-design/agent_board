@@ -4,9 +4,9 @@
  * The genuine CLI's `/model <value>` slash command is a direct setter, so the
  * Nimbalyst model picker can retune a RUNNING CLI session by typing the
  * command into the PTY — no respawn needed. Values reuse
- * `resolveClaudeCliModelArg` so picker ids map to the CLI's own aliases
- * (`claude-code-cli:fable` → `fable`, `claude-code-cli:opus-1m` → `opus[1m]`,
- * pinned opus variants collapse to `opus`); non-claude ids never reach the PTY.
+ * `resolveClaudeCliModelArg`, which strips only the provider namespace. The
+ * engine owns the exact model spelling; no alias or context-suffix rewrite is
+ * applied before it reaches the PTY.
  *
  * The write is two-step (text, gap, then Enter) mirroring `claudeCliSubmit` —
  * a single `text + \r` write can leave the Ink TUI showing the text without
@@ -16,7 +16,6 @@
  */
 
 import { resolveClaudeCliModelArg } from './claudeCliSpawnConfig';
-import { assertDynamicModelCatalogSelection } from './modelCatalogValidation';
 
 /** Gap between the command write and the Enter write (same as claudeCliSubmit). */
 export const MODEL_SWITCH_WRITE_GAP_MS = 25;
@@ -48,10 +47,9 @@ export async function switchClaudeCliModel(
   input: SwitchClaudeCliModelInput,
   deps: SwitchClaudeCliModelDeps,
 ): Promise<SwitchClaudeCliModelResult> {
-  // A live PTY can already be active, so `ensureClaudeCliSession` will not
-  // run again to validate `--model`. Gate the direct `/model` command here:
-  // no stale alias, cache row, or catalog failure may reach the CLI.
-  await assertDynamicModelCatalogSelection('claude-code-cli', input.model);
+  // A live PTY can already be active, so this is the final model boundary.
+  // The explicit raw value reaches the native CLI, which owns validation and
+  // its error wording.
   const command = buildClaudeCliModelSwitchCommand(input.model);
   if (!command) return { switched: false };
 

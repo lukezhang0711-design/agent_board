@@ -117,7 +117,7 @@ describe('ModelSelector', () => {
     expect(screen.queryByTestId('model-picker-provider-claude-code-cli')).toBeNull();
   });
 
-  it('GREEN: renders live Codex 5.6 IDs, Claude alias resolution, and a cached-catalog red light', async () => {
+  it('GREEN EO: keeps a cached catalog visible and selectable after a refresh failure', async () => {
     (window as any).electronAPI.aiGetModels.mockResolvedValue({
       success: true,
       grouped: {
@@ -140,7 +140,7 @@ describe('ModelSelector', () => {
           verified: true,
           modelSource: 'cache',
           lastSuccessAt: 1,
-          lastError: { message: 'codex debug models timed out after 20ms' },
+          lastError: { message: 'codex app-server model/list timed out after 20ms' },
         },
       },
     });
@@ -160,17 +160,17 @@ describe('ModelSelector', () => {
     expect(screen.getByText('GPT-5.6 Luna')).toBeTruthy();
     expect(screen.getByText(/claude-opus-5\[1m\]/)).toBeTruthy();
     expect(screen.getByTestId('model-catalog-status-openai-codex').textContent)
-      .toContain('codex debug models timed out after 20ms');
+      .toContain('codex app-server model/list timed out after 20ms');
     expect(screen.getByTestId('model-catalog-status-openai-codex').textContent)
       .toContain('上次成功获取于');
     expect(screen.getByTestId('model-catalog-status-openai-codex').textContent)
-      .toContain('缓存仅供查看');
+      .toContain('原样交给引擎');
     const cachedSol = screen.getAllByText('GPT-5.6 Sol')
       .map((node) => node.closest('.model-selector-option'))
       .find(Boolean) as HTMLButtonElement;
-    expect(cachedSol.disabled).toBe(true);
+    expect(cachedSol.disabled).toBe(false);
     fireEvent.click(cachedSol);
-    expect(onModelChange).not.toHaveBeenCalled();
+    expect(onModelChange).toHaveBeenCalledWith('openai-codex:gpt-5.6-sol');
   });
 
   it('GREEN: keeps the original catalog failure visible when first discovery returned no models', async () => {

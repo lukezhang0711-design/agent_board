@@ -153,7 +153,7 @@ describe('CodexAppServerProtocol', () => {
     protocol.cleanupSession(session);
   });
 
-  it('pins session children to the host model catalog before app-server startup', async () => {
+  it('GREEN EO: does not pin session children to a host model catalog', async () => {
     const protocol = new CodexAppServerProtocol();
     const catalogPath = '/tmp/nimbalyst model catalog.json';
     const sessionPromise = protocol.createSession({
@@ -176,15 +176,11 @@ describe('CodexAppServerProtocol', () => {
 
     const session = await sessionPromise;
     const [, args] = spawnMock.mock.calls[0];
-    expect(args).toEqual([
-      '--config',
-      `model_catalog_json=${JSON.stringify(catalogPath)}`,
-      'app-server',
-      '--listen',
-      'stdio://',
-    ]);
+    expect(args).toEqual(['app-server', '--listen', 'stdio://']);
     expect((startReq.params as { config?: Record<string, unknown> }).config)
       .not.toHaveProperty('model_catalog_json');
+    expect((startReq.params as { config?: Record<string, unknown> }).config)
+      .not.toHaveProperty('model_reasoning_effort');
 
     protocol.cleanupSession(session);
   });

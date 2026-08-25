@@ -1375,9 +1375,9 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
                 </span>
               </HelpTooltip>
             )}
-            {showEffortLevel && onEffortLevelChange && effortLevel && (
+            {showEffortLevel && onEffortLevelChange && (supportedEffortLevels?.length ?? 0) > 0 && (
               <EffortLevelSelector
-                level={effortLevel}
+                level={effortLevel ?? supportedEffortLevels?.[0]}
                 onLevelChange={onEffortLevelChange}
                 supportedLevels={supportedEffortLevels ?? []}
               />

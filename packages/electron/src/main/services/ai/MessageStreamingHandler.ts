@@ -518,9 +518,9 @@ export class MessageStreamingHandler {
       throw new Error(`Session mismatch: requested ${sessionId} but got ${session.id}`);
     }
 
-    // Legacy/imported dynamic sessions may be missing a model or reference a
-    // model that has disappeared. Reject before persisting the input or
-    // initializing a provider: package defaults are not live-engine evidence.
+    // Legacy/imported dynamic sessions may be missing a model or reference an
+    // unlisted one. Preserve an explicit value and let the native engine make
+    // the final decision; this preflight only reconciles documented effort.
     if (this.isRuntimeDynamicCatalogProvider(session.provider)) {
       try {
         // The live service distinguishes session and app-default values so it
@@ -740,7 +740,8 @@ export class MessageStreamingHandler {
         apiKey,
         maxTokens: (session.providerConfig as any)?.maxTokens,
         temperature: (session.providerConfig as any)?.temperature,
-        // Only a model-declared level reaches an engine.
+        // Codex receives only a declared level; Claude forwards its raw
+        // effort value and Gemini receives no independent effort parameter.
         ...(reinitEffortLevel && { effortLevel: reinitEffortLevel }),
       };
 
@@ -764,10 +765,11 @@ export class MessageStreamingHandler {
             const modelForProvider = extractModelForProvider(fullModel, session.provider as AIProviderType);
             if (modelForProvider !== null) {
               reinitConfig.model = modelForProvider;
-            } else if (this.isRuntimeDynamicCatalogProvider(session.provider)) {
-              throw new Error(`${session.provider} 会话模型未通过实时目录校验。请重新选择模型；系统不会使用静态默认型号。`);
-            } else {
+            } else if (!this.isRuntimeDynamicCatalogProvider(session.provider)) {
               // extractModelForProvider returned null - fall back to default
+              // only for legacy static providers. A dynamic engine receives
+              // the exact user-supplied identifier (or chooses its native
+              // default when none was supplied).
               const defaultModel = await ModelRegistry.getDefaultModel(session.provider as AIProviderType);
               if (defaultModel) {
                 const defaultModelForProvider = extractModelForProvider(defaultModel, session.provider as AIProviderType);
@@ -780,18 +782,17 @@ export class MessageStreamingHandler {
           }
         }
       } else {
-        if (this.isRuntimeDynamicCatalogProvider(session.provider)) {
-          throw new Error(`${session.provider} 会话未设置已验证的模型。请重新选择模型；系统不会使用静态默认型号。`);
-        }
-        // No model specified - get default
-        const defaultModel = await ModelRegistry.getDefaultModel(session.provider as AIProviderType);
-        if (defaultModel) {
-          if (isProviderClaudeCode) {
-            reinitConfig.model = defaultModel;
-          } else {
-            const defaultModelForProvider = extractModelForProvider(defaultModel, session.provider as AIProviderType);
-            if (defaultModelForProvider !== null) {
-              reinitConfig.model = defaultModelForProvider;
+        if (!this.isRuntimeDynamicCatalogProvider(session.provider)) {
+          // No model specified - get default for legacy static providers only.
+          const defaultModel = await ModelRegistry.getDefaultModel(session.provider as AIProviderType);
+          if (defaultModel) {
+            if (isProviderClaudeCode) {
+              reinitConfig.model = defaultModel;
+            } else {
+              const defaultModelForProvider = extractModelForProvider(defaultModel, session.provider as AIProviderType);
+              if (defaultModelForProvider !== null) {
+                reinitConfig.model = defaultModelForProvider;
+              }
             }
           }
         }
@@ -1363,10 +1364,9 @@ export class MessageStreamingHandler {
           const modelForProvider = fullModel
             ? extractModelForProvider(fullModel, session.provider as AIProviderType)
             : null;
-          if (modelForProvider === null) {
-            throw new Error(`${session.provider} 会话未设置已验证的模型。请重新选择模型；系统不会使用静态默认型号。`);
+          if (modelForProvider !== null) {
+            turnConfig.model = modelForProvider;
           }
-          turnConfig.model = modelForProvider;
         }
         await provider.initialize(turnConfig);
       }

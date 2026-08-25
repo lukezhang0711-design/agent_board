@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 describe('ClaudeCodeModelCatalogService', () => {
-  it('uses supportedModels as the source, turns [1m] into -1m, and preserves resolved aliases and effort support', async () => {
+  it('uses supportedModels as the source and preserves raw SDK values, labels, aliases, and effort support', async () => {
     const fetchSupportedModels = vi.fn().mockResolvedValue(SDK_MODELS);
     const { service } = createService(fetchSupportedModels);
 
@@ -83,19 +83,17 @@ describe('ClaudeCodeModelCatalogService', () => {
         resolvedModel: 'claude-opus-5[1m]',
       }),
       expect.objectContaining({
-        id: 'claude-code:opus-1m',
-        name: 'Claude Agent · Opus (1M context)',
+        id: 'claude-code:opus[1m]',
+        name: 'Opus (1M context)',
         resolvedModel: 'claude-opus-5[1m]',
         description: 'Most capable',
         supportsEffort: true,
         supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
-        contextWindow: 1_000_000,
       }),
       expect.objectContaining({
         id: 'claude-code:haiku',
         supportsEffort: false,
         supportedEffortLevels: [],
-        contextWindow: 200_000,
       }),
       expect.objectContaining({
         id: 'claude-code:sonnet',
@@ -127,7 +125,7 @@ describe('ClaudeCodeModelCatalogService', () => {
     });
     expect(next.getModels()).toEqual([
       expect.objectContaining({ id: 'claude-code:default', isEngineDefault: true }),
-      expect.objectContaining({ id: 'claude-code:opus-1m' }),
+      expect.objectContaining({ id: 'claude-code:opus[1m]' }),
       expect.anything(),
       expect.objectContaining({
         id: 'claude-code:sonnet',

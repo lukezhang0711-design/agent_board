@@ -257,6 +257,16 @@ declare global {
     refreshModels(): Promise<Array<{ id: string; name: string; default?: boolean; supportedEffortLevels: [] }>>;
 
     /**
+     * Zero-inference Gemini login probe: static OAuth-file state plus
+     * `agy models`, never a model prompt.
+     */
+    probeLogin(): Promise<{
+      state: 'logged-in' | 'logged-out' | 'unknown';
+      reason?: string;
+      completionMs: number;
+    }>;
+
+    /**
      * Read-only usage/quota probe. Returns the live Antigravity usage snapshot
      * (account credits + per-model quota) when the language server is already
      * running, or an unavailable result otherwise. MUST NOT spawn the server.

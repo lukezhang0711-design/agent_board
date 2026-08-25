@@ -76,12 +76,16 @@ function normalizeStoredModelIdentifier(
     return model;
   }
 
-  if (provider === 'claude-code' || model.startsWith('claude-code:')) {
-    const parsed = ModelIdentifier.parse(model);
-    if (provider === 'claude-code' && parsed.provider !== 'claude-code') {
-      throw new Error(`Claude Agent sessions require a claude-code:* model identifier. Received: ${model}`);
-    }
-    return parsed.combined;
+  if (
+    provider === 'claude-code'
+    || provider === 'claude-code-cli'
+    || model.startsWith('claude-code:')
+    || model.startsWith('claude-code-cli:')
+  ) {
+    // Claude's native SDK owns model spelling. This persistence boundary must
+    // not round-trip it through ModelIdentifier (which historically folded
+    // case/context syntax) or turn an unlisted explicit value into a failure.
+    return model;
   }
 
   return model;

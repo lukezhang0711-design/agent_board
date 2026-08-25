@@ -20,9 +20,8 @@
  */
 
 import React from 'react';
-// Provider class moved into the backend module (dist/agent.js) per Phase 5
-// reshape. Model discovery is static, declared in manifest.json. The host
-// passes availableModels via props.
+// Provider class moved into the backend module (dist/agent.js) per Phase 5.
+// `agy models` owns discovery; the host passes its raw rows via props.
 
 interface Model {
   id: string;
@@ -129,9 +128,8 @@ export function AntigravityAgentSettings({
 
     if (!shouldProbe) return;
 
-    // Model discovery is now static (manifest.aiAgentProviders[0].models).
-    // The host passes availableModels via props; no runtime probe is needed.
-    // Clear any stale error state from a previous transition.
+    // The host refreshes the dynamic agy catalog. Clear only stale local UI
+    // state here; do not synthesize a static fallback list.
     setModelsError(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.enabled, availableModels.length, loading]);
@@ -185,12 +183,12 @@ export function AntigravityAgentSettings({
         <div className="antigravity-main-column flex-1 flex flex-col">
           <div className="provider-panel-header mb-4 pb-4 border-b border-[var(--nim-border)]">
             <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-              Gemini 3.5 Flash (Agent)
+              Gemini（Antigravity）
             </h3>
             <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
               Agent provider that runs a Nimbalyst-orchestrated tool loop
-              over Gemini 3.5 Flash. Auth uses your existing ~/.gemini
-              login.
+              over the models currently declared by Antigravity. Auth uses
+              your existing ~/.gemini login.
             </p>
           </div>
 
@@ -263,12 +261,13 @@ export function AntigravityAgentSettings({
       <div className="antigravity-main-column flex-1 flex flex-col">
         <div className="provider-panel-header mb-4 pb-4 border-b border-[var(--nim-border)]">
           <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-            Gemini 3.5 Flash (Agent)
+            Gemini（Antigravity）
           </h3>
           <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
             Agent provider that runs a Nimbalyst-orchestrated tool loop over
-            Gemini 3.5 Flash. Supports meta-agent mode and the full Nimbalyst
-            tool registry. Auth uses your existing ~/.gemini login.
+            the models currently declared by Antigravity. Supports meta-agent
+            mode and the full Nimbalyst tool registry. Auth uses your existing
+            ~/.gemini login.
           </p>
         </div>
 
@@ -314,7 +313,7 @@ export function AntigravityAgentSettings({
 
         <div className="provider-enable provider-panel-section flex items-center justify-between gap-4 py-4 mb-4 border-b border-[var(--nim-border)]">
           <span className="provider-enable-label text-sm font-medium text-[var(--nim-text)]">
-            Enable Gemini 3.5 Flash (Agent)
+            Enable Gemini（Antigravity）
           </span>
           <ToggleSwitch checked={config.enabled || false} onChange={onToggle} />
         </div>
@@ -353,7 +352,7 @@ export function AntigravityAgentSettings({
                   <p className="text-[13px] text-[var(--nim-text-muted)]">
                     {loading
                       ? 'Loading models...'
-                      : 'No models found. Make sure Antigravity is installed and you are signed in, then test the connection.'}
+                      : '暂未读取到模型。请确认 Antigravity CLI 已安装且已登录后重试。'}
                   </p>
                 </>
               ) : (
@@ -377,9 +376,10 @@ export function AntigravityAgentSettings({
 
             <div className="provider-panel-section py-3">
               <p className="text-[12px] leading-relaxed text-[var(--nim-text-muted)]">
-                Default model is <strong>Gemini 3.5 Flash (High)</strong>. The
-                agent uses the tool-loop protocol over GetModelResponse - no
-                native function calling, no MCP passthrough.
+                型号与强度直接来自 <code>agy models</code>；每一行都是一个原生
+                型号选项，不额外拆分、拼接或添加独立档位。The agent uses the
+                tool-loop protocol over GetModelResponse - no native function
+                calling, no MCP passthrough.
               </p>
             </div>
           </>

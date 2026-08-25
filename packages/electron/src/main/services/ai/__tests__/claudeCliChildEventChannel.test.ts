@@ -202,19 +202,19 @@ describe('claude-code-cli child session event channel', () => {
     });
   });
 
-  it('marks an idle-flush prompt failed without writing the PTY when the catalog turns red', async () => {
+  it('GREEN EO: forwards an idle-flush prompt when the catalog is unavailable', async () => {
     const sessionId = 'cli-parent-catalog-failed';
     await AISessionsRepository.create({
       id: sessionId,
       provider: 'claude-code-cli',
-      model: 'claude-code-cli:sonnet',
+      model: 'claude-code-cli:future-native-unlisted-model',
       workspaceId: '/workspace',
       title: 'CLI parent catalog failed',
     });
     const queued = await queueStore.create({
       id: 'cli-catalog-failed',
       sessionId,
-      prompt: 'must remain unsent',
+      prompt: 'must still be sent',
     });
     setDynamicModelCatalogValidator(async () => {
       throw new Error('supportedModels(): network unavailable');
@@ -222,12 +222,14 @@ describe('claude-code-cli child session event channel', () => {
 
     await expect(
       flushNextClaudeCliQueuedPromptForSession(sessionId, '/workspace', 'idle-transition'),
-    ).resolves.toBe(false);
+    ).resolves.toBe(true);
 
-    expect(productionState.terminalWrites).toEqual([]);
+    expect(productionState.terminalWrites).toEqual([
+      [sessionId, pasted('must still be sent')],
+      [sessionId, '\r'],
+    ]);
     await expect(queueStore.get(queued.id)).resolves.toMatchObject({
-      status: 'failed',
-      errorMessage: 'supportedModels(): network unavailable',
+      status: 'completed',
     });
   });
 });

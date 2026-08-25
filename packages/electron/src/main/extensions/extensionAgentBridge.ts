@@ -581,6 +581,55 @@ export interface ExtensionAgentCatalogModel {
   defaultEffortLevel?: string;
 }
 
+export interface ExtensionAgentLoginProbe {
+  state: 'logged-in' | 'logged-out' | 'unknown';
+  reason?: string;
+  completionMs?: number;
+}
+
+/**
+ * Ask an extension for its zero-inference login probe. This is deliberately
+ * separate from model refresh so health checks can classify “need login” and
+ * “backend not started” without treating either as an empty catalog.
+ */
+export async function probeExtensionAgentProviderLogin(
+  contributionId: string,
+): Promise<ExtensionAgentLoginProbe> {
+  const entry = getAgentProviderRegistry().findByContributionId(contributionId);
+  if (!entry) {
+    throw new BridgeError(
+      'extension-agent-unknown',
+      `No extension-agent provider registered for ${contributionId}.`,
+    );
+  }
+  const workspacePath = resolveWorkspacePath();
+  await ensureModuleStarted(entry, workspacePath);
+  const { backendModuleId } = findBackendModule(entry);
+  const response = await getPrivilegedExtensionHost().request({
+    extensionId: entry.extensionId,
+    moduleId: backendModuleId,
+    workspacePath,
+    method: 'probeLogin',
+    params: {},
+    requiredPermission: null,
+  });
+  if (!response || typeof response !== 'object') {
+    throw new Error(`${contributionId} probeLogin returned an invalid result.`);
+  }
+  const record = response as Record<string, unknown>;
+  const state = record.state;
+  if (state !== 'logged-in' && state !== 'logged-out' && state !== 'unknown') {
+    throw new Error(`${contributionId} probeLogin returned an invalid state.`);
+  }
+  return {
+    state,
+    ...(typeof record.reason === 'string' ? { reason: record.reason } : {}),
+    ...(typeof record.completionMs === 'number' && Number.isFinite(record.completionMs)
+      ? { completionMs: record.completionMs }
+      : {}),
+  };
+}
+
 /**
  * Explicit picker/Head refresh for a dynamic extension provider. This uses the
  * same consent and broker path as a real session, but deliberately requires a
@@ -614,17 +663,19 @@ export async function refreshExtensionAgentProviderModels(
   return response.flatMap((candidate): ExtensionAgentCatalogModel[] => {
     if (!candidate || typeof candidate !== 'object') return [];
     const record = candidate as Record<string, unknown>;
-    const id = typeof record.id === 'string' ? record.id.trim() : '';
-    const name = typeof record.name === 'string' ? record.name.trim() : '';
+    // IDs/labels are opaque engine values. Validate emptiness without changing
+    // the raw strings returned by a dynamic provider.
+    const id = typeof record.id === 'string' && record.id.trim().length > 0 ? record.id : '';
+    const name = typeof record.name === 'string' && record.name.trim().length > 0 ? record.name : id;
     if (!id || !name) return [];
     const supportedEffortLevels = Array.isArray(record.supportedEffortLevels)
       ? Array.from(new Set(record.supportedEffortLevels
         .filter((level): level is string => typeof level === 'string' && level.trim().length > 0)
-        .map((level) => level.trim())))
+      ))
       : [];
     const defaultEffortLevel = typeof record.defaultEffortLevel === 'string'
-      && supportedEffortLevels.includes(record.defaultEffortLevel.trim())
-      ? record.defaultEffortLevel.trim()
+      && supportedEffortLevels.includes(record.defaultEffortLevel)
+      ? record.defaultEffortLevel
       : undefined;
     return [{
       id,

@@ -180,6 +180,25 @@ describe('SessionManager (runtime server)', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('GREEN EO: preserves an explicit unlisted Claude engine value instead of requiring a host prefix', async () => {
+    const session = await manager.createSession(
+      'claude-code',
+      { content: 'text' },
+      'ws',
+      undefined,
+      'claude-future-engine-model',
+    );
+
+    expect(session.model).toBe('claude-future-engine-model');
+    await expect(
+      manager.updateSessionProviderAndModel(
+        session.id,
+        'claude-code',
+        'claude-another-unlisted-model',
+      ),
+    ).resolves.toBeUndefined();
+  });
+
   it('only blocks started provider switches when an agent provider is involved', () => {
     expect(shouldBlockStartedSessionProviderSwitch('claude-code', 'openai-codex', true)).toBe(true);
     expect(shouldBlockStartedSessionProviderSwitch('openai-codex', 'claude-code', true)).toBe(true);

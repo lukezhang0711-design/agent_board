@@ -1,21 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
 import type { IpcMainInvokeEvent } from 'electron';
 import type { AIModel, AIProviderType } from '@nimbalyst/runtime/ai/server/types';
 import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
-import {
-  getCodexVendorPathEntries,
-  resolveCodexBinaryPath,
-} from '@nimbalyst/runtime/ai/server/protocols/codexAppServer/codexAppServerBinary';
-import { resolvePackagedCodexBinaryPath } from '@nimbalyst/runtime/ai/server/providers/codex/codexBinaryPath';
 import { safeHandle } from '../utils/ipcRegistry';
 import { logger } from '../utils/logger';
-import { getEnhancedPath } from './CLIManager';
 
 /** The state is deliberately separate from channel health's existing verdicts. */
 export type CodexModelRefreshPhase = 'normal' | 'retrying' | 'stopped';
-export type CodexModelSource = 'runtime' | 'cache' | 'placeholder' | 'none';
+export type CodexModelSource = 'runtime' | 'cache' | 'none';
 export type CodexModelRefreshErrorCategory = 'network' | 'child_process' | 'upstream_rejected';
 
 export interface CodexModelRefreshError {
@@ -40,17 +33,28 @@ export interface CodexModelRefreshState {
 
 interface CatalogReasoningLevel {
   effort?: unknown;
+  reasoningEffort?: unknown;
+  level?: unknown;
   description?: unknown;
 }
 
 interface CatalogModel {
+  id?: unknown;
   slug?: unknown;
+  model?: unknown;
+  name?: unknown;
+  displayName?: unknown;
   display_name?: unknown;
   description?: unknown;
   priority?: unknown;
+  isDefault?: unknown;
+  default?: unknown;
+  defaultReasoningEffort?: unknown;
   default_reasoning_level?: unknown;
+  supportedReasoningEfforts?: unknown;
   supported_reasoning_levels?: unknown;
   visibility?: unknown;
+  hidden?: unknown;
   context_window?: unknown;
   max_context_window?: unknown;
 }
@@ -61,15 +65,12 @@ interface ModelsCatalog {
 }
 
 interface CacheMetadata {
-  source: 'codex debug models';
+  source: 'codex app-server model/list';
   lastSuccessAt: number;
 }
 
-export type CodexModelsCommandRunner = (
-  command: string,
-  args: string[],
-  options: { env: NodeJS.ProcessEnv; timeoutMs: number },
-) => Promise<{ stdout: string; stderr?: string }>;
+/** Raw response from app-server `model/list`, retained without a CLI fallback. */
+export type CodexModelListFetcher = () => Promise<unknown>;
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 type IpcRegister = (channel: string, handler: IpcHandler) => void;
@@ -82,103 +83,49 @@ interface RefreshLogger {
 }
 
 export interface CodexModelRefreshServiceOptions {
-  /** Raw `codex debug models` JSON, supplied unchanged to app-server children. */
+  /** Raw app-server `model/list` response. */
   catalogPath: string;
+  fetchCatalog: CodexModelListFetcher;
   retryDelaysMs?: number[];
   requestTimeoutMs?: number;
   manualRetryDedupeMs?: number;
-  resolveBinaryPath?: () => string;
-  buildEnv?: (binaryPath: string) => NodeJS.ProcessEnv;
-  commandRunner?: CodexModelsCommandRunner;
   logger?: RefreshLogger;
 }
 
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 5_000, 30_000];
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
 const DEFAULT_MANUAL_RETRY_DEDUPE_MS = 2_000;
-const CACHE_SOURCE = 'codex debug models' as const;
-
-/**
- * The sole permitted static inventory. It is visible only before the very
- * first discovery attempt and carries `unverifiedPlaceholder`; a failure
- * clears it instead of exposing it as an implicit fallback.
- */
-const INITIAL_UNVERIFIED_PLACEHOLDER: AIModel[] = [{
-  id: 'openai-codex:gpt-5.5',
-  name: 'GPT-5.5',
-  provider: 'openai-codex' as AIProviderType,
-  unverifiedPlaceholder: true,
-}];
+const CACHE_SOURCE = 'codex app-server model/list' as const;
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function defaultBuildEnv(binaryPath: string): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  const pathEntries = [
-    ...getCodexVendorPathEntries(binaryPath),
-    ...getEnhancedPath().split(path.delimiter),
-    ...(env.PATH ?? env.Path ?? '').split(path.delimiter),
-  ].filter(Boolean);
-  env.PATH = Array.from(new Set(pathEntries)).join(path.delimiter);
-  delete env.Path;
-  // `codex debug models` must authenticate exactly like the installed CLI.
-  // Environment API keys would turn this probe into a different product path.
-  delete env.OPENAI_API_KEY;
-  delete env.CODEX_API_KEY;
-  return env;
+function withTimeout<T>(operation: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+    operation.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); },
+    );
+  });
 }
 
-const defaultCommandRunner: CodexModelsCommandRunner = (command, args, options) => new Promise((resolve, reject) => {
-  const child = spawn(command, args, {
-    env: options.env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  let stdout = '';
-  let stderr = '';
-  let settled = false;
-  let timedOut = false;
-  const settle = (callback: () => void) => {
-    if (settled) return;
-    settled = true;
-    clearTimeout(timeout);
-    callback();
-  };
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    try { child.kill('SIGTERM'); } catch { /* best-effort cleanup */ }
-    // Do not wait for a misbehaving child to emit `close`: callers must
-    // receive the original timeout and turn the catalog health indicator red.
-    settle(() => reject(new Error(`codex debug models timed out after ${options.timeoutMs}ms`)));
-  }, options.timeoutMs);
-  child.stdout.setEncoding('utf8');
-  child.stderr.setEncoding('utf8');
-  child.stdout.on('data', (chunk: string) => { stdout += chunk; });
-  child.stderr.on('data', (chunk: string) => { stderr += chunk; });
-  child.once('error', (error) => settle(() => reject(error)));
-  child.once('close', (code, signal) => settle(() => {
-    if (timedOut) {
-      reject(new Error(`codex debug models timed out after ${options.timeoutMs}ms`));
-      return;
-    }
-    if (code !== 0) {
-      reject(new Error(stderr.trim() || `codex debug models exited with code ${code ?? 'null'}${signal ? ` (${signal})` : ''}`));
-      return;
-    }
-    resolve({ stdout, stderr });
-  }));
-});
 
 function parseCatalog(value: unknown): ModelsCatalog | null {
   if (!value || typeof value !== 'object') return null;
-  const models = (value as { models?: unknown }).models;
+  const record = value as { models?: unknown; data?: unknown; items?: unknown; result?: unknown };
+  const nested = record.result && typeof record.result === 'object'
+    ? record.result as { models?: unknown; data?: unknown; items?: unknown }
+    : undefined;
+  const models = record.models ?? record.data ?? record.items
+    ?? nested?.models ?? nested?.data ?? nested?.items;
   if (!Array.isArray(models) || models.length === 0 || models.some((model) => !model || typeof model !== 'object')) {
     return null;
   }
-  // Keep the exact CLI payload shape for the persisted catalog consumed by
-  // app-server children; mapping below reads only the documented fields.
-  return value as ModelsCatalog;
+  // Preserve raw app-server rows exactly; mapping below reads only display and
+  // capability fields without manufacturing names or effort tiers.
+  return { models: models as CatalogModel[] };
 }
 
 function parseCacheMetadata(value: unknown): CacheMetadata | null {
@@ -193,21 +140,30 @@ function toProviderModelId(rawId: string): string {
   return rawId.startsWith('openai-codex:') ? rawId : `openai-codex:${rawId}`;
 }
 
+function rawString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+}
+
 function isEffortLevel(value: unknown): value is EffortLevel {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
 function modelEffortLevels(model: CatalogModel): EffortLevel[] {
-  if (!Array.isArray(model.supported_reasoning_levels)) return [];
+  const declared = model.supportedReasoningEfforts ?? model.supported_reasoning_levels;
+  if (!Array.isArray(declared)) return [];
   const levels: EffortLevel[] = [];
-  for (const entry of model.supported_reasoning_levels) {
+  for (const entry of declared) {
     const effort = typeof entry === 'string'
       ? entry
       : entry && typeof entry === 'object'
         ? (entry as CatalogReasoningLevel).effort
+          ?? (entry as CatalogReasoningLevel).reasoningEffort
+          ?? (entry as CatalogReasoningLevel).level
         : undefined;
-    const normalized = isEffortLevel(effort) ? effort.trim() : undefined;
-    if (normalized && !levels.includes(normalized)) levels.push(normalized);
+    // Values are opaque engine vocabulary. We only discard whitespace-only
+    // records; no provider-wide normalization or synthetic tier is applied.
+    const raw = isEffortLevel(effort) ? effort : undefined;
+    if (raw && !levels.includes(raw)) levels.push(raw);
   }
   return levels;
 }
@@ -215,21 +171,27 @@ function modelEffortLevels(model: CatalogModel): EffortLevel[] {
 function mapCatalogModels(catalog: ModelsCatalog): AIModel[] {
   const mapped = new Map<string, { model: AIModel; priority?: number }>();
   for (const model of catalog.models) {
-    // `list` is intentional. `hide` AND every unknown visibility must stay out.
-    if (model.visibility !== 'list' || typeof model.slug !== 'string' || !model.slug.trim()) continue;
+    // Current app-server rows use `hidden: false`; older app-server releases
+    // use `visibility: 'list'`. Do not guess when neither native marker is
+    // present, and let an explicit legacy visibility marker take precedence.
+    const isVisible = model.visibility !== undefined
+      ? model.visibility === 'list'
+      : model.hidden === false;
+    if (!isVisible) continue;
+    const rawId = rawString(model.id) ?? rawString(model.slug) ?? rawString(model.model);
+    if (!rawId) continue;
     const levels = modelEffortLevels(model);
-    const defaultEffortLevel = isEffortLevel(model.default_reasoning_level)
-      && levels.includes(model.default_reasoning_level.trim())
-      ? model.default_reasoning_level.trim()
+    const declaredDefaultEffort = rawString(model.defaultReasoningEffort)
+      ?? rawString(model.default_reasoning_level);
+    const defaultEffortLevel = declaredDefaultEffort && levels.includes(declaredDefaultEffort)
+      ? declaredDefaultEffort
       : undefined;
-    const id = toProviderModelId(model.slug);
+    const id = toProviderModelId(rawId);
     if (mapped.has(id)) continue;
     mapped.set(id, {
       model: {
         id,
-        name: typeof model.display_name === 'string' && model.display_name.trim()
-          ? model.display_name
-          : model.slug,
+        name: rawString(model.displayName) ?? rawString(model.display_name) ?? rawString(model.name) ?? rawId,
         provider: 'openai-codex' as AIProviderType,
         ...(typeof model.description === 'string' && model.description.trim()
           ? { description: model.description }
@@ -243,7 +205,9 @@ function mapCatalogModels(catalog: ModelsCatalog): AIModel[] {
         supportedEffortLevels: levels,
         ...(defaultEffortLevel ? { defaultEffortLevel } : {}),
       },
-      priority: typeof model.priority === 'number' && Number.isFinite(model.priority)
+      priority: model.isDefault === true || model.default === true
+        ? Number.NEGATIVE_INFINITY
+        : typeof model.priority === 'number' && Number.isFinite(model.priority)
         ? model.priority
         : undefined,
     });
@@ -282,9 +246,7 @@ export class CodexModelRefreshService {
   private readonly retryDelaysMs: number[];
   private readonly requestTimeoutMs: number;
   private readonly manualRetryDedupeMs: number;
-  private readonly resolveBinaryPath: () => string;
-  private readonly buildEnv: (binaryPath: string) => NodeJS.ProcessEnv;
-  private readonly commandRunner: CodexModelsCommandRunner;
+  private readonly fetchCatalogFromAppServer: CodexModelListFetcher;
   private readonly log: RefreshLogger;
   private state: CodexModelRefreshState;
   private models: AIModel[] = [];
@@ -303,17 +265,14 @@ export class CodexModelRefreshService {
     this.retryDelaysMs = [...(options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS)];
     this.requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.manualRetryDedupeMs = Math.max(0, options.manualRetryDedupeMs ?? DEFAULT_MANUAL_RETRY_DEDUPE_MS);
-    this.resolveBinaryPath = options.resolveBinaryPath
-      ?? (() => resolveCodexBinaryPath(() => resolvePackagedCodexBinaryPath(), getEnhancedPath()));
-    this.buildEnv = options.buildEnv ?? defaultBuildEnv;
-    this.commandRunner = options.commandRunner ?? defaultCommandRunner;
+    this.fetchCatalogFromAppServer = options.fetchCatalog;
     this.log = options.logger ?? logger.main;
 
     const cached = this.readVerifiedCache();
-    this.models = cached?.models ?? INITIAL_UNVERIFIED_PLACEHOLDER.map((model) => ({ ...model }));
+    this.models = cached?.models ?? [];
     this.state = {
       phase: 'normal',
-      modelSource: cached ? 'cache' : 'placeholder',
+      modelSource: cached ? 'cache' : 'none',
       verified: !!cached,
       attempt: 0,
       maxAttempts: this.retryDelaysMs.length + 1,
@@ -330,19 +289,6 @@ export class CodexModelRefreshService {
 
   getModels(): AIModel[] {
     return this.models.map((model) => ({ ...model, supportedEffortLevels: model.supportedEffortLevels && [...model.supportedEffortLevels] }));
-  }
-
-  /**
-   * App-server children may receive only a fresh successful discovery. A cache
-   * remains UI evidence after a failed refresh, but must never become runtime
-   * execution input while its red-light error is active.
-   */
-  getCatalogPath(): string | undefined {
-    return this.state.modelSource === 'runtime'
-      && this.state.verified
-      && !this.state.lastError
-      ? this.catalogPath
-      : undefined;
   }
 
   start(): Promise<CodexModelRefreshState> {
@@ -405,7 +351,7 @@ export class CodexModelRefreshService {
     try {
       const catalog = await this.fetchCatalog();
       const models = mapCatalogModels(catalog);
-      if (models.length === 0) throw new Error('codex debug models returned no visibility=list models');
+      if (models.length === 0) throw new Error('codex app-server model/list returned no visible models');
       if (cycle !== this.cycle || this.shuttingDown) return this.getStatus();
       const lastSuccessAt = Date.now();
       this.writeJsonAtomically(this.catalogPath, catalog);
@@ -423,7 +369,7 @@ export class CodexModelRefreshService {
         lastError: null,
         lastSuccessAt,
       };
-      this.log.info('[CodexModelRefresh] `codex debug models` succeeded', { modelCount: models.length, lastSuccessAt });
+      this.log.info('[CodexModelRefresh] app-server model/list succeeded', { modelCount: models.length, lastSuccessAt });
       return this.getStatus();
     } catch (error) {
       if (cycle !== this.cycle || this.shuttingDown) return this.getStatus();
@@ -455,19 +401,14 @@ export class CodexModelRefreshService {
   }
 
   private async fetchCatalog(): Promise<ModelsCatalog> {
-    const binaryPath = this.resolveBinaryPath();
-    const result = await this.commandRunner(binaryPath, ['debug', 'models'], {
-      env: this.buildEnv(binaryPath),
-      timeoutMs: this.requestTimeoutMs,
-    });
-    try {
-      const catalog = parseCatalog(JSON.parse(result.stdout));
-      if (!catalog) throw new Error('response has no models array');
-      return catalog;
-    } catch (error) {
-      const stderr = result.stderr?.trim();
-      throw new Error(`codex debug models returned invalid JSON: ${errorMessage(error)}${stderr ? `; stderr: ${stderr}` : ''}`);
-    }
+    const response = await withTimeout(
+      this.fetchCatalogFromAppServer(),
+      this.requestTimeoutMs,
+      'codex app-server model/list',
+    );
+    const catalog = parseCatalog(response);
+    if (!catalog) throw new Error('codex app-server model/list returned no models array');
+    return catalog;
   }
 
   private scheduleRetry(cycle: number, delayMs: number): void {

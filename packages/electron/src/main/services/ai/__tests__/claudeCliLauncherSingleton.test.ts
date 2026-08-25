@@ -26,7 +26,6 @@ describe('claudeCliLauncherSingleton', () => {
     };
     const launch = vi.fn(async (_input?: any): Promise<void> => undefined);
     const flushQueuedPrompt = vi.fn(async () => false);
-    const assertDynamicModelCatalogSelection = vi.fn(async () => undefined);
 
     vi.doMock('../../TerminalSessionManager', () => ({
       getTerminalSessionManager: () => manager,
@@ -81,9 +80,6 @@ describe('claudeCliLauncherSingleton', () => {
     vi.doMock('../claudeCliQueueFlushSingleton', () => ({
       flushNextClaudeCliQueuedPromptForSession: flushQueuedPrompt,
     }));
-    vi.doMock('../modelCatalogValidation', () => ({
-      assertDynamicModelCatalogSelection,
-    }));
     vi.doMock('../ClaudeCliSessionLauncher', () => ({
       ClaudeCliSessionLauncher: class {
         constructor() {
@@ -101,7 +97,6 @@ describe('claudeCliLauncherSingleton', () => {
       flushQueuedPrompt,
       getSession,
       buildMetaAgentSystemPrompt,
-      assertDynamicModelCatalogSelection,
     };
   }
 
@@ -181,23 +176,20 @@ describe('claudeCliLauncherSingleton', () => {
     expect(h.launch).not.toHaveBeenCalled();
   }, 20000);
 
-  it('rejects an empty or vanished live-catalog model before CLI launch', async () => {
+  it('GREEN EO: launches with an omitted model so the native CLI chooses its own default', async () => {
     const h = await loadHarness();
-    h.assertDynamicModelCatalogSelection.mockRejectedValueOnce(
-      new Error('claude-code-cli 模型目录不可用：supportedModels timed out'),
-    );
 
     await expect(h.ensureClaudeCliSession({
       sessionId: 'stale-session',
       workspacePath: '/work',
-    })).rejects.toThrow('supportedModels timed out');
+    })).resolves.toEqual({ success: true });
 
-    expect(h.assertDynamicModelCatalogSelection).toHaveBeenCalledWith(
-      'claude-code-cli',
-      undefined,
-    );
-    expect(h.stateManager.startSession).not.toHaveBeenCalled();
-    expect(h.launch).not.toHaveBeenCalled();
+    expect(h.stateManager.startSession).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'stale-session',
+    }));
+    expect(h.launch).toHaveBeenCalledWith(expect.objectContaining({
+      model: undefined,
+    }));
   }, 20000);
 
   it('reads the persisted Head role and forwards the shared Meta prompt to the CLI launch', async () => {

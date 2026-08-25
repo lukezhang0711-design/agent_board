@@ -287,7 +287,7 @@ export function ModelSelector({
           className="mx-2 mb-1 rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
           data-testid={`model-catalog-status-${provider}`}
         >
-          目录获取失败：{status.lastError.message}{cachedAt ? `。上次成功获取于 ${cachedAt}` : ''}。缓存仅供查看，不能创建会话。
+          目录获取失败：{status.lastError.message}{cachedAt ? `。上次成功获取于 ${cachedAt}` : ''}。已保留上次成功清单；所选型号将原样交给引擎。
         </div>
       );
     }
@@ -450,12 +450,8 @@ export function ModelSelector({
                       {providerModels.map(model => {
                         const isCurrent = model.id === currentModel;
                         const isUnverifiedPlaceholder = model.unverifiedPlaceholder === true;
-                        const catalogFetchFailed = isDynamicCatalogProvider(provider)
-                          && !!catalogStatuses[provider]?.lastError?.message;
-                        const isDisabled = isProviderSwitchDisabled(provider) || isUnverifiedPlaceholder || catalogFetchFailed;
-                        const disabledTooltip = catalogFetchFailed
-                          ? '模型目录获取失败；上次成功缓存仅供查看，不能创建会话'
-                          : isUnverifiedPlaceholder
+                        const isDisabled = isProviderSwitchDisabled(provider) || isUnverifiedPlaceholder;
+                        const disabledTooltip = isUnverifiedPlaceholder
                           ? '模型目录尚未验证，不能用占位型号创建会话'
                           : 'Start a new session to switch providers after the session has started';
                         return (

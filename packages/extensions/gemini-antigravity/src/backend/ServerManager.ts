@@ -31,16 +31,12 @@ import * as fs from 'fs';
 import { randomUUID } from 'crypto';
 import { acquireSpawnLock, releaseSpawnLock } from './spawnLock';
 import {
-  AGY_MODEL_MAP,
-  STATIC_AGY_MODELS,
   buildAgyModelCatalog,
   parseAgyModelsOutput,
   type AgyModelDescriptor,
 } from './agyModelCatalog';
 
 export {
-  AGY_MODEL_MAP,
-  STATIC_AGY_MODELS,
   buildAgyModelCatalog,
   parseAgyModelsOutput,
 };
@@ -128,24 +124,6 @@ export class AntigravityAgyProtocolError extends AntigravityAgyError {
   }
 }
 
-/** Resolve an extension model key to a real agy model id. */
-export function mapAgyModel(modelKey: string): string {
-  const key = extractAgyModelKey(modelKey);
-  const mapped = AGY_MODEL_MAP[key];
-  if (!mapped) {
-    throw new AntigravityAgyModelError(
-      `agy model ${key} is not mapped; supported extension models: ` +
-      `${Object.keys(AGY_MODEL_MAP).join(', ')}`,
-    );
-  }
-  return mapped;
-}
-
-interface ResolvedEngine {
-  kind: 'desktop' | 'agy';
-  binary: string;
-}
-
 class AgyProcessFailure extends Error {
   constructor(
     message: string,
@@ -161,6 +139,57 @@ class AgyProcessFailure extends Error {
 export interface AgyParsedResponse {
   text: string;
   conversationId?: string;
+}
+
+export type GeminiLoginProbeState = 'logged-in' | 'logged-out' | 'unknown';
+
+export interface GeminiLoginProbeResult {
+  state: GeminiLoginProbeState;
+  /** Safe classification only; never contains credential material. */
+  reason?: 'credentials_missing' | 'credentials_unreadable' | 'not_started' | 'timeout' | 'engine_error';
+  completionMs: number;
+}
+
+export interface GeminiProbeFs {
+  homedir: () => string;
+  existsSync: (candidate: string) => boolean;
+  readFileSync: (candidate: string, encoding: BufferEncoding) => string | Buffer;
+}
+
+export function probeGeminiOAuthFiles(fsApi: GeminiProbeFs = {
+  homedir: os.homedir,
+  existsSync: fs.existsSync,
+  readFileSync: fs.readFileSync,
+}): GeminiLoginProbeState | 'unreadable' {
+  const root = path.join(fsApi.homedir(), '.gemini');
+  const targets = [
+    path.join(root, 'settings.json'),
+    path.join(root, 'google_accounts.json'),
+    path.join(root, 'oauth_creds.json'),
+  ];
+  try {
+    if (targets.some((target) => !fsApi.existsSync(target))) return 'logged-out';
+    const settings = JSON.parse(String(fsApi.readFileSync(targets[0]!, 'utf8'))) as unknown;
+    const accounts = JSON.parse(String(fsApi.readFileSync(targets[1]!, 'utf8'))) as unknown;
+    const credentials = JSON.parse(String(fsApi.readFileSync(targets[2]!, 'utf8'))) as unknown;
+    const auth = asRecord(asRecord(settings)?.security)?.auth;
+    const hasPersonalOauth = asRecord(auth)?.selectedType === 'oauth-personal';
+    const active = asRecord(accounts)?.active;
+    const hasActiveAccount = typeof active === 'string'
+      ? active.trim().length > 0
+      : Array.isArray(active)
+        ? active.length > 0
+        : false;
+    const refreshToken = asRecord(credentials)?.refresh_token;
+    const hasRefreshToken = typeof refreshToken === 'string' && refreshToken.length > 10;
+    return hasPersonalOauth && hasActiveAccount && hasRefreshToken
+      ? 'logged-in'
+      : 'logged-out';
+  } catch {
+    // Credential files can be observed halfway through an OAuth refresh. This
+    // is not evidence of logout, so callers must show the neutral state.
+    return 'unreadable';
+  }
 }
 
 export class AntigravityServerManager {
@@ -184,9 +213,8 @@ export class AntigravityServerManager {
   private enumCache = new Map<string, string>();
   /** Session key -> agy conversation id, owned only by this backend process. */
   private agyConversationIds = new Map<string, string>();
-  /** First-use model discovery cache; a failed probe resolves to the static list. */
+  /** First-use model discovery cache; a failed probe is retryable and never fabricates rows. */
   private agyModelCatalogPromise: Promise<readonly AgyModelDescriptor[]> | null = null;
-  private agyModelCatalog: readonly AgyModelDescriptor[] | null = null;
 
   // Injected configuration. Falls back to the hardcoded defaults when the
   // host hasn't called configure() (dev harness, unit tests).
@@ -268,59 +296,27 @@ export class AntigravityServerManager {
     });
   }
 
-  /** True if ~/.gemini has an OAuth credential with a refresh token. */
-  static hasGeminiAuth(): boolean {
-    try {
-      const p = path.join(os.homedir(), '.gemini', 'oauth_creds.json');
-      if (!fs.existsSync(p)) return false;
-      const creds = JSON.parse(fs.readFileSync(p, 'utf8'));
-      return Boolean(creds && creds.refresh_token);
-    } catch {
-      return false;
-    }
+  /**
+   * Read the three local Gemini OAuth signals without writing or logging their
+   * values. A refresh token is sufficient even if the access token has expired:
+   * agy renews it lazily on its next control-plane call.
+   */
+  static getGeminiLoginProbe(): GeminiLoginProbeResult {
+    const state = probeGeminiOAuthFiles();
+    return {
+      state: state === 'unreadable' ? 'unknown' : state,
+      ...(state === 'unreadable'
+        ? { reason: 'credentials_unreadable' as const }
+        : state === 'logged-out'
+          ? { reason: 'credentials_missing' as const }
+          : {}),
+      completionMs: 0,
+    };
   }
 
-  /**
-   * Read-only agy OAuth probe. This is deliberately advisory: the command is
-   * still launched and its actual auth result remains authoritative because
-   * agy can refresh an expired credential itself.
-   */
-  static hasAgyAuth(): boolean {
-    try {
-      const tokenPath = path.join(
-        os.homedir(), '.gemini', 'antigravity-cli', 'antigravity-oauth-token',
-      );
-      if (!fs.existsSync(tokenPath)) return false;
-      const raw = fs.readFileSync(tokenPath, 'utf8').trim();
-      if (!raw) return false;
-
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(raw) as unknown;
-      } catch {
-        // An opaque, non-empty token file is still a present credential. agy
-        // remains the authority on whether it is usable.
-        return true;
-      }
-
-      const root = asRecord(parsed);
-      const token = asRecord(root?.token) ?? root;
-      const accessToken = firstString(token, ['access_token', 'accessToken', 'token']);
-      const refreshToken = firstString(token, ['refresh_token', 'refreshToken']);
-      if (!accessToken && !refreshToken) return false;
-
-      const expiry = firstString(token, ['expiry', 'expires_at', 'expiresAt', 'expiry_date']);
-      if (expiry) {
-        const expiryMs = Date.parse(expiry) || Number(expiry);
-        if (Number.isFinite(expiryMs)) {
-          const normalizedMs = expiryMs < 1_000_000_000_000 ? expiryMs * 1000 : expiryMs;
-          if (normalizedMs <= Date.now() && !refreshToken) return false;
-        }
-      }
-      return true;
-    } catch {
-      return false;
-    }
+  /** True only when the complete local OAuth state is present. */
+  static hasGeminiAuth(): boolean {
+    return this.getGeminiLoginProbe().state === 'logged-in';
   }
 
   /**
@@ -381,44 +377,40 @@ export class AntigravityServerManager {
     this.enumCache.clear();
     this.agyConversationIds.clear();
     this.agyModelCatalogPromise = null;
-    this.agyModelCatalog = null;
   }
 
   /**
-   * Read the current agy model catalog once per backend lifetime.
-   *
-   * This is intentionally CLI-only. Desktop mode has its own RPC model catalog,
-   * while `agy models` is the source of truth for model ids accepted by the
-   * fallback engine. Any missing binary, non-zero exit, timeout, or unparseable
-   * output falls back to the existing static entries without breaking startup.
+   * Read the current agy model catalog once per backend lifetime. `agy models`
+   * is authoritative for both Gemini and third-party rows; discovery failures
+   * intentionally remain failures instead of becoming a made-up static list.
    */
   async getAvailableAgyModels(
     timeoutMs = 10_000,
     workspacePath?: string,
   ): Promise<readonly AgyModelDescriptor[]> {
     if (!this.agyModelCatalogPromise) {
-      this.agyModelCatalogPromise = this.loadAgyModelCatalog(timeoutMs, workspacePath)
-        .catch(() => STATIC_AGY_MODELS)
-        .then((catalog) => {
-          this.agyModelCatalog = catalog;
-          return catalog;
-        });
+      const pending = this.loadAgyModelCatalog(timeoutMs, workspacePath);
+      let tracked: Promise<readonly AgyModelDescriptor[]>;
+      tracked = pending.catch((error) => {
+        // A transient auth/transport failure must be retryable later.
+        if (this.agyModelCatalogPromise === tracked) this.agyModelCatalogPromise = null;
+        throw error;
+      });
+      this.agyModelCatalogPromise = tracked;
     }
     return this.agyModelCatalogPromise;
   }
 
   /**
-   * Re-run the existing discovery path for an explicit catalog refresh. This
-   * intentionally does not change getAvailableAgyModels' static fallback:
-   * callers that need a live picker result receive the discovery failure and
-   * can show its red state instead of treating cached rows as executable.
+   * Re-run discovery for an explicit picker refresh. Callers receive the real
+   * engine failure so an unauthenticated account can say “需登录”, never “no
+   * models”.
    */
   async refreshAvailableAgyModels(
     timeoutMs = 10_000,
     workspacePath?: string,
   ): Promise<readonly AgyModelDescriptor[]> {
     const catalog = await this.loadAgyModelCatalog(timeoutMs, workspacePath);
-    this.agyModelCatalog = catalog;
     this.agyModelCatalogPromise = Promise.resolve(catalog);
     return catalog;
   }
@@ -427,13 +419,41 @@ export class AntigravityServerManager {
     timeoutMs: number,
     workspacePath?: string,
   ): Promise<readonly AgyModelDescriptor[]> {
-    const engine = this.resolveEngine();
-    if (engine.kind !== 'agy') return STATIC_AGY_MODELS;
+    const binary = this.resolveAgyBinaryForCatalog();
+    const output = await this.runAgy(binary, ['models'], timeoutMs, workspacePath);
+    const catalog = buildAgyModelCatalog(parseAgyModelsOutput(output));
+    if (catalog.length === 0) {
+      throw new AntigravityAgyProtocolError('agy models returned no model rows');
+    }
+    return catalog;
+  }
 
-    const output = await this.runAgy(engine.binary, ['models'], timeoutMs, workspacePath);
-    const modelIds = parseAgyModelsOutput(output);
-    const catalog = buildAgyModelCatalog(modelIds);
-    return catalog.length > 0 ? catalog : STATIC_AGY_MODELS;
+  /** Zero-inference two-stage login probe used by the host health panel. */
+  async probeAgyLogin(timeoutMs = 10_000, workspacePath?: string): Promise<GeminiLoginProbeResult> {
+    const startedAt = Date.now();
+    const local = AntigravityServerManager.getGeminiLoginProbe();
+    try {
+      // This is deliberately `agy models` rather than a prompt. It may renew
+      // OAuth silently, but it never consumes inference tokens.
+      await this.loadAgyModelCatalog(timeoutMs, workspacePath);
+      return { state: 'logged-in', completionMs: Date.now() - startedAt };
+    } catch (error) {
+      const normalized = this.normalizeAgyError(error);
+      if (normalized instanceof AntigravityAgyNotLoggedInError) {
+        return { state: 'logged-out', reason: 'credentials_missing', completionMs: Date.now() - startedAt };
+      }
+      if (normalized instanceof AntigravityAgyTimeoutError) {
+        return { state: 'unknown', reason: 'timeout', completionMs: Date.now() - startedAt };
+      }
+      if (normalized instanceof AntigravityAgyNotInstalledError) {
+        return { state: 'unknown', reason: 'not_started', completionMs: Date.now() - startedAt };
+      }
+      return {
+        state: local.state === 'logged-out' ? 'logged-out' : 'unknown',
+        reason: local.state === 'logged-out' ? 'credentials_missing' : 'engine_error',
+        completionMs: Date.now() - startedAt,
+      };
+    }
   }
 
   /** Drop a CLI conversation id when the host creates or cleans up a session. */
@@ -544,15 +564,25 @@ export class AntigravityServerManager {
       return this.getDesktopModelResponse(prompt, modelKeyOrEnum, timeoutMs);
     }
 
-    const engine = this.resolveEngine();
-    if (engine.kind === 'agy') {
+    // A selected agy row is an opaque engine string. Prefer agy whenever it
+    // exists so the exact picker value reaches the same native CLI that
+    // declared it; only old desktop-only installs use the legacy RPC path.
+    const agyBinary = AntigravityServerManager.agyPathCandidates().find(safeExists);
+    if (agyBinary) {
       return this.getAgyModelResponse(
         prompt,
         modelKeyOrEnum,
         timeoutMs,
         conversationKey,
         workspacePath,
-        engine.binary,
+        agyBinary,
+      );
+    }
+    if (!safeExists(AntigravityServerManager.desktopBinaryPath())) {
+      throw new AntigravityAgyNotInstalledError(
+        `Antigravity CLI agy not installed（未安装）；已检查 ` +
+        `${AntigravityServerManager.agyPathCandidates().join(', ')}。` +
+        '请安装 agy 命令行后重试。',
       );
     }
     return this.getDesktopModelResponse(prompt, modelKeyOrEnum, timeoutMs);
@@ -602,13 +632,9 @@ export class AntigravityServerManager {
     throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
   }
 
-  private resolveEngine(): ResolvedEngine {
-    const desktop = AntigravityServerManager.desktopBinaryPath();
-    if (safeExists(desktop)) return { kind: 'desktop', binary: desktop };
-
-    const agy = AntigravityServerManager.agyPathCandidates().find(safeExists);
-    if (agy) return { kind: 'agy', binary: agy };
-
+  private resolveAgyBinaryForCatalog(): string {
+    const binary = AntigravityServerManager.agyPathCandidates().find(safeExists);
+    if (binary) return binary;
     throw new AntigravityAgyNotInstalledError(
       `Antigravity CLI agy not installed（未安装）；已检查 ` +
       `${AntigravityServerManager.agyPathCandidates().join(', ')}。` +
@@ -618,7 +644,7 @@ export class AntigravityServerManager {
 
   private async getAgyModelResponse(
     prompt: string,
-    modelKey: string,
+    modelKey: string | undefined,
     timeoutMs: number,
     conversationKey: string,
     workspacePath: string | undefined,
@@ -629,12 +655,11 @@ export class AntigravityServerManager {
     const args = ['-p', prompt];
     if (conversationId) {
       args.push('--conversation', conversationId);
-    } else {
-      const resolvedAgyModel = this.resolveAgyModel(modelKey, timeoutMs, workspacePath);
-      const agyModel = resolvedAgyModel instanceof Promise
-        ? await resolvedAgyModel
-        : resolvedAgyModel;
-      args.push('--model', agyModel);
+    } else if (modelKey) {
+      // Do not validate against, parse, split, or compose catalog entries.
+      // Explicit user values go straight to the native engine, whose error is
+      // more accurate than a stale host-side allow-list.
+      args.push('--model', this.resolveAgyModel(modelKey));
     }
     // JSON output keeps the response one-shot while also carrying the
     // conversation id needed for the next turn. No token or auth env is passed.
@@ -666,33 +691,12 @@ export class AntigravityServerManager {
     }
   }
 
-  private resolveAgyModel(
-    modelKey: string,
-    timeoutMs: number,
-    workspacePath?: string,
-  ): string | Promise<string> {
+  private resolveAgyModel(modelKey: string): string {
     const key = extractAgyModelKey(modelKey);
-    const staticModel = AGY_MODEL_MAP[key];
-    if (staticModel) return staticModel;
-
-    // Preserve the old no-spawn failure for malformed keys while allowing
-    // versioned Gemini ids (e.g. gemini-3.1-*) to come from agy discovery.
-    if (!/^gemini-\d/.test(key)) {
-      return mapAgyModel(modelKey);
+    if (!key) {
+      throw new AntigravityAgyModelError('agy model selection is empty');
     }
-
-    const resolveFromCatalog = (catalog: readonly AgyModelDescriptor[]): string => {
-      const discovered = catalog.find((model) => model.key === key || model.agyModel === key);
-      if (discovered) return discovered.agyModel;
-
-      throw new AntigravityAgyModelError(
-        `agy model ${key} is not mapped; supported extension models: ` +
-        `${catalog.map((model) => model.key).join(', ')}`,
-      );
-    };
-
-    if (this.agyModelCatalog) return resolveFromCatalog(this.agyModelCatalog);
-    return this.getAvailableAgyModels(timeoutMs, workspacePath).then(resolveFromCatalog);
+    return key;
   }
 
   private runAgy(
@@ -791,11 +795,8 @@ export class AntigravityServerManager {
         );
       }
       if (/not.?logged.?in|not authenticated|unauthenticated|oauth|login|401/i.test(raw)) {
-        const credentialState = AntigravityServerManager.hasAgyAuth()
-          ? 'agy rejected the existing OAuth credential'
-          : 'no usable agy OAuth credential was found';
         return new AntigravityAgyNotLoggedInError(
-          `Antigravity CLI not logged in (${credentialState}); ` +
+          'Antigravity CLI not logged in; ' +
           `请在终端登录 antigravity 命令行后重试。Raw output: ${truncate(raw)}`,
         );
       }
@@ -1176,17 +1177,9 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function firstString(record: Record<string, unknown> | null, keys: string[]): string | undefined {
-  if (!record) return undefined;
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  }
-  return undefined;
-}
-
 function extractAgyModelKey(raw: string): string {
-  return raw.includes(':') ? raw.split(':').slice(1).join(':') : raw;
+  const providerPrefix = 'antigravity-gemini-agent:';
+  return raw.startsWith(providerPrefix) ? raw.slice(providerPrefix.length) : raw;
 }
 
 function safeExists(candidate: string): boolean {
