@@ -201,17 +201,17 @@ export const OPENAI_MODELS: ModelDefinition[] = [
  * Opus) windows at 200k client-side; no `[1m]` suffix is emitted.
  *
  * This is intentionally distinct from the user-facing default
- * (`DEFAULT_MODELS['claude-code']`, currently `opus-1m`): new installs may
- * still default to the 1M tier as a visible, deliberate choice, but the
- * INVISIBLE fallback must never be a paid model.
+ * (`DEFAULT_MODELS['claude-code']`, currently the engine's `default` row):
+ * the visible choice remains engine-owned, while the INVISIBLE fallback must
+ * never become a paid model.
  */
 export const CLAUDE_CODE_SAFE_FALLBACK_MODEL = 'claude-code:opus' as const;
 
 export const DEFAULT_MODELS = {
   claude: 'claude:claude-opus-4-8',
   openai: 'openai:gpt-5.5',
-  'claude-code': 'claude-code:opus-1m',
-  'claude-code-cli': 'claude-code-cli:opus-1m',
+  'claude-code': 'claude-code:default',
+  'claude-code-cli': 'claude-code-cli:default',
   'openai-codex': 'openai-codex:gpt-5.5',
   'openai-codex-acp': 'openai-codex-acp:gpt-5.5',
   lmstudio: 'lmstudio:local-model',

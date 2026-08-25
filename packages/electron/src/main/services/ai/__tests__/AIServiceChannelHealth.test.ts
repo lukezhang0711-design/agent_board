@@ -587,6 +587,88 @@ describe('AIService channel-health Claude CLI transport', () => {
   });
 });
 
+describe('AIService persisted historical model migration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.updateSessionMetadata.mockResolvedValue(undefined);
+  });
+
+  it('GREEN ES: upgrades a persisted Opus 1M ID once on session load even when default shares its resolved model', async () => {
+    const start = vi.fn(async () => ({}));
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      claudeCodeModelCatalogService: {
+        start,
+        getModels: () => [
+          { id: 'claude-code:default', resolvedModel: 'claude-opus-5[1m]' },
+          { id: 'claude-code:opus[1m]', resolvedModel: 'claude-opus-5[1m]' },
+        ],
+      },
+    });
+    const session = {
+      id: 'legacy-opus-session',
+      provider: 'claude-code',
+      model: 'claude-code:opus-1m',
+    };
+
+    await service.migratePersistedHistoricalModelOnLoad(session);
+    await service.migratePersistedHistoricalModelOnLoad(session);
+
+    expect(start).toHaveBeenCalledOnce();
+    expect(session.model).toBe('claude-code:opus[1m]');
+    expect(mocks.updateSessionMetadata).toHaveBeenCalledTimes(1);
+    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('legacy-opus-session', {
+      model: 'claude-code:opus[1m]',
+    });
+  });
+
+  it('GREEN ES: covers the Claude Code CLI namespace with the same product history', async () => {
+    const start = vi.fn(async () => ({}));
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      claudeCodeModelCatalogService: {
+        start,
+        getCliModels: () => [{
+          id: 'claude-code-cli:claude-fable-5[1m]',
+          resolvedModel: 'claude-fable-5[1m]',
+        }],
+      },
+    });
+    const session = {
+      id: 'legacy-cli-fable-session',
+      provider: 'claude-code-cli',
+      model: 'claude-code-cli:claude-fable-5-1m',
+    };
+
+    await service.migratePersistedHistoricalModelOnLoad(session);
+
+    expect(start).toHaveBeenCalledOnce();
+    expect(session.model).toBe('claude-code-cli:claude-fable-5[1m]');
+    expect(mocks.updateSessionMetadata).toHaveBeenCalledWith('legacy-cli-fable-session', {
+      model: 'claude-code-cli:claude-fable-5[1m]',
+    });
+  });
+
+  it('GREEN ES: leaves an unknown persisted model untouched for the visible safety valve', async () => {
+    const start = vi.fn(async () => ({}));
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      claudeCodeModelCatalogService: { start },
+    });
+    const session = {
+      id: 'unknown-legacy-session',
+      provider: 'claude-code',
+      model: 'claude-code:unknown-product-legacy-id',
+    };
+
+    await service.migratePersistedHistoricalModelOnLoad(session);
+
+    expect(start).not.toHaveBeenCalled();
+    expect(session.model).toBe('claude-code:unknown-product-legacy-id');
+    expect(mocks.updateSessionMetadata).not.toHaveBeenCalled();
+  });
+});
+
 describe('AIService zero-inference channel probes', () => {
   beforeEach(() => {
     vi.clearAllMocks();

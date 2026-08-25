@@ -136,6 +136,21 @@ export class CodexRawParser implements IRawMessageParser {
     try {
       const parsed = JSON.parse(msg.content);
 
+      // MessageStreamingHandler writes one provider-neutral terminal error
+      // record for every engine. Codex normally stores native protocol events,
+      // but this durable error row deliberately has the shared `{ type:error }`
+      // shape; preserve its raw engine wording instead of dropping it when no
+      // Codex event parser recognizes the envelope.
+      if (parsed?.type === 'error' && parsed.error) {
+        descriptors.push({
+          type: 'system_message',
+          text: typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error),
+          systemType: 'error',
+          createdAt: msg.createdAt,
+        });
+        return descriptors;
+      }
+
       // Nimbalyst's own durable prompts (ExitPlanMode, AskUserQuestion,
       // ToolPermission) are persisted as synthetic `nimbalyst_tool_*` rows no
       // matter which provider drives the session -- they come from our MCP

@@ -69,7 +69,7 @@ describe('claude-code-cli provider wiring (Phase 0)', () => {
 
     it('has a parseable default model', () => {
       const id = ModelIdentifier.getDefaultModelId('claude-code-cli');
-      expect(id).toBe('claude-code-cli:opus-1m');
+      expect(id).toBe('claude-code-cli:default');
       expect(() => ModelIdentifier.parse(id)).not.toThrow();
     });
   });

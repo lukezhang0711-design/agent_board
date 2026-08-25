@@ -74,6 +74,10 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [models, setModels] = useState<Record<string, Model[]>>({});
+  // Keep the unfiltered engine response separately from the new-session menu.
+  // A hidden/replay-only provider may still be the current session's valid
+  // model, so availability must never be inferred from menu visibility.
+  const [catalogModels, setCatalogModels] = useState<Record<string, Model[]>>({});
   const [providerLabels, setProviderLabels] = useState<Record<string, string>>({});
   const [providerIcons, setProviderIcons] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -108,6 +112,7 @@ export function ModelSelector({
   // Clear cached models when provider settings change so next dropdown open fetches fresh data
   useEffect(() => {
     setModels({});
+    setCatalogModels({});
     void loadModels();
     // The shared available-model atom also drives the effort selector in the
     // transcript, so fetch once on mount instead of waiting for the first tap.
@@ -128,6 +133,7 @@ export function ModelSelector({
     try {
       const response = await window.electronAPI.aiGetModels();
       if (response.success && response.grouped) {
+        setCatalogModels(response.grouped as Record<string, Model[]>);
         setModels(
           Object.fromEntries(
             Object.entries(response.grouped)
@@ -267,6 +273,30 @@ export function ModelSelector({
 
   const isDynamicCatalogProvider = (provider: string) => catalogStatuses[provider] !== undefined;
 
+  const currentModelUnavailable = (() => {
+    if (!currentModel) return false;
+    const [provider] = currentModel.split(':');
+    const status = catalogStatuses[provider];
+    // A first-install/failed discovery has no engine-backed answer. Do not
+    // turn that transient state into a false “engine no longer provides it”
+    // warning; the existing catalog red/yellow notice covers that condition.
+    if (!status?.verified || (status.modelSource !== 'runtime' && status.modelSource !== 'cache')) {
+      return false;
+    }
+    return !(catalogModels[provider] ?? []).some((model) => model.id === currentModel);
+  })();
+
+  const currentModelUnavailableNotice = currentModelUnavailable ? (
+    <div
+      id="model-current-unavailable"
+      role="alert"
+      className="mt-1 max-w-[260px] rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
+      data-testid="model-current-unavailable"
+    >
+      这个会话存的型号引擎已经不提供了，请重新选一个
+    </div>
+  ) : null;
+
   const renderCatalogNotice = (provider: string) => {
     const status = catalogStatuses[provider];
     if (!status || !isDynamicCatalogProvider(provider)) return null;
@@ -350,13 +380,16 @@ export function ModelSelector({
     return (
       <div className="model-selector inline-block">
         <span
-          className="model-selector-button model-selector-readonly flex items-center gap-1 px-2 py-[3px] rounded-xl text-[11px] font-medium whitespace-nowrap max-w-[200px] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] cursor-default"
+          className={`model-selector-button model-selector-readonly flex items-center gap-1 px-2 py-[3px] rounded-xl text-[11px] font-medium whitespace-nowrap max-w-[200px] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border cursor-default ${currentModelUnavailable ? 'border-[var(--nim-error)]' : 'border-[var(--nim-border)]'}`}
           aria-label={`Current model: ${getCurrentModelName()}`}
+          aria-invalid={currentModelUnavailable || undefined}
+          aria-describedby={currentModelUnavailable ? 'model-current-unavailable' : undefined}
           data-testid="model-picker"
           title={readOnlyTitle}
         >
           <span className="model-selector-label overflow-hidden text-ellipsis">{getCurrentModelName()}</span>
         </span>
+        {currentModelUnavailableNotice}
       </div>
     );
   }
@@ -365,8 +398,10 @@ export function ModelSelector({
     <div className="model-selector inline-block">
       <button
         ref={refs.setReference}
-        className="model-selector-button flex items-center gap-1 px-2 py-[3px] rounded-xl text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap max-w-[200px] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
+        className={`model-selector-button flex items-center gap-1 px-2 py-[3px] rounded-xl text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap max-w-[200px] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border hover:bg-[var(--nim-bg-hover)] ${currentModelUnavailable ? 'border-[var(--nim-error)]' : 'border-[var(--nim-border)] hover:border-[var(--nim-primary)]'}`}
         aria-label={`Current model: ${getCurrentModelName()}`}
+        aria-invalid={currentModelUnavailable || undefined}
+        aria-describedby={currentModelUnavailable ? 'model-current-unavailable' : undefined}
         data-testid="model-picker"
         {...getReferenceProps({
           onClick: () => setIsOpen(open => !open),
@@ -375,6 +410,7 @@ export function ModelSelector({
         <span className="model-selector-label overflow-hidden text-ellipsis">{getCurrentModelName()}</span>
         <MaterialSymbol icon="expand_more" size={14} className={`model-selector-arrow transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
+      {currentModelUnavailableNotice}
 
       {isOpen && (
         <FloatingPortal>

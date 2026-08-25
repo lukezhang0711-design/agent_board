@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveClaudeCodeModelVariant } from '../../types';
 import { ModelIdentifier } from '../../ModelIdentifier';
 
-const DEFAULT_MODEL = 'claude-code:opus-1m';
+const DEFAULT_MODEL = 'claude-code:default';
 
 describe('resolveClaudeCodeModelVariant', () => {
   it('passes a dynamically discovered SDK alias through unchanged', () => {
@@ -25,8 +25,8 @@ describe('resolveClaudeCodeModelVariant', () => {
   });
 
   it('uses the supplied native default only when an old session has no model', () => {
-    expect(resolveClaudeCodeModelVariant(undefined, DEFAULT_MODEL)).toBe('opus-1m');
-    expect(resolveClaudeCodeModelVariant('', DEFAULT_MODEL)).toBe('opus-1m');
+    expect(resolveClaudeCodeModelVariant(undefined, DEFAULT_MODEL)).toBe('default');
+    expect(resolveClaudeCodeModelVariant('', DEFAULT_MODEL)).toBe('default');
   });
 
   it('rejects a model for another provider', () => {

@@ -181,6 +181,10 @@ import {
   setDynamicModelEffortNormalizer,
   type DynamicModelCatalogStatus,
 } from './modelCatalogValidation';
+import {
+  isHistoricalClaudeModelId,
+  resolveEquivalentModelIdMigration,
+} from './modelIdMigration';
 import { database as databaseWorker } from '../../database/PGLiteDatabaseWorker';
 import {
   createTolerantAISettingsWriter,
@@ -2140,6 +2144,42 @@ export class AIService {
   }
 
   /**
+   * Applies only the product's recorded Claude ID migrations as a session is
+   * opened. This intentionally sits outside normal send resolution: unknown
+   * imported values still reach the engine unchanged, while a known historic
+   * product spelling becomes the exact live catalog row once and is persisted.
+   */
+  public async migratePersistedHistoricalModelOnLoad(session: SessionData): Promise<void> {
+    const provider = session.provider;
+    if (provider !== 'claude-code' && provider !== 'claude-code-cli') return;
+
+    const modelId = this.normalizeDynamicModelIdentifier(provider, session.model);
+    if (!isHistoricalClaudeModelId(modelId)) return;
+
+    try {
+      // A model directory is engine-owned evidence. If it is unavailable,
+      // leave the session untouched so the renderer can show the reselection
+      // safety valve instead of guessing a fallback.
+      await this.claudeCodeModelCatalogService.start();
+      const migration = resolveEquivalentModelIdMigration(
+        modelId,
+        this.getDynamicCatalogModels(provider),
+      );
+      if (!migration) return;
+
+      await AISessionsRepository.updateMetadata(session.id, { model: migration.to });
+      session.model = migration.to;
+      logger.main.info(
+        `[AIService] Migrated persisted historical model ID on load: ${migration.from} -> ${migration.to} (sessionId=${session.id})`,
+      );
+    } catch (error) {
+      logger.main.warn(
+        `[AIService] Could not migrate persisted historical model ID for session ${session.id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
    * Existing sessions pass their persisted model through unchanged. Catalogs
    * improve selection UI, not execution authority; imported/unlisted values
    * must reach the native engine and receive its own error if invalid.
@@ -4010,6 +4050,8 @@ export class AIService {
         console.log(`[SESSION] Session not found: ${sessionId} (this is normal if the session was deleted)`);
         return null;
       }
+
+      await this.migratePersistedHistoricalModelOnLoad(session);
 
       session.messages = await enrichTranscriptMessagesWithToolCallDiffs(session.id, session.messages);
 
