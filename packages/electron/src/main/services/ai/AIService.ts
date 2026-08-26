@@ -2117,6 +2117,7 @@ export class AIService {
       }
     }
     return {
+      resolvedModelNote: 'resolvedModel is display-only; never put it in a model field. Use id for create_session and submit_plan.',
       models: models.map((model) => ({
         id: model.id,
         provider: model.provider,

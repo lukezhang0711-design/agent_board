@@ -30,6 +30,11 @@ export type PlanCandidate = {
   risks: StructuredPlanText;
   provider: string;
   model: string;
+  /**
+   * Internal-only: preserves exactly what Head submitted for validation feedback.
+   * It is deliberately non-enumerable, so it cannot reach the persisted card.
+   */
+  rawModelForValidation?: string;
   effortLevel?: EffortLevel;
 };
 
@@ -39,6 +44,13 @@ export type PlanModule = {
   inputs: string[];
   provider: string;
   model: string;
+  /**
+   * Internal-only: preserves exactly what Head submitted for validation feedback.
+   * It is deliberately non-enumerable, so it cannot reach the persisted card.
+   */
+  rawModelForValidation?: string;
+  /** Internal submission-time marker; the card must wait for catalog confirmation. */
+  modelCatalogPending?: boolean;
   effortLevel?: EffortLevel;
   doneCriteria: string;
   candidates?: PlanCandidate[];
@@ -136,7 +148,7 @@ const SUBMIT_PLAN_DESCRIPTION = [
   "planItems is a non-empty array of non-empty strings and is required.",
   "workOrderCount is an optional non-negative integer; omit it to use planItems.length.",
   "risks is a required array of strings and may be empty; [] means no risks were declared.",
-  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, exact full model ID, optional model-declared effortLevel, and doneCriteria.",
+  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, a model taken from a list_models id (or that id's portion after the colon), optional model-declared effortLevel, and doneCriteria. resolvedModel is display-only and must never be used as a model value.",
   "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, and optional effortLevel; do not write serial comparison paragraphs.",
 ].join("\n");
 
@@ -226,6 +238,19 @@ function normalizeNonEmptyString(value: unknown, fieldName: string): string {
   return value.trim();
 }
 
+function withRawModelForValidation<T extends PlanModule | PlanCandidate>(
+  value: T,
+  rawModel: unknown,
+): T {
+  if (typeof rawModel === 'string') {
+    Object.defineProperty(value, 'rawModelForValidation', {
+      value: rawModel,
+      enumerable: false,
+    });
+  }
+  return value;
+}
+
 function normalizeStringList(value: unknown, fieldName: string): string[] {
   if (!Array.isArray(value)) {
     throw submitPlanValidationError(
@@ -269,7 +294,7 @@ function normalizePlanCandidate(value: unknown, moduleIndex: number, candidateIn
     candidate.effortLevel,
     `modules[${moduleIndex}].candidates[${candidateIndex}].effortLevel`,
   );
-  return {
+  return withRawModelForValidation({
     name: normalizeNonEmptyString(candidate.name, `modules[${moduleIndex}].candidates[${candidateIndex}].name`),
     approach: normalizeNonEmptyString(candidate.approach, `modules[${moduleIndex}].candidates[${candidateIndex}].approach`),
     pros: normalizeStructuredText(candidate.pros, `modules[${moduleIndex}].candidates[${candidateIndex}].pros`),
@@ -278,7 +303,7 @@ function normalizePlanCandidate(value: unknown, moduleIndex: number, candidateIn
     provider: normalizeNonEmptyString(candidate.provider, `modules[${moduleIndex}].candidates[${candidateIndex}].provider`),
     model: normalizeNonEmptyString(candidate.model, `modules[${moduleIndex}].candidates[${candidateIndex}].model`),
     ...(effortLevel ? { effortLevel } : {}),
-  };
+  }, candidate.model);
 }
 
 function normalizePlanModules(value: unknown): PlanModule[] | undefined {
@@ -309,7 +334,7 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
       module.effortLevel,
       `modules[${moduleIndex}].effortLevel`,
     );
-    return {
+    return withRawModelForValidation({
       title: normalizeNonEmptyString(module.title, `modules[${moduleIndex}].title`),
       outputFiles: normalizeStringList(module.outputFiles, `modules[${moduleIndex}].outputFiles`),
       inputs: normalizeStringList(module.inputs, `modules[${moduleIndex}].inputs`),
@@ -320,7 +345,7 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
       ...(rawCandidates === undefined
         ? {}
         : { candidates: rawCandidates.map((candidate, candidateIndex) => normalizePlanCandidate(candidate, moduleIndex, candidateIndex)) }),
-    };
+    }, module.model);
   });
 }
 
@@ -473,7 +498,7 @@ const META_AGENT_TOOL_DEFS: Array<{
   {
     name: "list_models",
     description:
-      "Read the current verified provider/model catalog before delegating. Use only the exact model IDs returned here when calling create_session; the response also reports discovery failures, caches, and allowed thinking-effort levels.",
+      "Read the current verified provider/model catalog before delegating. Use only the exact model IDs returned here when calling create_session or submit_plan. resolvedModel is display-only; never put it in a model field. The response also reports discovery failures, caches, and allowed thinking-effort levels.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -526,7 +551,7 @@ const META_AGENT_TOOL_DEFS: Array<{
               outputFiles: { type: "array", items: { type: "string", minLength: 1 }, description: "Expected output paths relative to the project root." },
               inputs: { type: "array", items: { type: "string", minLength: 1 }, description: "Inputs/materials used by the module." },
               provider: { type: "string", minLength: 1, description: "Provider ID for this module." },
-              model: { type: "string", minLength: 1, description: "Exact model ID, not a display nickname." },
+              model: { type: "string", minLength: 1, description: "Use a list_models catalog id (or the provider-local part after ':'); never use resolvedModel." },
               effortLevel: { type: "string", minLength: 1, description: "Optional exact raw effort value declared by this model in list_models; omit when its list is empty." },
               doneCriteria: { type: "string", minLength: 1, description: "Concrete completion standard." },
               candidates: {
@@ -541,7 +566,7 @@ const META_AGENT_TOOL_DEFS: Array<{
                     cons: { oneOf: [{ type: "string", minLength: 1 }, { type: "array", items: { type: "string", minLength: 1 } }] },
                     risks: { oneOf: [{ type: "string", minLength: 1 }, { type: "array", items: { type: "string", minLength: 1 } }] },
                     provider: { type: "string", minLength: 1 },
-                    model: { type: "string", minLength: 1, description: "Exact model ID." },
+                    model: { type: "string", minLength: 1, description: "Use a list_models catalog id (or the provider-local part after ':'); never use resolvedModel." },
                     effortLevel: { type: "string", minLength: 1, description: "Optional exact raw model-declared effort value." },
                   },
                   required: ["name", "approach", "pros", "cons", "risks", "provider", "model"],

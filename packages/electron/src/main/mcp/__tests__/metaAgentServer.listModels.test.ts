@@ -16,6 +16,7 @@ describe('list_models meta-agent tool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listModels.mockResolvedValue(JSON.stringify({
+      resolvedModelNote: 'resolvedModel is display-only; never put it in a model field. Use id for create_session and submit_plan.',
       models: [{
         id: 'openai-codex:gpt-5.6-sol',
         provider: 'openai-codex',
@@ -38,9 +39,12 @@ describe('list_models meta-agent tool', () => {
     });
   });
 
-  it('exposes a read-only real-name catalog before create_session on both tool surfaces', async () => {
+  it('teaches both create_session and submit_plan to use catalog IDs, not resolvedModel', async () => {
     const tool = getMetaAgentOpenAITools().find((candidate) => candidate.function.name === 'list_models');
     expect(tool?.function.description).toContain('exact model IDs');
+    expect(tool?.function.description).toContain('create_session');
+    expect(tool?.function.description).toContain('submit_plan');
+    expect(tool?.function.description).toContain('resolvedModel is display-only; never put it in a model field');
     expect(tool?.function.parameters).toMatchObject({ type: 'object', properties: {} });
 
     await expect(dispatchMetaAgentTool(
@@ -49,6 +53,12 @@ describe('list_models meta-agent tool', () => {
       '/workspace',
       {},
     )).resolves.toContain('openai-codex:gpt-5.6-sol');
+    await expect(dispatchMetaAgentTool(
+      'mcp__nimbalyst-meta-agent__list_models',
+      'head-session',
+      '/workspace',
+      {},
+    )).resolves.toContain('resolvedModel is display-only; never put it in a model field');
     expect(listModels).toHaveBeenCalledWith('head-session', '/workspace');
   });
 });

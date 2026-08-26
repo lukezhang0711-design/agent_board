@@ -173,6 +173,45 @@ describe('AIService channel-health Claude CLI transport', () => {
     mocks.probeExtensionLogin.mockResolvedValue({ state: 'logged-in', completionMs: 4 });
   });
 
+  it('green ET: marks resolvedModel as display-only in the Head model catalog', async () => {
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      getNormalizedProviderSettings: () => ({
+        'claude-code': { enabled: true },
+        'openai-codex': { enabled: false },
+      }),
+      awaitModelCatalogsIfEnabled: vi.fn(async () => {}),
+      claudeCodeModelCatalogService: {
+        getStatus: () => ({ modelSource: 'runtime', verified: true, lastError: null }),
+        getModels: () => [{
+          id: 'claude-code:opus[1m]',
+          provider: 'claude-code',
+          name: 'Opus (1M)',
+          resolvedModel: 'claude-opus-5[1m]',
+          supportedEffortLevels: [],
+        }],
+        getCliModels: () => [],
+      },
+      codexModelRefreshService: {
+        getStatus: () => ({ modelSource: 'placeholder', verified: false, lastError: null }),
+        getModels: () => [],
+      },
+      getModelCatalogStatuses: () => ({
+        'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+        'claude-code-cli': { modelSource: 'runtime', verified: true, lastError: null },
+        'openai-codex': { modelSource: 'placeholder', verified: false, lastError: null },
+      }),
+    });
+
+    await expect(service.getCurrentModelCatalog()).resolves.toMatchObject({
+      resolvedModelNote: 'resolvedModel is display-only; never put it in a model field. Use id for create_session and submit_plan.',
+      models: [{
+        id: 'claude-code:opus[1m]',
+        resolvedModel: 'claude-opus-5[1m]',
+      }],
+    });
+  });
+
   it('RED: waits for the initial idle boundary before injecting the health prompt into the real CLI PTY', async () => {
     const ready = deferred<void>();
     const service = createHealthService();

@@ -57,6 +57,7 @@ interface RenderModule {
   inputs: string[];
   provider: string;
   model: string;
+  modelCatalogPending: boolean;
   effortLevel: SelectedPlanCandidate['effortLevel'] | '';
   doneCriteria: string;
   candidates: RenderCandidate[];
@@ -159,6 +160,7 @@ function parsePlanModules(value: unknown): RenderModule[] {
       inputs: getDisplayStringList(module.inputs),
       provider: getDisplayString(module.provider),
       model: getDisplayString(module.model, ''),
+      modelCatalogPending: module.modelCatalogPending === true,
       effortLevel: getOptionalEffortLevel(module.effortLevel),
       doneCriteria: getDisplayString(module.doneCriteria),
       candidates: Array.isArray(module.candidates)
@@ -1254,6 +1256,21 @@ const SubmittedPlanApprovalCard: React.FC<{
                             </option>
                           ))}
                         </select>
+                        {module.modelCatalogPending ? (
+                          <p
+                            data-testid={`plan-module-model-catalog-pending-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-nim-muted"
+                          >
+                            目录未就绪，模型待确认
+                          </p>
+                        ) : modelCatalog.status === 'ready' && !moduleRoute ? (
+                          <p
+                            data-testid={`plan-module-model-invalid-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-amber-800 dark:text-amber-200"
+                          >
+                            Head 报的型号 <code>{module.model}</code> 不在当前清单里，请选一个
+                          </p>
+                        ) : null}
                       </dd>
                     </div>
                     {routeModel && routeModel.supportedEffortLevels.length > 0 && (
