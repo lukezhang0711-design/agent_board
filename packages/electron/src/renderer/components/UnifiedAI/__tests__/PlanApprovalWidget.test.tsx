@@ -604,6 +604,84 @@ describe('PlanApprovalWidget', () => {
     ).toBe(true);
   });
 
+  it('green ET-5: explains the original Head-reported model value when a persisted plan module is absent from the current catalog', async () => {
+    installModelCatalog({
+      success: true,
+      grouped: {
+        'claude-code': [
+          { id: 'claude-code:default', provider: 'claude-code', supportedEffortLevels: [] },
+          { id: 'claude-code:opus[1m]', provider: 'claude-code', supportedEffortLevels: [] },
+          { id: 'claude-code:sonnet', provider: 'claude-code', supportedEffortLevels: [] },
+        ],
+      },
+      catalogStatuses: {
+        'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+      },
+    });
+    renderWidget({
+      ...planArguments,
+      modules: [
+        {
+          ...modelPickerPlanArguments.modules[0],
+          title: '模块一',
+          provider: 'claude-code',
+          model: 'claude-opus-5[1m]',
+        },
+        {
+          ...modelPickerPlanArguments.modules[0],
+          title: '模块二',
+          provider: 'claude-code',
+          model: 'claude-opus-5[1m]',
+        },
+        {
+          ...modelPickerPlanArguments.modules[0],
+          title: '模块三',
+          provider: 'claude-code',
+          model: 'claude-sonnet-5',
+        },
+      ],
+    });
+
+    const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+
+    expect(modelSelect.value).toBe('');
+    expect(screen.getByRole('button', { name: '全部批准' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByTestId('plan-module-model-invalid-1').textContent)
+      .toContain('Head 报的型号 claude-opus-5[1m] 不在当前清单里，请选一个');
+    expect(screen.queryByText('这个会话存的型号不在当前模型清单里，请重新选一个')).toBeNull();
+  });
+
+  it('green ET-6: marks a catalog-pending submitted module without mislabeling it as an invalid model', async () => {
+    installModelCatalog({
+      success: true,
+      grouped: { 'claude-code': [] },
+      catalogStatuses: {
+        'claude-code': {
+          modelSource: 'placeholder',
+          verified: false,
+          lastError: { message: 'Claude model discovery failed' },
+        },
+      },
+    });
+    renderWidget({
+      ...planArguments,
+      modules: [{
+        ...modelPickerPlanArguments.modules[0],
+        title: '目录待确认模块',
+        provider: 'claude-code',
+        model: 'claude-opus-5[1m]',
+        modelCatalogPending: true,
+      }],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('plan-module-model-catalog-pending-1').textContent)
+        .toBe('目录未就绪，模型待确认');
+    });
+    expect(screen.queryByTestId('plan-module-model-invalid-1')).toBeNull();
+  });
+
   it('green EJ-4: never offers cached models when the real-time catalog is red', async () => {
     installModelCatalog({
       success: true,

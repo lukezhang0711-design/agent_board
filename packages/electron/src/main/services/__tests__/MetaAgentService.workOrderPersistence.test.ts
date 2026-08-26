@@ -2479,6 +2479,218 @@ describe('MetaAgentService work-order persistence', () => {
     });
   });
 
+  it('green ET-1: rejects a Head-resolved module model with its raw value, current IDs, and corrected direction', async () => {
+    const modules = [
+      {
+        title: '模块一',
+        outputFiles: ['module-one.md'],
+        inputs: ['实时模型目录'],
+        provider: 'claude-code',
+        model: 'claude-opus-5[1m]',
+        doneCriteria: '模块一完成。',
+      },
+      {
+        title: '模块二',
+        outputFiles: ['module-two.md'],
+        inputs: ['实时模型目录'],
+        provider: 'claude-code',
+        model: 'claude-opus-5[1m]',
+        doneCriteria: '模块二完成。',
+      },
+      {
+        title: '模块三',
+        outputFiles: ['module-three.md'],
+        inputs: ['实时模型目录'],
+        provider: 'claude-code',
+        model: 'claude-sonnet-5',
+        doneCriteria: '模块三完成。',
+      },
+    ];
+    (service as any).aiService.getCurrentModelCatalog = vi.fn().mockResolvedValue({
+      models: [
+        { id: 'claude-code:default', provider: 'claude-code', resolvedModel: 'claude-opus-5[1m]' },
+        { id: 'claude-code:opus[1m]', provider: 'claude-code', resolvedModel: 'claude-opus-5[1m]' },
+        { id: 'claude-code:sonnet', provider: 'claude-code', resolvedModel: 'claude-sonnet-5' },
+      ],
+      catalogs: {
+        'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+      },
+    });
+    const submitPlan = await getSubmitPlanTool();
+    let rejection: Error | null = null;
+    try {
+      await submitPlan('head-session', workspacePath, {
+        title: 'Head 使用解析后型号的方案卡',
+        planItems: ['等待方案卡批准'],
+        workOrderCount: 3,
+        risks: [],
+        modules,
+      });
+    } catch (error) {
+      rejection = error as Error;
+    }
+
+    expect(rejection).toBeInstanceOf(Error);
+    expect(rejection?.message).toContain('claude-opus-5[1m]');
+    expect(rejection?.message).toContain('claude-code:default');
+    expect(rejection?.message).toContain('claude-code:opus[1m]');
+    expect(rejection?.message).toContain('claude-code:sonnet');
+    expect(rejection?.message).toContain('不要用 resolvedModel');
+    expect(rejection?.message).toContain('Correct example');
+    const { rows } = await db.query<{ id: string }>(
+      `SELECT id FROM tracker_items WHERE source_ref = $1`,
+      ['meta-agent-submitted-plan:head-session'],
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it('green ET-1b: quotes the untouched Head model input when normalization removed surrounding whitespace', async () => {
+    const rawModel = '  claude-opus-5[1m]  ';
+    const module = {
+      title: '原始值回显模块',
+      outputFiles: ['module.md'],
+      inputs: ['实时模型目录'],
+      provider: 'claude-code',
+      model: 'claude-opus-5[1m]',
+      doneCriteria: '报错须保留 Head 原始输入。',
+    };
+    Object.defineProperty(module, 'rawModelForValidation', {
+      value: rawModel,
+      enumerable: false,
+    });
+    (service as any).aiService.getCurrentModelCatalog = vi.fn().mockResolvedValue({
+      models: [{ id: 'claude-code:opus[1m]', provider: 'claude-code' }],
+      catalogs: {
+        'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+      },
+    });
+    const submitPlan = await getSubmitPlanTool();
+
+    await expect(submitPlan('head-session', workspacePath, {
+      title: '保留 Head 原始型号',
+      planItems: ['在同一轮给出可执行修正'],
+      workOrderCount: 1,
+      risks: [],
+      modules: [module],
+    })).rejects.toThrow(`原始值 “${rawModel}”`);
+  });
+
+  it('green ET-2: accepts both provider-local and provider-qualified catalog IDs unchanged', async () => {
+    const modules = [{
+      title: '可派发模块',
+      outputFiles: ['module.md'],
+      inputs: ['实时模型目录'],
+      provider: 'claude-code',
+      model: 'opus[1m]',
+      doneCriteria: '编号保持不变。',
+      candidates: [{
+        name: '方案 A',
+        approach: '使用完整编号。',
+        pros: ['可验证'],
+        cons: ['无'],
+        risks: ['无'],
+        provider: 'claude-code',
+        model: 'claude-code:sonnet',
+      }],
+    }];
+    (service as any).aiService.getCurrentModelCatalog = vi.fn().mockResolvedValue({
+      models: [
+        { id: 'claude-code:default', provider: 'claude-code' },
+        { id: 'claude-code:opus[1m]', provider: 'claude-code' },
+        { id: 'claude-code:sonnet', provider: 'claude-code' },
+      ],
+      catalogs: {
+        'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+      },
+    });
+    const submitPlan = await getSubmitPlanTool();
+    const submission = submitPlan('head-session', workspacePath, {
+      title: '正确编号的方案卡',
+      planItems: ['等待方案卡批准'],
+      workOrderCount: 1,
+      risks: [],
+      modules,
+    });
+
+    const approvalPrompt = await waitForPlanApprovalPrompt();
+    expect(approvalPrompt.input.modules).toEqual(modules);
+    await persistPlanApprovalResponse(approvalPrompt.requestId, false, '结束夹具。');
+    await expect(submission).resolves.toContain('"approved": false');
+  });
+
+  it('green ET-3: rejects a candidate resolvedModel against the candidate provider catalog', async () => {
+    (service as any).aiService.getCurrentModelCatalog = vi.fn().mockResolvedValue({
+      models: [
+        { id: 'claude-code:opus[1m]', provider: 'claude-code' },
+        { id: 'claude-code:sonnet', provider: 'claude-code' },
+      ],
+      catalogs: {
+        'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+      },
+    });
+    const submitPlan = await getSubmitPlanTool();
+
+    await expect(submitPlan('head-session', workspacePath, {
+      title: '候选方案错误型号',
+      planItems: ['等待方案卡批准'],
+      workOrderCount: 1,
+      risks: [],
+      modules: [{
+        title: '主模块',
+        outputFiles: ['module.md'],
+        inputs: ['实时模型目录'],
+        provider: 'claude-code',
+        model: 'opus[1m]',
+        doneCriteria: '候选型号也必须校验。',
+        candidates: [{
+          name: '方案 A',
+          approach: '误用解析后名称。',
+          pros: ['无'],
+          cons: ['会静默失败'],
+          risks: ['无法批准'],
+          provider: 'claude-code',
+          model: 'claude-opus-5[1m]',
+        }],
+      }],
+    })).rejects.toThrow(/modules\[0\]\.candidates\[0\].*claude-opus-5\[1m\].*claude-code:opus\[1m\].*不要用 resolvedModel/);
+  });
+
+  it('green ET-4: allows a discovery-failed catalog through and marks the submitted module pending', async () => {
+    const modules = [{
+      title: '目录待确认模块',
+      outputFiles: ['module.md'],
+      inputs: ['实时模型目录'],
+      provider: 'claude-code',
+      model: 'claude-opus-5[1m]',
+      doneCriteria: '目录回来后再确认。',
+    }];
+    (service as any).aiService.getCurrentModelCatalog = vi.fn().mockResolvedValue({
+      models: [],
+      catalogs: {
+        'claude-code': {
+          modelSource: 'placeholder',
+          verified: false,
+          lastError: { message: 'Claude model discovery failed' },
+        },
+      },
+    });
+    const submitPlan = await getSubmitPlanTool();
+    const submission = submitPlan('head-session', workspacePath, {
+      title: '发现失败时的方案卡',
+      planItems: ['等待目录恢复'],
+      workOrderCount: 1,
+      risks: [],
+      modules,
+    });
+
+    const approvalPrompt = await waitForPlanApprovalPrompt();
+    expect(approvalPrompt.input.modules).toEqual([
+      { ...modules[0], modelCatalogPending: true },
+    ]);
+    await persistPlanApprovalResponse(approvalPrompt.requestId, false, '结束夹具。');
+    await expect(submission).resolves.toContain('"approved": false');
+  });
+
   it('matches the Codex transcript composite request ID for rejection feedback', async () => {
     const requestId = '94471805-5eca-4d66-a448-56e438de6ab3';
     await persistPlanApprovalResponse(

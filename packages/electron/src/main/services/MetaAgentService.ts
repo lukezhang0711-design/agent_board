@@ -157,6 +157,138 @@ function buildPlanModuleApprovals(
   });
 }
 
+interface HeadModelCatalogEntry {
+  id: string;
+  provider: string;
+}
+
+interface ParsedHeadModelCatalog {
+  readyProviders: Set<string>;
+  modelIdsByProvider: Map<string, string[]>;
+}
+
+function isReadyHeadModelCatalogStatus(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const status = value as Record<string, unknown>;
+  return status.verified === true && !status.lastError;
+}
+
+function parseHeadModelCatalog(value: unknown): ParsedHeadModelCatalog {
+  const catalog = value && typeof value === 'object'
+    ? value as Record<string, unknown>
+    : {};
+  const readyProviders = new Set<string>();
+  const rawCatalogs = catalog.catalogs;
+  if (rawCatalogs && typeof rawCatalogs === 'object') {
+    for (const [provider, status] of Object.entries(rawCatalogs)) {
+      if (provider.trim() && isReadyHeadModelCatalogStatus(status)) {
+        readyProviders.add(provider.trim());
+      }
+    }
+  }
+
+  const modelIdsByProvider = new Map<string, string[]>();
+  const rawModels = Array.isArray(catalog.models) ? catalog.models : [];
+  for (const rawModel of rawModels) {
+    if (!rawModel || typeof rawModel !== 'object') continue;
+    const model = rawModel as Partial<HeadModelCatalogEntry>;
+    const id = typeof model.id === 'string' ? model.id.trim() : '';
+    const provider = typeof model.provider === 'string' ? model.provider.trim() : '';
+    if (!id || !provider || !id.startsWith(`${provider}:`)) continue;
+    const ids = modelIdsByProvider.get(provider) ?? [];
+    if (!ids.includes(id)) ids.push(id);
+    modelIdsByProvider.set(provider, ids);
+  }
+
+  return { readyProviders, modelIdsByProvider };
+}
+
+function isSubmittedPlanModelAvailable(
+  provider: string,
+  model: string,
+  availableIds: readonly string[],
+): boolean {
+  const normalizedModel = model.trim();
+  return availableIds.includes(normalizedModel)
+    || availableIds.includes(`${provider}:${normalizedModel}`);
+}
+
+function createSubmittedPlanModelValidationError(
+  fieldName: string,
+  provider: string,
+  model: string,
+  availableIds: readonly string[],
+): Error {
+  const providerLocalId = availableIds[0]?.slice(`${provider}:`.length) ?? '';
+  return new Error(
+    `${fieldName} 的 model 原始值 “${model}” 不在 provider “${provider}” 的当前模型目录中。当前可用编号：${availableIds.length > 0 ? availableIds.join(', ') : '[]'}。请使用清单里的 id（或冒号后的那一段），不要用 resolvedModel. Correct example: ${JSON.stringify({ provider, model: providerLocalId || availableIds[0] || 'model-id' })}`,
+  );
+}
+
+async function validateSubmittedPlanModuleModels(
+  aiService: Pick<AIService, 'getCurrentModelCatalog'> | null,
+  modules: PlanModule[] | undefined,
+): Promise<PlanModule[] | undefined> {
+  if (!modules || modules.length === 0) return modules;
+
+  let catalog: ParsedHeadModelCatalog | null = null;
+  try {
+    if (aiService) {
+      catalog = parseHeadModelCatalog(await aiService.getCurrentModelCatalog());
+    }
+  } catch {
+    // Discovery failure is a timing concern, not a Head input error. Preserve
+    // the card and make its pending state visible instead of silently guessing.
+    catalog = null;
+  }
+
+  const pendingModuleIndexes = new Set<number>();
+  modules.forEach((module, moduleIndex) => {
+    const validateReference = (
+      provider: string,
+      model: string,
+      fieldName: string,
+      rawModel: string,
+    ): void => {
+      const normalizedProvider = provider.trim();
+      if (!catalog || !catalog.readyProviders.has(normalizedProvider)) {
+        pendingModuleIndexes.add(moduleIndex);
+        return;
+      }
+      const availableIds = catalog.modelIdsByProvider.get(normalizedProvider) ?? [];
+      if (!isSubmittedPlanModelAvailable(normalizedProvider, model, availableIds)) {
+        throw createSubmittedPlanModelValidationError(
+          fieldName,
+          normalizedProvider,
+          rawModel,
+          availableIds,
+        );
+      }
+    };
+
+    validateReference(
+      module.provider,
+      module.model,
+      `modules[${moduleIndex}]`,
+      module.rawModelForValidation ?? module.model,
+    );
+    module.candidates?.forEach((candidate, candidateIndex) => {
+      validateReference(
+        candidate.provider,
+        candidate.model,
+        `modules[${moduleIndex}].candidates[${candidateIndex}]`,
+        candidate.rawModelForValidation ?? candidate.model,
+      );
+    });
+  });
+
+  return modules.map((module, moduleIndex) =>
+    pendingModuleIndexes.has(moduleIndex)
+      ? { ...module, modelCatalogPending: true }
+      : module,
+  );
+}
+
 interface PendingInteractivePrompt {
   id: string;
   promptId: string;
@@ -3342,6 +3474,11 @@ export class MetaAgentService {
       throw new Error(`Head session ${metaSessionId} not found in this workspace`);
     }
 
+    const submittedModules = await validateSubmittedPlanModuleModels(
+      this.aiService,
+      args.modules,
+    );
+
     const sourceRef = `meta-agent-submitted-plan:${metaSessionId}`;
     const { rows: existingRows } = await databaseWorker.query<{ id: string; data: unknown }>(
       `SELECT id, data
@@ -3379,9 +3516,9 @@ export class MetaAgentService {
       submittedAt,
       tags: ['meta-agent', 'user-approval'],
     };
-    if (args.modules !== undefined) {
-      planData.modules = args.modules;
-      const moduleApprovals = buildPlanModuleApprovals(args.modules, priorData);
+    if (submittedModules !== undefined) {
+      planData.modules = submittedModules;
+      const moduleApprovals = buildPlanModuleApprovals(submittedModules, priorData);
       if (moduleApprovals) planData.moduleApprovals = moduleApprovals;
       else delete planData.moduleApprovals;
     } else {
@@ -3401,7 +3538,7 @@ export class MetaAgentService {
           planItems,
           workOrderCount,
           risks,
-          ...(args.modules !== undefined ? { modules: args.modules } : {}),
+          ...(submittedModules !== undefined ? { modules: submittedModules } : {}),
           ...(planData.moduleApprovals ? { moduleApprovals: planData.moduleApprovals } : {}),
         }), planId],
       );
@@ -3421,7 +3558,7 @@ export class MetaAgentService {
             planItems,
             workOrderCount,
             risks,
-            ...(args.modules !== undefined ? { modules: args.modules } : {}),
+            ...(submittedModules !== undefined ? { modules: submittedModules } : {}),
             ...(planData.moduleApprovals ? { moduleApprovals: planData.moduleApprovals } : {}),
           }),
           sourceRef,
@@ -3442,7 +3579,7 @@ export class MetaAgentService {
         planItems,
         workOrderCount,
         risks,
-        ...(args.modules !== undefined ? { modules: args.modules } : {}),
+        ...(submittedModules !== undefined ? { modules: submittedModules } : {}),
         ...(planData.moduleApprovals ? { moduleApprovals: planData.moduleApprovals } : {}),
         ...(options.planSummary?.trim() ? { planSummary: options.planSummary.trim() } : {}),
       },

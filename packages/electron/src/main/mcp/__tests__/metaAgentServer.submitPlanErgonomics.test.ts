@@ -115,6 +115,8 @@ describe('submit_plan ergonomics', () => {
     expect(submitPlanTool?.function.description).toContain('planItems is a non-empty array');
     expect(submitPlanTool?.function.description).toContain('workOrderCount is an optional non-negative integer');
     expect(submitPlanTool?.function.description).toContain('risks is a required array of strings');
+    expect(submitPlanTool?.function.description).toContain('model taken from a list_models id');
+    expect(submitPlanTool?.function.description).toContain('resolvedModel is display-only');
     expect(schema).toMatchObject({
       properties: {
         title: { type: 'string' },
@@ -133,7 +135,10 @@ describe('submit_plan ergonomics', () => {
           outputFiles: { type: 'array' },
           inputs: { type: 'array' },
           provider: { type: 'string' },
-          model: { type: 'string' },
+          model: expect.objectContaining({
+            type: 'string',
+            description: expect.stringContaining('list_models catalog id'),
+          }),
           effortLevel: { type: 'string', minLength: 1 },
           doneCriteria: { type: 'string' },
           candidates: {
@@ -245,6 +250,42 @@ describe('submit_plan ergonomics', () => {
         }],
       }],
     });
+  });
+
+  it('green ET-1c: preserves the exact submitted model only for downstream validation feedback', () => {
+    const rawModel = '  claude-opus-5[1m]  ';
+    const result = normalizeSubmitPlanArgs({
+      title: 'Preserve model validation input',
+      planItems: ['Reject a resolved model without rewriting Head input'],
+      risks: [],
+      modules: [{
+        title: 'Validation module',
+        outputFiles: ['module.md'],
+        inputs: ['model catalog'],
+        provider: 'claude-code',
+        model: rawModel,
+        doneCriteria: 'The correction points to the untouched Head value.',
+        candidates: [{
+          name: 'Alternative',
+          approach: 'Use the same model input preservation.',
+          pros: ['Clear feedback'],
+          cons: ['Internal metadata'],
+          risks: ['None'],
+          provider: 'claude-code',
+          model: rawModel,
+        }],
+      }],
+    });
+
+    const module = result.modules?.[0];
+    const candidate = module?.candidates?.[0];
+    expect(module?.model).toBe('claude-opus-5[1m]');
+    expect(module?.rawModelForValidation).toBe(rawModel);
+    expect(candidate?.model).toBe('claude-opus-5[1m]');
+    expect(candidate?.rawModelForValidation).toBe(rawModel);
+    expect(Object.keys(module ?? {})).not.toContain('rawModelForValidation');
+    expect(Object.keys(candidate ?? {})).not.toContain('rawModelForValidation');
+    expect(JSON.stringify(result)).not.toContain(rawModel);
   });
 
   it('keeps an unknown model-declared effort and accepts Gemini-style modules without one', () => {
