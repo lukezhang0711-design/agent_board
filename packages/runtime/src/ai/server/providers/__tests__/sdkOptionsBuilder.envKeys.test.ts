@@ -203,11 +203,36 @@ describe('buildSdkOptions env-key hardening', () => {
   });
 
   it('green FB-125: gives only a Head session the verified MCP approval timeout environment', async () => {
-    const head = await buildSdkOptions(makeDeps(), makeParams({ isMetaAgent: true }));
-    const standard = await buildSdkOptions(makeDeps(), makeParams({ isMetaAgent: false }));
+    // buildSdkOptions inherits the host process environment, and a developer
+    // running these tests from inside Claude Code already has MCP_TOOL_TIMEOUT
+    // set. Isolate it so this asserts what the builder decides, not what the
+    // shell happened to export.
+    const inherited = process.env.MCP_TOOL_TIMEOUT;
+    delete process.env.MCP_TOOL_TIMEOUT;
+    try {
+      const head = await buildSdkOptions(makeDeps(), makeParams({ isMetaAgent: true }));
+      const standard = await buildSdkOptions(makeDeps(), makeParams({ isMetaAgent: false }));
 
-    expect(head.options.env.MCP_TOOL_TIMEOUT).toBe('14400000');
-    expect(standard.options.env.MCP_TOOL_TIMEOUT).toBeUndefined();
+      expect(head.options.env.MCP_TOOL_TIMEOUT).toBe('14400000');
+      expect(standard.options.env.MCP_TOOL_TIMEOUT).toBeUndefined();
+    } finally {
+      if (inherited === undefined) delete process.env.MCP_TOOL_TIMEOUT;
+      else process.env.MCP_TOOL_TIMEOUT = inherited;
+    }
+  });
+
+  it('green FB-125: a Head session overrides an inherited MCP timeout instead of deferring to it', async () => {
+    const inherited = process.env.MCP_TOOL_TIMEOUT;
+    process.env.MCP_TOOL_TIMEOUT = '600000';
+    try {
+      const head = await buildSdkOptions(makeDeps(), makeParams({ isMetaAgent: true }));
+      // The engine treats this as a hard wall-clock limit, so a shorter
+      // inherited value would reintroduce the 600s plan-approval timeout.
+      expect(head.options.env.MCP_TOOL_TIMEOUT).toBe('14400000');
+    } finally {
+      if (inherited === undefined) delete process.env.MCP_TOOL_TIMEOUT;
+      else process.env.MCP_TOOL_TIMEOUT = inherited;
+    }
   });
 
   it.each([
