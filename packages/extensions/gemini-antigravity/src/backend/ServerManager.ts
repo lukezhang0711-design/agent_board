@@ -385,7 +385,7 @@ export class AntigravityServerManager {
    * intentionally remain failures instead of becoming a made-up static list.
    */
   async getAvailableAgyModels(
-    timeoutMs = 10_000,
+    timeoutMs = 30_000,
     workspacePath?: string,
   ): Promise<readonly AgyModelDescriptor[]> {
     if (!this.agyModelCatalogPromise) {
@@ -407,7 +407,7 @@ export class AntigravityServerManager {
    * models”.
    */
   async refreshAvailableAgyModels(
-    timeoutMs = 10_000,
+    timeoutMs = 30_000,
     workspacePath?: string,
   ): Promise<readonly AgyModelDescriptor[]> {
     const catalog = await this.loadAgyModelCatalog(timeoutMs, workspacePath);
@@ -429,9 +429,12 @@ export class AntigravityServerManager {
   }
 
   /** Zero-inference two-stage login probe used by the host health panel. */
-  async probeAgyLogin(timeoutMs = 10_000, workspacePath?: string): Promise<GeminiLoginProbeResult> {
+  async probeAgyLogin(timeoutMs = 30_000, workspacePath?: string): Promise<GeminiLoginProbeResult> {
     const startedAt = Date.now();
     const local = AntigravityServerManager.getGeminiLoginProbe();
+    if (local.state === 'logged-in') {
+      return { state: 'logged-in', completionMs: Date.now() - startedAt };
+    }
     try {
       // This is deliberately `agy models` rather than a prompt. It may renew
       // OAuth silently, but it never consumes inference tokens.
