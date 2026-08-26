@@ -18,6 +18,10 @@
  */
 
 import { ModelIdentifier, isClaudeCodeFamily } from '@nimbalyst/runtime/ai/server/types';
+import {
+  META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV,
+  META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
+} from '@nimbalyst/runtime/ai/server';
 
 /**
  * Resolve only the host's provider namespace before passing a selected value to
@@ -335,6 +339,14 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
   merged.TERM = 'xterm-256color';
   merged.COLORTERM = 'truecolor';
   merged.LANG = merged.LANG || 'en_US.UTF-8';
+  if (input.isMetaAgent) {
+    // The Claude engine uses this millisecond variable when a server-specific
+    // timeout is unavailable. Keep it Head-only: submit_plan can wait for a
+    // human approval, whereas ordinary child tool calls should retain defaults.
+    merged[META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV] = String(
+      META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
+    );
+  }
   if (input.extraEnv) {
     Object.assign(merged, input.extraEnv);
   }

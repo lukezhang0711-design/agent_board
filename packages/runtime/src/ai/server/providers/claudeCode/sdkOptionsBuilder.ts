@@ -11,6 +11,10 @@ import path from 'path';
 import { app } from 'electron';
 import { ClaudeCodeDeps } from './dependencyInjection';
 import { resolveClaudeAgentCliPath } from './cliPathResolver';
+import {
+  META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV,
+  META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
+} from '../../services/McpConfigService';
 
 type SessionMode = 'planning' | 'agent' | 'auto' | undefined;
 
@@ -22,7 +26,13 @@ type SDKUserMessage = {
 
 export interface BuildSdkOptionsDeps {
   resolveModelVariant: () => string;
-  mcpConfigService: { getMcpServersConfig: (params: { sessionId?: string; workspacePath: string }) => Promise<Record<string, any>> };
+  mcpConfigService: {
+    getMcpServersConfig: (params: {
+      sessionId?: string;
+      workspacePath: string;
+      profile?: 'standard' | 'meta-agent';
+    }) => Promise<Record<string, any>>;
+  };
   createCanUseToolHandler: (sessionId?: string, workspacePath?: string, permissionsPath?: string) => any;
   toolHooksService: {
     createPreToolUseHook: () => any;
@@ -208,7 +218,11 @@ export async function buildSdkOptions(
           append: systemPrompt
         },
     settingSources,
-    mcpServers: await mcpConfigService.getMcpServersConfig({ sessionId, workspacePath: mcpConfigWorkspacePath || workspacePath }),
+    mcpServers: await mcpConfigService.getMcpServersConfig({
+      sessionId,
+      workspacePath: mcpConfigWorkspacePath || workspacePath,
+      profile: isMetaAgent ? 'meta-agent' : 'standard',
+    }),
     cwd: workspacePath,
     abortController,
     model: resolveModelVariant(),
@@ -361,6 +375,14 @@ export async function buildSdkOptions(
     ...(process.env.CLAUDE_CODE_ENTRYPOINT == null && { CLAUDE_CODE_ENTRYPOINT: 'cli' }),
     ...(config.effortLevel && {
       CLAUDE_CODE_EFFORT_LEVEL: config.effortLevel
+    }),
+    // The installed Claude engine reads this exact variable in milliseconds.
+    // It applies only to a Head process, whose submit_plan tool waits for a
+    // human decision and must outlive the default 600-second call limit.
+    ...(isMetaAgent && {
+      [META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV]: String(
+        META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
+      ),
     }),
   };
 

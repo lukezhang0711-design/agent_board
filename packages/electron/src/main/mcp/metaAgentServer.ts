@@ -359,6 +359,8 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
 interface SubmitPlanMcpCall {
   requestId: string;
   resolveOriginalMcpCall: (result: string) => boolean;
+  /** Records the durable card ID before the original MCP request starts waiting. */
+  setSubmittedPlanId: (planId: string) => void;
 }
 
 interface MetaAgentServerOptions {
@@ -1070,6 +1072,9 @@ function startPlanApprovalProgressHeartbeat(
 ): () => void {
   const progressToken = extra._meta?.progressToken;
   if (typeof progressToken !== "string" && typeof progressToken !== "number") {
+    console.info(
+      '[MCP:nimbalyst-meta-agent] Plan approval heartbeat inactive: progressToken missing; relying on the configured Head MCP timeout.',
+    );
     return () => {};
   }
 
@@ -1120,6 +1125,7 @@ async function awaitSubmitPlanMcpResult(
 ): Promise<string> {
   const stopHeartbeat = startPlanApprovalProgressHeartbeat(extra, progressIntervalMs);
   let settled = false;
+  let submittedPlanId: string | undefined;
   let resolveOriginalResult!: (result: string) => void;
   let rejectOriginalResult!: (error: Error) => void;
 
@@ -1141,7 +1147,10 @@ async function awaitSubmitPlanMcpResult(
     }
     settled = true;
     clearAbortListener();
-    rejectOriginalResult(new Error("submit_plan MCP call was cancelled before approval settled"));
+    const guidance = submittedPlanId
+      ? `Plan card is still awaiting approval; do not resubmit. Continue with planId ${submittedPlanId}.`
+      : 'submit_plan MCP call was cancelled before the plan card was persisted';
+    rejectOriginalResult(new Error(guidance));
   };
 
   const originalResult = new Promise<string>((resolve, reject) => {
@@ -1158,6 +1167,9 @@ async function awaitSubmitPlanMcpResult(
   const mcpCall: SubmitPlanMcpCall = {
     requestId: randomUUID(),
     resolveOriginalMcpCall: settleResult,
+    setSubmittedPlanId: (planId) => {
+      submittedPlanId = planId.trim() || undefined;
+    },
   };
 
   void dispatchMetaAgentTool(

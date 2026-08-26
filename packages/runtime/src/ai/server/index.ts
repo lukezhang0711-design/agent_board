@@ -14,7 +14,12 @@ export * from './providers/OpenCodeProvider';
 export * from './providers/CopilotCLIProvider';
 export * from './utils/errorDetection';
 export * from './preferredAgentLanguageConfig';
-export { McpConfigService } from './services/McpConfigService';
+export {
+  McpConfigService,
+  META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV,
+  META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
+  META_AGENT_PLAN_APPROVAL_TIMEOUT_SEC,
+} from './services/McpConfigService';
 export type { McpConfigServiceDeps } from './services/McpConfigService';
 
 // Meta-agent persona builder. Re-exported here (rather than from the root

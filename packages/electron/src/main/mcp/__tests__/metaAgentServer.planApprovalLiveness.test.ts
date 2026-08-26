@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {
@@ -46,12 +46,13 @@ describe('meta-agent submit_plan approval liveness', () => {
     setMcpAuthTokenForTest(null);
   });
 
-  it('keeps the original MCP call alive through a scaled six-minute approval and returns its result', async () => {
+  it('green FB-125: keeps the original MCP call alive through a scaled eleven-minute approval and returns its result', async () => {
     // Scale one test millisecond to one production second: approval happens at
-    // 360s, after the engine's 300s no-progress limit. The server must emit a
-    // progress notification every scaled 30s while the original call is open.
-    const approvalDelayMs = 360;
-    const engineNoProgressTimeoutMs = 300;
+    // 660s, beyond the old 600s hard timeout. The fixture uses the configured
+    // four-hour deadline and the server must emit a progress notification every
+    // scaled 30s while the original call is open.
+    const approvalDelayMs = 660;
+    const configuredHeadTimeoutMs = 14_400;
     const progress: Array<{ progress: number; message?: string }> = [];
     let submitPlanCalls = 0;
     setMcpAuthTokenForTest(TEST_AUTH_TOKEN);
@@ -94,7 +95,7 @@ describe('meta-agent submit_plan approval liveness', () => {
         },
         undefined,
         {
-          timeout: engineNoProgressTimeoutMs,
+          timeout: configuredHeadTimeoutMs,
           resetTimeoutOnProgress: true,
           onprogress: (event) => progress.push({
             progress: event.progress,
@@ -107,7 +108,7 @@ describe('meta-agent submit_plan approval liveness', () => {
         isError: false,
         content: [{ type: 'text', text: JSON.stringify({ approved: true, planId: 'plan-six-minute-approval' }) }],
       });
-      expect(progress.length).toBeGreaterThanOrEqual(10);
+      expect(progress.length).toBeGreaterThanOrEqual(20);
       expect(progress.every((event) => event.message === 'Waiting for user plan approval.')).toBe(true);
       // A timeout would make a Claude-like engine retry submit_plan and create
       // another approval card. The live original request needs exactly one call.
@@ -237,6 +238,57 @@ describe('meta-agent submit_plan approval liveness', () => {
       await delay(60);
       expect(progress).toEqual([]);
     } finally {
+      await transport.close();
+    }
+  });
+
+  it('green FB-125: logs the missing progress token so a no-heartbeat request is auditable', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const approvalResult = JSON.stringify({
+      approved: true,
+      planId: 'plan-without-progress-token',
+    });
+    setMcpAuthTokenForTest(TEST_AUTH_TOKEN);
+    installToolFns(async () => approvalResult);
+
+    const { httpServer } = await startMetaAgentServer(0, {
+      planApprovalProgressIntervalMs: 30,
+    });
+    const address = httpServer.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('Meta-agent test server did not expose a TCP port');
+    }
+
+    const transport = new StreamableHTTPClientTransport(
+      new URL(
+        `http://127.0.0.1:${address.port}/mcp?sessionId=head-session&workspaceId=%2Fworkspace`,
+      ),
+      { requestInit: { headers: { Authorization: `Bearer ${TEST_AUTH_TOKEN}` } } },
+    );
+    const client = new Client(
+      { name: 'approval-no-progress-token-fixture', version: '1.0.0' },
+      { capabilities: {} },
+    );
+    await client.connect(transport);
+
+    try {
+      await expect(client.callTool({
+        name: 'submit_plan',
+        arguments: {
+          title: 'No progress token',
+          planItems: ['Record the no-token liveness trace'],
+          workOrderCount: 0,
+          risks: 'A client without a token cannot receive progress notifications.',
+        },
+      })).resolves.toMatchObject({
+        isError: false,
+        content: [{ type: 'text', text: approvalResult }],
+      });
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('progressToken missing'),
+      );
+    } finally {
+      infoSpy.mockRestore();
       await transport.close();
     }
   });
