@@ -111,6 +111,14 @@ describe('buildClaudeCliSpawnConfig', () => {
     expect(cfg.env.PATH).toBe('/opt/bin:/usr/bin');
   });
 
+  it('green FB-125: gives only a Head CLI session the verified MCP approval timeout environment', () => {
+    const head = buildClaudeCliSpawnConfig({ ...base, isMetaAgent: true });
+    const standard = buildClaudeCliSpawnConfig({ ...base, isMetaAgent: false });
+
+    expect(head.env.MCP_TOOL_TIMEOUT).toBe('14400000');
+    expect(standard.env.MCP_TOOL_TIMEOUT).toBeUndefined();
+  });
+
   it('merges observation extraEnv (e.g. Phase 3 ANTHROPIC_BASE_URL) but still strips the API key', () => {
     const cfg = buildClaudeCliSpawnConfig({
       ...base,

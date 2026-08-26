@@ -202,6 +202,14 @@ describe('buildSdkOptions env-key hardening', () => {
     expect(options.env.CLAUDE_CODE_ENTRYPOINT).toBe('cli');
   });
 
+  it('green FB-125: gives only a Head session the verified MCP approval timeout environment', async () => {
+    const head = await buildSdkOptions(makeDeps(), makeParams({ isMetaAgent: true }));
+    const standard = await buildSdkOptions(makeDeps(), makeParams({ isMetaAgent: false }));
+
+    expect(head.options.env.MCP_TOOL_TIMEOUT).toBe('14400000');
+    expect(standard.options.env.MCP_TOOL_TIMEOUT).toBeUndefined();
+  });
+
   it.each([
     ['claude-code:opus-5', 'opus-5'],
     ['claude-code:sonnet-5', 'sonnet-5'],

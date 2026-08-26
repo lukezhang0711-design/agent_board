@@ -80,6 +80,52 @@ const PLAN_APPROVAL_FAST_POLL_INTERVAL_MS = 100;
 const PLAN_APPROVAL_SLOW_POLL_INTERVAL_MS = 2_000;
 const LIFETIME_BACKSTOP = 50;
 const WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON = '原指挥官会话已不存在，无法重派';
+const PLAN_APPROVAL_STILL_PENDING_MESSAGE =
+  'Plan card is still awaiting approval; do not resubmit. Continue with this planId after the user responds.';
+
+type ConversationOutputLanguage = 'Chinese' | 'English';
+
+function inferConversationOutputLanguage(
+  userPrompts: readonly string[],
+): ConversationOutputLanguage | null {
+  // Use the latest actual user prompt rather than the app-wide preference:
+  // a user can switch languages between conversations without changing Settings.
+  for (let index = userPrompts.length - 1; index >= 0; index -= 1) {
+    const prompt = userPrompts[index].trim();
+    if (!prompt) continue;
+
+    const hanCount = (prompt.match(/[\u3400-\u9fff]/g) ?? []).length;
+    const latinCount = (prompt.match(/[A-Za-z]/g) ?? []).length;
+    if (hanCount > 0 && hanCount * 2 >= latinCount) return 'Chinese';
+    if (latinCount > 0) return 'English';
+    if (hanCount > 0) return 'Chinese';
+  }
+  return null;
+}
+
+function appendConversationLanguageInstruction(
+  prompt: string,
+  language: ConversationOutputLanguage,
+): string {
+  const instruction = language === 'Chinese'
+    ? '【输出语言】当前老板对话使用中文。请使用中文撰写面向老板的说明、报告和交付物；代码、命令和专有名词可保留原样。'
+    : '[Output language] The current user conversation is in English. Use English for user-facing explanations, reports, and deliverables; keep code, commands, and proper nouns as needed.';
+  return `${prompt.trim()}\n\n${instruction}`;
+}
+
+function serializePlanApprovalStillPending(planId: string, requestId: string): string {
+  return JSON.stringify({
+    planId,
+    requestId,
+    status: 'awaiting-user-approval',
+    message: PLAN_APPROVAL_STILL_PENDING_MESSAGE,
+  }, null, 2);
+}
+
+function isPlanApprovalWaitTimeout(error: unknown): boolean {
+  return error instanceof Error
+    && error.message === 'Timed out waiting for plan approval response';
+}
 
 class DispatchCapacityError extends Error {
   constructor(
@@ -676,6 +722,8 @@ interface PlanSubmissionOptions {
    * claim delivery.
    */
   resolveOriginalMcpCall?: (result: string) => boolean | Promise<boolean>;
+  /** Lets the MCP transport retain recovery guidance if its client times out. */
+  onPlanSubmitted?: (planId: string) => void;
 }
 
 interface PlanApprovalResponse {
@@ -1226,6 +1274,34 @@ export class MetaAgentService {
     });
   }
 
+  /**
+   * Carries the active conversation language into a delegated task. This is
+   * intentionally derived from parent user messages, not a fixed Chinese
+   * string and not the optional global preferred-language setting.
+   */
+  private async applyConversationLanguageToChildPrompt(
+    parentSessionId: string,
+    args: InternalCreateChildSessionArgs,
+  ): Promise<InternalCreateChildSessionArgs> {
+    if (!args.prompt?.trim()) return args;
+
+    try {
+      const parentMessages = await AgentMessagesRepository.list(parentSessionId, { limit: 500 });
+      const language = inferConversationOutputLanguage(extractUserPrompts(parentMessages));
+      if (!language) return args;
+      return {
+        ...args,
+        prompt: appendConversationLanguageInstruction(args.prompt, language),
+      };
+    } catch (error) {
+      // Dispatch must remain available if history storage is temporarily unavailable.
+      console.warn(
+        `[MetaAgentService] Could not infer parent conversation language for child dispatch: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return args;
+    }
+  }
+
   private async persistTextPlanBypassWarning(sessionId: string, workspacePath: string): Promise<void> {
     await AgentMessagesRepository.create({
       sessionId,
@@ -1521,6 +1597,7 @@ export class MetaAgentService {
           this.submitPlan(metaSessionId, workspaceId, args, signal, {
             requestId: mcpCall?.requestId,
             resolveOriginalMcpCall: mcpCall?.resolveOriginalMcpCall,
+            onPlanSubmitted: mcpCall?.setSubmittedPlanId,
           }),
         createSession: (metaSessionId, workspaceId, args) =>
           this.createChildSession(metaSessionId, workspaceId, args),
@@ -3611,6 +3688,16 @@ export class MetaAgentService {
     console.info(
       `[MetaAgentService] Plan approval transition: requestId=${requestId}, from=none, to=submitted`,
     );
+    try {
+      options.onPlanSubmitted?.(planId);
+    } catch (error) {
+      // The durable card is already persisted; a transport bookkeeping failure
+      // must not erase it or stop the approval waiter.
+      console.warn(
+        `[MetaAgentService] Failed to report submitted plan ID to MCP transport: requestId=${requestId}, planId=${planId}`,
+        error,
+      );
+    }
 
     const autoApproved = store.get('metaAgentPlanAutoApprove') === true;
     const waiterKey = this.planApprovalWaiterKey(metaSessionId, requestId);
@@ -3633,7 +3720,17 @@ export class MetaAgentService {
         );
       }
 
-      response = await this.waitForPlanApprovalResponse(metaSessionId, requestId, planId);
+      try {
+        response = await this.waitForPlanApprovalResponse(metaSessionId, requestId, planId);
+      } catch (error) {
+        if (isPlanApprovalWaitTimeout(error)) {
+          console.warn(
+            `[MetaAgentService] Plan approval wait timed out but card remains active: requestId=${requestId}, planId=${planId}`,
+          );
+          return serializePlanApprovalStillPending(planId, requestId);
+        }
+        throw error;
+      }
     } finally {
       this.activePlanApprovalWaiters.delete(waiterKey);
     }
@@ -3690,10 +3787,14 @@ export class MetaAgentService {
   ): Promise<string> {
     await this.assertDispatchAuthorized(workspaceId, args);
     const approvedArgs = await this.applyApprovedCardRouting(workspaceId, args);
+    const languageAwareArgs = await this.applyConversationLanguageToChildPrompt(
+      metaSessionId,
+      approvedArgs,
+    );
     const result = await this.dispatchOrQueueChildSession(
       metaSessionId,
       workspaceId,
-      approvedArgs,
+      languageAwareArgs,
       'create_session',
     );
     return JSON.stringify(result, null, 2);
@@ -3978,7 +4079,7 @@ export class MetaAgentService {
     // the dispatcher; it is deliberately resolved before workstream mutation.
     const notifyOnComplete = args.notifyOnComplete === true;
 
-    const childResult = await this.dispatchOrQueueChildSession(parentSessionId, workspaceId, {
+    const childArgs = await this.applyConversationLanguageToChildPrompt(parentSessionId, {
       title: args.title,
       prompt: args.prompt,
       useWorktree: !!args.useWorktree,
@@ -3994,7 +4095,13 @@ export class MetaAgentService {
       maxParallelOverride: args.maxParallelOverride,
       parentSessionIdOverride: workstreamId,
       notifyParent: notifyOnComplete,
-    }, 'spawn_session');
+    });
+    const childResult = await this.dispatchOrQueueChildSession(
+      parentSessionId,
+      workspaceId,
+      childArgs,
+      'spawn_session',
+    );
 
     return JSON.stringify({
       ...childResult,

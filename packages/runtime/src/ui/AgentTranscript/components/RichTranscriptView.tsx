@@ -642,6 +642,50 @@ export function isInteractiveWidgetTool(toolName: string | null | undefined): bo
   return INTERACTIVE_WIDGET_TOOLS.has(stripMcpPrefix(toolName));
 }
 
+/**
+ * Returns tool-call rows replaced by a later version of the same card.
+ *
+ * Provider IDs handle SDK resume echoes. Plan approvals need one additional
+ * identity: every revision gets a fresh request/tool ID while retaining the
+ * durable `planId`. Hide the earlier rendering so a single plan cannot appear
+ * as several independently actionable approval cards in the transcript.
+ */
+export function getSupersededTranscriptToolIndices(
+  messages: ReadonlyArray<TranscriptViewMessage>,
+): Set<number> {
+  const indices = new Set<number>();
+  const lastSeenByToolId = new Map<string, number>();
+  const lastSeenByPlanId = new Map<string, number>();
+
+  for (let i = 0; i < messages.length; i++) {
+    const tool = messages[i].toolCall;
+    const providerToolCallId = tool?.providerToolCallId;
+    if (providerToolCallId) {
+      const previous = lastSeenByToolId.get(providerToolCallId);
+      if (previous !== undefined) {
+        indices.add(previous);
+      }
+      lastSeenByToolId.set(providerToolCallId, i);
+    }
+
+    // Submitted meta-agent plans are rendered through the ExitPlanMode widget.
+    // A new request replaces the card contents but deliberately keeps planId.
+    const planId = stripMcpPrefix(tool?.toolName ?? '') === 'ExitPlanMode'
+      && typeof tool?.arguments.planId === 'string'
+      ? tool.arguments.planId.trim()
+      : '';
+    if (planId) {
+      const previous = lastSeenByPlanId.get(planId);
+      if (previous !== undefined) {
+        indices.add(previous);
+      }
+      lastSeenByPlanId.set(planId, i);
+    }
+  }
+
+  return indices;
+}
+
 const isFileModifyingTool = (name?: string): boolean => {
   if (!name) return false;
   const normalized = name.toLowerCase();
@@ -1353,26 +1397,10 @@ export const RichTranscriptView = React.forwardRef<
     return { restartAfterIndex: -1, restartAtBottom: false };
   }, [messages, appStartTime]);
 
-  // Codex SDK reuses item IDs across session resumes, which can create
-  // duplicate tool_call events with the same providerToolCallId. When
-  // duplicates exist, hide the earlier (superseded) ones so only the
-  // latest version renders (typically the completed one).
+  // Codex SDK reuses item IDs across session resumes, while plan revisions
+  // retain a durable planId. In either case, hide older rendered card blocks.
   const supersededToolIndices = useMemo(() => {
-    const indices = new Set<number>();
-    // Map from providerToolCallId -> last seen message index
-    const lastSeenByToolId = new Map<string, number>();
-    for (let i = 0; i < messages.length; i++) {
-      const id = messages[i].toolCall?.providerToolCallId;
-      if (id) {
-        const prev = lastSeenByToolId.get(id);
-        if (prev !== undefined) {
-          // Mark the earlier one as superseded
-          indices.add(prev);
-        }
-        lastSeenByToolId.set(id, i);
-      }
-    }
-    return indices;
+    return getSupersededTranscriptToolIndices(messages);
   }, [messages]);
 
   // Find pending (unresolved) ToolPermission widgets and the VList indices where they're actually rendered.
@@ -2043,7 +2071,10 @@ export const RichTranscriptView = React.forwardRef<
       if (message.type === 'assistant_message') {
         let checkPrev = index - 1;
         while (checkPrev >= 0 && isToolLikeMessage(messages[checkPrev])) {
-          if (isInteractiveWidgetTool(messages[checkPrev].toolCall?.toolName)) {
+          if (
+            !supersededToolIndices.has(checkPrev)
+            && isInteractiveWidgetTool(messages[checkPrev].toolCall?.toolName)
+          ) {
             hasInteractiveToolsBefore = true;
             break;
           }
@@ -2070,7 +2101,9 @@ export const RichTranscriptView = React.forwardRef<
     if (message.type === 'assistant_message') {
       let checkIdx = index - 1;
       while (checkIdx >= 0 && isToolLikeMessage(messages[checkIdx])) {
-        toolMessagesBefore.unshift({ message: messages[checkIdx], index: checkIdx });
+        if (!supersededToolIndices.has(checkIdx)) {
+          toolMessagesBefore.unshift({ message: messages[checkIdx], index: checkIdx });
+        }
         checkIdx--;
       }
     }

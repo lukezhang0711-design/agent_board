@@ -70,8 +70,13 @@ export interface TextPlanGuardDecision {
 
 const PLAN_LABEL_PATTERNS: ReadonlyArray<RegExp> = [
   /\b(?:implementation|execution|revised|revision)\s+plan\b/i,
-  /(?:^|\n)\s*#{0,6}\s*(?:实施|执行|落地|修订|修改后的)?\s*(?:方案|计划)\s*(?:[:：]|$)/im,
-  /(?:实施|执行|落地|修订|修改后的)\s*(?:方案|计划)/,
+  // The old whitelist of leading verbs (实施/执行/落地/修订/修改后的) missed
+  // everyday labels such as 改进方案 and 优化方案. Keep the POSITIONAL
+  // requirement instead: the label has to head its own line (a Markdown
+  // heading or a `…方案：` lead-in), which is what a real plan looks like.
+  // A mid-sentence mention ("我的处理方案是回滚") is not a plan and must not
+  // reach the chase path.
+  /(?:^|\n)\s*#{0,6}\s*[^\n：:]{0,8}?(?:方案|计划)\s*(?:[:：]|$)/im,
 ];
 
 const PLAN_STRUCTURE_PATTERNS: ReadonlyArray<RegExp> = [
@@ -98,7 +103,11 @@ function hasNumberedOrBulletedStructure(text: string): boolean {
  */
 export function isImplementationPlanLikeText(finalText: string | null | undefined): boolean {
   const text = finalText?.trim();
-  if (!text || !PLAN_LABEL_PATTERNS.some((pattern) => pattern.test(text))) {
+  if (
+    !text
+    || QUESTION_OR_INVESTIGATION_PATTERN.test(text)
+    || !PLAN_LABEL_PATTERNS.some((pattern) => pattern.test(text))
+  ) {
     return false;
   }
 

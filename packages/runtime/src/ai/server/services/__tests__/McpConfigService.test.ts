@@ -176,19 +176,29 @@ describe('McpConfigService', () => {
       );
     });
 
-    it('allows submit_plan to wait up to seven days for user approval', async () => {
+    it('green FB-125: supplies Claude\'s per-server millisecond timeout for a Head plan approval', async () => {
       mockDeps.metaAgentServerPort = 3004;
       service = new McpConfigService(mockDeps);
       const config = await service.getMcpServersConfig({
         sessionId: 'session123',
         workspacePath: '/test/workspace',
+        profile: 'meta-agent',
       });
 
       expect(config['nimbalyst-meta-agent']).toEqual(
         expect.objectContaining({
-          tool_timeout_sec: 604800,
+          timeout: 14_400_000,
+          tool_timeout_sec: 14_400,
         }),
       );
+
+      const standardConfig = await service.getMcpServersConfig({
+        sessionId: 'session123',
+        workspacePath: '/test/workspace',
+        profile: 'standard',
+      });
+      expect(standardConfig['nimbalyst-meta-agent']).not.toHaveProperty('timeout');
+      expect(standardConfig['nimbalyst-meta-agent']).not.toHaveProperty('tool_timeout_sec');
     });
 
     it('should include session-naming server when port is set and session ID exists', async () => {

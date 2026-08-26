@@ -61,6 +61,16 @@ export interface McpConfigServiceDeps {
 }
 
 /**
+ * `submit_plan` deliberately remains open while a person reviews the plan
+ * card. Claude's MCP timeout is expressed in milliseconds; Codex's matching
+ * per-tool setting is expressed in seconds.
+ */
+export const META_AGENT_PLAN_APPROVAL_TIMEOUT_MS = 4 * 60 * 60 * 1000;
+export const META_AGENT_PLAN_APPROVAL_TIMEOUT_SEC =
+  META_AGENT_PLAN_APPROVAL_TIMEOUT_MS / 1000;
+export const META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV = 'MCP_TOOL_TIMEOUT';
+
+/**
  * Service for loading and processing MCP server configurations
  */
 export class McpConfigService {
@@ -163,8 +173,13 @@ export class McpConfigService {
         transport: 'sse',
         url: `http://127.0.0.1:${this.deps.metaAgentServerPort}/mcp?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspacePath)}`,
         ...(authHeaders ? { headers: { ...authHeaders } } : {}),
-        // submit_plan blocks while the user reviews and approves the plan.
-        tool_timeout_sec: 604800,
+        ...(isMetaAgent ? {
+          // `timeout` is Claude's per-server wall-clock setting (milliseconds).
+          // `tool_timeout_sec` is the equivalent field consumed by Codex.
+          // Both must cover a real human review rather than the engine default.
+          timeout: META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
+          tool_timeout_sec: META_AGENT_PLAN_APPROVAL_TIMEOUT_SEC,
+        } : {}),
       };
     }
 

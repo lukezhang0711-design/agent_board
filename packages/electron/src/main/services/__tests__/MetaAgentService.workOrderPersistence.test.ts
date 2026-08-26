@@ -353,6 +353,7 @@ describe('MetaAgentService work-order persistence', () => {
     mcpCall?: {
       requestId: string;
       resolveOriginalMcpCall: (result: string) => boolean;
+      setSubmittedPlanId?: (planId: string) => void;
     },
   ) => Promise<string>> {
     await service.start((service as any).aiService);
@@ -516,6 +517,43 @@ describe('MetaAgentService work-order persistence', () => {
 
     expect(queuePromptForSession).toHaveBeenCalledTimes(1);
     expect(queuePromptForSession.mock.calls[0][1]).toContain('submit_plan');
+  });
+
+  it('green FB-125: returns planId and no-resubmit guidance if the durable approval waiter itself times out', async () => {
+    const submitPlan = await getSubmitPlanTool();
+    const submittedPlanIds: string[] = [];
+    const waitSpy = vi.spyOn(service as any, 'waitForPlanApprovalResponse')
+      .mockRejectedValue(new Error('Timed out waiting for plan approval response'));
+    try {
+      const result = JSON.parse(await submitPlan('head-session', workspacePath, {
+        title: 'Timeout recovery card',
+        planItems: ['Keep the persisted card instead of creating a duplicate'],
+        workOrderCount: 1,
+        risks: 'The waiting transport could outlive its configured deadline.',
+      }, undefined, {
+        requestId: 'timeout-recovery-request',
+        resolveOriginalMcpCall: () => true,
+        setSubmittedPlanId: (planId) => submittedPlanIds.push(planId),
+      }));
+
+      expect(result).toMatchObject({
+        planId: expect.any(String),
+        requestId: 'timeout-recovery-request',
+        status: 'awaiting-user-approval',
+        message: expect.stringContaining('do not resubmit'),
+      });
+      expect(submittedPlanIds).toEqual([result.planId]);
+      const { rows } = await db.query<{ data: unknown }>(
+        `SELECT data FROM tracker_items WHERE id = $1`,
+        [result.planId],
+      );
+      expect(parseStoredJson<Record<string, unknown>>(rows[0].data)).toMatchObject({
+        status: 'in-review',
+        approvalPromptId: 'timeout-recovery-request',
+      });
+    } finally {
+      waitSpy.mockRestore();
+    }
   });
 
   it('green FB-111: two failed chases surface the required warning', async () => {
@@ -856,6 +894,66 @@ describe('MetaAgentService work-order persistence', () => {
     const persisted = await AISessionsRepository.get(child.sessionId);
     expect(persisted?.metadata).toMatchObject({ effortLevel: 'xhigh' });
     expect(resolveEffortLevel(persisted?.metadata?.effortLevel, 'low')).toBe('xhigh');
+  });
+
+  it('green FB-126: passes the current Chinese or English conversation language into child prompts', async () => {
+    const readChildInput = async (sessionId: string): Promise<string> => {
+      const messages = await AgentMessagesRepository.list(sessionId);
+      const input = messages.find((message) => message.direction === 'input')?.content;
+      expect(input).toEqual(expect.any(String));
+      return input!;
+    };
+
+    const chineseConversation = '请检查审批链路，并用中文整理可执行的修复结论。';
+    testState.headTurnUserPrompts = [chineseConversation];
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'input',
+      content: JSON.stringify({ prompt: chineseConversation }),
+      createdAt: new Date(),
+      searchable: true,
+      messageKind: 'user',
+    });
+    const chineseChild = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: '中文交付',
+        prompt: '检查审批卡超时并写出结论。',
+        intent: 'investigation',
+      },
+    ));
+    await expect(readChildInput(chineseChild.sessionId)).resolves.toContain(
+      '当前老板对话使用中文。请使用中文撰写面向老板的说明、报告和交付物',
+    );
+
+    const englishConversation = 'Please investigate the approval timeout and report the findings in English.';
+    testState.headTurnUserPrompts = [englishConversation];
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'input',
+      content: JSON.stringify({ prompt: englishConversation }),
+      createdAt: new Date(Date.now() + 1),
+      searchable: true,
+      messageKind: 'user',
+    });
+    const englishChild = JSON.parse(await (service as any).spawnSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'English deliverable',
+        prompt: 'Inspect the plan-card timeout and provide the result.',
+        intent: 'investigation',
+        isolated: true,
+      },
+    ));
+    const englishInput = await readChildInput(englishChild.sessionId);
+    expect(englishInput).toContain(
+      'The current user conversation is in English. Use English for user-facing explanations, reports, and deliverables',
+    );
+    expect(englishInput).not.toContain('当前老板对话使用中文');
   });
 
   // FB-020: SessionNamingService.applySessionTitle renames with `force: true`,

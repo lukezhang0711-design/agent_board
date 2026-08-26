@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TranscriptViewMessage } from '../../../../ai/server/transcript/TranscriptProjector';
 import {
   extractEditsFromToolMessage,
+  getSupersededTranscriptToolIndices,
   isInteractiveWidgetTool,
   isTranscriptAtBottom,
   parseUnifiedDiffToReplacements,
@@ -445,5 +446,44 @@ describe('interactive widget tool name normalization', () => {
     expect(isInteractiveWidgetTool(undefined)).toBe(false);
     expect(isInteractiveWidgetTool(null)).toBe(false);
     expect(isInteractiveWidgetTool('')).toBe(false);
+  });
+});
+
+describe('submitted plan-card transcript deduplication', () => {
+  function makeSubmittedPlanCard(
+    planId: string,
+    providerToolCallId: string,
+  ): TranscriptViewMessage {
+    return makeTestMessage({
+      toolCall: {
+        toolName: 'ExitPlanMode',
+        toolDisplayName: 'ExitPlanMode',
+        status: 'completed',
+        description: null,
+        arguments: { planId },
+        targetFilePath: null,
+        mcpServer: 'nimbalyst-meta-agent',
+        mcpTool: 'submit_plan',
+        providerToolCallId,
+        progress: [],
+      },
+    });
+  }
+
+  it('green FB-125: keeps only the latest live card when a plan is resubmitted', () => {
+    const messages = [
+      makeSubmittedPlanCard('plan-reused', 'request-initial'),
+      makeSubmittedPlanCard('plan-unrelated', 'request-unrelated'),
+      makeSubmittedPlanCard('plan-reused', 'request-revision'),
+    ];
+
+    const superseded = getSupersededTranscriptToolIndices(messages);
+
+    // The first rendering is directly collapsed; the unrelated card and the
+    // latest revision stay live and actionable.
+    expect([...superseded]).toEqual([0]);
+    expect(messages.filter((_, index) => !superseded.has(index))).toHaveLength(2);
+    expect(messages.filter((_, index) => !superseded.has(index))[1].toolCall?.arguments.planId)
+      .toBe('plan-reused');
   });
 });
