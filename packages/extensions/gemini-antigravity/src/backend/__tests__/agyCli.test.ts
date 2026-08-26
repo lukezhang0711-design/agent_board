@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import type { ChildProcess } from 'child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,7 +47,34 @@ function mockEnvironment({ desktop = false, agy = true } = {}): void {
   });
 }
 
-function mockChild({ stdout = '', stderr = '', code = 0, close = true } = {}): MockChild {
+function mockGeminiOAuthFiles({ refreshToken = 'refresh-token-is-long-enough', includeAgy = false }: {
+  refreshToken?: string | null;
+  includeAgy?: boolean;
+} = {}): void {
+  const root = path.join(os.homedir(), '.gemini');
+  const values: Record<string, string> = {
+    [path.join(root, 'settings.json')]: JSON.stringify({ security: { auth: { selectedType: 'oauth-personal' } } }),
+    [path.join(root, 'google_accounts.json')]: JSON.stringify({ active: 'account@example.com' }),
+    [path.join(root, 'oauth_creds.json')]: JSON.stringify({
+      access_token: 'access-token',
+      expiry: '2099-01-01T00:00:00.000Z',
+      ...(refreshToken === null ? {} : { refresh_token: refreshToken }),
+    }),
+  };
+  existsSyncMock.mockImplementation((candidate) => {
+    const value = String(candidate);
+    return value in values || (includeAgy && value === '/fixture/home/.local/bin/agy');
+  });
+  readFileSyncMock.mockImplementation((candidate) => values[String(candidate)]!);
+}
+
+function mockChild({
+  stdout = '',
+  stderr = '',
+  code = 0,
+  close = true,
+  closeDelayMs = 0,
+} = {}): MockChild {
   const child = new EventEmitter() as unknown as MockChild;
   child.stdout = new EventEmitter() as unknown as MockChild['stdout'];
   child.stderr = new EventEmitter() as unknown as MockChild['stderr'];
@@ -53,7 +82,10 @@ function mockChild({ stdout = '', stderr = '', code = 0, close = true } = {}): M
   queueMicrotask(() => {
     if (stdout) child.stdout.emit('data', Buffer.from(stdout));
     if (stderr) child.stderr.emit('data', Buffer.from(stderr));
-    if (close) child.emit('close', code);
+    if (close) {
+      if (closeDelayMs > 0) setTimeout(() => child.emit('close', code), closeDelayMs);
+      else child.emit('close', code);
+    }
   });
   return child;
 }
@@ -167,6 +199,119 @@ describe('agy CLI dynamic model catalog', () => {
 
     const manager = freshManager();
     await expect(manager.getAvailableAgyModels()).rejects.toThrow('agy models unavailable');
+  });
+
+  it('RED EU: classifies an 11-second agy models call as unknown timeout under a 10-second limit', async () => {
+    vi.useFakeTimers();
+    try {
+      mockEnvironment({ desktop: false, agy: true });
+      spawnMock.mockReturnValue(mockChild({
+        stdout: 'Gemini 3.7 Flash (High)\n',
+        closeDelayMs: 11_000,
+      }));
+
+      const resultPromise = freshManager().probeAgyLogin(10_000);
+      await vi.runAllTicks();
+      await vi.advanceTimersByTimeAsync(11_000);
+
+      await expect(resultPromise).resolves.toMatchObject({
+        state: 'unknown',
+        reason: 'timeout',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('GREEN EU: returns local logged-in state without invoking agy models', async () => {
+    mockGeminiOAuthFiles();
+
+    const result = await freshManager().probeAgyLogin();
+
+    expect(result).toMatchObject({ state: 'logged-in' });
+    expect(result.completionMs).toBeLessThan(1_000);
+    expect(spawnMock).not.toHaveBeenCalled();
+  });
+
+  it('GREEN EU: falls back to agy models when the local refresh token is missing', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    mockGeminiOAuthFiles({ refreshToken: null, includeAgy: true });
+    spawnMock.mockReturnValue(mockChild({ stdout: 'Gemini 3.7 Flash (High)\n' }));
+
+    const result = await freshManager().probeAgyLogin();
+
+    expect(result).toMatchObject({ state: 'logged-in' });
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+    expect(spawnMock.mock.calls[0]?.[1]).toEqual(['models']);
+  });
+
+  it('GREEN EU: falls back to agy models when local OAuth files are unreadable', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    existsSyncMock.mockReturnValue(true);
+    readFileSyncMock.mockImplementation(() => {
+      throw new Error('fixture unreadable');
+    });
+    spawnMock.mockReturnValue(mockChild({ stdout: 'Gemini 3.7 Flash (High)\n' }));
+
+    const result = await freshManager().probeAgyLogin();
+
+    expect(result).toMatchObject({ state: 'logged-in' });
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+    expect(spawnMock.mock.calls[0]?.[1]).toEqual(['models']);
+  });
+
+  it('GREEN EU: accepts an 11-second agy models call under the new 30-second default', async () => {
+    vi.useFakeTimers();
+    try {
+      mockEnvironment({ desktop: false, agy: true });
+      vi.spyOn(AntigravityServerManager, 'getGeminiLoginProbe').mockReturnValue({
+        state: 'logged-out',
+        reason: 'credentials_missing',
+        completionMs: 0,
+      });
+      spawnMock.mockReturnValue(mockChild({
+        stdout: 'Gemini 3.7 Flash (High)\n',
+        closeDelayMs: 11_000,
+      }));
+
+      const resultPromise = freshManager().probeAgyLogin();
+      await vi.runAllTicks();
+      await vi.advanceTimersByTimeAsync(11_000);
+
+      await expect(resultPromise).resolves.toMatchObject({ state: 'logged-in' });
+      expect(spawnMock.mock.calls[0]?.[1]).toEqual(['models']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('GREEN EU: keeps a real timeout unknown when agy models exceeds the new 30-second default', async () => {
+    vi.useFakeTimers();
+    try {
+      mockEnvironment({ desktop: false, agy: true });
+      vi.spyOn(AntigravityServerManager, 'getGeminiLoginProbe').mockReturnValue({
+        state: 'logged-out',
+        reason: 'credentials_missing',
+        completionMs: 0,
+      });
+      const child = mockChild({
+        stdout: 'Gemini 3.7 Flash (High)\n',
+        closeDelayMs: 31_000,
+      });
+      spawnMock.mockReturnValue(child);
+
+      const resultPromise = freshManager().probeAgyLogin();
+      await vi.runAllTicks();
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      await expect(resultPromise).resolves.toMatchObject({
+        state: 'unknown',
+        reason: 'timeout',
+      });
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('GREEN EO: probes login with `agy models` only, never a prompt or effort flag', async () => {
