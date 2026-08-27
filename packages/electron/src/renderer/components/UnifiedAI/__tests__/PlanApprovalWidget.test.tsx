@@ -210,6 +210,23 @@ const modelPickerPlanArguments = {
   ],
 };
 
+const dispatchKnobPlanArguments = {
+  ...planArguments,
+  title: '派发两旋钮',
+  modules: [{
+    title: '执行模块',
+    outputFiles: ['packages/electron/src/main/services/MetaAgentService.ts'],
+    inputs: ['审批卡'],
+    provider: 'openai-codex',
+    model: 'gpt-5.4-mini',
+    effortLevel: 'medium',
+    intent: 'implementation',
+    permissionScope: 'workspace-write',
+    disturbanceLevel: 'on-failure',
+    doneCriteria: '按老板调整后的两项设置派发。',
+  }],
+};
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -483,6 +500,78 @@ describe('PlanApprovalWidget', () => {
         },
       ]);
     });
+  });
+
+  it('green EX-1: renders both controls, keeps Head→owner traces, and submits the owner values', async () => {
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    installModelCatalog();
+    renderWidget(dispatchKnobPlanArguments, { exitPlanModeApprove });
+
+    const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+
+    const permissionScope = screen.getByTestId(
+      'plan-module-permission-scope-select-1',
+    ) as HTMLSelectElement;
+    const disturbanceLevel = screen.getByTestId(
+      'plan-module-disturbance-level-select-1',
+    ) as HTMLSelectElement;
+    expect(permissionScope.value).toBe('workspace-write');
+    expect(disturbanceLevel.value).toBe('on-failure');
+
+    fireEvent.change(permissionScope, { target: { value: 'read-only' } });
+    fireEvent.change(disturbanceLevel, { target: { value: 'on-request' } });
+
+    expect(screen.getByTestId('plan-module-permission-scope-trace-1').textContent)
+      .toContain('Head 建议：只写自己工地 → 当前：只读');
+    expect(screen.getByTestId('plan-module-disturbance-level-trace-1').textContent)
+      .toContain('Head 建议：失败才问 → 当前：高危必问');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    await waitFor(() => {
+      expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
+        expect.objectContaining({
+          moduleIndex: 0,
+          permissionScope: 'read-only',
+          disturbanceLevel: 'on-request',
+        }),
+      ]);
+    });
+  });
+
+  it('green EX-4: Gemini cards show only its supported selector subset and surface the downgrade receipt', async () => {
+    installModelCatalog();
+    renderWidget({
+      ...planArguments,
+      modules: [{
+        ...dispatchKnobPlanArguments.modules[0],
+        title: 'Gemini 模块',
+        provider: 'antigravity-gemini-agent',
+        model: 'gemini-3.7-flash-high',
+        permissionScope: 'danger-full-access',
+        disturbanceLevel: 'on-failure',
+      }],
+    });
+
+    const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+
+    const scopes = Array.from(
+      (screen.getByTestId('plan-module-permission-scope-select-1') as HTMLSelectElement).options,
+      (option) => option.value,
+    );
+    const disturbances = Array.from(
+      (screen.getByTestId('plan-module-disturbance-level-select-1') as HTMLSelectElement).options,
+      (option) => option.value,
+    );
+    expect(scopes).toEqual(['read-only', 'workspace-write']);
+    expect(disturbances).toEqual(['never', 'on-request']);
+    expect(scopes).not.toContain('danger-full-access');
+    expect(disturbances).not.toContain('on-failure');
+    expect(screen.getByTestId('plan-module-dispatch-downgrade-1').textContent)
+      .toContain('Gemini：该引擎不支持“全放开”，按“只写自己工地”执行。');
+    expect(screen.getByTestId('plan-module-dispatch-downgrade-1').textContent)
+      .toContain('Gemini：该引擎不支持“失败才问”，按“高危必问”执行。');
   });
 
   it('green FB-114/115: renders only model controls for Haiku and Gemini, while preserving unknown declared tiers', async () => {

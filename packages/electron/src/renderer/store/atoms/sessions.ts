@@ -249,6 +249,7 @@ export interface DurablePlanApprovalViewState {
   decision?: 'approved' | 'rejected' | 'dismissed';
   feedback?: string;
   moduleIndex?: number;
+  selectedCandidates?: unknown[];
   moduleApprovals?: Array<{
     moduleIndex: number;
     status: 'pending' | 'approved' | 'rejected';

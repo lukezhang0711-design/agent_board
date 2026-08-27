@@ -31,6 +31,7 @@ import {
   ClaudeCodeProvider,
   OpenAICodexProvider,
 } from '@nimbalyst/runtime/ai/server';
+import { readDispatchPermissionResolution } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 import { ClaudeCodeCliProvider } from '@nimbalyst/runtime/ai/server/providers/ClaudeCodeCliProvider';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { parseContextUsageMessage } from '@nimbalyst/runtime/ai/server/utils/contextUsage';
@@ -2582,11 +2583,15 @@ export class AIService {
       fullModel,
       (session.metadata as any)?.effortLevel,
     );
+    const dispatchPermission = readDispatchPermissionResolution(
+      (session.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
+    );
     const config: ProviderConfig = {
       maxTokens: (session.providerConfig as any)?.maxTokens,
       temperature: (session.providerConfig as any)?.temperature,
       ...(apiKey ? { apiKey } : {}),
       ...(effortLevel && { effortLevel }),
+      ...(dispatchPermission ? { dispatchPermission } : {}),
     };
 
     // Omit a missing model and let the native SDK select its own default.
@@ -3868,9 +3873,13 @@ export class AIService {
         : ProviderFactory.createProvider(provider, session.id);
 
       // Build config based on provider type
+      const dispatchPermission = readDispatchPermissionResolution(
+        (session.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
+      );
       const initConfig: any = {
         maxTokens: (session.providerConfig as any)?.maxTokens,
-        temperature: (session.providerConfig as any)?.temperature
+        temperature: (session.providerConfig as any)?.temperature,
+        ...(dispatchPermission ? { dispatchPermission } : {}),
       };
 
       // Claude Code can use a dedicated API key, but must never use anthropic.

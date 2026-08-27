@@ -36,6 +36,7 @@ import {
 import { resolveClaudeCliJsonlPath, shouldResumeClaudeCliSession } from './claudeCliJsonlPath';
 import type { TerminalSessionManager } from '../TerminalSessionManager';
 import type { ClaudeTurnState, ParsedClaudePidFile } from './claudeCliPidState';
+import type { DispatchPermissionResolution } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 
 export interface ClaudeCliSessionLauncherDeps {
   /**
@@ -224,6 +225,8 @@ export interface LaunchClaudeCliSessionInput {
   cwd?: string;
   /** Resolved CLI model value (`--model`), e.g. `opus`. Omit to let the CLI default. */
   model?: string;
+  /** Actual policy resolved from the approved plan card for this session. */
+  dispatchPermission?: DispatchPermissionResolution;
   /** Resume an existing CLI session id (`--resume <id>`). */
   resumeSessionId?: string;
   cols?: number;
@@ -302,8 +305,11 @@ export class ClaudeCliSessionLauncher {
     // otherwise still prompt for Bash/Edit/Write on top of the skip). `ask` / null
     // (untrusted) keep the hook + native gate.
     const permissionMode = this.deps.getPermissionMode?.(workspacePath) ?? null;
+    const dispatchPermission = input.dispatchPermission?.native.claudeCli;
     const dangerouslySkipPermissions =
-      permissionMode === 'allow-all' || permissionMode === 'bypass-all';
+      dispatchPermission
+        ? dispatchPermission.dangerouslySkipPermissions === true
+        : permissionMode === 'allow-all' || permissionMode === 'bypass-all';
 
     // NIM-806 Phase 4 (Direction A): register a PreToolUse permission hook (via
     // --settings) that routes built-in tool prompts to a Nimbalyst widget. The
@@ -399,6 +405,7 @@ export class ClaudeCliSessionLauncher {
       allowedMcpServerNames,
       settingsJson,
       dangerouslySkipPermissions,
+      dispatchPermission: input.dispatchPermission,
       additionalDirectories: input.additionalDirectories,
       pluginDirs,
       systemPromptAppend: input.systemPromptAppend,

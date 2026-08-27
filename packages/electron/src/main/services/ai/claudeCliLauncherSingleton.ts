@@ -22,6 +22,10 @@ import {
   McpConfigService,
   type MetaAgentWorkflowPreset,
 } from '@nimbalyst/runtime/ai/server';
+import {
+  readDispatchPermissionResolution,
+  type DispatchPermissionResolution,
+} from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { AISessionsRepository } from '@nimbalyst/runtime/storage/repositories/AISessionsRepository';
 import { getTerminalSessionManager } from '../TerminalSessionManager';
@@ -234,6 +238,19 @@ async function resolveMetaAgentLaunchConfig(
   }
 }
 
+async function resolveClaudeCliDispatchPermission(
+  sessionId: string,
+): Promise<DispatchPermissionResolution | undefined> {
+  try {
+    const session = await AISessionsRepository.get(sessionId);
+    return readDispatchPermissionResolution(
+      (session?.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
+    );
+  } catch {
+    return undefined;
+  }
+}
+
 export interface EnsureClaudeCliSessionInput {
   sessionId: string;
   workspacePath: string;
@@ -317,6 +334,9 @@ export async function ensureClaudeCliSession(
         input.sessionId,
         input.model,
       );
+      const dispatchPermission = await resolveClaudeCliDispatchPermission(
+        input.sessionId,
+      );
       const launcher = buildLauncher();
       // Pre-authorize the workspace's chat-attachments root so pasted images
       // (stored OUTSIDE the workspace cwd) read without the native CLI permission
@@ -334,6 +354,7 @@ export async function ensureClaudeCliSession(
         cols: input.cols,
         rows: input.rows,
         additionalDirectories,
+        ...(dispatchPermission ? { dispatchPermission } : {}),
         ...metaAgentLaunchConfig,
         onTurnState: (state: ClaudeTurnState, _parsed: unknown, reason: ClaudeTurnStateReason = 'pid-state') => {
           logger.main.info(`[CliQueue] pid-state sessionId=${input.sessionId} state=${state} reason=${reason}`);

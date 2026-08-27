@@ -28,7 +28,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { AntigravityServerManager } from './ServerManager';
+import {
+  AntigravityServerManager,
+  type AgyExecutionOptions,
+} from './ServerManager';
 import { AntigravityUsageMeter } from './UsageMeter';
 import { AntigravityToolLoopProtocol } from './ToolLoopProtocol';
 
@@ -43,6 +46,7 @@ interface SessionState {
   systemPrompt: string;
   tools: BackendOpenAITool[];
   documentContext?: unknown;
+  executionOptions?: AgyExecutionOptions;
   toolLoop: AntigravityToolLoopProtocol;
   abortController: AbortController | null;
 }
@@ -271,6 +275,7 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
       server,
       conversationKey: input.sessionId,
       workspacePath: input.workspacePath,
+      executionOptions: input.dispatchPermission?.native?.gemini,
     });
     return {
       sessionId: input.sessionId,
@@ -279,6 +284,7 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
       systemPrompt: input.systemPrompt ?? '',
       tools: input.tools ?? [],
       documentContext: input.documentContext,
+      executionOptions: input.dispatchPermission?.native?.gemini,
       toolLoop,
       abortController: null,
     };

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildClaudeCliSpawnConfig, resolveClaudeCliModelArg } from '../claudeCliSpawnConfig';
+import { resolveDispatchPermission } from '@nimbalyst/runtime/ai/server';
 
 const CURRENT_STANDARD_SYSTEM_PROMPT = [
   'You are running inside Nimbalyst, a desktop GUI that manages your session. When you need user input, a decision, or disambiguation, call the mcp__nimbalyst-mcp__AskUserQuestion tool (multiple-choice) or the mcp__nimbalyst-mcp__PromptForUserInput tool (richer structured input) — they render as interactive UI elements the user can click. Do not ask questions in plain text.',
@@ -322,6 +323,31 @@ describe('buildClaudeCliSpawnConfig', () => {
     expect(
       buildClaudeCliSpawnConfig({ ...base, dangerouslySkipPermissions: false }).args
     ).not.toContain('--dangerously-skip-permissions');
+  });
+
+  it('green EX-3b: emits Claude CLI’s actual native permission-mode, tools, and deny-list flags', () => {
+    const dispatchPermission = resolveDispatchPermission('claude-code-cli', {
+      permissionScope: 'read-only',
+      disturbanceLevel: 'on-failure',
+    });
+    const cfg = buildClaudeCliSpawnConfig({
+      ...base,
+      dangerouslySkipPermissions: true,
+      dispatchPermission,
+    });
+
+    expect(cfg.args).toContain('--permission-mode');
+    expect(cfg.args[cfg.args.indexOf('--permission-mode') + 1]).toBe('auto');
+    const toolsStart = cfg.args.indexOf('--tools');
+    const toolsEnd = cfg.args.indexOf('--allowedTools');
+    expect(cfg.args.slice(toolsStart + 1, toolsEnd)).toEqual(['Read', 'Glob', 'Grep', 'LS']);
+    const disallowedStart = cfg.args.indexOf('--disallowedTools');
+    const disallowedEnd = cfg.args.indexOf('--append-system-prompt');
+    expect(cfg.args.slice(disallowedStart + 1, disallowedEnd)).toEqual(
+      expect.arrayContaining(['Write', 'Edit', 'Bash']),
+    );
+    // A per-dispatch high-risk policy must override an otherwise trusted workspace.
+    expect(cfg.args).not.toContain('--dangerously-skip-permissions');
   });
 
   it('still denies the built-in AskUserQuestion under --dangerously-skip-permissions (MCP routing kept)', () => {

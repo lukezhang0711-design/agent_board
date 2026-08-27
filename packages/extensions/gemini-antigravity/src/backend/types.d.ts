@@ -79,6 +79,15 @@ declare global {
     systemPrompt?: string;
     /** Optional document context the host wants attached to user turns. */
     documentContext?: unknown;
+    /** Native agy execution policy supplied by the host for this dispatch. */
+    dispatchPermission?: {
+      native?: {
+        gemini?: {
+          mode?: 'plan' | 'accept-edits';
+          dangerouslySkipPermissions?: boolean;
+        };
+      };
+    };
   }
 
   interface ResumeSessionInput {
@@ -90,6 +99,7 @@ declare global {
     documentContext?: unknown;
     /** Prior conversation history to seed the tool loop. */
     history?: BackendHistoryMessage[];
+    dispatchPermission?: CreateSessionInput['dispatchPermission'];
   }
 
   interface SendMessageInput {

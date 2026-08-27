@@ -30,6 +30,7 @@ vi.mock('../codexAppServer/codexAppServerBinary', () => ({
 }));
 
 import { CodexAppServerProtocol } from '../CodexAppServerProtocol';
+import { resolveDispatchPermission } from '../../dispatchPermissionKnobs';
 import type { ProtocolEvent } from '../ProtocolInterface';
 import {
   FakeCodexAppServer,
@@ -116,6 +117,33 @@ describe('CodexAppServerProtocol', () => {
     expect(bin).toBe('/fake/codex');
     expect(args).toEqual(['app-server', '--listen', 'stdio://']);
 
+    protocol.cleanupSession(session);
+  });
+
+  it('green EX-3a: passes the approved knobs as actual Codex app-server thread/start fields', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const dispatchPermission = resolveDispatchPermission('openai-codex', {
+      permissionScope: 'read-only',
+      disturbanceLevel: 'on-failure',
+    });
+    const sessionPromise = protocol.createSession({
+      workspacePath: '/tmp/ws',
+      raw: { dispatchPermission },
+    });
+
+    const initReq = await nextWrittenMatching(child, 'initialize');
+    child.emitLine({
+      id: initReq.id,
+      result: { codexHome: '/fake', platformFamily: 'unix', platformOs: 'macos', userAgent: 'fake/0' },
+    });
+    const startReq = await nextWrittenMatching(child, 'thread/start');
+    expect(startReq.params).toMatchObject({
+      sandbox: 'read-only',
+      approvalPolicy: 'on-failure',
+    });
+    child.emitLine({ id: startReq.id, result: { thread: { id: 'thread-ex-policy' } } });
+
+    const session = await sessionPromise;
     protocol.cleanupSession(session);
   });
 

@@ -23,6 +23,10 @@ export interface AskUserQuestionResponse {
 
 import type { RequestUserInputAnswer } from '../../../../ai/server/providers/shared/requestUserInputTypes';
 import type { EffortLevel } from '../../../../ai/server/effortLevels';
+import type {
+  DispatchDisturbanceLevel,
+  DispatchPermissionScope,
+} from '../../../../ai/server/dispatchPermissionKnobs';
 export type {
   InteractivePromptAvailability,
   InteractivePromptStatusQuery,
@@ -52,6 +56,10 @@ export interface SelectedPlanCandidate {
   model: string;
   /** Omitted when the selected model has no independent effort dimension. */
   effortLevel?: EffortLevel;
+  /** Owner-adjusted per-dispatch native-permission request. */
+  permissionScope?: DispatchPermissionScope;
+  /** Owner-adjusted per-dispatch interruption request. */
+  disturbanceLevel?: DispatchDisturbanceLevel;
 }
 
 export type PlanModuleApprovalStatus = 'pending' | 'approved' | 'rejected';

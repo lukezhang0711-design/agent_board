@@ -141,6 +141,12 @@ export interface AgyParsedResponse {
   conversationId?: string;
 }
 
+/** The complete native permission surface exposed by the installed `agy` CLI. */
+export interface AgyExecutionOptions {
+  mode?: 'plan' | 'accept-edits';
+  dangerouslySkipPermissions?: boolean;
+}
+
 export type GeminiLoginProbeState = 'logged-in' | 'logged-out' | 'unknown';
 
 export interface GeminiLoginProbeResult {
@@ -560,10 +566,19 @@ export class AntigravityServerManager {
    * case latency is ~2x timeoutMs plus one backoff and one respawn cycle.
    */
   async getModelResponse(prompt: string, modelKeyOrEnum: string,
-    timeoutMs = 120_000, conversationKey = 'default', workspacePath?: string): Promise<string> {
+    timeoutMs = 120_000,
+    conversationKey = 'default',
+    workspacePath?: string,
+    executionOptions?: AgyExecutionOptions,
+  ): Promise<string> {
     // MODEL_* is an explicit language-server enum, so keep the legacy desktop
     // path for callers that already resolved a server enum (and for old tests).
     if (modelKeyOrEnum.startsWith('MODEL_')) {
+      if (executionOptions) {
+        throw new AntigravityAgyError(
+          'Gemini desktop protocol does not expose agy permission modes; refusing to silently drop the approved dispatch policy.',
+        );
+      }
       return this.getDesktopModelResponse(prompt, modelKeyOrEnum, timeoutMs);
     }
 
@@ -579,6 +594,7 @@ export class AntigravityServerManager {
         conversationKey,
         workspacePath,
         agyBinary,
+        executionOptions,
       );
     }
     if (!safeExists(AntigravityServerManager.desktopBinaryPath())) {
@@ -586,6 +602,11 @@ export class AntigravityServerManager {
         `Antigravity CLI agy not installed（未安装）；已检查 ` +
         `${AntigravityServerManager.agyPathCandidates().join(', ')}。` +
         '请安装 agy 命令行后重试。',
+      );
+    }
+    if (executionOptions) {
+      throw new AntigravityAgyError(
+        'Gemini agy is unavailable, so its approved native permission mode cannot be applied.',
       );
     }
     return this.getDesktopModelResponse(prompt, modelKeyOrEnum, timeoutMs);
@@ -652,6 +673,7 @@ export class AntigravityServerManager {
     conversationKey: string,
     workspacePath: string | undefined,
     binary: string,
+    executionOptions?: AgyExecutionOptions,
   ): Promise<string> {
     const key = conversationKey || 'default';
     const conversationId = this.agyConversationIds.get(key);
@@ -663,6 +685,12 @@ export class AntigravityServerManager {
       // Explicit user values go straight to the native engine, whose error is
       // more accurate than a stale host-side allow-list.
       args.push('--model', this.resolveAgyModel(modelKey));
+    }
+    if (executionOptions?.mode) {
+      args.push('--mode', executionOptions.mode);
+    }
+    if (executionOptions?.dangerouslySkipPermissions) {
+      args.push('--dangerously-skip-permissions');
     }
     // JSON output keeps the response one-shot while also carrying the
     // conversation id needed for the next turn. No token or auth env is passed.
