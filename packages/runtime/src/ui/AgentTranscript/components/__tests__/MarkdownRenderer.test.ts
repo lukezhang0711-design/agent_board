@@ -24,8 +24,28 @@ describe('resolveTranscriptFilePathFromHref', () => {
     expect(resolveTranscriptFilePathFromHref('https://nimbalyst.com/docs')).toBeNull();
   });
 
-  it('returns null for non-absolute local paths', () => {
-    expect(resolveTranscriptFilePathFromHref('src/ai/prompt.ts')).toBeNull();
+  // A bare path written in prose has always been clickable (the autolink
+  // plugin marks it and the renderer joins it against the session's working
+  // directory). The same path written as a markdown link used to be dead,
+  // which is what made Head-written file links unopenable.
+  it('resolves workspace-relative link targets', () => {
+    expect(resolveTranscriptFilePathFromHref('src/ai/prompt.ts')).toBe('src/ai/prompt.ts');
+    expect(resolveTranscriptFilePathFromHref('./docs/guide.md')).toBe('./docs/guide.md');
+    expect(resolveTranscriptFilePathFromHref('report.sql')).toBe('report.sql');
+    expect(resolveTranscriptFilePathFromHref('src/ai/prompt.ts:42')).toBe('src/ai/prompt.ts');
+  });
+
+  it('decodes a relative target whose segments are percent-encoded', () => {
+    expect(resolveTranscriptFilePathFromHref('%E8%AF%8A%E6%96%AD%E6%8A%A5%E5%91%8A/a.sql')).toBe(
+      '诊断报告/a.sql',
+    );
+  });
+
+  it('still leaves in-document and extension-less link targets alone', () => {
+    expect(resolveTranscriptFilePathFromHref('#section')).toBeNull();
+    expect(resolveTranscriptFilePathFromHref('docs')).toBeNull();
+    expect(resolveTranscriptFilePathFromHref('mailto:someone@example.com')).toBeNull();
+    expect(resolveTranscriptFilePathFromHref('//cdn.example.com/x.js')).toBeNull();
   });
 
   // Claude Code emits markdown links with an `/abs/path/` prefix on

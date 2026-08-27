@@ -292,8 +292,24 @@ function isAbsoluteFilePath(filePath: string): boolean {
 }
 
 /**
+ * A workspace-relative link target: no scheme, and it ends in a file
+ * extension. The extension requirement is what keeps ordinary in-document
+ * links (`docs`, `../`, `#section`) out.
+ */
+function looksLikeRelativeFilePath(filePath: string): boolean {
+  if (!filePath || filePath.startsWith('#')) return false;
+  return /\.[A-Za-z0-9]{1,8}$/.test(filePath);
+}
+
+/**
  * Resolve href to an openable local file path when it looks like a filesystem link.
  * Returns null for non-file/external links.
+ *
+ * Workspace-relative targets resolve too: the caller joins them against the
+ * session's working directory before opening (see `resolveTranscriptClickPath`
+ * in the Electron renderer). Bare paths written in prose have always been
+ * clickable through the autolink plugin, so the same path written as a
+ * markdown link has to behave the same way.
  */
 export function resolveTranscriptFilePathFromHref(href?: string): string | null {
   if (!href) return null;
@@ -336,11 +352,16 @@ export function resolveTranscriptFilePathFromHref(href?: string): string | null 
   // prefix is a Claude Code marker, not a real filesystem segment;
   // strip it so the rest of the renderer routes the link through
   // `workspace:open-file` with the actual on-disk path. Fixes #240.
-  if (cleanedPath.startsWith('/abs/path/')) {
+  const hadAbsolutePathMarker = cleanedPath.startsWith('/abs/path/');
+  if (hadAbsolutePathMarker) {
     cleanedPath = cleanedPath.slice('/abs/path/'.length);
   }
 
-  return isAbsoluteFilePath(cleanedPath) ? cleanedPath : null;
+  if (isAbsoluteFilePath(cleanedPath)) return cleanedPath;
+  // The marker promises an absolute path. A relative remainder means the
+  // link is malformed, not workspace-relative, so it stays rejected.
+  if (hadAbsolutePathMarker) return null;
+  return looksLikeRelativeFilePath(cleanedPath) ? cleanedPath : null;
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
