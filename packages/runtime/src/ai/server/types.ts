@@ -4,6 +4,7 @@
 
 import type { ToolDefinition } from '../tools';
 import type { EffortLevel } from './effortLevels';
+import type { DispatchPermissionResolution } from './dispatchPermissionKnobs';
 import type { ToolResult } from './protocols/ProtocolInterface';
 import { ModelIdentifier } from './ModelIdentifier';
 import type { TranscriptViewMessage } from './transcript/TranscriptProjector';
@@ -367,6 +368,8 @@ export interface ProviderConfig {
   temperature?: number;
   baseUrl?: string;
   allowedTools?: string[];  // List of allowed tool names, ['*'] for all tools
+  /** Per-dispatch engine-native permission mapping, never a global workspace setting. */
+  dispatchPermission?: DispatchPermissionResolution;
   effortLevel?: EffortLevel;  // Engine-reported thinking effort (including ultra when supported)
   responseFormat?: ProviderResponseFormat;  // Response format constraint (extension chat completions)
   skipLogging?: boolean;  // Skip message logging to DB (extension stateless completions)

@@ -357,6 +357,32 @@ describe('agy CLI process boundary', () => {
     ]);
   });
 
+  it('green EX-3c: forwards Gemini’s actual agy mode and permission-skip flags', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    spawnMock.mockReturnValue(mockChild({
+      stdout: JSON.stringify({ result: 'policy applied', conversation_id: 'conv-policy' }),
+    }));
+
+    const manager = freshManager();
+    await expect(manager.getModelResponse(
+      'read the workspace',
+      'gemini-3.6-flash-high',
+      2_000,
+      'session-policy',
+      '/tmp/workspace',
+      { mode: 'plan', dangerouslySkipPermissions: true },
+    )).resolves.toBe('policy applied');
+
+    expect(spawnMock.mock.calls[0][1]).toEqual([
+      '-p', 'read the workspace',
+      '--model', 'gemini-3.6-flash-high',
+      '--mode', 'plan',
+      '--dangerously-skip-permissions',
+      '--output-format', 'json',
+      '--print-timeout', '2s',
+    ]);
+  });
+
   it('continues the same agy conversation on later calls', async () => {
     mockEnvironment({ desktop: false, agy: true });
     spawnMock.mockReturnValueOnce(mockChild({

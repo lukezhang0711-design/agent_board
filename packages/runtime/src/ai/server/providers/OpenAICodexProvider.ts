@@ -792,6 +792,9 @@ export class OpenAICodexProvider extends BaseAgentProvider {
           codexConfigOverrides: this.buildCodexConfigOverrides(mcpServers),
           ...(codexEnv ? { codexEnv } : {}),
           ...(this.config?.effortLevel ? { effortLevel: this.config.effortLevel } : {}),
+          ...(this.config?.dispatchPermission
+            ? { dispatchPermission: this.config.dispatchPermission }
+            : {}),
           ...(additionalDirectories.length > 0 ? { additionalDirectories } : {}),
         },
       } satisfies SessionOptions;

@@ -29,6 +29,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { buildDocumentAttachmentPromptText } from '../providers/codex/documentAttachmentPrompt';
+import { readDispatchPermissionResolution } from '../dispatchPermissionKnobs';
 import { describeCodexConfigError } from './codexConfigError';
 import { isInteractivePromptToolName } from './CodexSDKProtocol';
 import { reverseCodexPatch, type CodexPatchKind } from '../providers/codex/patchReverse';
@@ -750,8 +751,14 @@ export class CodexAppServerProtocol implements AgentProtocol {
    * `buildThreadOptions` so behavior is preserved across transports.
    */
   private buildThreadStartParams(options: SessionOptions): ThreadStartParams {
+    const dispatchPermission = readDispatchPermissionResolution(
+      options.raw?.dispatchPermission,
+    );
     const sandbox: ThreadStartParams['sandbox'] =
-      options.permissionMode === 'bypass-all' ? 'danger-full-access' : 'workspace-write';
+      dispatchPermission?.native.codex?.sandbox
+      ?? (options.permissionMode === 'bypass-all' ? 'danger-full-access' : 'workspace-write');
+    const approvalPolicy: ThreadStartParams['approvalPolicy'] =
+      dispatchPermission?.native.codex?.approvalPolicy ?? 'never';
 
     // Codex owns the per-model reasoning vocabulary. Omit this field when
     // the selected model declares no level instead of inventing a `high`
@@ -790,7 +797,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
       model: options.model ?? null,
       sandbox,
       cwd: options.workspacePath,
-      approvalPolicy: 'never', // Nimbalyst routes approvals via host bindings; we never want codex to block waiting on stdin
+      approvalPolicy,
       ephemeral: false,
       developerInstructions: systemPrompt,
       config,
@@ -816,8 +823,9 @@ export class CodexAppServerProtocol implements AgentProtocol {
   /**
    * Register handlers for codex's server-to-client requests. Each handler
    * delegates to the host bindings (Nimbalyst's permission system, dialog
-   * surface, etc.). Defaults are intentionally permissive to mirror today's
-   * `approvalPolicy: 'never'` behavior in the SDK transport.
+   * surface, etc.). When no host binding exists, fallback responses retain the
+   * legacy behavior; a dispatch-specific approval policy is still sent on
+   * `thread/start` and can cause Codex to call these handlers.
    */
   private wireServerRequestHandlers(client: JsonRpcClient, userInputPause: UserInputPauseState): void {
     const deny: ApprovalResponse = { decision: 'denied' };

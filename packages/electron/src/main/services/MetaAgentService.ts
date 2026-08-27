@@ -3,7 +3,20 @@ import * as fs from 'fs';
 import { BrowserWindow } from 'electron';
 import { randomUUID } from 'crypto';
 import { safeHandle } from '../utils/ipcRegistry';
-import { ClaudeCodeProvider, OpenAICodexProvider, OpenAICodexACPProvider, SessionManager } from '@nimbalyst/runtime/ai/server';
+import {
+  ClaudeCodeProvider,
+  OpenAICodexProvider,
+  OpenAICodexACPProvider,
+  SessionManager,
+} from '@nimbalyst/runtime/ai/server';
+import {
+  isDispatchDisturbanceLevel,
+  isDispatchPermissionScope,
+  readDispatchPermissionResolution,
+  resolveDispatchPermission,
+  type DispatchPermissionKnobs,
+  type DispatchPermissionResolution,
+} from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 import type { AIProviderType } from '@nimbalyst/runtime/ai/server/types';
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
 import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
@@ -377,6 +390,8 @@ interface WorkOrderReceipt {
   startedAt: string;
   endedAt: string;
   outcome: WorkOrderReceiptOutcome;
+  /** The engine-native policy that actually applied to this dispatch. */
+  dispatchPermission?: DispatchPermissionResolution;
 }
 
 interface WorkOrderAttempt extends WorkOrderReceipt {
@@ -700,6 +715,8 @@ interface CreateChildSessionArgs {
   outputFiles?: string[];
   completionCriteria?: WorkOrderCompletionCriteria;
   maxParallelOverride?: number;
+  /** Requested by the approved plan card; translated only after routing resolves. */
+  dispatchPermissionKnobs?: DispatchPermissionKnobs;
 }
 
 interface ModuleRouting {
@@ -711,6 +728,11 @@ interface ModuleRouting {
 interface ModelSelectionOverride {
   original: ModuleRouting;
   approved: ModuleRouting;
+}
+
+interface DispatchPermissionSelectionOverride {
+  original: DispatchPermissionKnobs;
+  approved: DispatchPermissionKnobs;
 }
 
 interface SubmitPlanArgs {
@@ -773,6 +795,8 @@ interface SelectedPlanCandidate {
   provider: string;
   model: string;
   effortLevel?: EffortLevel;
+  permissionScope?: DispatchPermissionKnobs['permissionScope'];
+  disturbanceLevel?: DispatchPermissionKnobs['disturbanceLevel'];
 }
 
 function buildNativeHeadPlanArgs(planSummary: string, planFilePath: string): SubmitPlanArgs {
@@ -913,6 +937,26 @@ function sameModuleRouting(left: ModuleRouting, right: ModuleRouting): boolean {
     && left.effortLevel === right.effortLevel;
 }
 
+function readModuleDispatchPermission(value: unknown): DispatchPermissionKnobs | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  return isDispatchPermissionScope(record.permissionScope)
+    && isDispatchDisturbanceLevel(record.disturbanceLevel)
+    ? {
+        permissionScope: record.permissionScope,
+        disturbanceLevel: record.disturbanceLevel,
+      }
+    : null;
+}
+
+function sameDispatchPermissionKnobs(
+  left: DispatchPermissionKnobs,
+  right: DispatchPermissionKnobs,
+): boolean {
+  return left.permissionScope === right.permissionScope
+    && left.disturbanceLevel === right.disturbanceLevel;
+}
+
 interface SpawnSessionArgs {
   title?: string;
   prompt: string;
@@ -956,6 +1000,10 @@ type InternalCreateChildSessionArgs = CreateChildSessionArgs & {
   notifyParent?: boolean;
   /** Owner-selected card routing retained on the work-order for reconciliation. */
   modelSelectionOverride?: ModelSelectionOverride;
+  /** Owner-selected card knobs retained alongside the original Head suggestion. */
+  dispatchPermissionSelectionOverride?: DispatchPermissionSelectionOverride;
+  /** Resolved after provider routing; persisted and passed to the native adapter. */
+  dispatchPermission?: DispatchPermissionResolution;
 };
 
 interface CreatedChildSessionResult {
@@ -969,6 +1017,7 @@ interface CreatedChildSessionResult {
   createdBySessionId: string;
   queuedInitialPrompt: boolean;
   parentSessionId: string | null;
+  dispatchPermission?: DispatchPermissionResolution;
 }
 
 interface QueuedChildSessionResult {
@@ -983,6 +1032,7 @@ interface QueuedChildSessionResult {
   createdBySessionId: string;
   parentSessionId: string | null;
   message: string;
+  dispatchPermission?: DispatchPermissionResolution;
 }
 
 type ChildDispatchResult = CreatedChildSessionResult | QueuedChildSessionResult;
@@ -2075,6 +2125,7 @@ export class MetaAgentService {
       ?? (modules.length === 1 ? 1 : undefined);
     if (moduleIndex === undefined) return args;
 
+    const module = modules[moduleIndex - 1];
     const selectedCandidate = Array.isArray(planData.selectedCandidates)
       ? planData.selectedCandidates.find((candidate) =>
           candidate
@@ -2082,25 +2133,49 @@ export class MetaAgentService {
           && (candidate as Record<string, unknown>).moduleIndex === moduleIndex - 1,
         )
       : undefined;
-    if (!selectedCandidate) return args;
-
-    const approved = readModuleRouting(selectedCandidate);
-    const original = readModuleRouting(modules[moduleIndex - 1]);
-    if (!approved || !original) {
+    const originalRouting = readModuleRouting(module);
+    const approvedRouting = selectedCandidate
+      ? readModuleRouting(selectedCandidate)
+      : null;
+    if (selectedCandidate && (!approvedRouting || !originalRouting)) {
       throw new Error(
         `Approved routing for module ${moduleIndex} is incomplete; resubmit the plan card before dispatching.`,
       );
     }
 
+    const originalDispatchPermission = readModuleDispatchPermission(module);
+    const approvedDispatchPermission = selectedCandidate
+      ? readModuleDispatchPermission(selectedCandidate)
+      : null;
+    const effectiveRequestedDispatchPermission = approvedDispatchPermission
+      ?? originalDispatchPermission;
+
     return {
       ...args,
       moduleIndex,
-      provider: approved.provider,
-      model: approved.model,
-      effortLevel: approved.effortLevel,
-      ...(sameModuleRouting(original, approved)
-        ? {}
-        : { modelSelectionOverride: { original, approved } }),
+      ...(approvedRouting
+        ? {
+            provider: approvedRouting.provider,
+            model: approvedRouting.model,
+            effortLevel: approvedRouting.effortLevel,
+          }
+        : {}),
+      ...(originalRouting && approvedRouting && !sameModuleRouting(originalRouting, approvedRouting)
+        ? { modelSelectionOverride: { original: originalRouting, approved: approvedRouting } }
+        : {}),
+      ...(effectiveRequestedDispatchPermission
+        ? { dispatchPermissionKnobs: effectiveRequestedDispatchPermission }
+        : {}),
+      ...(originalDispatchPermission
+        && approvedDispatchPermission
+        && !sameDispatchPermissionKnobs(originalDispatchPermission, approvedDispatchPermission)
+        ? {
+            dispatchPermissionSelectionOverride: {
+              original: originalDispatchPermission,
+              approved: approvedDispatchPermission,
+            },
+          }
+        : {}),
     };
   }
 
@@ -2415,6 +2490,14 @@ export class MetaAgentService {
       provider: routing.provider,
       model: routing.model,
       sessionIdOverride: reservedSessionId,
+      ...(args.dispatchPermissionKnobs
+        ? {
+            dispatchPermission: resolveDispatchPermission(
+              routing.provider,
+              args.dispatchPermissionKnobs,
+            ),
+          }
+        : {}),
     };
 
     return this.withDispatchLock(metaSessionId, async () => {
@@ -2493,6 +2576,8 @@ export class MetaAgentService {
         outputFiles: args.outputFiles,
         completionCriteria: args.completionCriteria,
         modelSelectionOverride: args.modelSelectionOverride,
+        dispatchPermissionSelectionOverride: args.dispatchPermissionSelectionOverride,
+        dispatchPermission: args.dispatchPermission,
       },
     );
 
@@ -2530,6 +2615,7 @@ export class MetaAgentService {
         createdBySessionId: metaSessionId,
         parentSessionId: args.parentSessionIdOverride ?? null,
         message: `Dispatch queued at position ${position}; it will start automatically when a Head Agent slot opens.`,
+        ...(args.dispatchPermission ? { dispatchPermission: args.dispatchPermission } : {}),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2538,6 +2624,7 @@ export class MetaAgentService {
         typeof args.model === 'string' ? args.model : null,
         requestedAt,
         'failure',
+        args.dispatchPermission,
       );
       await this.updateWorkOrderStatusBySourceRef(
         sourceRef,
@@ -2706,6 +2793,7 @@ export class MetaAgentService {
             typeof args.model === 'string' ? args.model : null,
             item.requestedAt,
             'failure',
+            args.dispatchPermission,
           );
           await this.dispatchQueueStore.markFailed(item.id, message);
           await this.updateWorkOrderStatusBySourceRef(
@@ -2857,6 +2945,7 @@ export class MetaAgentService {
     model: string | null | undefined,
     startedAt: unknown,
     outcome: WorkOrderReceiptOutcome,
+    dispatchPermission?: DispatchPermissionResolution,
   ): WorkOrderReceipt {
     const endedAt = new Date().toISOString();
     return {
@@ -2865,6 +2954,7 @@ export class MetaAgentService {
       startedAt: normalizeReceiptTimestamp(startedAt, endedAt),
       endedAt,
       outcome,
+      ...(dispatchPermission ? { dispatchPermission } : {}),
     };
   }
 
@@ -2884,6 +2974,7 @@ export class MetaAgentService {
       typeof args.model === 'string' ? args.model : null,
       requestedAt,
       'failure',
+      args.dispatchPermission,
     );
 
     try {
@@ -2923,6 +3014,8 @@ export class MetaAgentService {
             outputFiles: args.outputFiles,
             completionCriteria: args.completionCriteria,
             modelSelectionOverride: args.modelSelectionOverride,
+            dispatchPermissionSelectionOverride: args.dispatchPermissionSelectionOverride,
+            dispatchPermission: args.dispatchPermission,
           },
         );
       }
@@ -3976,6 +4069,8 @@ export class MetaAgentService {
             outputFiles: args.outputFiles,
             completionCriteria: args.completionCriteria,
             modelSelectionOverride: args.modelSelectionOverride,
+            dispatchPermissionSelectionOverride: args.dispatchPermissionSelectionOverride,
+            dispatchPermission: args.dispatchPermission,
           },
         );
       }
@@ -4036,6 +4131,7 @@ export class MetaAgentService {
       createdBySessionId: metaSessionId,
       queuedInitialPrompt: !!initialPrompt,
       parentSessionId: args.parentSessionIdOverride ?? null,
+      ...(args.dispatchPermission ? { dispatchPermission: args.dispatchPermission } : {}),
     };
   }
 
@@ -4534,6 +4630,7 @@ export class MetaAgentService {
                 session.model,
                 session.createdAt,
                 failureReason ? 'failure' : 'success',
+                readDispatchPermissionResolution(sessionMetadata.dispatchPermission),
               ),
             }
           : interruption
@@ -5312,6 +5409,8 @@ export class MetaAgentService {
       outputFiles?: string[];
       completionCriteria?: WorkOrderCompletionCriteria;
       modelSelectionOverride?: ModelSelectionOverride;
+      dispatchPermissionSelectionOverride?: DispatchPermissionSelectionOverride;
+      dispatchPermission?: DispatchPermissionResolution;
     } = {},
   ): Promise<string> {
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
@@ -5359,6 +5458,12 @@ export class MetaAgentService {
         if (options.modelSelectionOverride) {
           data.modelSelectionOverride = options.modelSelectionOverride;
         }
+        if (options.dispatchPermissionSelectionOverride) {
+          data.dispatchPermissionSelectionOverride = options.dispatchPermissionSelectionOverride;
+        }
+        if (options.dispatchPermission) {
+          data.dispatchPermission = options.dispatchPermission;
+        }
         // A retry starts a clean current state. Its previous failure remains in
         // `attempts`; only the current top-level receipt/failure is replaced.
         delete data.failureReason;
@@ -5405,6 +5510,12 @@ export class MetaAgentService {
         ...(options.modelSelectionOverride
           ? { modelSelectionOverride: options.modelSelectionOverride }
           : {}),
+        ...(options.dispatchPermissionSelectionOverride
+          ? { dispatchPermissionSelectionOverride: options.dispatchPermissionSelectionOverride }
+          : {}),
+        ...(options.dispatchPermission
+          ? { dispatchPermission: options.dispatchPermission }
+          : {}),
         attempts: options.receipt
           ? [{
               ...options.receipt,
@@ -5450,7 +5561,7 @@ export class MetaAgentService {
 
   private async applyChildSessionMetadata(
     sessionId: string,
-    args: Pick<InternalCreateChildSessionArgs, 'effortLevel' | 'toolScope' | 'notifyParent' | 'title'>,
+    args: Pick<InternalCreateChildSessionArgs, 'effortLevel' | 'toolScope' | 'notifyParent' | 'title' | 'dispatchPermission'>,
   ): Promise<void> {
     const metadata: Record<string, unknown> = {};
     // Record that this title came from the dispatch call, not from a model. The
@@ -5463,7 +5574,18 @@ export class MetaAgentService {
     if (args.effortLevel) {
       metadata.effortLevel = args.effortLevel;
     }
-    if (args.toolScope === 'read' || args.toolScope === 'write') {
+    if (args.dispatchPermission) {
+      metadata.dispatchPermission = args.dispatchPermission;
+      metadata.toolScope = args.dispatchPermission.effective.permissionScope === 'read-only'
+        ? 'read'
+        : args.dispatchPermission.effective.permissionScope === 'workspace-write'
+          ? 'write'
+          : 'full';
+    } else if (
+      args.toolScope === 'read'
+      || args.toolScope === 'write'
+      || args.toolScope === 'full'
+    ) {
       metadata.toolScope = args.toolScope;
     }
     if (args.notifyParent !== undefined) {

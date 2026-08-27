@@ -15,6 +15,7 @@ import {
   META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV,
   META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
 } from '../../services/McpConfigService';
+import type { DispatchPermissionResolution } from '../../dispatchPermissionKnobs';
 
 type SessionMode = 'planning' | 'agent' | 'auto' | undefined;
 
@@ -47,7 +48,13 @@ export interface BuildSdkOptionsDeps {
     resolveTeamContext: (sessionId?: string) => Promise<string | undefined>;
   };
   sessions: { getSessionId: (sessionId: string) => string | null | undefined };
-  config: { model?: string; apiKey?: string; effortLevel?: string };
+  config: {
+    model?: string;
+    apiKey?: string;
+    effortLevel?: string;
+    allowedTools?: string[];
+    dispatchPermission?: DispatchPermissionResolution;
+  };
   abortController: AbortController;
 }
 
@@ -206,6 +213,17 @@ export async function buildSdkOptions(
   const resolvedBinaryPath = await resolveClaudeAgentCliPath(enhancedPath).catch(() => undefined);
   const customPath = ClaudeCodeDeps.customClaudeCodePathLoader?.(workspacePath) || '';
   const effectivePath = customPath || resolvedBinaryPath;
+  const dispatchPermission = config.dispatchPermission?.native.claudeSdk;
+  const dispatchDisallowedTools = dispatchPermission?.disallowedTools ?? [];
+  const metaAgentDisallowedTools = isMetaAgent ? ['Agent', 'Task'] : [];
+  const disallowedTools = [...new Set([
+    ...metaAgentDisallowedTools,
+    ...dispatchDisallowedTools,
+  ])];
+  const allowedTools = [...new Set([
+    ...(config.allowedTools ?? []),
+    ...(dispatchPermission?.allowedTools ?? []),
+  ])];
   // console.log(`[CLAUDE-CODE] Binary path: custom=${customPath || '(none)'} resolved=${resolvedBinaryPath ?? '(none)'} effective=${effectivePath ?? '(none)'}`);
 
   const options: any = {
@@ -238,7 +256,12 @@ export async function buildSdkOptions(
     // Because escalation still hits `canUseTool`, Nimbalyst's workspace rules
     // (allow-all / bypass-all in immediateToolDecision.ts) continue to apply on
     // the escalation path.
-    permissionMode: resolvePermissionMode(currentMode),
+    permissionMode: dispatchPermission?.permissionMode ?? resolvePermissionMode(currentMode),
+    ...(dispatchPermission?.tools ? { tools: dispatchPermission.tools } : {}),
+    ...(allowedTools.length > 0 ? { allowedTools } : {}),
+    ...(dispatchPermission?.allowDangerouslySkipPermissions
+      ? { allowDangerouslySkipPermissions: true }
+      : {}),
     // When plan tracking is enabled, direct plan files to the project's plans folder
     // (relative to cwd). This applies whenever the agent enters plan mode, even mid-session.
     settings: {
@@ -261,7 +284,7 @@ export async function buildSdkOptions(
     // Head may write its own coordination documents. Product implementation is
     // still delegated by the system prompt and work-order provenance gate.
     // Native delegation must pass through Nimbalyst's create_session MCP tool.
-    ...(isMetaAgent ? { disallowedTools: ['Agent', 'Task'] } : {}),
+    ...(disallowedTools.length > 0 ? { disallowedTools } : {}),
   };
 
   if (currentMode === 'planning') {

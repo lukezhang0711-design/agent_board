@@ -24,6 +24,7 @@ import {
   type AIProvider,
   type SessionManager,
 } from '@nimbalyst/runtime/ai/server';
+import { readDispatchPermissionResolution } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 import {
   type Message,
   type AIProviderType,
@@ -736,6 +737,9 @@ export class MessageStreamingHandler {
             (session.metadata as any)?.effortLevel,
           )
         : undefined;
+      const dispatchPermission = readDispatchPermissionResolution(
+        (session.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
+      );
       const reinitConfig: any = {
         apiKey,
         maxTokens: (session.providerConfig as any)?.maxTokens,
@@ -743,6 +747,7 @@ export class MessageStreamingHandler {
         // Codex receives only a declared level; Claude forwards its raw
         // effort value and Gemini receives no independent effort parameter.
         ...(reinitEffortLevel && { effortLevel: reinitEffortLevel }),
+        ...(dispatchPermission ? { dispatchPermission } : {}),
       };
 
       // Add baseUrl for LMStudio
@@ -1353,11 +1358,15 @@ export class MessageStreamingHandler {
               (session.metadata as any)?.effortLevel,
             )
           : undefined;
+        const dispatchPermission = readDispatchPermissionResolution(
+          (session.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
+        );
         const turnConfig: ProviderConfig = {
           apiKey: freshApiKey,
           maxTokens: (session.providerConfig as any)?.maxTokens,
           temperature: (session.providerConfig as any)?.temperature,
           ...(turnEffortLevel && { effortLevel: turnEffortLevel }),
+          ...(dispatchPermission ? { dispatchPermission } : {}),
         };
         if (this.isRuntimeDynamicCatalogProvider(session.provider)) {
           const fullModel = session.model || session.providerConfig?.model;

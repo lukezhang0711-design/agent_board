@@ -22,6 +22,7 @@ import {
   META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV,
   META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
 } from '@nimbalyst/runtime/ai/server';
+import type { DispatchPermissionResolution } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 
 /**
  * Resolve only the host's provider namespace before passing a selected value to
@@ -96,6 +97,8 @@ export interface ClaudeCliSpawnInput {
    * permission skip). Defaults to the gated path when unset/false.
    */
   dangerouslySkipPermissions?: boolean;
+  /** Per-dispatch native policy; takes precedence over workspace-wide trust. */
+  dispatchPermission?: DispatchPermissionResolution;
   /**
    * Extra directories to pre-authorize for the CLI's file tools via `--add-dir`
    * (NIM-806 — input integration). Pasted chat attachments are written OUTSIDE
@@ -260,11 +263,19 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
     // `--resume` are mutually exclusive.
     args.push('--session-id', input.sessionId);
   }
+  const dispatchPermission = input.dispatchPermission?.native.claudeCli;
+  if (dispatchPermission?.permissionMode) {
+    args.push('--permission-mode', dispatchPermission.permissionMode);
+  }
   // Trusted "allow-all"/"bypass-all" workspaces skip the gate entirely via the
   // genuine CLI's own flag (NIM-806 Phase 4). Value-less boolean, safe before the
   // variadics. The launcher never sets this together with `settingsJson` (the hook
   // would prompt on top of the skip), but they're independent here for safety.
-  if (input.dangerouslySkipPermissions) {
+  if (
+    dispatchPermission
+      ? dispatchPermission.dangerouslySkipPermissions === true
+      : input.dangerouslySkipPermissions
+  ) {
     args.push('--dangerously-skip-permissions');
   }
   // Register the PreToolUse permission hook via --settings so built-in tool
@@ -299,6 +310,11 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
   for (const dir of pluginDirs) {
     args.push('--plugin-dir', dir);
   }
+  // `--tools` is Claude CLI's real tool-availability list. It is distinct from
+  // `--allowedTools`, which only pre-approves tools that remain available.
+  if (dispatchPermission?.tools && dispatchPermission.tools.length > 0) {
+    args.push('--tools', ...dispatchPermission.tools);
+  }
   // Pre-allow our trusted Nimbalyst MCP servers at the server level so the genuine
   // CLI doesn't double-prompt (its built-in TUI permission gate) on top of the
   // durable-prompt widget we render (NIM-806 BUG 2). Server-level `mcp__<server>`
@@ -313,8 +329,12 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
   const allowedServerEntries = (input.allowedMcpServerNames ?? [])
     .filter((name) => typeof name === 'string' && name.length > 0)
     .map((name) => `mcp__${name}`);
-  if (allowedServerEntries.length > 0) {
-    args.push('--allowedTools', ...allowedServerEntries);
+  const allowedTools = [...new Set([
+    ...allowedServerEntries,
+    ...(dispatchPermission?.allowedTools ?? []),
+  ])];
+  if (allowedTools.length > 0) {
+    args.push('--allowedTools', ...allowedTools);
   }
   // Force the model off the built-in TUI AskUserQuestion and onto our MCP tool.
   // Head sessions also cannot use Claude's private subagent channel.
@@ -322,6 +342,7 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
     '--disallowedTools',
     ...CLAUDE_CLI_DISALLOWED_TOOLS,
     ...(input.isMetaAgent ? CLAUDE_CLI_META_AGENT_DISALLOWED_TOOLS : []),
+    ...(dispatchPermission?.disallowedTools ?? []),
   );
   const systemPromptAppend = input.systemPromptAppend
     ? `${CLAUDE_CLI_SYSTEM_PROMPT_APPEND}\n\n${input.systemPromptAppend}`

@@ -135,6 +135,17 @@ let resolveActiveWorkspace: WorkspaceResolver = () => null;
  */
 const inFlightStarts = new Map<string, Promise<ModuleHandle>>();
 
+/** Per-session provider config is handed to initialize before streaming. */
+const sessionProviderConfigs = new Map<string, ProviderConfig>();
+
+function providerSessionKey(
+  extensionId: string,
+  contributionId: string,
+  sessionId: string,
+): string {
+  return `${extensionId}/${contributionId}/${sessionId}`;
+}
+
 function startKey(extensionId: string, contributionId: string, workspacePath: string): string {
   return `${extensionId}/${contributionId}::${workspacePath}`;
 }
@@ -314,6 +325,10 @@ const bridge: ExtensionAgentBridge = {
   async initialize(args) {
     const entry = requireEntry(args.extensionId, args.contributionId);
     const workspacePath = resolveWorkspacePath();
+    sessionProviderConfigs.set(
+      providerSessionKey(args.extensionId, args.contributionId, args.sessionId),
+      args.config,
+    );
     await ensureModuleStarted(entry, workspacePath);
     // After start, dispatch the optional initialize RPC if the module
     // exposes one. We treat absence as success -- many modules will only
@@ -346,6 +361,9 @@ const bridge: ExtensionAgentBridge = {
       const workspacePath = resolveWorkspacePath(args.workspacePath);
       await ensureModuleStarted(entry, workspacePath);
       const { backendModuleId } = findBackendModule(entry);
+      const dispatchPermission = sessionProviderConfigs.get(
+        providerSessionKey(args.extensionId, args.contributionId, args.sessionId),
+      )?.dispatchPermission;
 
       // Ensure the backend session exists before streaming the turn. The
       // backend's sendMessage throws "session is not created" otherwise.
@@ -367,6 +385,7 @@ const bridge: ExtensionAgentBridge = {
           model: args.model,
           tools: args.tools,
           systemPrompt: args.systemPrompt,
+          ...(dispatchPermission ? { dispatchPermission } : {}),
         },
         requiredPermission: null,
       });
@@ -504,6 +523,9 @@ const bridge: ExtensionAgentBridge = {
     // already removed listeners; here we only cancel any lingering stream
     // and fire a best-effort 'destroy' RPC.
     const cancel = activeStreams.get(streamKey(args));
+    sessionProviderConfigs.delete(
+      providerSessionKey(args.extensionId, args.contributionId, args.sessionId),
+    );
     if (cancel) {
       try {
         cancel();

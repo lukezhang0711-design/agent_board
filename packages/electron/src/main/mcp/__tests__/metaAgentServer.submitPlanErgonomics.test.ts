@@ -140,6 +140,9 @@ describe('submit_plan ergonomics', () => {
             description: expect.stringContaining('list_models catalog id'),
           }),
           effortLevel: { type: 'string', minLength: 1 },
+          intent: { type: 'string' },
+          permissionScope: { type: 'string' },
+          disturbanceLevel: { type: 'string' },
           doneCriteria: { type: 'string' },
           candidates: {
             type: 'array',
@@ -191,14 +194,40 @@ describe('submit_plan ergonomics', () => {
     };
 
     const result = await callSubmitPlan(args);
-    expect(JSON.parse(result)).toEqual({
+    expect(JSON.parse(result)).toMatchObject({
       ...args,
       workOrderCount: 1,
+      modules: [{
+        ...args.modules[0],
+        intent: 'implementation',
+        permissionScope: 'workspace-write',
+        disturbanceLevel: 'on-failure',
+        candidates: [{
+          ...args.modules[0].candidates[0],
+          intent: 'implementation',
+          permissionScope: 'workspace-write',
+          disturbanceLevel: 'on-failure',
+        }],
+      }],
     });
-    expect(submitPlan).toHaveBeenCalledWith('head-session', '/workspace', {
-      ...args,
+    expect(submitPlan).toHaveBeenCalledWith('head-session', '/workspace', expect.objectContaining({
+      title: args.title,
+      planItems: args.planItems,
+      risks: args.risks,
       workOrderCount: 1,
-    });
+      modules: [expect.objectContaining({
+        ...args.modules[0],
+        intent: 'implementation',
+        permissionScope: 'workspace-write',
+        disturbanceLevel: 'on-failure',
+        candidates: [expect.objectContaining({
+          ...args.modules[0].candidates[0],
+          intent: 'implementation',
+          permissionScope: 'workspace-write',
+          disturbanceLevel: 'on-failure',
+        })],
+      })],
+    }));
   });
 
   it('normalizes structured fields with the same tolerant string handling as legacy fields', () => {
@@ -237,6 +266,9 @@ describe('submit_plan ergonomics', () => {
         provider: 'openai-codex',
         model: 'gpt-5.4-mini',
         effortLevel: 'medium',
+        intent: 'implementation',
+        permissionScope: 'workspace-write',
+        disturbanceLevel: 'on-failure',
         doneCriteria: 'Result exists.',
         candidates: [{
           name: 'A',
@@ -247,9 +279,63 @@ describe('submit_plan ergonomics', () => {
           provider: 'openai-codex',
           model: 'gpt-5.4-mini',
           effortLevel: 'low',
+          intent: 'implementation',
+          permissionScope: 'workspace-write',
+          disturbanceLevel: 'on-failure',
         }],
       }],
     });
+  });
+
+  it('green EX-2: defaults omitted knobs by worker role for modules and candidates', () => {
+    const modules = normalizeSubmitPlanArgs({
+      title: 'Role-specific defaults',
+      planItems: ['Dispatch one investigator and one implementer'],
+      risks: [],
+      modules: [{
+        title: 'Implement',
+        outputFiles: ['src/implement.ts'],
+        inputs: ['brief'],
+        provider: 'openai-codex',
+        model: 'gpt-5.4-mini',
+        doneCriteria: 'Implementation is ready.',
+      }, {
+        title: 'Investigate',
+        outputFiles: ['report.md'],
+        inputs: ['brief'],
+        provider: 'claude-code',
+        model: 'haiku',
+        intent: 'investigation',
+        doneCriteria: 'Report is ready.',
+        candidates: [{
+          name: 'Read-only path',
+          approach: 'Inspect without mutation.',
+          pros: ['No writes'],
+          cons: ['Cannot patch'],
+          risks: ['May need a follow-up'],
+          provider: 'claude-code',
+          model: 'haiku',
+        }],
+      }],
+    }).modules;
+
+    expect(modules).toEqual([
+      expect.objectContaining({
+        intent: 'implementation',
+        permissionScope: 'workspace-write',
+        disturbanceLevel: 'on-failure',
+      }),
+      expect.objectContaining({
+        intent: 'investigation',
+        permissionScope: 'read-only',
+        disturbanceLevel: 'never',
+        candidates: [expect.objectContaining({
+          intent: 'investigation',
+          permissionScope: 'read-only',
+          disturbanceLevel: 'never',
+        })],
+      }),
+    ]);
   });
 
   it('green ET-1c: preserves the exact submitted model only for downstream validation feedback', () => {

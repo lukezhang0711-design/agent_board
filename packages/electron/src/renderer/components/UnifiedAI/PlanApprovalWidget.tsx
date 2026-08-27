@@ -21,6 +21,18 @@ import {
 } from '@nimbalyst/runtime/ui/AgentTranscript/contributions';
 import type { TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/transcript/TranscriptProjector';
 import {
+  getDefaultDispatchPermissionKnobs,
+  getDispatchDisturbanceLevelLabel,
+  getDispatchPermissionCapabilities,
+  getDispatchPermissionScopeLabel,
+  isDispatchDisturbanceLevel,
+  isDispatchPermissionScope,
+  resolveDispatchPermission,
+  type DispatchDisturbanceLevel,
+  type DispatchPermissionKnobs,
+  type DispatchPermissionScope,
+} from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
+import {
   planApprovalStateAtom,
   refreshPlanApprovalStateAtom,
 } from '../../store/atoms/sessions';
@@ -49,7 +61,12 @@ interface RenderCandidate {
   provider: string;
   model: string;
   effortLevel?: SelectedPlanCandidate['effortLevel'];
+  intent: PlanWorkerIntent;
+  permissionScope?: DispatchPermissionScope;
+  disturbanceLevel?: DispatchDisturbanceLevel;
 }
+
+type PlanWorkerIntent = 'investigation' | 'implementation';
 
 interface RenderModule {
   title: string;
@@ -59,6 +76,9 @@ interface RenderModule {
   model: string;
   modelCatalogPending: boolean;
   effortLevel: SelectedPlanCandidate['effortLevel'] | '';
+  intent: PlanWorkerIntent;
+  permissionScope?: DispatchPermissionScope;
+  disturbanceLevel?: DispatchDisturbanceLevel;
   doneCriteria: string;
   candidates: RenderCandidate[];
 }
@@ -92,6 +112,37 @@ interface ResolvedModuleRoute {
   provider: string;
   model: string;
   effortLevel?: PlanEffortLevel;
+}
+
+interface ModuleDispatchSelection {
+  permissionScope: DispatchPermissionScope;
+  disturbanceLevel: DispatchDisturbanceLevel;
+}
+
+function parseDurableDispatchSelections(
+  value: unknown,
+): Record<number, ModuleDispatchSelection> {
+  if (!Array.isArray(value)) return {};
+  return value.reduce<Record<number, ModuleDispatchSelection>>((selections, candidate) => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      return selections;
+    }
+    const record = candidate as Record<string, unknown>;
+    if (
+      typeof record.moduleIndex !== 'number'
+      || !Number.isInteger(record.moduleIndex)
+      || record.moduleIndex < 0
+      || !isDispatchPermissionScope(record.permissionScope)
+      || !isDispatchDisturbanceLevel(record.disturbanceLevel)
+    ) {
+      return selections;
+    }
+    selections[record.moduleIndex] = {
+      permissionScope: record.permissionScope,
+      disturbanceLevel: record.disturbanceLevel,
+    };
+    return selections;
+  }, {});
 }
 
 type RenderModuleApprovalStatus = PlanModuleApproval['status'];
@@ -147,6 +198,37 @@ function getOptionalEffortLevel(
   return getDisplayString(value, '') as SelectedPlanCandidate['effortLevel'] | '';
 }
 
+function getPlanWorkerIntent(
+  value: unknown,
+  fallback: PlanWorkerIntent = 'implementation',
+): PlanWorkerIntent {
+  return value === 'investigation' || value === 'implementation'
+    ? value
+    : fallback;
+}
+
+function getOptionalPermissionScope(
+  value: unknown,
+): DispatchPermissionScope | undefined {
+  return isDispatchPermissionScope(value) ? value : undefined;
+}
+
+function getOptionalDisturbanceLevel(
+  value: unknown,
+): DispatchDisturbanceLevel | undefined {
+  return isDispatchDisturbanceLevel(value) ? value : undefined;
+}
+
+function getSuggestedDispatchPermission(
+  module: Pick<RenderModule, 'intent' | 'permissionScope' | 'disturbanceLevel'>,
+): DispatchPermissionKnobs {
+  const defaults = getDefaultDispatchPermissionKnobs(module.intent);
+  return {
+    permissionScope: module.permissionScope ?? defaults.permissionScope,
+    disturbanceLevel: module.disturbanceLevel ?? defaults.disturbanceLevel,
+  };
+}
+
 function parsePlanModules(value: unknown): RenderModule[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -154,35 +236,52 @@ function parsePlanModules(value: unknown): RenderModule[] {
       (value): value is Record<string, unknown> =>
         !!value && typeof value === 'object',
     )
-    .map((module, moduleIndex) => ({
-      title: getDisplayString(module.title, `模块 ${moduleIndex + 1}`),
-      outputFiles: getDisplayStringList(module.outputFiles),
-      inputs: getDisplayStringList(module.inputs),
-      provider: getDisplayString(module.provider),
-      model: getDisplayString(module.model, ''),
-      modelCatalogPending: module.modelCatalogPending === true,
-      effortLevel: getOptionalEffortLevel(module.effortLevel),
-      doneCriteria: getDisplayString(module.doneCriteria),
-      candidates: Array.isArray(module.candidates)
-        ? module.candidates
-            .filter(
-              (candidate): candidate is Record<string, unknown> =>
-                !!candidate && typeof candidate === 'object',
-            )
-            .map((candidate) => ({
-              name: getDisplayString(candidate.name, '未命名方案'),
-              approach: getDisplayString(candidate.approach),
-              pros: getStructuredText(candidate.pros),
-              cons: getStructuredText(candidate.cons),
-              risks: getStructuredText(candidate.risks),
-              provider: getDisplayString(candidate.provider),
-              model: getDisplayString(candidate.model),
-              ...(getEffortLevel(candidate.effortLevel)
-                ? { effortLevel: getEffortLevel(candidate.effortLevel) }
-                : {}),
-            }))
-        : [],
-    }));
+    .map((module, moduleIndex) => {
+      const intent = getPlanWorkerIntent(module.intent);
+      return {
+        title: getDisplayString(module.title, `模块 ${moduleIndex + 1}`),
+        outputFiles: getDisplayStringList(module.outputFiles),
+        inputs: getDisplayStringList(module.inputs),
+        provider: getDisplayString(module.provider),
+        model: getDisplayString(module.model, ''),
+        modelCatalogPending: module.modelCatalogPending === true,
+        effortLevel: getOptionalEffortLevel(module.effortLevel),
+        intent,
+        ...(getOptionalPermissionScope(module.permissionScope)
+          ? { permissionScope: getOptionalPermissionScope(module.permissionScope) }
+          : {}),
+        ...(getOptionalDisturbanceLevel(module.disturbanceLevel)
+          ? { disturbanceLevel: getOptionalDisturbanceLevel(module.disturbanceLevel) }
+          : {}),
+        doneCriteria: getDisplayString(module.doneCriteria),
+        candidates: Array.isArray(module.candidates)
+          ? module.candidates
+              .filter(
+                (candidate): candidate is Record<string, unknown> =>
+                  !!candidate && typeof candidate === 'object',
+              )
+              .map((candidate) => ({
+                name: getDisplayString(candidate.name, '未命名方案'),
+                approach: getDisplayString(candidate.approach),
+                pros: getStructuredText(candidate.pros),
+                cons: getStructuredText(candidate.cons),
+                risks: getStructuredText(candidate.risks),
+                provider: getDisplayString(candidate.provider),
+                model: getDisplayString(candidate.model),
+                intent: getPlanWorkerIntent(candidate.intent, intent),
+                ...(getEffortLevel(candidate.effortLevel)
+                  ? { effortLevel: getEffortLevel(candidate.effortLevel) }
+                  : {}),
+                ...(getOptionalPermissionScope(candidate.permissionScope)
+                  ? { permissionScope: getOptionalPermissionScope(candidate.permissionScope) }
+                  : {}),
+                ...(getOptionalDisturbanceLevel(candidate.disturbanceLevel)
+                  ? { disturbanceLevel: getOptionalDisturbanceLevel(candidate.disturbanceLevel) }
+                  : {}),
+              }))
+          : [],
+      };
+    });
 }
 
 function parseModuleApprovals(value: unknown): RenderModuleApproval[] {
@@ -436,6 +535,24 @@ const SubmittedPlanApprovalCard: React.FC<{
   const [moduleRouteSelections, setModuleRouteSelections] = useState<
     Record<number, ModuleRouteSelection>
   >({});
+  const [moduleDispatchSelections, setModuleDispatchSelections] = useState<
+    Record<number, ModuleDispatchSelection>
+  >({});
+  const approvalStateKey = useMemo(
+    () => ({
+      sessionId,
+      promptId: requestId ?? '',
+    }),
+    [requestId, sessionId],
+  );
+  const durableState = useAtomValue(planApprovalStateAtom(approvalStateKey));
+  const refreshPlanApprovalState = useSetAtom(refreshPlanApprovalStateAtom);
+  const durableDispatchSelections = useMemo(
+    () => durableState?.decision === 'approved'
+      ? parseDurableDispatchSelections(durableState.selectedCandidates)
+      : {},
+    [durableState?.decision, durableState?.selectedCandidates],
+  );
 
   useEffect(() => {
     let disposed = false;
@@ -494,6 +611,16 @@ const SubmittedPlanApprovalCard: React.FC<{
   const hasUnavailableModuleRoute =
     modules.length > 0
     && (modelCatalog.status !== 'ready' || moduleRoutes.some((route) => !route));
+  const moduleDispatchPermissions = useMemo(
+    () => modules.map((module, moduleIndex) => {
+      const selected = moduleDispatchSelections[moduleIndex]
+        ?? durableDispatchSelections[moduleIndex];
+      const requested: DispatchPermissionKnobs = selected ?? getSuggestedDispatchPermission(module);
+      const provider = moduleRoutes[moduleIndex]?.provider ?? module.provider;
+      return resolveDispatchPermission(provider, requested);
+    }),
+    [durableDispatchSelections, moduleDispatchSelections, moduleRoutes, modules],
+  );
   const selectedCandidates = useMemo<SelectedPlanCandidate[]>(
     () =>
       modules.flatMap((module, moduleIndex) => {
@@ -503,7 +630,15 @@ const SubmittedPlanApprovalCard: React.FC<{
         const candidate = selectedName
           ? module.candidates.find((item) => item.name === selectedName)
           : undefined;
-        if (!candidate && isSameModuleRoute(module, route)) return [];
+        const dispatch = moduleDispatchPermissions[moduleIndex];
+        const hasDispatchSelection = moduleDispatchSelections[moduleIndex] !== undefined
+          || durableDispatchSelections[moduleIndex] !== undefined;
+        const shouldIncludeDispatch = hasDispatchSelection
+          || candidate?.permissionScope !== undefined
+          || candidate?.disturbanceLevel !== undefined
+          || module.permissionScope !== undefined
+          || module.disturbanceLevel !== undefined;
+        if (!candidate && isSameModuleRoute(module, route) && !hasDispatchSelection) return [];
         // The route is the capability-checked source of truth. In particular,
         // a candidate may carry a historical effort string for a model (such
         // as Haiku) that declares no independent effort dimension.
@@ -530,10 +665,26 @@ const SubmittedPlanApprovalCard: React.FC<{
             provider: route.provider,
             model: route.model,
             ...(route.effortLevel ? { effortLevel: route.effortLevel } : {}),
+            ...(dispatch && shouldIncludeDispatch
+              ? {
+                  // Keep the owner-selected product request durable. The
+                  // dispatch service resolves it again after final routing so
+                  // its receipt can truthfully retain any engine downgrade.
+                  permissionScope: dispatch.requested.permissionScope,
+                  disturbanceLevel: dispatch.requested.disturbanceLevel,
+                }
+              : {}),
           },
         ];
       }),
-    [moduleRoutes, modules, selectedCandidateNames],
+    [
+      moduleDispatchPermissions,
+      moduleDispatchSelections,
+      durableDispatchSelections,
+      moduleRoutes,
+      modules,
+      selectedCandidateNames,
+    ],
   );
   const toolResult = toolCall.result ?? '';
   const autoApproved = useMemo(() => {
@@ -552,15 +703,6 @@ const SubmittedPlanApprovalCard: React.FC<{
     getInteractivePromptStatus ? 'checking' : host ? 'available' : 'checking',
   );
   const effectiveWorkspacePath = workspacePath || host?.workspacePath;
-  const approvalStateKey = useMemo(
-    () => ({
-      sessionId,
-      promptId: requestId ?? '',
-    }),
-    [requestId, sessionId],
-  );
-  const durableState = useAtomValue(planApprovalStateAtom(approvalStateKey));
-  const refreshPlanApprovalState = useSetAtom(refreshPlanApprovalStateAtom);
   const [moduleApprovalOverrides, setModuleApprovalOverrides] = useState<
     Record<number, RenderModuleApproval>
   >({});
@@ -858,6 +1000,38 @@ const SubmittedPlanApprovalCard: React.FC<{
     [catalogModelsById, moduleRoutes],
   );
 
+  const handleModulePermissionScopeChange = useCallback(
+    (moduleIndex: number, permissionScope: string) => {
+      if (!isDispatchPermissionScope(permissionScope)) return;
+      const current = moduleDispatchPermissions[moduleIndex];
+      if (!current) return;
+      setModuleDispatchSelections((selections) => ({
+        ...selections,
+        [moduleIndex]: {
+          permissionScope,
+          disturbanceLevel: current.effective.disturbanceLevel,
+        },
+      }));
+    },
+    [moduleDispatchPermissions],
+  );
+
+  const handleModuleDisturbanceLevelChange = useCallback(
+    (moduleIndex: number, disturbanceLevel: string) => {
+      if (!isDispatchDisturbanceLevel(disturbanceLevel)) return;
+      const current = moduleDispatchPermissions[moduleIndex];
+      if (!current) return;
+      setModuleDispatchSelections((selections) => ({
+        ...selections,
+        [moduleIndex]: {
+          permissionScope: current.effective.permissionScope,
+          disturbanceLevel,
+        },
+      }));
+    },
+    [moduleDispatchPermissions],
+  );
+
   const handleCandidateSelection = useCallback(
     (moduleIndex: number, candidate: RenderCandidate) => {
       setSelectedCandidateNames((current) => ({
@@ -877,6 +1051,23 @@ const SubmittedPlanApprovalCard: React.FC<{
           ...(effortLevel ? { effortLevel } : {}),
         },
       }));
+      if (
+        candidate.permissionScope !== undefined
+        || candidate.disturbanceLevel !== undefined
+      ) {
+        const defaults = getDefaultDispatchPermissionKnobs(candidate.intent);
+        const requested: DispatchPermissionKnobs = {
+          permissionScope: candidate.permissionScope ?? defaults.permissionScope,
+          disturbanceLevel: candidate.disturbanceLevel ?? defaults.disturbanceLevel,
+        };
+        setModuleDispatchSelections((current) => ({
+          ...current,
+          // Preserve a candidate's original request even when its engine
+          // cannot express it. The visible select renders the effective
+          // supported value; the durable receipt records the downgrade.
+          [moduleIndex]: requested,
+        }));
+      }
     },
     [catalogModelsById],
   );
@@ -1151,6 +1342,17 @@ const SubmittedPlanApprovalCard: React.FC<{
               const routeModel = moduleRoute
                 ? catalogModelsById.get(moduleRoute.model)
                 : undefined;
+              const dispatchPermission = moduleDispatchPermissions[moduleIndex];
+              const dispatchCapabilities = getDispatchPermissionCapabilities(
+                moduleRoute?.provider ?? module.provider,
+              );
+              const suggestedDispatchPermission = getSuggestedDispatchPermission(module);
+              const permissionScopeChanged = dispatchPermission
+                && suggestedDispatchPermission.permissionScope
+                  !== dispatchPermission.effective.permissionScope;
+              const disturbanceLevelChanged = dispatchPermission
+                && suggestedDispatchPermission.disturbanceLevel
+                  !== dispatchPermission.effective.disturbanceLevel;
               const isModuleRejected = moduleApproval.status === 'rejected';
               const isModuleFeedbackOpen =
                 activeFeedbackModuleIndex === stableModuleIndex;
@@ -1305,6 +1507,116 @@ const SubmittedPlanApprovalCard: React.FC<{
                         </dd>
                       </div>
                     )}
+                    <div
+                      data-testid={`plan-module-permission-scope-field-${stableModuleIndex}`}
+                      className="plan-module-permission-scope-field min-w-0"
+                    >
+                      <dt className="text-xs font-semibold text-nim-muted">
+                        权限范围
+                      </dt>
+                      <dd className="mt-1 min-w-0">
+                        <select
+                          data-testid={`plan-module-permission-scope-select-${stableModuleIndex}`}
+                          aria-label={`${module.title} 权限范围`}
+                          value={
+                            dispatchPermission
+                            && dispatchCapabilities.permissionScopes.includes(
+                              dispatchPermission.effective.permissionScope,
+                            )
+                              ? dispatchPermission.effective.permissionScope
+                              : ''
+                          }
+                          onChange={(event) =>
+                            handleModulePermissionScopeChange(
+                              moduleIndex,
+                              event.target.value,
+                            )
+                          }
+                          disabled={
+                            isSubmitting
+                            || dispatchCapabilities.permissionScopes.length === 0
+                          }
+                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {dispatchCapabilities.permissionScopes.length === 0 ? (
+                            <option value="">该引擎不支持此档</option>
+                          ) : (
+                            dispatchCapabilities.permissionScopes.map((scope) => (
+                              <option key={scope} value={scope}>
+                                {getDispatchPermissionScopeLabel(scope)}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                        {permissionScopeChanged && dispatchPermission && (
+                          <p
+                            data-testid={`plan-module-permission-scope-trace-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-nim-muted"
+                          >
+                            Head 建议：{getDispatchPermissionScopeLabel(suggestedDispatchPermission.permissionScope)} → 当前：{getDispatchPermissionScopeLabel(dispatchPermission.effective.permissionScope)}
+                          </p>
+                        )}
+                      </dd>
+                    </div>
+                    <div
+                      data-testid={`plan-module-disturbance-level-field-${stableModuleIndex}`}
+                      className="plan-module-disturbance-level-field min-w-0"
+                    >
+                      <dt className="text-xs font-semibold text-nim-muted">
+                        打扰程度
+                      </dt>
+                      <dd className="mt-1 min-w-0">
+                        <select
+                          data-testid={`plan-module-disturbance-level-select-${stableModuleIndex}`}
+                          aria-label={`${module.title} 打扰程度`}
+                          value={
+                            dispatchPermission
+                            && dispatchCapabilities.disturbanceLevels.includes(
+                              dispatchPermission.effective.disturbanceLevel,
+                            )
+                              ? dispatchPermission.effective.disturbanceLevel
+                              : ''
+                          }
+                          onChange={(event) =>
+                            handleModuleDisturbanceLevelChange(
+                              moduleIndex,
+                              event.target.value,
+                            )
+                          }
+                          disabled={
+                            isSubmitting
+                            || dispatchCapabilities.disturbanceLevels.length === 0
+                          }
+                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {dispatchCapabilities.disturbanceLevels.length === 0 ? (
+                            <option value="">该引擎不支持此档</option>
+                          ) : (
+                            dispatchCapabilities.disturbanceLevels.map((level) => (
+                              <option key={level} value={level}>
+                                {getDispatchDisturbanceLevelLabel(level)}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                        {disturbanceLevelChanged && dispatchPermission && (
+                          <p
+                            data-testid={`plan-module-disturbance-level-trace-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-nim-muted"
+                          >
+                            Head 建议：{getDispatchDisturbanceLevelLabel(suggestedDispatchPermission.disturbanceLevel)} → 当前：{getDispatchDisturbanceLevelLabel(dispatchPermission.effective.disturbanceLevel)}
+                          </p>
+                        )}
+                        {dispatchPermission?.notice && (
+                          <p
+                            data-testid={`plan-module-dispatch-downgrade-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-amber-800 dark:text-amber-200"
+                          >
+                            {dispatchPermission.notice}
+                          </p>
+                        )}
+                      </dd>
+                    </div>
                     <div className="plan-module-done-criteria min-w-0">
                       <dt className="text-xs font-semibold text-nim-muted">
                         完成标准

@@ -116,6 +116,7 @@ vi.mock('../ai/claudeCliLauncherSingleton', () => ({
 }));
 
 import { AISessionsRepository } from '@nimbalyst/runtime';
+import { resolveDispatchPermission as resolveNativeDispatchPermission } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 import { database as databaseWorker } from '../../database/PGLiteDatabaseWorker';
 import { MetaAgentService } from '../MetaAgentService';
 
@@ -144,6 +145,10 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
     vi.mocked(AISessionsRepository.delete).mockReset();
     vi.mocked(AISessionsRepository.get).mockReset();
     vi.mocked(AISessionsRepository.updateMetadata).mockReset();
+    vi.mocked(databaseWorker.query).mockReset();
+    vi.mocked(databaseWorker.query).mockResolvedValue({
+      rows: [{ in_flight: '0', total: '0' }],
+    } as any);
   });
 
   it('inherits the gemini parent provider+model when the parent is a chat-only extension agent and no provider is given', async () => {
@@ -474,6 +479,128 @@ describe('MetaAgentService child-spawn provider inheritance', () => {
     const created = vi.mocked(AISessionsRepository.create).mock.calls[0][0] as any;
     expect(created.provider).toBe('antigravity-gemini-agent');
     expect(created.provider).not.toBe('claude-code');
+  });
+
+  it('green EX-1: applies the owner-edited card knobs and keeps the Head suggestion for audit', async () => {
+    const service = MetaAgentService.getInstance() as any;
+    vi.mocked(databaseWorker.query).mockResolvedValue({
+      rows: [{
+        data: {
+          modules: [{
+            provider: 'openai-codex',
+            model: 'gpt-5.6-terra',
+            permissionScope: 'workspace-write',
+            disturbanceLevel: 'on-failure',
+          }],
+          selectedCandidates: [{
+            moduleIndex: 0,
+            provider: 'openai-codex',
+            model: 'gpt-5.6-terra',
+            permissionScope: 'read-only',
+            disturbanceLevel: 'on-request',
+          }],
+        },
+      }],
+    } as any);
+
+    const routed = await service.applyApprovedCardRouting('/workspace/path', {
+      intent: 'implementation',
+      planId: 'approved-plan',
+      moduleIndex: 1,
+    });
+
+    expect(routed.dispatchPermissionKnobs).toEqual({
+      permissionScope: 'read-only',
+      disturbanceLevel: 'on-request',
+    });
+    expect(routed.dispatchPermissionSelectionOverride).toEqual({
+      original: {
+        permissionScope: 'workspace-write',
+        disturbanceLevel: 'on-failure',
+      },
+      approved: {
+        permissionScope: 'read-only',
+        disturbanceLevel: 'on-request',
+      },
+    });
+  });
+
+  it('green EX-4: returns and persists the native effective receipt, including an explicit Gemini downgrade', async () => {
+    const service = MetaAgentService.getInstance() as any;
+    const dispatchPermission = resolveNativeDispatchPermission(
+      'antigravity-gemini-agent',
+      {
+        permissionScope: 'danger-full-access',
+        disturbanceLevel: 'on-failure',
+      },
+    );
+    (service as any).aiService = {
+      queuePromptForSession: vi.fn(),
+      assertCurrentDynamicModelAvailable: vi.fn(async () => {}),
+    };
+    vi.mocked(AISessionsRepository.get).mockResolvedValue(GEMINI_PARENT as any);
+
+    const result = await service.createChildSessionInternal(
+      'parent-gemini-session',
+      '/workspace/path',
+      { dispatchPermission },
+    );
+
+    expect(result.dispatchPermission).toEqual(dispatchPermission);
+    expect(
+      service.buildWorkOrderReceipt(
+        'antigravity-gemini-agent',
+        'antigravity-gemini-agent:gemini-flash-3.5',
+        '2026-08-27T00:00:00.000Z',
+        'success',
+        dispatchPermission,
+      ),
+    ).toMatchObject({
+      dispatchPermission: expect.objectContaining({
+        effective: {
+          permissionScope: 'workspace-write',
+          disturbanceLevel: 'on-request',
+        },
+        notice: expect.stringContaining('Gemini：该引擎不支持“全放开”'),
+      }),
+    });
+    expect(AISessionsRepository.updateMetadata).toHaveBeenCalledWith(
+      result.sessionId,
+      {
+        metadata: expect.objectContaining({
+          dispatchPermission,
+          toolScope: 'write',
+        }),
+      },
+    );
+    const trackerInsert = vi.mocked(databaseWorker.query).mock.calls.find(
+      ([sql]) => String(sql).includes('INSERT INTO tracker_items'),
+    );
+    expect(trackerInsert).toBeDefined();
+    const workOrderData = JSON.parse((trackerInsert as any)[1][3]);
+    expect(workOrderData.dispatchPermission).toEqual(dispatchPermission);
+    expect(workOrderData.dispatchPermission.notice).toContain('Gemini：该引擎不支持“全放开”');
+  });
+
+  it('green EX-6: no knob combination bypasses the existing unapproved-plan gate', async () => {
+    const service = MetaAgentService.getInstance() as any;
+    const dispatch = vi.spyOn(service, 'dispatchOrQueueChildSession');
+    vi.mocked(databaseWorker.query).mockResolvedValue({ rows: [] } as any);
+
+    try {
+      for (const permissionScope of ['read-only', 'workspace-write', 'danger-full-access']) {
+        for (const disturbanceLevel of ['never', 'on-failure', 'on-request']) {
+          await expect(service.createChildSession('head-session', '/workspace/path', {
+            intent: 'implementation',
+            planId: 'not-approved',
+            dispatchPermissionKnobs: { permissionScope, disturbanceLevel },
+          })).rejects.toThrow('implementation sessions require an approved plan');
+        }
+      }
+      expect(dispatch).not.toHaveBeenCalled();
+    } finally {
+      dispatch.mockRestore();
+    }
   });
 });
 

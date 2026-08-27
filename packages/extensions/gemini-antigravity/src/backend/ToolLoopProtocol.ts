@@ -27,7 +27,10 @@
  *       and stripped of the envelope token to break that vector.
  */
 
-import { AntigravityServerManager } from './ServerManager';
+import {
+  AntigravityServerManager,
+  type AgyExecutionOptions,
+} from './ServerManager';
 
 interface OpenAITool {
   type: 'function';
@@ -110,6 +113,7 @@ export class AntigravityToolLoopProtocol {
   private readonly server: AntigravityServerManager;
   private readonly conversationKey: string;
   private readonly workspacePath?: string;
+  private readonly executionOptions?: AgyExecutionOptions;
   private history: ProtocolMessage[] = [];
   private aborted = false;
   // Compact record of the tool calls already made THIS turn, surfaced back to
@@ -127,12 +131,14 @@ export class AntigravityToolLoopProtocol {
     server?: AntigravityServerManager;
     conversationKey?: string;
     workspacePath?: string;
+    executionOptions?: AgyExecutionOptions;
   }) {
     this.modelKey = opts.modelKey;
     this.maxIterations = opts.maxIterations ?? 40;
     this.server = opts.server ?? AntigravityServerManager.shared();
     this.conversationKey = opts.conversationKey ?? 'default';
     this.workspacePath = opts.workspacePath;
+    this.executionOptions = opts.executionOptions;
   }
 
   setModelKey(modelKey: string): void {
@@ -186,6 +192,32 @@ export class AntigravityToolLoopProtocol {
   }
 
   /**
+   * Keep the established five-argument call shape for ordinary Gemini turns.
+   * A sixth argument is only meaningful for an EX dispatch that carries native
+   * agy policy; passing an extra `undefined` breaks existing host adapters and
+   * makes a no-policy turn look like it was explicitly configured.
+   */
+  private requestModelResponse(prompt: string, timeoutMs: number): Promise<string> {
+    if (this.executionOptions) {
+      return this.server.getModelResponse(
+        prompt,
+        this.modelKey,
+        timeoutMs,
+        this.conversationKey,
+        this.workspacePath,
+        this.executionOptions,
+      );
+    }
+    return this.server.getModelResponse(
+      prompt,
+      this.modelKey,
+      timeoutMs,
+      this.conversationKey,
+      this.workspacePath,
+    );
+  }
+
+  /**
    * Run the tool loop for one user turn.
    *
    * Hardening (a) -- tool allowlist: built from the `tools` argument at the
@@ -229,13 +261,7 @@ export class AntigravityToolLoopProtocol {
       if (this.aborted) return;
 
       const prompt = this.renderPrompt(fullSystemPrompt);
-      const response = await this.server.getModelResponse(
-        prompt,
-        this.modelKey,
-        timeoutMs,
-        this.conversationKey,
-        this.workspacePath,
-      );
+      const response = await this.requestModelResponse(prompt, timeoutMs);
 
       if (this.aborted) return;
 
@@ -489,13 +515,7 @@ export class AntigravityToolLoopProtocol {
           ),
         });
         const finalPrompt = this.renderPrompt(fullSystemPrompt);
-        const finalResp = await this.server.getModelResponse(
-          finalPrompt,
-          this.modelKey,
-          timeoutMs,
-          this.conversationKey,
-          this.workspacePath,
-        );
+        const finalResp = await this.requestModelResponse(finalPrompt, timeoutMs);
         const finalText = this.sanitizeFinalText(this.stripToolCallJson(finalResp));
         if (!this.aborted && finalText) {
           this.history.push({ role: 'assistant', content: finalText });
@@ -1001,13 +1021,7 @@ export class AntigravityToolLoopProtocol {
       'Corrected answer:',
     ].join('\n');
     try {
-      const resp = await this.server.getModelResponse(
-        verifyPrompt,
-        this.modelKey,
-        timeoutMs,
-        this.conversationKey,
-        this.workspacePath,
-      );
+      const resp = await this.requestModelResponse(verifyPrompt, timeoutMs);
       if (this.aborted) return draft;
       const verified = this.sanitizeFinalText(this.stripToolCallJson(resp));
       return verified.trim().length > 0 ? verified : draft;

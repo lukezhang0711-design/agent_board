@@ -10,6 +10,13 @@ import {
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { parse as parseUrl } from "url";
 import { randomUUID } from "crypto";
+import {
+  getDefaultDispatchPermissionKnobs,
+  isDispatchDisturbanceLevel,
+  isDispatchPermissionScope,
+  type DispatchDisturbanceLevel,
+  type DispatchPermissionScope,
+} from "@nimbalyst/runtime/ai/server/dispatchPermissionKnobs";
 import { requireMcpAuth } from "./mcpAuth";
 import { resolveProjectPath } from "../utils/workspaceDetection";
 
@@ -36,6 +43,10 @@ export type PlanCandidate = {
    */
   rawModelForValidation?: string;
   effortLevel?: EffortLevel;
+  /** Worker role used to supply default dispatch knobs. */
+  intent: SessionIntent;
+  permissionScope: DispatchPermissionScope;
+  disturbanceLevel: DispatchDisturbanceLevel;
 };
 
 export type PlanModule = {
@@ -52,6 +63,10 @@ export type PlanModule = {
   /** Internal submission-time marker; the card must wait for catalog confirmation. */
   modelCatalogPending?: boolean;
   effortLevel?: EffortLevel;
+  /** Worker role used to supply default dispatch knobs. */
+  intent: SessionIntent;
+  permissionScope: DispatchPermissionScope;
+  disturbanceLevel: DispatchDisturbanceLevel;
   doneCriteria: string;
   candidates?: PlanCandidate[];
 };
@@ -123,6 +138,9 @@ const SUBMIT_PLAN_EXAMPLE = {
       provider: "openai-codex",
       model: "gpt-5.4-mini",
       effortLevel: "medium",
+      intent: "implementation",
+      permissionScope: "workspace-write",
+      disturbanceLevel: "on-failure",
       doneCriteria: "The card renders the fields and the approval test passes.",
       candidates: [
         {
@@ -134,6 +152,9 @@ const SUBMIT_PLAN_EXAMPLE = {
           provider: "openai-codex",
           model: "gpt-5.4-mini",
           effortLevel: "low",
+          intent: "implementation",
+          permissionScope: "workspace-write",
+          disturbanceLevel: "on-failure",
         },
       ],
     },
@@ -148,8 +169,8 @@ const SUBMIT_PLAN_DESCRIPTION = [
   "planItems is a non-empty array of non-empty strings and is required.",
   "workOrderCount is an optional non-negative integer; omit it to use planItems.length.",
   "risks is a required array of strings and may be empty; [] means no risks were declared.",
-  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, a model taken from a list_models id (or that id's portion after the colon), optional model-declared effortLevel, and doneCriteria. resolvedModel is display-only and must never be used as a model value.",
-  "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, and optional effortLevel; do not write serial comparison paragraphs.",
+  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, a model taken from a list_models id (or that id's portion after the colon), optional model-declared effortLevel, intent, permissionScope, disturbanceLevel, and doneCriteria. resolvedModel is display-only and must never be used as a model value. Omitted knobs default by intent: investigation = read-only + never; implementation = workspace-write + on-failure.",
+  "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, optional effortLevel, and optional intent/permissionScope/disturbanceLevel; do not write serial comparison paragraphs.",
 ].join("\n");
 
 function submitPlanValidationError(message: string, example: string): Error {
@@ -282,7 +303,51 @@ function normalizeOptionalEffortLevel(value: unknown, fieldName: string): Effort
   );
 }
 
-function normalizePlanCandidate(value: unknown, moduleIndex: number, candidateIndex: number): PlanCandidate {
+function normalizePlanIntent(
+  value: unknown,
+  fieldName: string,
+  fallback: SessionIntent = 'implementation',
+): SessionIntent {
+  if (value === undefined || value === null) return fallback;
+  if (value === 'investigation' || value === 'implementation') return value;
+  throw submitPlanValidationError(
+    `${fieldName} must be "investigation" or "implementation" when provided`,
+    JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+  );
+}
+
+function normalizeDispatchPermissionScope(
+  value: unknown,
+  fieldName: string,
+  fallback: DispatchPermissionScope,
+): DispatchPermissionScope {
+  if (value === undefined || value === null) return fallback;
+  if (isDispatchPermissionScope(value)) return value;
+  throw submitPlanValidationError(
+    `${fieldName} must be "read-only", "workspace-write", or "danger-full-access" when provided`,
+    JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+  );
+}
+
+function normalizeDispatchDisturbanceLevel(
+  value: unknown,
+  fieldName: string,
+  fallback: DispatchDisturbanceLevel,
+): DispatchDisturbanceLevel {
+  if (value === undefined || value === null) return fallback;
+  if (isDispatchDisturbanceLevel(value)) return value;
+  throw submitPlanValidationError(
+    `${fieldName} must be "never", "on-failure", or "on-request" when provided`,
+    JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+  );
+}
+
+function normalizePlanCandidate(
+  value: unknown,
+  moduleIndex: number,
+  candidateIndex: number,
+  moduleIntent: SessionIntent,
+): PlanCandidate {
   if (!value || typeof value !== 'object') {
     throw submitPlanValidationError(
       `modules[${moduleIndex}].candidates[${candidateIndex}] must be an object`,
@@ -294,6 +359,12 @@ function normalizePlanCandidate(value: unknown, moduleIndex: number, candidateIn
     candidate.effortLevel,
     `modules[${moduleIndex}].candidates[${candidateIndex}].effortLevel`,
   );
+  const intent = normalizePlanIntent(
+    candidate.intent,
+    `modules[${moduleIndex}].candidates[${candidateIndex}].intent`,
+    moduleIntent,
+  );
+  const defaults = getDefaultDispatchPermissionKnobs(intent);
   return withRawModelForValidation({
     name: normalizeNonEmptyString(candidate.name, `modules[${moduleIndex}].candidates[${candidateIndex}].name`),
     approach: normalizeNonEmptyString(candidate.approach, `modules[${moduleIndex}].candidates[${candidateIndex}].approach`),
@@ -303,6 +374,17 @@ function normalizePlanCandidate(value: unknown, moduleIndex: number, candidateIn
     provider: normalizeNonEmptyString(candidate.provider, `modules[${moduleIndex}].candidates[${candidateIndex}].provider`),
     model: normalizeNonEmptyString(candidate.model, `modules[${moduleIndex}].candidates[${candidateIndex}].model`),
     ...(effortLevel ? { effortLevel } : {}),
+    intent,
+    permissionScope: normalizeDispatchPermissionScope(
+      candidate.permissionScope,
+      `modules[${moduleIndex}].candidates[${candidateIndex}].permissionScope`,
+      defaults.permissionScope,
+    ),
+    disturbanceLevel: normalizeDispatchDisturbanceLevel(
+      candidate.disturbanceLevel,
+      `modules[${moduleIndex}].candidates[${candidateIndex}].disturbanceLevel`,
+      defaults.disturbanceLevel,
+    ),
   }, candidate.model);
 }
 
@@ -334,6 +416,11 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
       module.effortLevel,
       `modules[${moduleIndex}].effortLevel`,
     );
+    const intent = normalizePlanIntent(
+      module.intent,
+      `modules[${moduleIndex}].intent`,
+    );
+    const defaults = getDefaultDispatchPermissionKnobs(intent);
     return withRawModelForValidation({
       title: normalizeNonEmptyString(module.title, `modules[${moduleIndex}].title`),
       outputFiles: normalizeStringList(module.outputFiles, `modules[${moduleIndex}].outputFiles`),
@@ -341,10 +428,21 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
       provider: normalizeNonEmptyString(module.provider, `modules[${moduleIndex}].provider`),
       model: normalizeNonEmptyString(module.model, `modules[${moduleIndex}].model`),
       ...(effortLevel ? { effortLevel } : {}),
+      intent,
+      permissionScope: normalizeDispatchPermissionScope(
+        module.permissionScope,
+        `modules[${moduleIndex}].permissionScope`,
+        defaults.permissionScope,
+      ),
+      disturbanceLevel: normalizeDispatchDisturbanceLevel(
+        module.disturbanceLevel,
+        `modules[${moduleIndex}].disturbanceLevel`,
+        defaults.disturbanceLevel,
+      ),
       doneCriteria: normalizeNonEmptyString(module.doneCriteria, `modules[${moduleIndex}].doneCriteria`),
       ...(rawCandidates === undefined
         ? {}
-        : { candidates: rawCandidates.map((candidate, candidateIndex) => normalizePlanCandidate(candidate, moduleIndex, candidateIndex)) }),
+        : { candidates: rawCandidates.map((candidate, candidateIndex) => normalizePlanCandidate(candidate, moduleIndex, candidateIndex, intent)) }),
     }, module.model);
   });
 }
@@ -555,6 +653,9 @@ const META_AGENT_TOOL_DEFS: Array<{
               provider: { type: "string", minLength: 1, description: "Provider ID for this module." },
               model: { type: "string", minLength: 1, description: "Use a list_models catalog id (or the provider-local part after ':'); never use resolvedModel." },
               effortLevel: { type: "string", minLength: 1, description: "Optional exact raw effort value declared by this model in list_models; omit when its list is empty." },
+              intent: { type: "string", enum: ["investigation", "implementation"], description: "Optional worker role. Omitted defaults to implementation; investigation defaults to read-only + never, implementation to workspace-write + on-failure." },
+              permissionScope: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"], description: "Optional suggested permission scope. Omitted values use the worker-role default." },
+              disturbanceLevel: { type: "string", enum: ["never", "on-failure", "on-request"], description: "Optional suggested owner-interruption level. Omitted values use the worker-role default." },
               doneCriteria: { type: "string", minLength: 1, description: "Concrete completion standard." },
               candidates: {
                 type: "array",
@@ -570,6 +671,9 @@ const META_AGENT_TOOL_DEFS: Array<{
                     provider: { type: "string", minLength: 1 },
                     model: { type: "string", minLength: 1, description: "Use a list_models catalog id (or the provider-local part after ':'); never use resolvedModel." },
                     effortLevel: { type: "string", minLength: 1, description: "Optional exact raw model-declared effort value." },
+                    intent: { type: "string", enum: ["investigation", "implementation"], description: "Optional worker role; defaults to the module role." },
+                    permissionScope: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"], description: "Optional suggested permission scope; defaults by role." },
+                    disturbanceLevel: { type: "string", enum: ["never", "on-failure", "on-request"], description: "Optional suggested owner-interruption level; defaults by role." },
                   },
                   required: ["name", "approach", "pros", "cons", "risks", "provider", "model"],
                 },
