@@ -57,6 +57,8 @@ export interface TextPlanGuardInput {
   submittedPlanThisTurn: boolean;
   hasPendingPlanCard: boolean;
   hasApprovedPlan: boolean;
+  /** Output files declared by the currently approved plan card. */
+  approvedPlanOutputFiles?: ReadonlyArray<string>;
   hasOutstandingPlanRequest: boolean;
   chaseCount: number;
 }
@@ -119,14 +121,52 @@ export function isImplementationPlanLikeText(finalText: string | null | undefine
     || (hasNumberedOrBulletedStructure(text) && structureSignalCount >= 1);
 }
 
+const CONCRETE_OUTPUT_FILE_PATH_PATTERN = /(?:^|[\s`"'“”‘’（(:：])((?:\.{1,2}\/)?(?:[^\\/\s`"'“”‘’（）(),，。；;:：]+\/)*[^\\/\s`"'“”‘’（）(),，。；;:：]+\.[A-Za-z][A-Za-z0-9_-]*)(?=$|[\s`"'“”‘’）),，。；;:：])/g;
+
+function normalizeOutputFilePath(value: string): string | null {
+  const normalized = value.trim().replace(/\\/g, '/').replace(/^\.\//, '');
+  return normalized || null;
+}
+
+/**
+ * A missing or malformed approved-file scope must not cause a chase: the
+ * guard is deliberately biased toward allowing ordinary progress updates.
+ */
+function hasOutputFileOutsideApprovedPlan(
+  finalText: string | null | undefined,
+  approvedPlanOutputFiles: ReadonlyArray<string> | undefined,
+): boolean {
+  const text = finalText?.trim();
+  if (!text || !approvedPlanOutputFiles?.length) return false;
+
+  const approvedOutputFiles = new Set(
+    approvedPlanOutputFiles
+      .map(normalizeOutputFilePath)
+      .filter((filePath): filePath is string => filePath !== null),
+  );
+  if (approvedOutputFiles.size === 0) return false;
+
+  for (const match of text.matchAll(CONCRETE_OUTPUT_FILE_PATH_PATTERN)) {
+    const filePath = normalizeOutputFilePath(match[1]);
+    if (filePath && !approvedOutputFiles.has(filePath)) return true;
+  }
+  return false;
+}
+
 export function evaluateTextPlanGuard(input: TextPlanGuardInput): TextPlanGuardDecision {
   if (
     input.hasAnyToolCallThisTurn
     || input.submittedPlanThisTurn
     || input.hasPendingPlanCard
-    || input.hasApprovedPlan
     || !input.hasOutstandingPlanRequest
     || !isImplementationPlanLikeText(input.finalText)
+  ) {
+    return { action: 'none', nextChaseCount: 0 };
+  }
+
+  if (
+    input.hasApprovedPlan
+    && !hasOutputFileOutsideApprovedPlan(input.finalText, input.approvedPlanOutputFiles)
   ) {
     return { action: 'none', nextChaseCount: 0 };
   }

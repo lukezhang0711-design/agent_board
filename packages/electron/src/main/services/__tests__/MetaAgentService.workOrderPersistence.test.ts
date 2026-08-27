@@ -716,6 +716,94 @@ describe('MetaAgentService work-order persistence', () => {
     expect(queuePromptForSession.mock.calls[0][1]).toContain('submit_plan');
   });
 
+  it('green FB-127: chases a new output file after a different plan card was approved', async () => {
+    testState.headTurnUserPrompts = ['请重构配置并补测试。'];
+    testState.headTurnFinalText = `## 重构方案
+
+1. 模块一：重构配置读取，产出文件 packages/electron/src/main/services/configRefactor.ts
+2. 模块二：补充迁移验证与风险说明
+
+未经批准，不派发子任务。`;
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status, content, archived, source, source_ref
+      ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'pending', $5, FALSE, 'meta-agent', $6)`,
+      [
+        'approved-plan-card-fb-127',
+        JSON.stringify(['plan']),
+        JSON.stringify({
+          title: 'Approved notes plan',
+          status: 'ready-for-development',
+          modules: [{ outputFiles: ['notes/approved-note.md'] }],
+        }),
+        workspacePath,
+        JSON.stringify({}),
+        'meta-agent-submitted-plan:head-session',
+      ],
+    );
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({ type: 'assistant', text: testState.headTurnFinalText }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    const queuePromptForSession = (service as any).aiService.queuePromptForSession as ReturnType<typeof vi.fn>;
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+
+    expect(queuePromptForSession).toHaveBeenCalledTimes(1);
+    expect(queuePromptForSession.mock.calls[0][1]).toContain('submit_plan');
+  });
+
+  it('green FB-127: keeps direct, module, and candidate output files inside an approved scope', async () => {
+    testState.headTurnUserPrompts = ['请整理已批准的笔记并补充验证。'];
+    testState.headTurnFinalText = `## 整理方案
+
+1. 模块一：整理总览，产出文件 notes/approved-overview.md
+2. 模块二：更新模块结果，产出文件 notes/approved-module.md
+3. 模块三：保留候选交付，产出文件 notes/approved-candidate.md
+
+风险：只在已批准范围内执行。`;
+    await db.query(
+      `INSERT INTO tracker_items (
+        id, type, type_tags, data, workspace, document_path, line_number,
+        created, updated, last_indexed, sync_status, content, archived, source, source_ref
+      ) VALUES ($1, 'plan', $2, $3, $4, '', NULL, NOW(), NOW(), NOW(), 'pending', $5, FALSE, 'meta-agent', $6)`,
+      [
+        'approved-scope-card-fb-127',
+        JSON.stringify(['plan']),
+        JSON.stringify({
+          title: 'Approved notes plan',
+          status: 'ready-for-development',
+          outputFiles: ['notes/approved-overview.md'],
+          modules: [{
+            outputFiles: ['notes/approved-module.md'],
+            candidates: [{ outputFiles: ['notes/approved-candidate.md'] }],
+          }],
+        }),
+        workspacePath,
+        JSON.stringify({}),
+        'meta-agent-submitted-plan:head-session',
+      ],
+    );
+    await AgentMessagesRepository.create({
+      sessionId: 'head-session',
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({ type: 'assistant', text: testState.headTurnFinalText }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+
+    const queuePromptForSession = (service as any).aiService.queuePromptForSession as ReturnType<typeof vi.fn>;
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+
+    expect(queuePromptForSession).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['ordinary question', '为什么这个函数返回 null？', '回答：因为调用方没有传入有效的配置。'],
     ['investigation report', '调查当前实现并汇报现状，不要改文件。', '调查报告：读取了 3 个文件，现状和失败点如下。'],
