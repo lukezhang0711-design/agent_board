@@ -1896,8 +1896,9 @@ describe('MetaAgentService work-order persistence', () => {
     const queuedCounts = await (service as any).getDispatchCounts('head-session', workspacePath);
     expect(queuedCounts).toEqual({ inFlightCount: 1, totalCount: 1 });
 
-    // Delegated Sessions reads this list; the placeholder must report as queued
-    // rather than as an idle child that silently never started.
+    // The Head reads this list (it drives the emergency-stop gate and the
+    // artifact shelf); the placeholder must report as queued rather than as an
+    // idle child that silently never started.
     const spawned = await (service as any).getSpawnedSessions('head-session', workspacePath);
     const queuedEntry = spawned.find((s: any) => s.sessionId === receipt.sessionId);
     expect(queuedEntry).toMatchObject({ title: 'Queued investigation', status: 'queued' });

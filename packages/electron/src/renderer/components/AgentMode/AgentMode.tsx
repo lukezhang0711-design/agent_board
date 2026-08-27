@@ -557,7 +557,7 @@ export const AgentMode = forwardRef<AgentModeRef, AgentModeProps>(function Agent
         workspacePath={workspacePath}
         isActive={isActive}
         sessionId={selectedWorkstream.id}
-        onOpenSessionInAgent={dispatchSelectSession}
+        onOpenFileInFiles={onFileOpen}
       />
     ) : (
       <AgentWorkstreamPanel

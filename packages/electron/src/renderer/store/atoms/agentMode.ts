@@ -23,6 +23,10 @@ import { selectedWorkstreamAtom, type WorkstreamType } from './sessions';
 import { sessionStoreAtom } from './sessions';
 import { activeWorkspacePathAtom } from './openProjects';
 import type { TeammateInfo } from '../../components/AgentMode/TeammatePanel';
+import {
+  PREVIEW_RAIL_DEFAULT_WIDTH,
+  clampPreviewRailWidth,
+} from '../../components/MetaAgentMode/filePreviewFormat';
 
 // ============================================================
 // Types
@@ -48,6 +52,8 @@ export interface SessionHistoryLayout {
 export interface AgentModeLayout {
   sessionHistoryLayout: SessionHistoryLayout;
   filesEditedWidth: number;
+  /** Width of the Head workbench file-preview rail. */
+  filePreviewWidth: number;
   todoPanelCollapsed: boolean;
   taskListPanelCollapsed: boolean;
   teammatePanelCollapsed: boolean;
@@ -71,6 +77,7 @@ const DEFAULT_SESSION_HISTORY_LAYOUT: SessionHistoryLayout = {
 const DEFAULT_LAYOUT: AgentModeLayout = {
   sessionHistoryLayout: DEFAULT_SESSION_HISTORY_LAYOUT,
   filesEditedWidth: 256,
+  filePreviewWidth: PREVIEW_RAIL_DEFAULT_WIDTH,
   todoPanelCollapsed: false,
   taskListPanelCollapsed: false,
   teammatePanelCollapsed: false,
@@ -96,6 +103,7 @@ function mergeWithDefaults(persisted: Partial<AgentModeLayout> | undefined): Age
   return {
     sessionHistoryLayout,
     filesEditedWidth: persisted?.filesEditedWidth ?? DEFAULT_LAYOUT.filesEditedWidth,
+    filePreviewWidth: clampPreviewRailWidth(persisted?.filePreviewWidth ?? DEFAULT_LAYOUT.filePreviewWidth),
     todoPanelCollapsed: persisted?.todoPanelCollapsed ?? DEFAULT_LAYOUT.todoPanelCollapsed,
     taskListPanelCollapsed: persisted?.taskListPanelCollapsed ?? DEFAULT_LAYOUT.taskListPanelCollapsed,
     teammatePanelCollapsed: persisted?.teammatePanelCollapsed ?? DEFAULT_LAYOUT.teammatePanelCollapsed,
@@ -154,6 +162,11 @@ export const sessionHistoryCollapsedAtom = atom(
 /** Files edited sidebar width */
 export const filesEditedWidthAtom = atom(
   (get) => get(agentModeLayoutAtom).filesEditedWidth
+);
+
+/** Head workbench file-preview rail width */
+export const filePreviewWidthAtom = atom(
+  (get) => get(agentModeLayoutAtom).filePreviewWidth
 );
 
 /** Collapsed group keys */
@@ -323,7 +336,7 @@ export const setSessionHistoryLayoutAtom = atom(
  */
 export const setAgentModeLayoutAtom = atom(
   null,
-  (get, set, updates: { filesEditedWidth?: number }) => {
+  (get, set, updates: { filesEditedWidth?: number; filePreviewWidth?: number }) => {
     const workspacePath = get(activeWorkspacePathAtom);
     const current = get(agentModeLayoutAtom);
     const newLayout = { ...current, ...updates };
@@ -356,6 +369,16 @@ export const setFilesEditedWidthAtom = atom(
   (get, set, width: number) => {
     const clampedWidth = Math.max(150, Math.min(500, width));
     set(setAgentModeLayoutAtom, { filesEditedWidth: clampedWidth });
+  }
+);
+
+/**
+ * Set the Head workbench file-preview rail width.
+ */
+export const setFilePreviewWidthAtom = atom(
+  null,
+  (get, set, width: number) => {
+    set(setAgentModeLayoutAtom, { filePreviewWidth: clampPreviewRailWidth(width) });
   }
 );
 

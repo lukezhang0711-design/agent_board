@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 <!-- New features go here -->
+- Head Agent conversations preview files in place: click a file link and it slides out in a resizable panel beside the chat (Markdown, code, images, PDFs, and sandboxed HTML with a render/source toggle), with a shelf listing everything the delegated sessions delivered.
 - iOS: create a Meta Agent from the session create menu (alpha-gated to mirror the desktop `meta-agent` feature flag, synced to mobile).
 - New Gemini (Antigravity) marketplace extension, usable as an AI chat and meta-agent provider, with a usage indicator chip. (#558)
 - `/session-cleanup` command (Planning extension) tidies your Sessions board: it proposes phase corrections and "mark complete" candidates for your approval, and flags old sessions to archive.
@@ -20,11 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Edit and delete your own tracker comments.
 
 ### Changed
+- The Head Agent's always-on Delegated Sessions panel is gone; open a delegated session from its card on the session board instead.
 - Contextual tips now fill empty AI sessions immediately and on every empty session, instead of after a delay and only once per app launch.
 
 ### Fixed
 - Plan approval cards now show the decision once you approve or request changes, instead of sitting at "Awaiting review".
-- Head Agent dispatches that are waiting for a free slot now appear as "Queued" in Delegated Sessions and on the session board, instead of being invisible until they start.
+- Head Agent dispatches that are waiting for a free slot now appear as "Queued" on the session board, instead of being invisible until they start.
 - A session name given when dispatching work is no longer overwritten by automatic naming.
 - Personal docs sync no longer overwrites newer local edits (or an open editor's unsaved changes) with an older synced copy.
 - "Commit with AI" in a worktree now proposes all uncommitted changes in the worktree, not just the current session's edits.
