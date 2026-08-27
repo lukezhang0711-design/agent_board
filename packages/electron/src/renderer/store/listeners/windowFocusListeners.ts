@@ -14,7 +14,21 @@
 import { store } from '../index';
 import { windowFocusedAtom } from '../atoms/windowFocus';
 
+let initialized = false;
+
+function blurActiveElement(): void {
+  const activeElement = document.activeElement;
+  if (activeElement && typeof (activeElement as HTMLElement).blur === 'function') {
+    (activeElement as HTMLElement).blur();
+  }
+}
+
 export function initWindowFocusListeners(): () => void {
+  if (initialized) {
+    return () => {};
+  }
+  initialized = true;
+
   // Seed the initial state — the foreground window resolves true, background
   // windows false — so the launch gate is correct before any focus event fires.
   window.electronAPI
@@ -25,11 +39,19 @@ export function initWindowFocusListeners(): () => void {
     });
 
   const handler = (focused: boolean) => {
-    store.set(windowFocusedAtom, !!focused);
+    const isFocused = !!focused;
+    store.set(windowFocusedAtom, isFocused);
+    if (!isFocused) {
+      blurActiveElement();
+    }
   };
   const unsubscribe = window.electronAPI.on('window:focus-changed', handler);
 
+  let cleanedUp = false;
   return () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    initialized = false;
     if (typeof unsubscribe === 'function') {
       unsubscribe();
     } else {
