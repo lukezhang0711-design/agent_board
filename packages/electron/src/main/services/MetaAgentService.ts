@@ -467,6 +467,31 @@ function readNonEmptyString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
+function collectDeclaredOutputFiles(value: unknown): string[] {
+  const outputFiles = new Set<string>();
+  const visited = new Set<object>();
+  const visit = (candidate: unknown): void => {
+    if (Array.isArray(candidate)) {
+      candidate.forEach(visit);
+      return;
+    }
+    if (!candidate || typeof candidate !== 'object' || visited.has(candidate)) return;
+    visited.add(candidate);
+
+    const record = candidate as Record<string, unknown>;
+    if (Array.isArray(record.outputFiles)) {
+      record.outputFiles.forEach((outputFile) => {
+        const filePath = readNonEmptyString(outputFile);
+        if (filePath) outputFiles.add(filePath);
+      });
+    }
+    Object.values(record).forEach(visit);
+  };
+
+  visit(value);
+  return [...outputFiles];
+}
+
 function readModuleIndex(value: unknown): number | undefined {
   return typeof value === 'number'
     && Number.isSafeInteger(value)
@@ -972,6 +997,7 @@ interface HeadTextPlanMessageRow {
 interface HeadTextPlanCardState {
   hasPendingPlanCard: boolean;
   hasApprovedPlan: boolean;
+  approvedPlanOutputFiles: string[];
   hasRejectedPlan: boolean;
 }
 
@@ -1337,7 +1363,12 @@ export class MetaAgentService {
     const data = parseWorkOrderData(rows[0]?.data);
     const status = typeof data.status === 'string' ? data.status : '';
     if (status === 'ready-for-development') {
-      return { hasPendingPlanCard: false, hasApprovedPlan: true, hasRejectedPlan: false };
+      return {
+        hasPendingPlanCard: false,
+        hasApprovedPlan: true,
+        approvedPlanOutputFiles: collectDeclaredOutputFiles(data),
+        hasRejectedPlan: false,
+      };
     }
 
     let approvalState: DurablePlanApprovalState | null = null;
@@ -1362,6 +1393,7 @@ export class MetaAgentService {
     return {
       hasPendingPlanCard,
       hasApprovedPlan: false,
+      approvedPlanOutputFiles: [],
       hasRejectedPlan,
     };
   }
@@ -1458,6 +1490,7 @@ export class MetaAgentService {
       submittedPlanThisTurn: toolSignals.submittedPlan,
       hasPendingPlanCard: cardState.hasPendingPlanCard,
       hasApprovedPlan: cardState.hasApprovedPlan,
+      approvedPlanOutputFiles: cardState.approvedPlanOutputFiles,
       hasOutstandingPlanRequest: outstandingPlanRequest,
       chaseCount,
     });
