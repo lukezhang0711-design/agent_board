@@ -261,16 +261,14 @@ describe('Head workbench right rail — file preview', () => {
     expect(rail.style.width).toBe('610px');
   });
 
-  it('hands the previewed file to the FILES page when the host offers that exit', async () => {
-    const onOpenFileInFiles = vi.fn();
-    renderHead({ onOpenFileInFiles });
+  it('does not render the retired FILES-page preview exit', async () => {
+    renderHead();
 
     await screen.findByTestId('session-transcript');
     fireEvent.click(screen.getByTestId('transcript-file-link'));
     await screen.findByTestId('file-preview-rail');
 
-    fireEvent.click(screen.getByTestId('file-preview-open-in-files'));
-    expect(onOpenFileInFiles).toHaveBeenCalledWith('/workspace/plans/2026-08-27-report.sql');
+    expect(screen.queryByTestId('file-preview-open-in-files')).toBeNull();
   });
 
   it('drops the always-on Delegated Sessions panel', async () => {

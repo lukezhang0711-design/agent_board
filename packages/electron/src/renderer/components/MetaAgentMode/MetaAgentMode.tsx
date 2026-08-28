@@ -15,8 +15,6 @@ interface MetaAgentModeProps {
   isActive?: boolean;
   /** If provided, use this session ID directly instead of finding/creating one */
   sessionId?: string;
-  /** Opens a file on the FILES page (the preview rail's "edit it" exit). */
-  onOpenFileInFiles?: (filePath: string) => void | Promise<void>;
 }
 
 interface SpawnedSessionSummary {
@@ -42,7 +40,6 @@ export function MetaAgentMode({
   workspacePath,
   isActive = false,
   sessionId: externalSessionId,
-  onOpenFileInFiles,
 }: MetaAgentModeProps) {
   const defaultModel = useAtomValue(defaultAgentModelAtom);
   const showClaudeCliChannel = useAtomValue(settingAtom('ai.showClaudeCliChannel'));
@@ -280,10 +277,6 @@ export function MetaAgentMode({
     setPreviewPath(null);
   }, []);
 
-  const handleOpenFileInFiles = useCallback((filePath: string) => {
-    void onOpenFileInFiles?.(filePath);
-  }, [onOpenFileInFiles]);
-
   if (loadingSession) {
     return <div className="meta-agent-mode flex-1 flex items-center justify-center text-nim-muted">Loading meta-agent session...</div>;
   }
@@ -332,7 +325,6 @@ export function MetaAgentMode({
         shelfLoading={loadingChildren && childSessions.length === 0}
         onSelectShelfItem={handleSelectShelfItem}
         onShowShelf={handleShowShelf}
-        onOpenInFiles={onOpenFileInFiles ? handleOpenFileInFiles : undefined}
       />
     </div>
   );

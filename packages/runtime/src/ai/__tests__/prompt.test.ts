@@ -147,4 +147,19 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('Treat a plan written in chat as invalid');
     expect(prompt).toContain('Do not debate model or permission choices in plan prose');
   });
+
+  it('green FC-4: tells Head to use searchable output file names and full file names in chat', () => {
+    const prompt = buildMetaAgentSystemPrompt('codex', 'default', {
+      provider: 'openai-codex',
+      model: 'gpt-5.4-mini',
+    });
+
+    expect(prompt).toContain('## Artifact Naming Discipline');
+    expect(prompt).toContain('`YYYY-MM-DD-主题-用途.后缀`');
+    expect(prompt).toContain('`2026-08-28-地图批-核对.sql`');
+    expect(prompt).toContain('topic in the current conversation language');
+    expect(prompt).toContain('no spaces');
+    expect(prompt).toContain('write the complete file name');
+    expect(prompt).toContain('artifact shelf search');
+  });
 });

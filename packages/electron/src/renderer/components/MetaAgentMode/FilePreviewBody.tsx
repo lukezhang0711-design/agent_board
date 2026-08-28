@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MarkdownRenderer } from '@nimbalyst/runtime';
 
 import {
@@ -14,6 +14,14 @@ interface FilePreviewBodyProps {
   filePath: string;
   /** Hands the file to the OS default application. */
   onOpenWithSystem: (filePath: string) => void;
+  /** Controlled by the rail toolbar for HTML files. */
+  htmlView?: 'render' | 'source';
+  /** Plain text query highlighted inside textual previews. */
+  searchQuery?: string;
+  /** Zero-based selected match index. */
+  activeSearchMatchIndex?: number;
+  /** Reports the number of highlighted matches to the rail find bar. */
+  onSearchMatchCountChange?: (count: number) => void;
 }
 
 type LoadState =
@@ -87,14 +95,88 @@ function OpenWithSystemButton({
   );
 }
 
-export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({ filePath, onOpenWithSystem }) => {
+function unwrapSearchHighlights(root: HTMLElement): void {
+  const marks = Array.from(root.querySelectorAll('mark.file-preview-search-hit'));
+  for (const mark of marks) {
+    const parent = mark.parentNode;
+    if (!parent) continue;
+    parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
+    parent.normalize();
+  }
+}
+
+function highlightSearchMatches(root: HTMLElement, query: string): HTMLElement[] {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return [];
+
+  const matches: HTMLElement[] = [];
+  const textNodes: Text[] = [];
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        const text = node.nodeValue ?? '';
+        if (!text.toLocaleLowerCase().includes(normalizedQuery)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        const parent = node.parentElement;
+        if (!parent || parent.closest('button,input,textarea,script,style,mark')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    },
+  );
+
+  let node = walker.nextNode();
+  while (node) {
+    textNodes.push(node as Text);
+    node = walker.nextNode();
+  }
+
+  for (const textNode of textNodes) {
+    const text = textNode.nodeValue ?? '';
+    const lower = text.toLocaleLowerCase();
+    const fragment = document.createDocumentFragment();
+    let cursor = 0;
+    let nextMatch = lower.indexOf(normalizedQuery, cursor);
+
+    while (nextMatch !== -1) {
+      if (nextMatch > cursor) {
+        fragment.appendChild(document.createTextNode(text.slice(cursor, nextMatch)));
+      }
+      const end = nextMatch + normalizedQuery.length;
+      const mark = document.createElement('mark');
+      mark.className = 'file-preview-search-hit rounded-sm bg-[rgba(250,204,21,0.45)] text-[var(--nim-text)]';
+      mark.dataset.testid = 'file-preview-search-hit';
+      mark.textContent = text.slice(nextMatch, end);
+      fragment.appendChild(mark);
+      matches.push(mark);
+      cursor = end;
+      nextMatch = lower.indexOf(normalizedQuery, cursor);
+    }
+
+    if (cursor < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(cursor)));
+    }
+    textNode.parentNode?.replaceChild(fragment, textNode);
+  }
+
+  return matches;
+}
+
+export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
+  filePath,
+  onOpenWithSystem,
+  htmlView = 'render',
+  searchQuery = '',
+  activeSearchMatchIndex = 0,
+  onSearchMatchCountChange,
+}) => {
   const classification = useMemo(() => classifyPreviewFile(filePath), [filePath]);
   const [state, setState] = useState<LoadState>({ phase: 'loading' });
-  const [htmlView, setHtmlView] = useState<'render' | 'source'>('render');
-
-  useEffect(() => {
-    setHtmlView('render');
-  }, [filePath]);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let disposed = false;
@@ -124,6 +206,40 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({ filePath, onOp
     classification.binary && readyContent ? readyContent : null,
     classification.mime,
   );
+
+  useEffect(() => {
+    const root = bodyRef.current;
+    if (!root || state.phase !== 'ready') {
+      onSearchMatchCountChange?.(0);
+      return undefined;
+    }
+
+    unwrapSearchHighlights(root);
+    const matches = highlightSearchMatches(root, searchQuery);
+    onSearchMatchCountChange?.(matches.length);
+
+    return () => {
+      if (bodyRef.current) {
+        unwrapSearchHighlights(bodyRef.current);
+      }
+    };
+  }, [activeSearchMatchIndex, htmlView, onSearchMatchCountChange, searchQuery, state.phase, state.phase === 'ready' ? state.content : null]);
+
+  useEffect(() => {
+    const root = bodyRef.current;
+    if (!root) return;
+    const matches = Array.from(root.querySelectorAll<HTMLElement>('mark.file-preview-search-hit'));
+    if (matches.length === 0) return;
+    const normalizedIndex = ((activeSearchMatchIndex % matches.length) + matches.length) % matches.length;
+    matches.forEach((match, index) => {
+      const active = index === normalizedIndex;
+      match.classList.toggle('file-preview-search-hit-active', active);
+      match.classList.toggle('outline', active);
+      match.classList.toggle('outline-1', active);
+      match.classList.toggle('outline-[var(--nim-primary)]', active);
+    });
+    matches[normalizedIndex]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [activeSearchMatchIndex, searchQuery, state.phase, state.phase === 'ready' ? state.content : null]);
 
   if (state.phase === 'loading') {
     return (
@@ -165,7 +281,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({ filePath, onOp
 
   if (classification.kind === 'markdown') {
     return (
-      <div className="file-preview-body markdown-content select-text px-4 py-3 text-sm" data-testid="file-preview-markdown">
+      <div ref={bodyRef} className="file-preview-body markdown-content select-text px-4 py-3 text-sm" data-testid="file-preview-markdown">
         <MarkdownRenderer content={content} />
       </div>
     );
@@ -208,30 +324,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({ filePath, onOp
 
   if (classification.kind === 'html') {
     return (
-      <div className="file-preview-body file-preview-body-html flex h-full min-h-0 flex-col">
-        <div className="flex shrink-0 items-center gap-1 border-b border-nim px-3 py-1.5">
-          <button
-            type="button"
-            className={`rounded px-2 py-0.5 text-xs ${htmlView === 'render' ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]' : 'text-[var(--nim-text-muted)]'}`}
-            onClick={() => setHtmlView('render')}
-            data-testid="file-preview-html-mode-render"
-            data-active={htmlView === 'render' ? 'true' : 'false'}
-          >
-            渲染
-          </button>
-          <button
-            type="button"
-            className={`rounded px-2 py-0.5 text-xs ${htmlView === 'source' ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]' : 'text-[var(--nim-text-muted)]'}`}
-            onClick={() => setHtmlView('source')}
-            data-testid="file-preview-html-mode-source"
-            data-active={htmlView === 'source' ? 'true' : 'false'}
-          >
-            源码
-          </button>
-          <span className="ml-2 text-[11px] text-[var(--nim-text-faint)]" data-testid="file-preview-html-sandbox-note">
-            沙箱渲染：脚本与外联资源已禁用
-          </span>
-        </div>
+      <div ref={bodyRef} className="file-preview-body file-preview-body-html flex h-full min-h-0 flex-col">
         {htmlView === 'render' ? (
           <iframe
             title={fileName(filePath)}
@@ -246,6 +339,9 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({ filePath, onOp
             <MarkdownRenderer content={toFencedCodeBlock(content, 'markup')} />
           </div>
         )}
+        <div className="shrink-0 border-t border-nim px-3 py-1 text-[11px] text-[var(--nim-text-faint)]" data-testid="file-preview-html-sandbox-note">
+          沙箱渲染：脚本与外联资源已禁用
+        </div>
       </div>
     );
   }
@@ -253,6 +349,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({ filePath, onOp
   if (classification.kind === 'code') {
     return (
       <div
+        ref={bodyRef}
         className="file-preview-body markdown-content select-text px-3 py-2 text-sm"
         data-testid="file-preview-code"
         data-language={classification.language ?? ''}
