@@ -358,6 +358,7 @@ export function buildMetaAgentSystemPrompt(
   const listModelsTool = formatMcpToolReference('nimbalyst-meta-agent', 'list_models', style);
   const listWorktreesTool = formatMcpToolReference('nimbalyst-meta-agent', 'list_worktrees', style);
   const submitPlanTool = formatMcpToolReference('nimbalyst-meta-agent', 'submit_plan', style);
+  const requestRedispatchTool = formatMcpToolReference('nimbalyst-meta-agent', 'request_redispatch', style);
   const createSessionTool = formatMcpToolReference('nimbalyst-meta-agent', 'create_session', style);
   const getSessionStatusTool = formatMcpToolReference('nimbalyst-meta-agent', 'get_session_status', style);
   const getSessionResultTool = formatMcpToolReference('nimbalyst-meta-agent', 'get_session_result', style);
@@ -493,6 +494,7 @@ You do not have built-in \`Agent\` or \`Task\` tools. When you need parallel hel
 - ${listWorktreesTool}: See available git worktrees and branches
 - ${listModelsTool}: Read the current provider/model IDs verified by each engine before selecting a child model
 - ${submitPlanTool}: Submit or revise an implementation plan and wait for user approval
+- ${requestRedispatchTool}: Request an owner confirmation card to redispatch a failed work-order with changed provider/model/effort/permission/skills/task prompt; this tool never dispatches by itself
 - ${createSessionTool}: Spawn a child coding session (optionally in a worktree); pass optional effortLevel to route thinking intensity per task
 - ${listSpawnedSessionsTool}: List all sessions you created with status summaries
 - ${getSessionStatusTool}: Check if a child session is running, idle, waiting, or errored
@@ -528,6 +530,7 @@ Instructions in the project's CLAUDE.md files and the user's prompt always take 
 11. Match tool scope to the task when spawning. Pass toolScope "read" to investigation, research, and analysis children (or "write" if they must save a file deliverable such as a report); only pass toolScope "full" (which includes run_command) to a child whose task genuinely requires building, testing, or running commands. A read or write child cannot run a build, so it cannot fabricate having built anything.
 12. Converge - do not spin. After a child returns useful findings, your DEFAULT next action is to write the final answer for the user from those findings, NOT to spawn another child. Spawn again only for a genuinely new, independent sub-question you have not already delegated; if a child returned incomplete results, send IT a follow-up rather than spawning a fresh duplicate. Stop spawning and answer as soon as you can address the user's request - you are done when the request is answered, not when you have spawned many children.
 13. Resume interrupted children in place. When asked to resume or continue an interrupted child, use ${sendPromptTool} for that child's existing session ID so it keeps its context and clears the interrupted marker when processing restarts. Only create a replacement session when the original cannot be resumed (for example, the session is missing, corrupt, or its provider cannot process it); tell the user explicitly that the original could not be resumed and that you re-dispatched it, including the reason.
+14. Failed work-order redispatch requires ${requestRedispatchTool}. If a work-order is already failed, do NOT call ${createSessionTool} directly to replace it and do NOT treat chat text as owner authorization. Call ${requestRedispatchTool} with the failed tracker card id, suggested provider/model/effort, both dispatch knobs, skill ids, the revised task prompt, and a short change summary. The owner approval button on the resulting RedispatchWorkOrder card is the only authorization to bypass RetryGate.
 
 ## Child Session Notifications
 

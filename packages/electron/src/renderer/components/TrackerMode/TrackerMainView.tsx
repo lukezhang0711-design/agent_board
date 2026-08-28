@@ -288,18 +288,29 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
         workspaceId: workspacePath,
       });
       if (!result?.success) {
-        throw new Error(result?.error || '重试失败');
+        throw new Error(result?.error || '打开重试确认失败');
       }
       await refreshSessionList();
+      const headSessionId =
+        typeof result.result?.headSessionId === 'string'
+          ? result.result.headSessionId
+          : null;
+      if (headSessionId) {
+        setSelectedWorkstream({
+          workspacePath,
+          selection: { type: 'session', id: headSessionId },
+        });
+        setWindowMode('agent');
+      }
     } catch (error) {
       errorNotificationService.showError(
-        '重试失败',
+        '打开重试确认失败',
         error instanceof Error ? error.message : String(error),
       );
     } finally {
       setRetryingWorkOrderId(null);
     }
-  }, [workspacePath, refreshSessionList, retryingWorkOrderId]);
+  }, [workspacePath, refreshSessionList, retryingWorkOrderId, setSelectedWorkstream, setWindowMode]);
 
   // Base item sets from atoms
   const activeItems = useAtomValue(trackerItemsByTypeAtom(filterType));

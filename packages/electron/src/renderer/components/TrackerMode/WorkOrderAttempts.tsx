@@ -9,6 +9,24 @@ export interface WorkOrderAttemptView {
   outcome: 'success' | 'failure';
   failureReason?: string;
   retryReason?: string;
+  retryParameterChange?: WorkOrderRetryParameterChangeView;
+}
+
+export interface WorkOrderRetryParametersView {
+  provider: string;
+  model: string;
+  effortLevel?: string;
+  prompt?: string;
+  permissionScope?: string;
+  disturbanceLevel?: string;
+  skillBundleName?: string;
+  skillIds: string[];
+}
+
+export interface WorkOrderRetryParameterChangeView {
+  changeSummary?: string;
+  original: WorkOrderRetryParametersView;
+  approved: WorkOrderRetryParametersView;
 }
 
 export function formatTimestamp(value: string | Date | number | undefined): string {
@@ -22,6 +40,69 @@ export function formatTimestamp(value: string | Date | number | undefined): stri
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function readStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((candidate) => {
+    const normalized = readString(candidate);
+    return normalized ? [normalized] : [];
+  });
+}
+
+function readRetryParametersView(value: unknown): WorkOrderRetryParametersView | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const provider = readString(record.provider);
+  const model = readString(record.model);
+  if (!provider || !model) return null;
+  const effortLevel = readString(record.effortLevel);
+  const prompt = readString(record.prompt);
+  const permissionScope = readString(record.permissionScope);
+  const disturbanceLevel = readString(record.disturbanceLevel);
+  const skillBundleName = readString(record.skillBundleName);
+  return {
+    provider,
+    model,
+    ...(effortLevel ? { effortLevel } : {}),
+    ...(prompt ? { prompt } : {}),
+    ...(permissionScope ? { permissionScope } : {}),
+    ...(disturbanceLevel ? { disturbanceLevel } : {}),
+    ...(skillBundleName ? { skillBundleName } : {}),
+    skillIds: readStringList(record.skillIds),
+  };
+}
+
+function readRetryParameterChangeView(value: unknown): WorkOrderRetryParameterChangeView | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const original = readRetryParametersView(record.original);
+  const approved = readRetryParametersView(record.approved);
+  if (!original || !approved) return undefined;
+  const changeSummary = readString(record.changeSummary);
+  return {
+    ...(changeSummary ? { changeSummary } : {}),
+    original,
+    approved,
+  };
+}
+
+function formatRetryParameters(parameters: WorkOrderRetryParametersView): string {
+  const parts = [
+    parameters.provider,
+    parameters.model,
+    parameters.effortLevel ? `强度 ${parameters.effortLevel}` : null,
+    parameters.permissionScope && parameters.disturbanceLevel
+      ? `${parameters.permissionScope}/${parameters.disturbanceLevel}`
+      : null,
+    parameters.skillBundleName ? `技能包 ${parameters.skillBundleName}` : null,
+    parameters.skillIds.length > 0 ? `技能 ${parameters.skillIds.join('、')}` : null,
+  ].filter((part): part is string => Boolean(part));
+  return parts.join(' · ');
 }
 
 function readWorkOrderReceiptView(
@@ -66,6 +147,9 @@ export function readWorkOrderAttemptViews(value: unknown): WorkOrderAttemptView[
           return [];
         }
         const rawAttemptNumber = raw.attempt;
+        const retryParameterChange = readRetryParameterChangeView(
+          (candidate as Record<string, unknown>).retryParameterChange,
+        );
         return [{
           attempt: typeof rawAttemptNumber === 'number'
             && Number.isSafeInteger(rawAttemptNumber)
@@ -79,6 +163,7 @@ export function readWorkOrderAttemptViews(value: unknown): WorkOrderAttemptView[
           outcome: raw.outcome,
           ...(typeof raw.failureReason === 'string' ? { failureReason: raw.failureReason } : {}),
           ...(typeof raw.retryReason === 'string' ? { retryReason: raw.retryReason } : {}),
+          ...(retryParameterChange ? { retryParameterChange } : {}),
         }];
       })
     : [];
@@ -149,6 +234,20 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
             {attempt.retryReason && (
               <div className="text-[10px] text-nim-accent" data-testid="work-order-attempt-retry-reason">
                 {attempt.retryReason}
+              </div>
+            )}
+            {attempt.retryParameterChange && (
+              <div className="space-y-1 text-[10px] text-nim-muted" data-testid="work-order-attempt-retry-params">
+                <div>
+                  参数变更：{formatRetryParameters(attempt.retryParameterChange.original)}
+                  {' → '}
+                  {formatRetryParameters(attempt.retryParameterChange.approved)}
+                </div>
+                {attempt.retryParameterChange.changeSummary && (
+                  <div className="whitespace-pre-wrap break-words">
+                    {attempt.retryParameterChange.changeSummary}
+                  </div>
+                )}
               </div>
             )}
           </div>

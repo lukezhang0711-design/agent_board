@@ -136,6 +136,10 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('skillBundleName');
     expect(prompt).toContain('skillIds');
     expect(prompt).toContain('Omitted skills mean no skills are granted');
+    expect(prompt).toContain('request_redispatch');
+    expect(prompt).toContain('Failed work-order redispatch requires');
+    expect(prompt).toContain('do NOT call');
+    expect(prompt).toContain('create_session');
   });
 
   it('green EZ-1: forbids Head native Claude plan mode while preserving the formal plan-card route', () => {

@@ -28,6 +28,7 @@ describe('list_models meta-agent tool', () => {
       listModels,
       listWorktrees: vi.fn(),
       submitPlan: vi.fn(),
+      requestRedispatch: vi.fn(),
       createSession: vi.fn(),
       spawnSession: vi.fn(),
       getSessionStatus: vi.fn(),

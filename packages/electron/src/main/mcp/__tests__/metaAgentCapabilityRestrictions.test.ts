@@ -31,6 +31,7 @@ describe('extension Meta Agent current capability restrictions', () => {
       'list_models',
       'list_worktrees',
       'submit_plan',
+      'request_redispatch',
       'create_session',
       'get_session_status',
       'get_session_result',
@@ -59,6 +60,7 @@ describe('extension Meta Agent current capability restrictions', () => {
     expect(sharedToolNames).not.toContain('PromptForUserInput');
     expect(sharedToolNames).not.toContain('AskUserQuestion');
     expect(metaToolNames).toContain('submit_plan');
+    expect(metaToolNames).toContain('request_redispatch');
     expect(shouldExcludePromptToolsForCodexHead({
       provider: 'openai-codex',
       agentRole: 'meta-agent',

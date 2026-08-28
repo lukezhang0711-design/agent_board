@@ -621,7 +621,7 @@ const WRITE_TOOL_NAMES = new Set(['write', 'notebookedit']);
  * `settings.showToolCalls` is false, so the user can still respond to prompts
  * (permission grants, plan-mode exits, AskUserQuestion answers, commit proposals).
  */
-const INTERACTIVE_WIDGET_TOOLS = new Set(['ToolPermission', 'ExitPlanMode', 'AskUserQuestion', 'GitCommitProposal']);
+const INTERACTIVE_WIDGET_TOOLS = new Set(['ToolPermission', 'ExitPlanMode', 'AskUserQuestion', 'GitCommitProposal', 'RedispatchWorkOrder']);
 
 /**
  * MCP tools arrive as `mcp__<server>__<toolName>` (server name may contain

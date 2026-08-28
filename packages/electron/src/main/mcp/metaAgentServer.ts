@@ -96,6 +96,19 @@ type CreateSessionArgs = {
   maxParallelOverride?: number;
 };
 
+type RequestRedispatchArgs = {
+  trackerItemId: string;
+  provider: string;
+  model: string;
+  effortLevel?: EffortLevel;
+  prompt: string;
+  changeSummary: string;
+  permissionScope: DispatchPermissionScope;
+  disturbanceLevel: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds: string[];
+};
+
 type SpawnSessionArgs = {
   title?: string;
   prompt: string;
@@ -171,6 +184,19 @@ const SUBMIT_PLAN_EXAMPLE = {
   ],
 };
 
+const REQUEST_REDISPATCH_EXAMPLE: RequestRedispatchArgs = {
+  trackerItemId: "failed-work-order-id",
+  provider: "openai-codex",
+  model: "openai-codex:gpt-5.6-sol",
+  effortLevel: "high",
+  prompt: "Revised task prompt for the replacement worker.",
+  changeSummary: "Switch from the timed-out engine and narrow the task brief.",
+  permissionScope: "workspace-write",
+  disturbanceLevel: "on-failure",
+  skillBundleName: "施工包",
+  skillIds: [],
+};
+
 const SUBMIT_PLAN_DESCRIPTION = [
   "REQUIRED before any implementation, file write, or state change. Submit the only valid user-approval card; never ask for approval in chat text (the user will not answer it). Read-only investigation is exempt. Creates or updates one durable plan card and waits for approval; resubmit revisions here.",
   "Copy this complete minimal legal call:",
@@ -185,6 +211,10 @@ const SUBMIT_PLAN_DESCRIPTION = [
 
 function submitPlanValidationError(message: string, example: string): Error {
   return new Error(`${message}. Correct example: ${example}`);
+}
+
+function requestRedispatchValidationError(message: string): Error {
+  return new Error(`${message}. Correct example: ${JSON.stringify(REQUEST_REDISPATCH_EXAMPLE)}`);
 }
 
 /**
@@ -491,6 +521,49 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
   });
 }
 
+function normalizeRequestRedispatchArgs(value: Record<string, unknown> | undefined): RequestRedispatchArgs {
+  const args = value ?? {};
+  const trackerItemId = typeof args.trackerItemId === "string" ? args.trackerItemId.trim() : "";
+  const provider = typeof args.provider === "string" ? args.provider.trim() : "";
+  const model = typeof args.model === "string" ? args.model.trim() : "";
+  const prompt = typeof args.prompt === "string" ? args.prompt.trim() : "";
+  const changeSummary = typeof args.changeSummary === "string" ? args.changeSummary.trim() : "";
+  if (!trackerItemId) throw requestRedispatchValidationError("trackerItemId is required");
+  if (!provider) throw requestRedispatchValidationError("provider is required");
+  if (!model) throw requestRedispatchValidationError("model is required");
+  if (!prompt) throw requestRedispatchValidationError("prompt is required");
+  if (!changeSummary) throw requestRedispatchValidationError("changeSummary is required");
+  if (!isDispatchPermissionScope(args.permissionScope)) {
+    throw requestRedispatchValidationError("permissionScope must be read-only, workspace-write, or danger-full-access");
+  }
+  if (!isDispatchDisturbanceLevel(args.disturbanceLevel)) {
+    throw requestRedispatchValidationError("disturbanceLevel must be never, on-failure, or on-request");
+  }
+  if (!Array.isArray(args.skillIds)) {
+    throw requestRedispatchValidationError("skillIds must be an array of non-empty strings");
+  }
+  const skillIds = args.skillIds.map((candidate, index) => {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    throw requestRedispatchValidationError(`skillIds[${index}] must be a non-empty string`);
+  });
+  const effortLevel = args.effortLevel === undefined
+    ? undefined
+    : normalizeOptionalEffortLevel(args.effortLevel, "effortLevel");
+  const skillBundleName = normalizeOptionalSkillBundleName(args.skillBundleName, "skillBundleName");
+  return {
+    trackerItemId,
+    provider,
+    model,
+    ...(effortLevel ? { effortLevel } : {}),
+    prompt,
+    changeSummary,
+    permissionScope: args.permissionScope,
+    disturbanceLevel: args.disturbanceLevel,
+    ...(skillBundleName ? { skillBundleName } : {}),
+    skillIds,
+  };
+}
+
 /**
  * The original MCP call that is waiting for a plan approval result.
  *
@@ -545,6 +618,11 @@ interface MetaAgentToolFns {
     args: SubmitPlanArgs,
     signal?: AbortSignal,
     mcpCall?: SubmitPlanMcpCall,
+  ) => Promise<string>;
+  requestRedispatch: (
+    metaSessionId: string,
+    workspaceId: string,
+    args: RequestRedispatchArgs
   ) => Promise<string>;
   createSession: (
     metaSessionId: string,
@@ -732,6 +810,76 @@ const META_AGENT_TOOL_DEFS: Array<{
         },
       },
       required: ["title", "planItems", "risks"],
+    },
+  },
+  {
+    name: "request_redispatch",
+    description:
+      "Request owner approval to redispatch an already failed work-order with changed parameters. This tool NEVER dispatches by itself: it renders a RedispatchWorkOrder confirmation card in the owner's Head conversation. For failed work-orders, do not call create_session directly; use this tool and wait for the owner to approve or reject the card. The owner can edit the final provider/model/effort/permission knobs/skills/task prompt on the card before approval.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        trackerItemId: {
+          type: "string",
+          minLength: 1,
+          description: "REQUIRED. ID of the failed work-order tracker card to redispatch.",
+        },
+        provider: {
+          type: "string",
+          minLength: 1,
+          description: "REQUIRED. Suggested provider ID for the retry, e.g. openai-codex or antigravity-gemini-agent.",
+        },
+        model: {
+          type: "string",
+          minLength: 1,
+          description: "REQUIRED. Suggested provider-qualified model ID from list_models. If you pass a provider-local model name, it is qualified against provider.",
+        },
+        effortLevel: {
+          type: "string",
+          minLength: 1,
+          description: "Optional exact raw effort value declared by this model in list_models; omit when unsupported.",
+        },
+        prompt: {
+          type: "string",
+          minLength: 1,
+          description: "REQUIRED. Suggested final task prompt for the replacement worker. Include any fix to the failed task brief here.",
+        },
+        changeSummary: {
+          type: "string",
+          minLength: 1,
+          description: "REQUIRED. Short explanation of what changed from the failed attempt and why.",
+        },
+        permissionScope: {
+          type: "string",
+          enum: ["read-only", "workspace-write", "danger-full-access"],
+          description: "REQUIRED. Suggested permission scope for the retry.",
+        },
+        disturbanceLevel: {
+          type: "string",
+          enum: ["never", "on-failure", "on-request"],
+          description: "REQUIRED. Suggested owner-interruption level for the retry.",
+        },
+        skillBundleName: {
+          type: "string",
+          minLength: 1,
+          description: "Optional skill bundle suggestion. The confirmation card expands it into explicit skill tags.",
+        },
+        skillIds: {
+          type: "array",
+          items: { type: "string", minLength: 1 },
+          description: "REQUIRED. Explicit skill ids for the retry. Use [] when no skills should be granted.",
+        },
+      },
+      required: [
+        "trackerItemId",
+        "provider",
+        "model",
+        "prompt",
+        "changeSummary",
+        "permissionScope",
+        "disturbanceLevel",
+        "skillIds",
+      ],
     },
   },
   {
@@ -1059,6 +1207,7 @@ const EXTENSION_META_AGENT_ALLOWED_TOOLS = new Set<string>([
   "list_models",
   "list_worktrees",
   "submit_plan",
+  "request_redispatch",
   "create_session",
   "get_session_status",
   "get_session_result",
@@ -1142,6 +1291,12 @@ export async function dispatchMetaAgentTool(
         submitPlanArgs,
       );
     }
+    case "request_redispatch":
+      return toolFns.requestRedispatch(
+        aiSessionId,
+        effectiveWorkspaceId,
+        normalizeRequestRedispatchArgs(args),
+      );
     case "create_session":
       return toolFns.createSession(aiSessionId, effectiveWorkspaceId, (args ?? {}) as CreateSessionArgs);
     case "spawn_session":
