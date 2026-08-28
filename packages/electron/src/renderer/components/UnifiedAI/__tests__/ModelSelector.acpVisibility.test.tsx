@@ -262,6 +262,73 @@ describe('ModelSelector', () => {
     expect(screen.queryByText(/Opus \(unverified\)/)).toBeNull();
   });
 
+  it('RED FB-140: renders a dynamic extension provider group while its first catalog read is in flight', async () => {
+    (window as any).electronAPI.aiGetModels.mockResolvedValue({
+      success: true,
+      grouped: {},
+      providerLabels: {
+        'antigravity-gemini-agent': 'Gemini',
+      },
+      catalogStatuses: {
+        'antigravity-gemini-agent': {
+          verified: false,
+          modelSource: 'none',
+          inFlight: true,
+          lastSuccessAt: null,
+          lastError: null,
+        },
+      },
+    });
+
+    render(
+      <ModelSelector
+        currentModel="openai-codex:gpt-5.6-sol"
+        onModelChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('model-picker'));
+
+    await waitFor(() => expect(screen.getByTestId('model-picker-provider-antigravity-gemini-agent')).toBeTruthy());
+    expect(screen.getByTestId('model-picker-provider-antigravity-gemini-agent').textContent)
+      .toContain('Gemini');
+    expect(screen.getByTestId('model-catalog-refreshing-antigravity-gemini-agent').textContent)
+      .toContain('正在读取模型目录');
+    expect(screen.queryByText('No models available')).toBeNull();
+  });
+
+  it('RED FB-140: renders the raw dynamic extension catalog failure without hiding the provider group', async () => {
+    (window as any).electronAPI.aiGetModels.mockResolvedValue({
+      success: true,
+      grouped: {},
+      providerLabels: {
+        'antigravity-gemini-agent': 'Gemini',
+      },
+      catalogStatuses: {
+        'antigravity-gemini-agent': {
+          verified: false,
+          modelSource: 'none',
+          inFlight: false,
+          lastSuccessAt: null,
+          lastError: { message: 'agy models failed: offline' },
+        },
+      },
+    });
+
+    render(
+      <ModelSelector
+        currentModel="openai-codex:gpt-5.6-sol"
+        onModelChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('model-picker'));
+
+    await waitFor(() => expect(screen.getByTestId('model-picker-provider-antigravity-gemini-agent')).toBeTruthy());
+    expect(screen.getByTestId('model-catalog-status-antigravity-gemini-agent').textContent)
+      .toContain('agy models failed: offline');
+  });
+
   it('GREEN FB-116: keeps the cached Gemini rows selectable-looking while its explicit picker refresh is in flight', async () => {
     const refresh = (() => {
       let resolve!: () => void;

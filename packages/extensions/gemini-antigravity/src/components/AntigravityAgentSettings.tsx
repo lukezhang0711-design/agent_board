@@ -45,16 +45,26 @@ interface ProviderConfig {
   backendModuleEnabled?: boolean;
 }
 
+interface ModelCatalogStatus {
+  modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
+  verified?: boolean;
+  inFlight?: boolean;
+  lastSuccessAt?: number | null;
+  lastError?: { message?: string } | null;
+}
+
 export interface AntigravityAgentSettingsProps {
   config: ProviderConfig;
   apiKeys?: Record<string, string>;
   availableModels: Model[];
   loading?: boolean;
+  catalogStatus?: ModelCatalogStatus;
   onToggle: (enabled: boolean) => void;
   onApiKeyChange?: (key: string, value: string) => void;
   onModelToggle: (modelId: string, enabled: boolean) => void;
   onSelectAllModels: (selectAll: boolean) => void;
   onTestConnection: () => Promise<void>;
+  onRefreshModels?: () => Promise<void>;
   onConfigChange?: (updates: Partial<ProviderConfig>) => void;
   /**
    * Triggers the host-mediated first-use consent flow that grants the
@@ -95,44 +105,36 @@ function ToggleSwitch({
   );
 }
 
+function isInstallOrLoginCatalogError(message: string): boolean {
+  return /not\s+(?:installed|found|logged\s+in)|missing|enoent|command not found|login required|unauthori[sz]ed|authentication/i
+    .test(message);
+}
+
 export function AntigravityAgentSettings({
   config,
   availableModels,
   loading,
+  catalogStatus,
   onToggle,
   onModelToggle,
   onSelectAllModels,
   onTestConnection,
+  onRefreshModels,
   onEnableBackendModule,
 }: AntigravityAgentSettingsProps): React.ReactElement {
   const enabledModelIds = config.models ?? [];
   const allSelected = availableModels.length > 0
     && availableModels.every((m) => enabledModelIds.includes(m.id));
-
-  // Extension-local error surface for getModels() failures (e.g. version-gate).
-  // Mirrors the same pattern in AntigravitySettings (chat panel).
-  const [modelsError, setModelsError] = React.useState<string | null>(null);
-  const prevEnabledRef = React.useRef<boolean | undefined>(undefined);
-  React.useEffect(() => {
-    const wasEnabled = prevEnabledRef.current;
-    prevEnabledRef.current = config.enabled;
-
-    if (!config.enabled) {
-      setModelsError(null);
-      return;
-    }
-
-    const shouldProbe =
-      (wasEnabled === false || wasEnabled === undefined) ||
-      (availableModels.length === 0 && !loading);
-
-    if (!shouldProbe) return;
-
-    // The host refreshes the dynamic agy catalog. Clear only stale local UI
-    // state here; do not synthesize a static fallback list.
-    setModelsError(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.enabled, availableModels.length, loading]);
+  const catalogError = catalogStatus?.lastError?.message?.trim() || null;
+  const showCatalogLoading = availableModels.length === 0
+    && (
+      loading === true
+      || catalogStatus?.inFlight === true
+      || (!catalogError && catalogStatus?.lastSuccessAt == null)
+    );
+  const showInstallLoginGuidance = catalogError
+    ? isInstallOrLoginCatalogError(catalogError)
+    : false;
 
   // Auto-tick all models on first enable. Mirrors AntigravitySettings (chat panel).
   // The ref guard prevents multiple disk writes from StrictMode double-invoke +
@@ -341,19 +343,48 @@ export function AntigravityAgentSettings({
 
               {availableModels.length === 0 ? (
                 <>
-                  {modelsError && !loading && (
+                  {showCatalogLoading ? (
                     <p
-                      className="text-[13px] text-[var(--nim-error)] mb-2"
-                      data-testid="antigravity-agent-models-error"
+                      className="text-[13px] text-[var(--nim-text-muted)]"
+                      data-testid="antigravity-agent-models-loading"
                     >
-                      {modelsError}
+                      正在读取模型目录…
+                    </p>
+                  ) : catalogError ? (
+                    <div className="flex flex-col gap-2">
+                      <p
+                        className="text-[13px] text-[var(--nim-error)]"
+                        data-testid="antigravity-agent-models-error"
+                      >
+                        {catalogError}
+                      </p>
+                      {showInstallLoginGuidance && (
+                        <p
+                          className="text-[13px] text-[var(--nim-text-muted)]"
+                          data-testid="antigravity-agent-models-guidance"
+                        >
+                          请确认 Antigravity CLI 已安装且已登录后重试。
+                        </p>
+                      )}
+                      {onRefreshModels && (
+                        <button
+                          type="button"
+                          onClick={() => { void onRefreshModels(); }}
+                          disabled={loading}
+                          className="provider-test-button self-start py-1.5 px-3 rounded-md text-[13px] font-medium cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] disabled:opacity-50"
+                        >
+                          Retry
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p
+                      className="text-[13px] text-[var(--nim-text-muted)]"
+                      data-testid="antigravity-agent-models-empty"
+                    >
+                      暂未返回模型。
                     </p>
                   )}
-                  <p className="text-[13px] text-[var(--nim-text-muted)]">
-                    {loading
-                      ? 'Loading models...'
-                      : '暂未读取到模型。请确认 Antigravity CLI 已安装且已登录后重试。'}
-                  </p>
                 </>
               ) : (
                 <ul className="provider-model-list flex flex-col gap-1">

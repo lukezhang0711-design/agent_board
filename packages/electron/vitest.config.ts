@@ -29,6 +29,8 @@ export default defineConfig({
       // Use array form so we can match @nimbalyst/runtime/<deep-path> with a regex.
       { find: /^@nimbalyst\/runtime$/, replacement: path.resolve(__dirname, '../runtime/src/index.ts') },
       { find: /^@nimbalyst\/runtime\/(.+)$/, replacement: path.resolve(__dirname, '../runtime/src') + '/$1' },
+      { find: /^@nimbalyst\/extension-sdk$/, replacement: path.resolve(__dirname, '../extension-sdk/src/index.ts') },
+      { find: /^@nimbalyst\/extension-sdk\/(.+)$/, replacement: path.resolve(__dirname, '../extension-sdk/src') + '/$1' },
       { find: '@', replacement: path.resolve(__dirname, './src') }
     ]
   },

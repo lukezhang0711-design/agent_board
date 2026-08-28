@@ -64,6 +64,7 @@ export interface Model {
 interface ModelCatalogStatus {
   modelSource?: 'runtime' | 'cache' | 'placeholder' | 'none';
   verified?: boolean;
+  inFlight?: boolean;
   lastSuccessAt?: number | null;
   lastError?: { message?: string } | null;
 }
@@ -121,10 +122,20 @@ type ExtAgentItem = {
 const ExtensionAgentSettingsPanel: React.FC<{
   extEntry: ExtAgentItem;
   commonProps: Record<string, unknown>;
+  catalogStatus?: ModelCatalogStatus;
+  onRefreshModels?: () => Promise<void>;
   workspacePath?: string;
   scope: 'user' | 'project';
   onOpenInstalledExtensions: () => void;
-}> = ({ extEntry, commonProps, workspacePath, scope, onOpenInstalledExtensions }) => {
+}> = ({
+  extEntry,
+  commonProps,
+  catalogStatus,
+  onRefreshModels,
+  workspacePath,
+  scope,
+  onOpenInstalledExtensions,
+}) => {
   const loadedExt = getExtensionLoader().getExtension(extEntry.extensionId);
   const contributions = (loadedExt?.manifest?.contributions ?? {}) as Record<string, unknown>;
   const aiProviders = contributions.aiAgentProviders as
@@ -210,12 +221,18 @@ const ExtensionAgentSettingsPanel: React.FC<{
   }
 
   const cfg = (commonProps.config as Record<string, unknown> | undefined) ?? {};
-  const extModels = (extEntry.models ?? []).map((m) => ({ id: m.id, name: m.name, provider: extEntry.id }));
+  const liveModels = Array.isArray(commonProps.availableModels)
+    ? commonProps.availableModels as Model[]
+    : [];
+  const manifestModels = (extEntry.models ?? []).map((m) => ({ id: m.id, name: m.name, provider: extEntry.id }));
+  const extModels = liveModels.length > 0 ? liveModels : manifestModels;
   return (
     <ExtPanel
       {...commonProps}
       config={{ ...cfg, backendModuleEnabled: granted }}
       availableModels={extModels}
+      catalogStatus={catalogStatus}
+      onRefreshModels={onRefreshModels}
       onEnableBackendModule={async () => {
         if (!perms || !moduleId) {
           throw new Error(
@@ -924,6 +941,11 @@ export function SettingsView({
             <ExtensionAgentSettingsPanel
               extEntry={extEntry}
               commonProps={commonProps as unknown as Record<string, unknown>}
+              catalogStatus={catalogStatuses[providerId]}
+              onRefreshModels={async () => {
+                await window.electronAPI.aiRefreshModelCatalogs?.();
+                await fetchModels(providerId);
+              }}
               workspacePath={workspacePath ?? undefined}
               scope={scope}
               onOpenInstalledExtensions={() => setSelectedCategory('installed-extensions')}

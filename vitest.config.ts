@@ -58,6 +58,14 @@ export default defineConfig({
         replacement: path.resolve(__dirname, './packages/runtime/src'),
       },
       {
+        find: /^@nimbalyst\/extension-sdk$/,
+        replacement: path.resolve(__dirname, './packages/extension-sdk/src/index.ts'),
+      },
+      {
+        find: /^@nimbalyst\/extension-sdk\/(.+)$/,
+        replacement: `${path.resolve(__dirname, './packages/extension-sdk/src')}/$1`,
+      },
+      {
         find: /^@\//,
         replacement: `${path.resolve(__dirname, './packages/runtime/src/editor')}/`,
       },

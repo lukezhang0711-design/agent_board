@@ -305,13 +305,16 @@ export function ModelSelector({
     const status = catalogStatuses[provider];
     if (!status || !isDynamicCatalogProvider(provider)) return null;
     const cachedAt = formatCatalogTime(status.lastSuccessAt);
+    const hasVisibleRows = (models[provider]?.length ?? 0) > 0;
     if (status.inFlight) {
       return (
         <div
           className="mx-2 mb-1 rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)]"
           data-testid={`model-catalog-refreshing-${provider}`}
         >
-          正在刷新模型目录；显示上次成功清单。{status.lastError?.message ? ` 上次失败：${status.lastError.message}` : ''}
+          {hasVisibleRows
+            ? `正在刷新模型目录；显示上次成功清单。${status.lastError?.message ? ` 上次失败：${status.lastError.message}` : ''}`
+            : '正在读取模型目录'}
         </div>
       );
     }
@@ -373,10 +376,39 @@ export function ModelSelector({
   const groupedProviders = Object.entries(models).reduce((acc, [provider, providerModels]) => {
     const isAgent = getProviderType(provider) === 'agent';
     const type = isAgent ? 'agents' : 'models';
-    if (!acc[type]) acc[type] = {};
     acc[type][provider] = providerModels;
     return acc;
-  }, {} as Record<'agents' | 'models', Record<string, Model[]>>);
+  }, { agents: {}, models: {} } as Record<'agents' | 'models', Record<string, Model[]>>);
+
+  const missingDynamicExtensionProviders = Object.keys(catalogStatuses)
+    .filter((provider) => (
+      provider !== 'openai-codex'
+      && provider !== 'openai-codex-acp'
+      && provider !== 'claude-code'
+      && provider !== 'claude-code-cli'
+      && !models[provider]
+      && (
+        catalogStatuses[provider]?.inFlight === true
+        || !!catalogStatuses[provider]?.lastError?.message
+        || catalogStatuses[provider]?.verified !== true
+      )
+    ));
+  const missingBuiltInCatalogProviders = Object.keys(catalogStatuses)
+    .filter((provider) => (
+      provider !== 'openai-codex-acp'
+      && provider !== 'claude-code-cli'
+      && (
+        provider === 'openai-codex'
+        || provider === 'claude-code'
+      )
+      && !models[provider]
+      && (
+        !!catalogStatuses[provider]?.lastError?.message
+        || catalogStatuses[provider]?.verified !== true
+      )
+    ));
+  const hasRenderableModels = Object.keys(models).length > 0;
+  const hasRenderableMissingDynamicExtensions = missingDynamicExtensionProviders.length > 0;
 
   // Read-only chip: show the running provider/model without a dropdown. Used by
   // committed claude-code-cli sessions where the model is fixed at spawn.
@@ -424,22 +456,12 @@ export function ModelSelector({
             style={floatingStyles}
             {...getFloatingProps()}
           >
-          {Object.keys(catalogStatuses)
-            // First-install placeholders are intentionally filtered out by
-            // the main process so they can never be selected. Still render
-            // their status here; otherwise a picker with other providers
-            // would hide the required “unverified” explanation entirely.
-            .filter((provider) => provider !== 'openai-codex-acp' && provider !== 'claude-code-cli')
-            .filter((provider) => !models[provider] && (
-              !!catalogStatuses[provider]?.lastError?.message
-              || catalogStatuses[provider]?.verified !== true
-            ))
-            .map((provider) => (
-              <React.Fragment key={`missing-catalog-${provider}`}>
-                {renderCatalogNotice(provider)}
-              </React.Fragment>
-            ))}
-          {Object.keys(models).length === 0 ? (
+          {missingBuiltInCatalogProviders.map((provider) => (
+            <React.Fragment key={`missing-catalog-${provider}`}>
+              {renderCatalogNotice(provider)}
+            </React.Fragment>
+          ))}
+          {!hasRenderableModels && !hasRenderableMissingDynamicExtensions ? (
             loading ? (
             <div className="model-selector-loading p-3 text-center text-xs text-[var(--nim-text-faint)]">Loading models...</div>
             ) : (
@@ -456,7 +478,7 @@ export function ModelSelector({
                 </div>
               )}
               {/* Agents Section */}
-              {groupedProviders.agents && Object.keys(groupedProviders.agents).length > 0 && (
+              {((groupedProviders.agents && Object.keys(groupedProviders.agents).length > 0) || hasRenderableMissingDynamicExtensions) && (
                 <>
                   <div className="model-selector-section-header px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.5px] text-[var(--nim-text-faint)]">Agents</div>
                   {isSectionDisabled('agent') && (
@@ -515,6 +537,20 @@ export function ModelSelector({
                           </button>
                         );
                       })}
+                    </div>
+                  ))}
+                  {missingDynamicExtensionProviders.map((provider) => (
+                    <div key={`missing-dynamic-extension-${provider}`} className="model-selector-provider-group mb-1">
+                      <HelpTooltip testId={`model-picker-provider-${provider}`} placement="right">
+                        <div
+                          className="model-selector-provider-header flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-[var(--nim-text-muted)]"
+                          data-testid={`model-picker-provider-${provider}`}
+                        >
+                          {renderProviderIcon(provider, 12)}
+                          <span>{getProviderLabel(provider)}</span>
+                        </div>
+                      </HelpTooltip>
+                      {renderCatalogNotice(provider)}
                     </div>
                   ))}
                 </>

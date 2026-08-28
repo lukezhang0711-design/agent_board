@@ -50,7 +50,10 @@ vi.mock('@nimbalyst/runtime', () => ({
 }));
 
 vi.mock('@nimbalyst/runtime/storage/repositories/AISessionsRepository', () => ({
-  AISessionsRepository: { get: mocks.getSession },
+  AISessionsRepository: {
+    get: mocks.getSession,
+    updateMetadata: mocks.updateSessionMetadata,
+  },
 }));
 
 vi.mock('../../../database/PGLiteDatabaseWorker', () => ({
