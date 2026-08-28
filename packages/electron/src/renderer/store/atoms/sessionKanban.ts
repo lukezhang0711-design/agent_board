@@ -75,6 +75,17 @@ type WorkOrderStatus =
 
 const WORK_ORDER_TYPE = 'work-order';
 
+/**
+ * Prefix of the `source_ref` MetaAgentService stamps on a work order when a
+ * Head dispatches a child session. The suffix is the child session id.
+ */
+export const WORK_ORDER_SOURCE_REF_PREFIX = 'meta-agent-work-order:';
+
+/** The `source_ref` a Head dispatch writes for `sessionId`. */
+export function workOrderSourceRefFor(sessionId: string): string {
+  return `${WORK_ORDER_SOURCE_REF_PREFIX}${sessionId}`;
+}
+
 function isWorkOrder(record: TrackerRecord): boolean {
   return record.primaryType === WORK_ORDER_TYPE
     || (Array.isArray(record.typeTags) && record.typeTags.includes(WORK_ORDER_TYPE));
@@ -400,6 +411,27 @@ export const sessionWorkOrderAttemptNumberAtom = atomFamily((sessionId: string) 
     const status = normalizedWorkOrderStatus(workOrder.fields.status);
     const isTerminal = status === 'completed' || status === 'failed';
     return Math.max(1, attempts.length + (isTerminal ? 0 : 1));
+  })
+);
+
+/**
+ * True when this card's session was dispatched by a Head — that is, a work
+ * order points at it. Only those cards get the "Open in Agent" entry: a plain
+ * session card has no delegated run to jump into.
+ *
+ * `sourceRef` is the primary signal (it is literally
+ * `meta-agent-work-order:<child session id>`); `childSessionId` covers a
+ * retried card, which keeps the original `sourceRef` while re-pointing the
+ * child link at the new run.
+ */
+export const sessionWorkOrderLinkedAtom = atomFamily((sessionId: string) =>
+  atom((get): boolean => {
+    const meta = get(sessionRegistryAtom).get(sessionId);
+    const records = get(trackerItemsMapAtom).values();
+    const workOrder = findWorkOrderForSession(sessionId, records, meta?.linkedTrackerItemIds);
+    if (!workOrder) return false;
+    return workOrder.sourceRef === workOrderSourceRefFor(sessionId)
+      || workOrder.fields.childSessionId === sessionId;
   })
 );
 

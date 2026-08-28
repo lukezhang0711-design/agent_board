@@ -2653,8 +2653,8 @@ export class MetaAgentService {
   }
 
   /**
-   * Give a queued dispatch a real `ai_sessions` row up front, so it is visible in
-   * Delegated Sessions and on the board while it waits for a slot. Without this a
+   * Give a queued dispatch a real `ai_sessions` row up front, so it is visible
+   * on the session board while it waits for a slot. Without this a
    * queued item exists only in `dispatch_queue` and in a tracker card, so the
    * operator sees nothing between "queued" and "started".
    *
@@ -4520,8 +4520,9 @@ export class MetaAgentService {
     const sessions: Array<Record<string, unknown>> = [];
     for (const row of rows) {
       // A dispatch that is still waiting for a slot has a placeholder row whose
-      // raw status is 'idle'. Report it as 'queued' so Delegated Sessions shows
-      // it as waiting rather than as an idle child that never started.
+      // raw status is 'idle'. Report it as 'queued' so the Head's own view of
+      // its children shows it as waiting rather than as an idle child that
+      // never started.
       const metadata = typeof row.metadata === 'string'
         ? (() => { try { return JSON.parse(row.metadata); } catch { return null; } })()
         : row.metadata;

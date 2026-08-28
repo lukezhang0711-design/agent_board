@@ -4,8 +4,8 @@ import { rehypeAutolinkFilePaths, __test } from '../rehypeAutolinkFilePaths';
 const { splitTextNode } = __test;
 
 /** Collect the file paths that `splitTextNode` would turn into anchors. */
-function linkedPaths(text: string): string[] {
-  const nodes = splitTextNode(text);
+function linkedPaths(text: string, insideInlineCode = false): string[] {
+  const nodes = splitTextNode(text, insideInlineCode);
   if (!nodes) return [];
   return nodes
     .filter((n: any) => n.type === 'element' && n.tagName === 'a')
@@ -49,6 +49,29 @@ describe('rehypeAutolinkFilePaths path detection', () => {
     ];
     it.each(cases)('does not link %j', (input) => {
       expect(linkedPaths(input)).toEqual([]);
+    });
+  });
+
+  describe('bare filenames inside inline code', () => {
+    it('links a known file extension', () => {
+      expect(linkedPaths('report.sql', true)).toEqual(['report.sql']);
+      expect(linkedPaths('2026-08-27-收官核对.sql', true)).toEqual(['2026-08-27-收官核对.sql']);
+      expect(linkedPaths('notes.md:12', true)).toEqual(['notes.md:12']);
+    });
+
+    it('still links paths that carry a folder', () => {
+      expect(linkedPaths('src/a/foo.ts', true)).toEqual(['src/a/foo.ts']);
+      // A Windows path counts as "has a folder", so the bare-filename
+      // extension list does not apply to it.
+      expect(linkedPaths('C:\\proj\\notes.unknown', true)).toEqual(['C:\\proj\\notes.unknown']);
+    });
+
+    // Library names read like filenames; keeping `.js` off the bare list is
+    // what stops `Node.js` in backticks from becoming a dead link.
+    it('leaves prose-shaped tokens alone', () => {
+      expect(linkedPaths('Node.js', true)).toEqual([]);
+      expect(linkedPaths('v1.2.3', true)).toEqual([]);
+      expect(linkedPaths('e.g', true)).toEqual([]);
     });
   });
 
@@ -101,6 +124,50 @@ describe('rehypeAutolinkFilePaths tree transform', () => {
     // Fenced code and existing-anchor subtrees are untouched.
     expect(pre.children[0].children[0]).toEqual({ type: 'text', value: 'src/a/bar.ts' });
     expect(anchor.children[0]).toEqual({ type: 'text', value: 'src/a/baz.ts' });
+  });
+
+  it('links a path whose folders are not ASCII', () => {
+    const tree = {
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tagName: 'p',
+          children: [{ type: 'text', value: '产物在 诊断报告/2026-08-27-收官核对.sql 里' }],
+        },
+      ],
+    };
+    run(tree);
+    const p = tree.children[0] as any;
+    const anchor = p.children.find((n: any) => n.type === 'element' && n.tagName === 'a');
+    expect(anchor.properties.dataFilePath).toBe('诊断报告/2026-08-27-收官核对.sql');
+  });
+
+  it('links a bare filename inside inline code but not in running prose', () => {
+    const tree = {
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tagName: 'code',
+          children: [{ type: 'text', value: '2026-08-27-收官增量核对-只读.sql' }],
+        },
+        {
+          type: 'element',
+          tagName: 'p',
+          children: [{ type: 'text', value: 'run 2026-08-27-收官增量核对-只读.sql now' }],
+        },
+      ],
+    };
+    run(tree);
+    const code = tree.children[0] as any;
+    const paragraph = tree.children[1] as any;
+    expect(code.children[0]).toMatchObject({ type: 'element', tagName: 'a' });
+    expect(code.children[0].properties.dataFilePath).toBe('2026-08-27-收官增量核对-只读.sql');
+    expect(paragraph.children[0]).toEqual({
+      type: 'text',
+      value: 'run 2026-08-27-收官增量核对-只读.sql now',
+    });
   });
 
   it('links a path inside a paragraph element', () => {

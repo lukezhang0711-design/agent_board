@@ -45,6 +45,7 @@ import {
   sessionWorkOrderStatusAtom,
   sessionWorkOrderAttemptNumberAtom,
   sessionWorkOrderFailedAtom,
+  sessionWorkOrderLinkedAtom,
   getCardType,
   SESSION_PHASE_COLUMNS,
   type SessionPhase,
@@ -521,6 +522,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
   const workOrderStatus = useAtomValue(sessionWorkOrderStatusAtom(session.id));
   const workOrderAttemptNumber = useAtomValue(sessionWorkOrderAttemptNumberAtom(session.id));
   const workOrderFailed = useAtomValue(sessionWorkOrderFailedAtom(session.id));
+  const hasDelegatedSession = useAtomValue(sessionWorkOrderLinkedAtom(session.id));
   const stateStyle = CARD_STATE_STYLES[cardState.state];
   const tags = session.tags || [];
   const cardRef = useRef<HTMLDivElement>(null);
@@ -708,9 +710,27 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
           </div>
         )}
 
-        {/* Footer: uncommitted + peek + time */}
+        {/* Footer: open-in-agent + uncommitted + peek + time */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
+            {/* Only a Head-dispatched card has a session to jump into. This is
+                the board's replacement for the retired Delegated Sessions
+                panel, so it stays a quiet text link, not a second CTA. */}
+            {hasDelegatedSession && (
+              <button
+                type="button"
+                className="text-[10px] text-[var(--nim-primary)] hover:underline"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect(session.id);
+                }}
+                title="Open this delegated session in Agent"
+                data-testid="session-kanban-open-in-agent"
+                data-session-id={session.id}
+              >
+                Open in Agent
+              </button>
+            )}
             {session.uncommittedCount > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-nim-faint" title={`${session.uncommittedCount} uncommitted file${session.uncommittedCount !== 1 ? 's' : ''}`}>
                 <MaterialSymbol icon="edit_note" size={12} />

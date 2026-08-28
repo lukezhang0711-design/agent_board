@@ -9,6 +9,7 @@ const invoke = vi.fn();
 
 vi.mock('@nimbalyst/runtime', () => ({
   MaterialSymbol: () => null,
+  MarkdownRenderer: ({ content }: { content: string }) => <div>{content}</div>,
 }));
 
 vi.mock('../../UnifiedAI/SessionTranscript', () => ({
@@ -25,7 +26,7 @@ vi.mock('../../../utils/metaAgentUtils', () => ({
   createMetaAgentSession: vi.fn(),
 }));
 
-function makeSpawnedSession(status: string, sessionId: string) {
+function makeSpawnedSession(status: string, sessionId: string, editedFiles: string[] = []) {
   return {
     sessionId,
     title: `${status} task`,
@@ -35,7 +36,7 @@ function makeSpawnedSession(status: string, sessionId: string) {
     lastActivity: null,
     originalPrompt: null,
     lastResponse: null,
-    editedFiles: [],
+    editedFiles,
     pendingPrompt: null,
     createdAt: 1,
     updatedAt: 2,
@@ -82,8 +83,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('MetaAgentMode queued summary', () => {
-  it('does not expose delegated sessions or a meta-agent badge for a standard session', async () => {
+describe('MetaAgentMode Head workbench', () => {
+  it('does not expose the Head workbench or a meta-agent badge for a standard session', async () => {
     invoke.mockImplementation((channel: string) => {
       if (channel === 'sessions:get') {
         return Promise.resolve({
@@ -105,19 +106,21 @@ describe('MetaAgentMode queued summary', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Unable to initialize meta-agent mode.')).toBeTruthy());
-    expect(screen.queryByTestId('meta-agent-dashboard')).toBeNull();
+    expect(screen.queryByTestId('file-preview-rail-toggle')).toBeNull();
     expect(screen.queryByTestId('meta-agent-identity-badge')).toBeNull();
   });
 
-  it('shows the delegated panel and identity badge only for a verified meta-agent session', async () => {
+  it('shows the identity badge and a collapsed preview rail for a verified meta-agent session', async () => {
     render(
       <Provider store={createStore()}>
         <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
       </Provider>,
     );
 
-    expect(await screen.findByTestId('meta-agent-dashboard')).toBeTruthy();
-    expect(screen.getByTestId('meta-agent-identity-badge').textContent).toBe('META AGENT');
+    expect((await screen.findByTestId('meta-agent-identity-badge')).textContent).toBe('META AGENT');
+    // The rail is collapsed: only its edge handle exists, no panel.
+    expect(screen.getByTestId('file-preview-rail-toggle')).toBeTruthy();
+    expect(screen.queryByTestId('file-preview-rail')).toBeNull();
   });
 
   it('disables the engine Plan/Agent toggle in the Head transcript', async () => {
@@ -130,47 +133,19 @@ describe('MetaAgentMode queued summary', () => {
     expect((await screen.findByTestId('session-transcript')).getAttribute('data-disable-mode-toggle')).toBe('true');
   });
 
-  it('shows queued delegated sessions in the summary', async () => {
+  it('keeps emergency stop available while running or queued delegated sessions make the Head wait', async () => {
     render(
       <Provider store={createStore()}>
         <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
       </Provider>,
     );
 
-    expect(await screen.findByText('1 queued')).toBeTruthy();
-    expect(screen.getByText('1 running')).toBeTruthy();
-    expect(screen.getByText('0 waiting')).toBeTruthy();
-  });
-
-  it('hides the queued summary when no delegated session is queued', async () => {
-    invoke.mockImplementation((channel: string) => {
-      if (channel === 'sessions:get') {
-        return Promise.resolve({
-          success: true,
-          session: {
-            id: 'meta-1',
-            agentRole: 'meta-agent',
-            isArchived: false,
-          },
-        });
-      }
-      return Promise.resolve({
-        success: true,
-        sessions: [makeSpawnedSession('running', 'running-only')],
-      });
-    });
-
-    render(
-      <Provider store={createStore()}>
-        <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
-      </Provider>,
+    await waitFor(() =>
+      expect(screen.getByTestId('session-transcript').dataset.emergencyStop).toBe('true'),
     );
-
-    expect(await screen.findByText('1 running')).toBeTruthy();
-    expect(screen.queryByText('0 queued')).toBeNull();
   });
 
-  it('renders interrupted delegated sessions with the warning tone', async () => {
+  it('withdraws emergency stop when no delegated session is running or queued', async () => {
     invoke.mockImplementation((channel: string) => {
       if (channel === 'sessions:get') {
         return Promise.resolve({
@@ -194,31 +169,42 @@ describe('MetaAgentMode queued summary', () => {
       </Provider>,
     );
 
-    const badge = await screen.findByText('interrupted');
-    expect(badge.className).toContain('text-[var(--nim-warning)]');
-    expect(badge.className).toContain('bg-[rgba(245,158,11,0.16)]');
+    const transcript = await screen.findByTestId('session-transcript');
+    await waitFor(() => expect(transcript.dataset.emergencyStop).toBe('false'));
   });
 
-  it('keeps emergency stop available while child sessions make the Head wait', async () => {
+  it('feeds the artifact shelf from the same delegated-session snapshot', async () => {
+    invoke.mockImplementation((channel: string) => {
+      if (channel === 'sessions:get') {
+        return Promise.resolve({
+          success: true,
+          session: {
+            id: 'meta-1',
+            agentRole: 'meta-agent',
+            isArchived: false,
+          },
+        });
+      }
+      return Promise.resolve({
+        success: true,
+        sessions: [
+          makeSpawnedSession('completed', 'child-1', ['docs/one.md']),
+          makeSpawnedSession('completed', 'child-2', ['docs/two.sql']),
+        ],
+      });
+    });
+
     render(
       <Provider store={createStore()}>
         <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
       </Provider>,
     );
 
-    expect(await screen.findByText('1 running')).toBeTruthy();
-    expect(screen.getByTestId('session-transcript').dataset.emergencyStop).toBe('true');
-  });
+    (await screen.findByTestId('file-preview-rail-toggle')).click();
 
-  it('derives the count pills from the same snapshot rendered as cards', async () => {
-    render(
-      <Provider store={createStore()}>
-        <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
-      </Provider>,
+    const shelf = await screen.findByTestId('file-preview-shelf');
+    await waitFor(() =>
+      expect(shelf.querySelectorAll('[data-testid="file-preview-shelf-item"]')).toHaveLength(2),
     );
-
-    expect(await screen.findAllByTestId('meta-agent-child-card')).toHaveLength(2);
-    expect(screen.getByText('1 running')).toBeTruthy();
-    expect(screen.getByText('1 queued')).toBeTruthy();
   });
 });
