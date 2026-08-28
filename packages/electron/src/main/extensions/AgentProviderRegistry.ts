@@ -67,12 +67,26 @@ export interface AgentProviderEntry {
   status: AgentProviderStatus;
 }
 
+export type AgentProviderRegistryChange =
+  | { type: 'registered'; entry: AgentProviderEntry }
+  | { type: 'status-changed'; entry: AgentProviderEntry }
+  | { type: 'cleared'; extensionId: string }
+  | { type: 'reset' };
+
 function makeKey(extensionId: string, contributionId: string): string {
   return `${extensionId}/${contributionId}`;
 }
 
 class AgentProviderRegistryImpl {
   private entries = new Map<string, AgentProviderEntry>();
+  private listeners = new Set<(event: AgentProviderRegistryChange) => void>();
+
+  onDidChange(listener: (event: AgentProviderRegistryChange) => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
 
   /**
    * Register (or replace) a provider entry. Called by the extension loader
@@ -87,8 +101,10 @@ class AgentProviderRegistryImpl {
     const key = makeKey(entry.extensionId, entry.contributionId);
     const existing = this.entries.get(key);
     const status: AgentProviderStatus = entry.status ?? existing?.status ?? 'registered';
-    this.entries.set(key, { ...entry, status });
+    const next = { ...entry, status };
+    this.entries.set(key, next);
     this.syncProviderSettings();
+    this.emitChange({ type: 'registered', entry: next });
   }
 
   get(key: string): AgentProviderEntry | undefined;
@@ -139,27 +155,45 @@ class AgentProviderRegistryImpl {
     const key = makeKey(extensionId, contributionId);
     const existing = this.entries.get(key);
     if (!existing) return;
-    this.entries.set(key, { ...existing, status });
+    const next = { ...existing, status };
+    this.entries.set(key, next);
+    this.emitChange({ type: 'status-changed', entry: next });
   }
 
   /** Remove every entry contributed by `extensionId`. Called on uninstall. */
   clearAll(extensionId: string): void {
+    let changed = false;
     for (const [key, entry] of this.entries) {
-      if (entry.extensionId === extensionId) this.entries.delete(key);
+      if (entry.extensionId === extensionId) {
+        this.entries.delete(key);
+        changed = true;
+      }
     }
     this.syncProviderSettings();
+    if (changed) this.emitChange({ type: 'cleared', extensionId });
   }
 
   /** Test-only: wipe everything. */
   __resetForTests(): void {
     this.entries.clear();
     this.syncProviderSettings();
+    this.emitChange({ type: 'reset' });
   }
 
   private syncProviderSettings(): void {
     syncExtensionProviderSettings(
       Array.from(this.entries.values(), (entry) => entry.contributionId),
     );
+  }
+
+  private emitChange(event: AgentProviderRegistryChange): void {
+    for (const listener of this.listeners) {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error('[AgentProviderRegistry] listener failed:', error);
+      }
+    }
   }
 }
 

@@ -14,6 +14,7 @@ import {
 import {
   getAgentProviderRegistry,
   type AgentProviderEntry,
+  type AgentProviderRegistryChange,
 } from '../../extensions/AgentProviderRegistry';
 import {
   refreshExtensionAgentProviderModels,
@@ -43,7 +44,7 @@ import {
   type EffortLevel,
 } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { getCodexToolLookupAliases } from '@nimbalyst/runtime/ai/server/toolLookupIds';
-import type { SessionStore } from '@nimbalyst/runtime';
+import type { SessionStore } from '@nimbalyst/runtime/ai/adapters/sessionStore';
 import type {
   InteractivePromptStatusResult,
   InteractivePromptType,
@@ -98,11 +99,12 @@ import {
   wasCommunityPopupShownThisLaunch,
 } from '../../utils/store';
 import { mergeAISettings, getAIProviderOverridesWithWorktreeFallback } from '../../utils/aiSettingsMerge';
-import { AISessionsRepository, DocumentContextService, type RawDocumentContext, type PreparedDocumentContext } from '@nimbalyst/runtime';
+import { DocumentContextService, type RawDocumentContext, type PreparedDocumentContext } from '@nimbalyst/runtime/ai/services';
+import { AISessionsRepository } from '@nimbalyst/runtime/storage/repositories/AISessionsRepository';
 import { getMessageSyncHandler, getSyncProvider, isDesktopTrulyAway } from '../SyncManager';
 import { normalizeCodexProviderConfig, omitModelsField, stripTransientProviderFields } from '@nimbalyst/runtime/ai/server/utils/modelConfigUtils';
 import { isFileInWorkspaceOrWorktree, resolveProjectPath } from '../../utils/workspaceDetection';
-import { SessionFilesRepository } from '@nimbalyst/runtime';
+import { SessionFilesRepository } from '@nimbalyst/runtime/storage/repositories/SessionFilesRepository';
 import { buildToolPermissionResponseRecord } from './claudeCliToolPermission';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -576,6 +578,7 @@ export class AIService {
   private readonly codexModelRefreshService: CodexModelRefreshService;
   private readonly claudeCodeModelCatalogService: ClaudeCodeModelCatalogService;
   private readonly extensionDynamicModelCatalogs = new Map<string, ExtensionDynamicModelCatalog>();
+  private extensionProviderRegistryUnsubscribe: (() => void) | null = null;
 
   constructor(sessionStore: SessionStore) {
     logger.main.info('[AIService] Constructor called');
@@ -631,6 +634,9 @@ export class AIService {
         sessionEffortLevel,
         sessionId,
       );
+    });
+    this.extensionProviderRegistryUnsubscribe = getAgentProviderRegistry().onDidChange((event) => {
+      this.handleAgentProviderRegistryChange(event);
     });
     this.codexModelRefreshService.registerIpcHandlers();
 
@@ -1860,19 +1866,36 @@ export class AIService {
     });
   }
 
-  /**
-   * Dynamic extensions may require a consent-backed backend process. Startup
-   * therefore refreshes only already-active extensions; the picker can still
-   * request the first consent-backed refresh explicitly.
-   */
   private startExtensionDynamicModelCatalogs(): void {
+    this.startUnresolvedExtensionDynamicModelCatalogs();
+  }
+
+  private handleAgentProviderRegistryChange(event: AgentProviderRegistryChange): void {
+    if (event.type === 'cleared' || event.type === 'reset') {
+      for (const provider of Array.from(this.extensionDynamicModelCatalogs.keys())) {
+        if (!getAgentProviderRegistry().findByContributionId(provider)) {
+          this.extensionDynamicModelCatalogs.delete(provider);
+        }
+      }
+      return;
+    }
+    if (
+      event.entry.status !== 'denied'
+      && event.entry.contribution.modelDiscovery === 'dynamic'
+    ) {
+      this.startUnresolvedExtensionDynamicModelCatalogs();
+    }
+  }
+
+  private startUnresolvedExtensionDynamicModelCatalogs(): void {
     for (const entry of getAgentProviderRegistry().list()) {
-      if (entry.status !== 'active' || entry.contribution.modelDiscovery !== 'dynamic') continue;
-      void this.refreshDynamicExtensionCatalog(entry.contributionId).catch((error) => {
-        logger.main.error(
-          `[AIService] ${entry.contributionId} startup model refresh failed:`,
-          error,
-        );
+      if (entry.status === 'denied' || entry.contribution.modelDiscovery !== 'dynamic') continue;
+      const catalog = this.getExtensionDynamicCatalog(entry.contributionId);
+      if (catalog.inFlight || catalog.status.inFlight || catalog.status.lastSuccessAt !== null) {
+        continue;
+      }
+      void this.refreshDynamicExtensionCatalog(entry.contributionId).catch(() => {
+        // refreshDynamicExtensionCatalog owns the provider/error log and status.
       });
     }
   }
@@ -1959,6 +1982,11 @@ export class AIService {
           lastError: null,
           inFlight: false,
         };
+        logger.main.info('[ExtensionDynamicModelCatalog] refreshModels succeeded', {
+          provider,
+          modelCount: models.length,
+          lastSuccessAt: catalog.status.lastSuccessAt,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         catalog.status = {
@@ -1971,6 +1999,11 @@ export class AIService {
           lastError: { message },
           inFlight: false,
         };
+        logger.main.warn('[ExtensionDynamicModelCatalog] refreshModels failed', {
+          provider,
+          error: message,
+          cacheRetained: catalog.models.length > 0,
+        });
         throw error;
       } finally {
         catalog.inFlight = null;
@@ -2042,7 +2075,17 @@ export class AIService {
       'openai-codex-acp': this.codexModelRefreshService.getStatus(),
     };
     for (const [provider, catalog] of this.extensionDynamicModelCatalogs) {
-      statuses[provider] = { ...catalog.status };
+      if (this.getDynamicExtensionProvider(provider)) {
+        statuses[provider] = { ...catalog.status };
+      }
+    }
+    for (const entry of getAgentProviderRegistry().list()) {
+      if (entry.status === 'denied' || entry.contribution.modelDiscovery !== 'dynamic') continue;
+      if (!statuses[entry.contributionId]) {
+        statuses[entry.contributionId] = {
+          ...this.getExtensionDynamicCatalog(entry.contributionId).status,
+        };
+      }
     }
     return statuses;
   }
@@ -5352,6 +5395,7 @@ export class AIService {
       const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
       this.startCodexModelRefreshIfEnabled(providerSettings);
       this.startClaudeCodeModelCatalogIfEnabled(providerSettings);
+      this.startExtensionDynamicModelCatalogs();
       await this.awaitModelCatalogsIfEnabled(providerSettings);
       const apiKeys = this.getSettingsStore().get('apiKeys', {}) as Record<string, string>;
 
@@ -5505,6 +5549,7 @@ export class AIService {
       const providerSettings = this.getNormalizedProviderSettings() as Record<AIProviderType, any>;
       this.startCodexModelRefreshIfEnabled(providerSettings);
       this.startClaudeCodeModelCatalogIfEnabled(providerSettings);
+      this.startExtensionDynamicModelCatalogs();
       // Do not await here: opening the picker must retain the last list while
       // a manual refresh marks it as in-flight. Session sends never call this
       // IPC path, so they cannot trigger a catalog probe.
@@ -6147,6 +6192,8 @@ export class AIService {
   }
 
   public destroy() {
+    this.extensionProviderRegistryUnsubscribe?.();
+    this.extensionProviderRegistryUnsubscribe = null;
     this.codexModelRefreshService.shutdown();
     this.claudeCodeModelCatalogService.shutdown();
     setDynamicModelCatalogValidator(null);

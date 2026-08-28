@@ -115,6 +115,7 @@ const claudeAgentSdkVersion = (() => {
 })();
 const runtimeSrcDir = resolve(__dirname, '../runtime/src');
 const runtimeDistDir = resolve(__dirname, '../runtime/dist');
+const extensionSdkSrcIndex = resolve(__dirname, '../extension-sdk/src/index.ts');
 
 // Plugin to resolve workspace package subpaths correctly in production
 const resolveWorkspaceSubpaths = () => {
@@ -169,7 +170,8 @@ export default defineConfig({
     resolve: {
       alias: {
         // Always use src for bundling - simpler than dealing with ESM/CJS issues
-        '@nimbalyst/runtime': runtimeSrcDir
+        '@nimbalyst/runtime': runtimeSrcDir,
+        '@nimbalyst/extension-sdk': extensionSdkSrcIndex
       }
     },
     build: {
@@ -380,6 +382,7 @@ export default defineConfig({
       alias: [
         // Ensure renderer also points runtime imports at source
         { find: '@nimbalyst/runtime', replacement: runtimeSrcDir },
+        { find: '@nimbalyst/extension-sdk', replacement: extensionSdkSrcIndex },
         // Redirect `import ... from 'prismjs'` (exact match only) to a shim
         // that returns the window.Prism instance loaded by the classic
         // <script> tag in index.html. Avoids a second IIFE run on the ESM

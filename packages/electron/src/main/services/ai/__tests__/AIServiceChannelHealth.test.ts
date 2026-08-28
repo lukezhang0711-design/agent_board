@@ -14,8 +14,14 @@ const mocks = vi.hoisted(() => ({
   getDefaultEffortLevel: vi.fn(),
   setDefaultEffortLevel: vi.fn(),
   logInfo: vi.fn(),
+  logWarn: vi.fn(),
   agentProviderList: vi.fn(),
   findAgentProvider: vi.fn(),
+  agentProviderListeners: new Set<(event: unknown) => void>(),
+  safeHandlers: new Map<string, (...args: any[]) => unknown>(),
+  refreshExtensionModels: vi.fn(),
+  modelRegistryGetAllModels: vi.fn(),
+  storeData: new Map<string, unknown>(),
   getAllWindows: vi.fn(),
   updateSessionMetadata: vi.fn(),
   probeExtensionLogin: vi.fn(),
@@ -23,6 +29,10 @@ const mocks = vi.hoisted(() => ({
   codexGetCliLoginStatus: vi.fn(),
   codexGetModelList: vi.fn(),
   claudeGetState: vi.fn(),
+  codexCatalogStart: vi.fn(),
+  codexCatalogManualRetry: vi.fn(),
+  claudeCatalogStart: vi.fn(),
+  claudeCatalogManualRetry: vi.fn(),
   terminalManager: {
     destroyTerminal: vi.fn(),
     getClaudeCliLiveTurnState: vi.fn(),
@@ -31,34 +41,209 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
-  SessionManager: class {},
-  ProviderFactory: { destroyProvider: vi.fn() },
-  ModelRegistry: { clearCache: vi.fn() },
+  SessionManager: class {
+    cleanupAllSessions() {
+      return 0;
+    }
+  },
+  ProviderFactory: { destroyProvider: vi.fn(), destroyAll: vi.fn() },
+  ModelRegistry: {
+    clearCache: vi.fn(),
+    getAllModels: mocks.modelRegistryGetAllModels,
+  },
   isAskUserQuestionProvider: () => false,
   isAgentProvider: () => false,
   isSlashCommandCatalogProvider: () => false,
-  ClaudeCodeProvider: { setCustomClaudeCodePathLoader: vi.fn() },
-  OpenAICodexProvider: class {},
+  ClaudeCodeProvider: {
+    setCustomClaudeCodePathLoader: vi.fn(),
+    setModelCatalogSnapshotResolver: vi.fn(),
+  },
+  OpenAICodexProvider: {
+    setModelRefreshSnapshotResolver: vi.fn(),
+    getKnownSlashCommands: vi.fn(() => []),
+  },
 }));
 vi.mock('@nimbalyst/runtime', () => ({
   AISessionsRepository: { updateMetadata: mocks.updateSessionMetadata },
-  DocumentContextService: class {},
+  DocumentContextService: class {
+    setPersistCallback() {}
+  },
   SessionFilesRepository: {},
+}));
+vi.mock('../../../../../../runtime/src/index.ts', () => ({
+  AISessionsRepository: { updateMetadata: mocks.updateSessionMetadata },
+  DocumentContextService: class {
+    setPersistCallback() {}
+  },
+  SessionFilesRepository: {},
+}));
+vi.mock('@nimbalyst/runtime/ai/services', () => ({
+  DocumentContextService: class {
+    setPersistCallback() {}
+  },
+}));
+vi.mock('@nimbalyst/runtime/storage/repositories/AISessionsRepository', () => ({
+  AISessionsRepository: { updateMetadata: mocks.updateSessionMetadata },
+}));
+vi.mock('@nimbalyst/runtime/storage/repositories/SessionFilesRepository', () => ({
+  SessionFilesRepository: {},
+}));
+vi.mock('@nimbalyst/runtime/ai/server/SessionStateManager', () => ({
+  getSessionStateManager: () => ({ setDatabase: vi.fn() }),
+}));
+vi.mock('@nimbalyst/runtime/ai/server/types', () => ({
+  ModelIdentifier: {
+    registerExtensionProvider: vi.fn(),
+    tryParse: (value: string | undefined) => {
+      if (!value || !value.includes(':')) return null;
+      const separator = value.indexOf(':');
+      return {
+        provider: value.slice(0, separator),
+        model: value.slice(separator + 1),
+      };
+    },
+  },
+}));
+vi.mock('@nimbalyst/runtime/ai/server/effortLevels', () => ({
+  parseEffortLevel: (value: unknown) => (
+    typeof value === 'string' && value.trim().length > 0 ? value : undefined
+  ),
+  resolveDeclaredEffortLevel: (
+    requested: unknown,
+    supported: readonly string[],
+    defaultEffort?: string,
+  ) => {
+    const effort = typeof requested === 'string' && requested.trim().length > 0
+      ? requested
+      : undefined;
+    if (!effort) return { outcome: 'none', effortLevel: undefined, requestedEffort: undefined };
+    if (supported.includes(effort)) {
+      return { outcome: 'accepted', effortLevel: effort, requestedEffort: effort };
+    }
+    if (defaultEffort && supported.includes(defaultEffort)) {
+      return { outcome: 'fallback', effortLevel: defaultEffort, requestedEffort: effort };
+    }
+    return { outcome: 'dropped', effortLevel: undefined, requestedEffort: effort };
+  },
+}));
+vi.mock('@nimbalyst/runtime/ai/server/toolLookupIds', () => ({
+  getCodexToolLookupAliases: vi.fn(() => []),
+  resolveGitCommitProposalLookup: vi.fn(() => null),
+}));
+vi.mock('@nimbalyst/runtime/ai/server/utils/modelConfigUtils', () => ({
+  normalizeCodexProviderConfig: (value: unknown) => value,
+  omitModelsField: (value: Record<string, unknown>) => {
+    const { models: _models, ...rest } = value;
+    return rest;
+  },
+  stripTransientProviderFields: (value: unknown) => value,
+}));
+vi.mock('@nimbalyst/runtime/ai/server/providers/ClaudeCodeCliProvider', () => ({
+  ClaudeCodeCliProvider: {
+    setModelCatalogSnapshotResolver: vi.fn(),
+    getKnownSlashCommands: vi.fn(() => []),
+  },
+}));
+vi.mock('../../CodexModelRefreshService', () => ({
+  CodexModelRefreshService: class {
+    registerIpcHandlers() {}
+
+    getStatus() {
+      return {
+        modelSource: 'none',
+        verified: false,
+        lastSuccessAt: null,
+        lastError: null,
+        inFlight: false,
+      };
+    }
+
+    getModels() {
+      return [];
+    }
+
+    start() {
+      mocks.codexCatalogStart();
+      return Promise.resolve(this.getStatus());
+    }
+
+    manualRetry() {
+      mocks.codexCatalogManualRetry();
+      return Promise.resolve(this.getStatus());
+    }
+
+    shutdown() {}
+  },
+}));
+vi.mock('../ClaudeCodeModelCatalogService', () => ({
+  ClaudeCodeModelCatalogService: class {
+    getStatus() {
+      return {
+        modelSource: 'none',
+        verified: false,
+        lastSuccessAt: null,
+        lastError: null,
+        inFlight: false,
+      };
+    }
+
+    getModels() {
+      return [];
+    }
+
+    getCliModels() {
+      return [];
+    }
+
+    start() {
+      mocks.claudeCatalogStart();
+      return Promise.resolve(this.getStatus());
+    }
+
+    manualRetry() {
+      mocks.claudeCatalogManualRetry();
+      return Promise.resolve(this.getStatus());
+    }
+
+    shutdown() {}
+  },
+}));
+vi.mock('electron-store', () => ({
+  default: class {
+    path = '/tmp/nimbalyst-ai-settings.json';
+
+    get(key: string, fallback?: unknown) {
+      return mocks.storeData.has(key) ? mocks.storeData.get(key) : fallback;
+    }
+
+    set(key: string, value: unknown) {
+      mocks.storeData.set(key, value);
+    }
+  },
 }));
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => '/mock/path'), on: vi.fn(), once: vi.fn() },
   BrowserWindow: { getAllWindows: mocks.getAllWindows, getFocusedWindow: vi.fn(() => null) },
   ipcMain: { handle: vi.fn(), on: vi.fn(), listenerCount: vi.fn(() => 0) },
 }));
-vi.mock('../../../utils/ipcRegistry', () => ({ safeHandle: vi.fn(), safeOn: vi.fn() }));
+vi.mock('../../../utils/ipcRegistry', () => ({
+  safeHandle: (channel: string, handler: (...args: any[]) => unknown) => {
+    mocks.safeHandlers.set(channel, handler);
+  },
+  safeOn: vi.fn(),
+}));
 vi.mock('../../../extensions/AgentProviderRegistry', () => ({
   getAgentProviderRegistry: () => ({
     list: mocks.agentProviderList,
     findByContributionId: mocks.findAgentProvider,
+    onDidChange: (listener: (event: unknown) => void) => {
+      mocks.agentProviderListeners.add(listener);
+      return () => mocks.agentProviderListeners.delete(listener);
+    },
   }),
 }));
 vi.mock('../../../extensions/extensionAgentBridge', () => ({
-  refreshExtensionAgentProviderModels: vi.fn(),
+  refreshExtensionAgentProviderModels: mocks.refreshExtensionModels,
   probeExtensionAgentProviderLogin: mocks.probeExtensionLogin,
 }));
 vi.mock('../../CodexAuthService', () => ({
@@ -73,15 +258,67 @@ vi.mock('../../ClaudeAuthStateService', () => ({
 }));
 vi.mock('../tools', () => ({ ToolExecutor: class {}, toolRegistry: { register: vi.fn() }, BUILT_IN_TOOLS: [] }));
 vi.mock('../MessageStreamingHandler', () => ({ MessageStreamingHandler: class {} }));
-vi.mock('../HooklessAgentFileWatcher', () => ({ HooklessAgentFileWatcher: class {} }));
+vi.mock('../HooklessAgentFileWatcher', () => ({
+  HooklessAgentFileWatcher: class {
+    destroy() {}
+  },
+}));
 vi.mock('../../TerminalSessionManager', () => ({ getTerminalSessionManager: () => mocks.terminalManager }));
+vi.mock('../MobileSessionControlHandler', () => ({ initMobileSessionControlHandler: vi.fn(() => () => {}) }));
+vi.mock('../../SoundNotificationService', () => ({ SoundNotificationService: class {} }));
+vi.mock('../../NotificationService', () => ({ notificationService: { notify: vi.fn() } }));
+vi.mock('../../../window/WindowManager', () => ({
+  windowStates: new Map(),
+  findWindowByWorkspace: vi.fn(() => null),
+  getWindowId: vi.fn(() => null),
+  createWindow: vi.fn(() => null),
+}));
+vi.mock('../../../window/windowState', () => ({
+  resolveActiveWorkspacePathForWindowId: vi.fn(() => null),
+}));
+vi.mock('../../SessionFileTracker', () => ({
+  sessionFileTracker: {
+    getFilesForSession: vi.fn(async () => []),
+    trackSessionFiles: vi.fn(),
+    clearSession: vi.fn(),
+  },
+}));
+vi.mock('../../TranscriptToolCallEnricher', () => ({
+  enrichTranscriptMessagesWithToolCallDiffs: vi.fn(async (_sessionId: string, messages: unknown[]) => messages),
+}));
+vi.mock('../tools/extractFilePath', () => ({ extractFilePath: vi.fn(() => null) }));
+vi.mock('../../ToolCallMatcher', () => ({
+  toolCallMatcher: {},
+  unwrapShellCommand: vi.fn((value: unknown) => value),
+}));
+vi.mock('../../WorkspaceFileEditAttributionService', () => ({
+  workspaceFileEditAttributionService: {
+    recordToolCall: vi.fn(),
+    ingestWatcherEvent: vi.fn(),
+  },
+}));
+vi.mock('../../../HistoryManager', () => ({ historyManager: {} }));
+vi.mock('../../../file/WorkspaceEventBus', () => ({ addGitignoreBypass: vi.fn() }));
+vi.mock('../../AgentWorkflowService', () => ({
+  getAgentWorkflowService: vi.fn(() => ({ listEntries: vi.fn(async () => []) })),
+}));
+vi.mock('../queuedPromptDispatcher', () => ({ tryClaimAndDispatchNextQueuedPrompt: vi.fn(async () => false) }));
+vi.mock('../claudeCliQueueDispatch', () => ({ dispatchQueuedPromptToClaudeCli: vi.fn(async () => false) }));
+vi.mock('../../FeatureUsageService.ts', () => ({
+  FEATURES: { SESSION_CREATED: 'session_created' },
+  FeatureUsageService: { getInstance: () => ({ recordUsage: vi.fn() }) },
+}));
+vi.mock('../../analytics/FeatureTrackingService', () => ({
+  FeatureTrackingService: { getInstance: () => ({ trackFeatureFirstUse: vi.fn() }) },
+}));
+vi.mock('../../SessionEditQuota', () => ({ createSessionEditQuota: vi.fn(() => null) }));
 vi.mock('../../RepositoryManager', () => ({ getQueuedPromptsStore: vi.fn() }));
 vi.mock('../../SyncManager', () => ({ getSyncProvider: () => null }));
 vi.mock('../../../database/PGLiteDatabaseWorker', () => ({ database: {} }));
 vi.mock('../../../tray/TrayManager', () => ({ TrayManager: { getInstance: vi.fn() } }));
 vi.mock('../../analytics/AnalyticsService.ts', () => ({ AnalyticsService: { getInstance: () => ({ sendEvent: vi.fn() }) } }));
 vi.mock('../../SettingsService', () => ({ getSettingsService: () => ({ get: vi.fn(), set: vi.fn() }) }));
-vi.mock('../../../utils/logger', () => ({ logger: { main: { info: mocks.logInfo, warn: vi.fn(), error: vi.fn(), debug: vi.fn() } } }));
+vi.mock('../../../utils/logger', () => ({ logger: { main: { info: mocks.logInfo, warn: mocks.logWarn, error: vi.fn(), debug: vi.fn() } } }));
 vi.mock('../../../utils/store', () => ({
   getAIProviderOverrides: vi.fn(),
   saveAIProviderOverrides: vi.fn(),
@@ -151,6 +388,22 @@ function createHealthService(): Record<string, any> {
   return service;
 }
 
+function geminiEntry(status: 'registered' | 'active' | 'pending-consent' | 'denied' = 'registered') {
+  return {
+    extensionId: 'gemini-antigravity',
+    contributionId: 'antigravity-gemini-agent',
+    extensionPath: '/extensions/gemini-antigravity',
+    status,
+    contribution: {
+      displayName: 'Gemini',
+      icon: 'auto_awesome',
+      modelDiscovery: 'dynamic',
+    },
+    manifest: {},
+    backendModuleId: 'antigravity-server',
+  } as any;
+}
+
 describe('AIService channel-health Claude CLI transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -164,6 +417,18 @@ describe('AIService channel-health Claude CLI transport', () => {
     mocks.getDefaultEffortLevel.mockReturnValue(undefined);
     mocks.agentProviderList.mockReturnValue([]);
     mocks.findAgentProvider.mockReturnValue(undefined);
+    mocks.agentProviderListeners.clear();
+    mocks.safeHandlers.clear();
+    mocks.refreshExtensionModels.mockResolvedValue([]);
+    mocks.modelRegistryGetAllModels.mockResolvedValue([]);
+    mocks.storeData.clear();
+    mocks.storeData.set('providerSettings', {
+      'claude-code': { enabled: false },
+      'claude-code-cli': { enabled: false },
+      'openai-codex': { enabled: false },
+      'openai-codex-acp': { enabled: false },
+    });
+    mocks.storeData.set('apiKeys', {});
     mocks.getAllWindows.mockReturnValue([]);
     mocks.updateSessionMetadata.mockResolvedValue(undefined);
     mocks.codexGetModelList.mockResolvedValue({ models: [] });
@@ -171,6 +436,10 @@ describe('AIService channel-health Claude CLI transport', () => {
     mocks.codexGetStatus.mockResolvedValue({ account: { type: 'chatgpt' }, requiresOpenaiAuth: false });
     mocks.codexGetCliLoginStatus.mockResolvedValue('unknown');
     mocks.probeExtensionLogin.mockResolvedValue({ state: 'logged-in', completionMs: 4 });
+    mocks.codexCatalogStart.mockResolvedValue(undefined);
+    mocks.codexCatalogManualRetry.mockResolvedValue(undefined);
+    mocks.claudeCatalogStart.mockResolvedValue(undefined);
+    mocks.claudeCatalogManualRetry.mockResolvedValue(undefined);
   });
 
   it('green ET: marks resolvedModel as display-only in the Head model catalog', async () => {
@@ -559,13 +828,7 @@ describe('AIService channel-health Claude CLI transport', () => {
   });
 
   it('GREEN FB-116: picker refresh probes Codex, Claude, and a dynamic Gemini provider together', async () => {
-    const gemini = {
-      extensionId: 'gemini-antigravity',
-      contributionId: 'antigravity-gemini-agent',
-      extensionPath: '/extensions/gemini-antigravity',
-      status: 'active',
-      contribution: { modelDiscovery: 'dynamic' },
-    } as any;
+    const gemini = geminiEntry('active');
     mocks.agentProviderList.mockReturnValue([gemini]);
     mocks.findAgentProvider.mockImplementation((id) => (
       id === 'antigravity-gemini-agent' ? gemini : undefined
@@ -591,14 +854,158 @@ describe('AIService channel-health Claude CLI transport', () => {
     expect(geminiRefresh).toHaveBeenCalledWith('antigravity-gemini-agent');
   });
 
+  it('RED FB-140: startup refreshes a registered dynamic extension provider without waiting for prior activation', async () => {
+    const gemini = geminiEntry('registered');
+    mocks.agentProviderList.mockReturnValue([gemini]);
+    mocks.findAgentProvider.mockImplementation((id) => (
+      id === 'antigravity-gemini-agent' ? gemini : undefined
+    ));
+    mocks.refreshExtensionModels.mockResolvedValueOnce([
+      { id: 'gemini-3.7-flash-high', name: 'Gemini 3.7 Flash High' },
+    ]);
+
+    const service = new AIService({} as any) as AIService;
+    try {
+      await vi.waitFor(() => {
+        expect(mocks.refreshExtensionModels).toHaveBeenCalledWith('antigravity-gemini-agent');
+      });
+    } finally {
+      service.destroy();
+    }
+  });
+
+  it('RED FB-140: a dynamic extension registered after the startup scan is still refreshed automatically', async () => {
+    mocks.agentProviderList.mockReturnValue([]);
+    const service = new AIService({} as any) as AIService;
+    try {
+      expect(mocks.refreshExtensionModels).not.toHaveBeenCalled();
+      const gemini = geminiEntry('registered');
+      mocks.agentProviderList.mockReturnValue([gemini]);
+      mocks.findAgentProvider.mockImplementation((id) => (
+        id === 'antigravity-gemini-agent' ? gemini : undefined
+      ));
+      mocks.refreshExtensionModels.mockResolvedValueOnce([
+        { id: 'gemini-3.7-flash-high', name: 'Gemini 3.7 Flash High' },
+      ]);
+
+      for (const listener of mocks.agentProviderListeners) {
+        listener({ type: 'registered', entry: gemini });
+      }
+
+      await vi.waitFor(() => {
+        expect(mocks.refreshExtensionModels).toHaveBeenCalledWith('antigravity-gemini-agent');
+      });
+    } finally {
+      service.destroy();
+    }
+  });
+
+  it('RED FB-140: ai:getModels starts one background refresh for a never-read dynamic extension catalog', async () => {
+    mocks.agentProviderList.mockReturnValue([]);
+    const service = new AIService({} as any) as AIService;
+    try {
+      const gemini = geminiEntry('registered');
+      mocks.agentProviderList.mockReturnValue([gemini]);
+      mocks.findAgentProvider.mockImplementation((id) => (
+        id === 'antigravity-gemini-agent' ? gemini : undefined
+      ));
+      const refresh = deferred<[{ id: string; name: string }]>();
+      mocks.refreshExtensionModels.mockReturnValue(refresh.promise);
+
+      const handler = mocks.safeHandlers.get('ai:getModels');
+      expect(handler).toBeTypeOf('function');
+      const first = await handler?.({} as Electron.IpcMainInvokeEvent) as any;
+
+      expect(mocks.refreshExtensionModels).toHaveBeenCalledTimes(1);
+      expect(first.grouped['antigravity-gemini-agent']).toBeUndefined();
+      expect(first.catalogStatuses['antigravity-gemini-agent']).toMatchObject({
+        modelSource: 'none',
+        verified: false,
+        inFlight: true,
+      });
+
+      await handler?.({} as Electron.IpcMainInvokeEvent);
+      expect(mocks.refreshExtensionModels).toHaveBeenCalledTimes(1);
+
+      refresh.resolve([{ id: 'gemini-3.7-flash-high', name: 'Gemini 3.7 Flash High' }]);
+      await vi.waitFor(() => {
+        expect((service as any).getModelCatalogStatuses()['antigravity-gemini-agent'])
+          .toMatchObject({ modelSource: 'runtime', verified: true, inFlight: false });
+      });
+
+      const afterSuccess = await handler?.({} as Electron.IpcMainInvokeEvent) as any;
+      expect(mocks.refreshExtensionModels).toHaveBeenCalledTimes(1);
+      expect(afterSuccess.grouped['antigravity-gemini-agent']).toEqual([
+        expect.objectContaining({
+          id: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+          name: 'Gemini 3.7 Flash High',
+        }),
+      ]);
+    } finally {
+      service.destroy();
+    }
+  });
+
+  it('RED FB-140: dynamic extension catalog status exists before the first successful refresh', () => {
+    const gemini = geminiEntry('registered');
+    mocks.agentProviderList.mockReturnValue([gemini]);
+    mocks.findAgentProvider.mockImplementation((id) => (
+      id === 'antigravity-gemini-agent' ? gemini : undefined
+    ));
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, {
+      extensionDynamicModelCatalogs: new Map(),
+      claudeCodeModelCatalogService: {
+        getStatus: () => ({ modelSource: 'none', verified: false, lastError: null }),
+      },
+      codexModelRefreshService: {
+        getStatus: () => ({ modelSource: 'none', verified: false, lastError: null }),
+      },
+    });
+
+    expect(service.getModelCatalogStatuses()['antigravity-gemini-agent']).toMatchObject({
+      modelSource: 'none',
+      verified: false,
+      lastSuccessAt: null,
+      lastError: null,
+    });
+  });
+
+  it('RED FB-140: dynamic extension catalog refresh writes success and failure logs with the provider and raw error', async () => {
+    const gemini = geminiEntry('registered');
+    mocks.findAgentProvider.mockImplementation((id) => (
+      id === 'antigravity-gemini-agent' ? gemini : undefined
+    ));
+    const service = Object.create(AIService.prototype) as Record<string, any>;
+    Object.assign(service, { extensionDynamicModelCatalogs: new Map() });
+
+    mocks.refreshExtensionModels.mockResolvedValueOnce([
+      { id: 'gemini-3.7-flash-high', name: 'Gemini 3.7 Flash High' },
+    ]);
+    await service.refreshDynamicExtensionCatalog('antigravity-gemini-agent');
+    expect(mocks.logInfo).toHaveBeenCalledWith(
+      '[ExtensionDynamicModelCatalog] refreshModels succeeded',
+      expect.objectContaining({
+        provider: 'antigravity-gemini-agent',
+        modelCount: 1,
+      }),
+    );
+
+    mocks.refreshExtensionModels.mockRejectedValueOnce(new Error('agy models failed: offline'));
+    await expect(
+      service.refreshDynamicExtensionCatalog('antigravity-gemini-agent'),
+    ).rejects.toThrow('agy models failed: offline');
+    expect(mocks.logWarn).toHaveBeenCalledWith(
+      '[ExtensionDynamicModelCatalog] refreshModels failed',
+      expect.objectContaining({
+        provider: 'antigravity-gemini-agent',
+        error: 'agy models failed: offline',
+      }),
+    );
+  });
+
   it('GREEN FB-116: Head dispatch refreshes only the selected engine catalog', async () => {
-    const gemini = {
-      extensionId: 'gemini-antigravity',
-      contributionId: 'antigravity-gemini-agent',
-      extensionPath: '/extensions/gemini-antigravity',
-      status: 'active',
-      contribution: { modelDiscovery: 'dynamic' },
-    } as any;
+    const gemini = geminiEntry('active');
     mocks.findAgentProvider.mockImplementation((id) => (
       id === 'antigravity-gemini-agent' ? gemini : undefined
     ));
