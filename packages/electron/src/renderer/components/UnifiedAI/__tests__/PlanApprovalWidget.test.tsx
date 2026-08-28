@@ -17,6 +17,10 @@ import type { InteractiveWidgetHost } from '@nimbalyst/runtime/ui/AgentTranscrip
 import type { TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/transcript/TranscriptProjector';
 import { getTranscriptToolWidget } from '@nimbalyst/runtime/ui/AgentTranscript/contributions';
 import {
+  planApprovalStateAtom,
+  type DurablePlanApprovalViewState,
+} from '../../../store/atoms/sessions';
+import {
   PlanApprovalWidget,
   formatPlanOutputPath,
   hasPendingSubmittedPlanApproval,
@@ -43,7 +47,15 @@ const liveModelCatalog = () => ({
         id: 'openai-codex:gpt-5.6-sol',
         name: 'gpt-5.6-sol',
         provider: 'openai-codex',
-        supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra', 'turbo'],
+        supportedEffortLevels: [
+          'low',
+          'medium',
+          'high',
+          'xhigh',
+          'max',
+          'ultra',
+          'turbo',
+        ],
         defaultEffortLevel: 'high',
       },
     ],
@@ -68,6 +80,43 @@ const liveModelCatalog = () => ({
     'openai-codex': { modelSource: 'runtime', verified: true, lastError: null },
     'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
     'antigravity-gemini-agent': { modelSource: 'runtime', verified: true, lastError: null },
+  },
+});
+
+const fb136ModelCatalog = () => ({
+  success: true,
+  grouped: {
+    'claude-code': [
+      {
+        id: 'claude-code:default',
+        name: 'default',
+        provider: 'claude-code',
+        supportedEffortLevels: ['low', 'medium', 'high'],
+        defaultEffortLevel: 'medium',
+      },
+    ],
+    'antigravity-gemini-agent': [
+      {
+        id: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+        name: 'gemini-3.7-flash-high',
+        provider: 'antigravity-gemini-agent',
+        supportedEffortLevels: [],
+      },
+    ],
+    'openai-codex': [
+      {
+        id: 'openai-codex:gpt-5.6-sol',
+        name: 'gpt-5.6-sol',
+        provider: 'openai-codex',
+        supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+        defaultEffortLevel: 'high',
+      },
+    ],
+  },
+  catalogStatuses: {
+    'claude-code': { modelSource: 'runtime', verified: true, lastError: null },
+    'antigravity-gemini-agent': { modelSource: 'runtime', verified: true, lastError: null },
+    'openai-codex': { modelSource: 'runtime', verified: true, lastError: null },
   },
 });
 
@@ -115,6 +164,7 @@ function installSkillLibrary(): void {
     { id: 'codex:user:diagnosing-bugs', name: 'diagnosing-bugs', engine: 'codex', source: 'user', scope: 'global' },
     { id: 'codex:user:disabled-skill', name: 'disabled-skill', engine: 'codex', source: 'user', scope: 'global' },
     { id: 'claude:user:implement', name: 'implement', engine: 'claude', source: 'user', scope: 'global' },
+    { id: 'gemini:user:review', name: 'gemini-review', engine: 'gemini', source: 'user', scope: 'global' },
   ];
   const settings = {
     disabledSkillIds: ['codex:user:disabled-skill'],
@@ -122,7 +172,7 @@ function installSkillLibrary(): void {
       {
         id: 'construction',
         name: '施工包',
-        skillIds: ['codex:user:implement', 'codex:user:review', 'codex:user:disabled-skill'],
+        skillIds: ['codex:user:implement', 'codex:user:review', 'codex:user:disabled-skill', 'gemini:user:review'],
       },
       { id: 'research', name: '调研包', skillIds: [] },
       { id: 'docs', name: '文档包', skillIds: [] },
@@ -181,12 +231,19 @@ function renderWidget(
   hostOverrides: Partial<InteractiveWidgetHost> = {},
   providerToolCallId: string | null = compositeRequestId,
   widgetOverrides: Partial<CustomToolWidgetProps> = {},
+  durablePlanState?: DurablePlanApprovalViewState | null,
 ) {
   const jotaiStore = createStore();
   jotaiStore.set(interactiveWidgetHostAtom(sessionId), {
     ...noopInteractiveWidgetHost,
     ...hostOverrides,
   });
+  if (providerToolCallId && durablePlanState !== undefined) {
+    jotaiStore.set(
+      planApprovalStateAtom({ sessionId, promptId: providerToolCallId }),
+      durablePlanState,
+    );
+  }
   return render(
     <JotaiProvider store={jotaiStore}>
       <PlanApprovalWidget
@@ -293,6 +350,44 @@ const dispatchKnobPlanArguments = {
     doneCriteria: '按老板调整后的两项设置派发。',
   }],
 };
+
+const fb136PlanArguments = {
+  ...planArguments,
+  title: 'FB-136 方案卡模型同步',
+  modules: [{
+    title: 'FB-136 模块',
+    outputFiles: ['packages/electron/src/renderer/components/UnifiedAI/PlanApprovalWidget.tsx'],
+    inputs: ['审批卡'],
+    provider: 'claude-code',
+    model: 'claude-code:default',
+    effortLevel: 'medium',
+    intent: 'implementation',
+    permissionScope: 'workspace-write',
+    disturbanceLevel: 'on-failure',
+    skillBundleName: '施工包',
+    doneCriteria: '卡面参数必须跟 selectedCandidates 一致。',
+  }],
+};
+
+const fb136FinalSelectedCandidate = {
+  moduleIndex: 0,
+  moduleTitle: 'FB-136 模块',
+  name: '模块路由调整',
+  approach: '老板在方案卡改为 Gemini。',
+  pros: [],
+  cons: [],
+  risks: [],
+  provider: 'antigravity-gemini-agent',
+  model: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+  permissionScope: 'workspace-write',
+  disturbanceLevel: 'on-request',
+  skillBundleName: '施工包',
+  skillIds: ['gemini:user:review'],
+};
+
+function selectValues(select: HTMLSelectElement): string[] {
+  return Array.from(select.options, (option) => option.value);
+}
 
 afterEach(() => {
   cleanup();
@@ -605,6 +700,144 @@ describe('PlanApprovalWidget', () => {
         }),
       ]);
     });
+  });
+
+  it('green FB-136-1/2: rerenders model edits with route traces and provider-specific controls', async () => {
+    installModelCatalog(fb136ModelCatalog());
+    installSkillLibrary();
+    renderWidget(fb136PlanArguments);
+
+    const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+    expect(modelSelect.value).toBe('claude-code:default');
+    expect((screen.getByTestId('plan-module-effort-select-1') as HTMLSelectElement).value)
+      .toBe('medium');
+
+    fireEvent.change(modelSelect, {
+      target: { value: 'antigravity-gemini-agent:gemini-3.7-flash-high' },
+    });
+
+    await waitFor(() => expect(modelSelect.value)
+      .toBe('antigravity-gemini-agent:gemini-3.7-flash-high'));
+    expect(screen.getByTestId('plan-module-provider-value-1').textContent)
+      .toBe('antigravity-gemini-agent');
+    expect(screen.getByTestId('plan-module-provider-trace-1').textContent)
+      .toContain('Head 建议：claude-code → 当前：antigravity-gemini-agent');
+    expect(screen.getByTestId('plan-module-model-trace-1').textContent)
+      .toContain('Head 建议：claude-code:default → 当前：antigravity-gemini-agent:gemini-3.7-flash-high');
+    expect(screen.queryByTestId('plan-module-effort-field-1')).toBeNull();
+    expect(selectValues(screen.getByTestId('plan-module-permission-scope-select-1') as HTMLSelectElement))
+      .toEqual(['read-only', 'workspace-write']);
+    expect(selectValues(screen.getByTestId('plan-module-disturbance-level-select-1') as HTMLSelectElement))
+      .toEqual(['never', 'on-request']);
+    expect(screen.getByTestId('plan-module-disturbance-level-select-1'))
+      .toHaveProperty('value', 'on-request');
+    expect(screen.getByTestId('plan-module-skill-tags-1').textContent)
+      .toContain('gemini-review');
+    expect(screen.getByTestId('plan-module-skill-tags-1').textContent)
+      .not.toContain('implement');
+
+    fireEvent.change(modelSelect, {
+      target: { value: 'openai-codex:gpt-5.6-sol' },
+    });
+
+    const codexEffortSelect = await screen.findByTestId(
+      'plan-module-effort-select-1',
+    ) as HTMLSelectElement;
+    expect(selectValues(codexEffortSelect)).toEqual([
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+      'ultra',
+    ]);
+    expect(codexEffortSelect.value).toBe('high');
+
+    fireEvent.change(modelSelect, { target: { value: 'claude-code:default' } });
+
+    const restoredClaudeEffortSelect = await screen.findByTestId(
+      'plan-module-effort-select-1',
+    ) as HTMLSelectElement;
+    expect(modelSelect.value).toBe('claude-code:default');
+    expect(selectValues(restoredClaudeEffortSelect)).toEqual(['low', 'medium', 'high']);
+    expect(restoredClaudeEffortSelect.value).toBe('medium');
+  });
+
+  it('green FB-136-3: approved cards render durable selectedCandidates as the final card state', async () => {
+    installModelCatalog(fb136ModelCatalog());
+    installSkillLibrary();
+    renderWidget(
+      fb136PlanArguments,
+      {},
+      compositeRequestId,
+      {},
+      {
+        requestId: compositeRequestId,
+        status: 'responded',
+        decision: 'approved',
+        selectedCandidates: [fb136FinalSelectedCandidate],
+      },
+    );
+
+    const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+    expect(modelSelect.value).toBe('antigravity-gemini-agent:gemini-3.7-flash-high');
+    expect(screen.getByTestId('plan-module-provider-value-1').textContent)
+      .toBe(fb136FinalSelectedCandidate.provider);
+    expect(screen.queryByTestId('plan-module-effort-field-1')).toBeNull();
+    expect(screen.getByTestId('plan-module-permission-scope-select-1'))
+      .toHaveProperty('value', fb136FinalSelectedCandidate.permissionScope);
+    expect(screen.getByTestId('plan-module-disturbance-level-select-1'))
+      .toHaveProperty('value', fb136FinalSelectedCandidate.disturbanceLevel);
+    expect(screen.getByTestId('plan-module-skill-tags-1').textContent)
+      .toContain('gemini-review');
+    expect(screen.getByText('Plan approved')).toBeTruthy();
+  });
+
+  it('green FB-136-4: dispatch payload matches the final values visible on the card', async () => {
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    installModelCatalog(fb136ModelCatalog());
+    installSkillLibrary();
+    renderWidget(fb136PlanArguments, { exitPlanModeApprove });
+
+    const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+    fireEvent.change(modelSelect, {
+      target: { value: 'antigravity-gemini-agent:gemini-3.7-flash-high' },
+    });
+    await waitFor(() => expect(screen.queryByTestId('plan-module-effort-field-1')).toBeNull());
+    fireEvent.change(screen.getByTestId('plan-module-disturbance-level-select-1'), {
+      target: { value: 'on-request' },
+    });
+
+    const visibleFinalState = {
+      provider: screen.getByTestId('plan-module-provider-value-1').textContent,
+      model: modelSelect.value,
+      effortFieldVisible: screen.queryByTestId('plan-module-effort-field-1') !== null,
+      permissionScope: (screen.getByTestId('plan-module-permission-scope-select-1') as HTMLSelectElement).value,
+      disturbanceLevel: (screen.getByTestId('plan-module-disturbance-level-select-1') as HTMLSelectElement).value,
+      skills: screen.getByTestId('plan-module-skill-tags-1').textContent,
+    };
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+
+    await waitFor(() => {
+      expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
+        expect.objectContaining({
+          provider: visibleFinalState.provider,
+          model: visibleFinalState.model,
+          permissionScope: visibleFinalState.permissionScope,
+          disturbanceLevel: visibleFinalState.disturbanceLevel,
+          skillBundleName: '施工包',
+          skillIds: ['gemini:user:review'],
+        }),
+      ]);
+    });
+    const payload = exitPlanModeApprove.mock.calls[0]?.[1]?.[0];
+    expect(payload).not.toHaveProperty('effortLevel');
+    expect(visibleFinalState.effortFieldVisible).toBe(false);
+    expect(visibleFinalState.skills).toContain('gemini-review');
   });
 
   it('green FD-3/FD-6: expands bundle tags, filters disabled skills, records tag edits, and submits final skill ids', async () => {
