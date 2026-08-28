@@ -32,7 +32,6 @@ import {
   AntigravityServerManager,
   type AgyExecutionOptions,
 } from './ServerManager';
-import { AntigravityUsageMeter } from './UsageMeter';
 import { AntigravityToolLoopProtocol } from './ToolLoopProtocol';
 
 // -------------------------------------------------------------------------
@@ -267,11 +266,6 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
   );
 
   const sessions = new Map<string, SessionState>();
-
-  // Usage meter shares the singleton ServerManager. getUsageSnapshot() below
-  // reads it WITHOUT spawning: if no endpoint is live yet, it returns an
-  // unavailable result rather than firing up the language server.
-  const usageMeter = new AntigravityUsageMeter(AntigravityServerManager.shared());
 
   function getOrThrow(sessionId: string): SessionState {
     const s = sessions.get(sessionId);
@@ -531,21 +525,10 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
     },
 
     async getUsageSnapshot(): Promise<UsageSnapshotResult> {
-      // Read-only. Never spawn: if the language server isn't already running,
-      // report unavailable so the usage chip degrades to a muted state instead
-      // of starting the server from a background poll.
-      if (AntigravityServerManager.shared().currentEndpoint() === null) {
-        return { available: false, error: 'Gemini server not started yet' };
-      }
-      try {
-        const snapshot = await usageMeter.getSnapshot();
-        return { available: true, snapshot };
-      } catch (err) {
-        return {
-          available: false,
-          error: err instanceof Error ? err.message : String(err),
-        };
-      }
+      // Read-only and truthful: agy stream-json exposes per-turn token counts,
+      // but no quota/remaining-limit API. Do not spawn the desktop language
+      // server just to synthesize a usage ring from a different protocol.
+      return { available: false, error: 'Antigravity 未提供用量查询' };
     },
   };
 

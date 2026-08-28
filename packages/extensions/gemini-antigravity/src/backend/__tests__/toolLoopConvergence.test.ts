@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AGY_PRINT_TIMEOUT_MS, AntigravityToolLoopProtocol } from '../ToolLoopProtocol';
+import { AGY_TURN_TOTAL_TIMEOUT_MS, AntigravityToolLoopProtocol } from '../ToolLoopProtocol';
 import type { AntigravityServerManager } from '../ServerManager';
 
 // These drive the REAL run() loop with a mock server.getModelResponse so no
@@ -48,12 +48,12 @@ async function drain(gen: AsyncGenerator<unknown>): Promise<Ev[]> {
 }
 
 describe('AntigravityToolLoopProtocol convergence hardening', () => {
-  it('uses the measured cold-start agy print budget by default', async () => {
+  it('uses the stream-json total turn budget by default', async () => {
     const { proto, spy } = makeProto(async () => 'done', 1);
 
     await drain(proto.run('task', 'sys', LIST_TOOL, async () => 'unused'));
 
-    expect(spy.mock.calls[0][2]).toBe(AGY_PRINT_TIMEOUT_MS);
+    expect(spy.mock.calls[0][2]).toBe(AGY_TURN_TOTAL_TIMEOUT_MS);
   });
 
   it('green FD-7: rejects Gemini Skill calls outside include_only before host execution', async () => {

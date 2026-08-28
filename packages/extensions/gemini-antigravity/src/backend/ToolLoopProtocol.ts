@@ -28,6 +28,7 @@
  */
 
 import {
+  AGY_STREAM_TOTAL_TIMEOUT_MS,
   AntigravityServerManager,
   type AgyExecutionOptions,
 } from './ServerManager';
@@ -85,10 +86,10 @@ const DEDUP_READONLY_TOOLS = new Set(['read_file', 'list_files', 'search_files']
 // stuck looping; stop and force a final synthesis instead of burning the budget.
 const MAX_DUPLICATE_READS = 4;
 
-// agy print measurements: cold starts take 19–90+ seconds and warm turns take
-// 8–70 seconds. A 180s first-run budget leaves headroom for a cold process
-// without allowing a wedged process to wait indefinitely.
-export const AGY_PRINT_TIMEOUT_MS = 180_000;
+// Gemini construction turns can run for illustration/editing work. The agy
+// backend now uses stream-json events for liveness, so this is only the total
+// wall-clock cap; idle/no-event detection lives in ServerManager.
+export const AGY_TURN_TOTAL_TIMEOUT_MS = AGY_STREAM_TOTAL_TIMEOUT_MS;
 
 // Sentinel-delimited write directive. write_file's `content` argument is a whole
 // file body (markdown, code, JSON) dense with quotes, braces, and newlines. A weak
@@ -251,7 +252,7 @@ export class AntigravityToolLoopProtocol {
     systemPrompt: string,
     tools: OpenAITool[],
     executeToolCall: (name: string, args: Record<string, unknown>) => Promise<unknown>,
-    timeoutMs = AGY_PRINT_TIMEOUT_MS
+    timeoutMs = AGY_TURN_TOTAL_TIMEOUT_MS
   ): AsyncGenerator<
     | { type: 'text'; content: string }
     | { type: 'tool_call'; name: string; args: Record<string, unknown> }

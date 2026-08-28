@@ -21,6 +21,7 @@ import { refreshGeminiUsage } from '../../store/listeners/geminiUsageListeners';
 
 const RING_RADIUS = 12;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const ANTIGRAVITY_USAGE_UNAVAILABLE = 'Antigravity 未提供用量查询';
 
 interface GeminiUsageIndicatorProps {
   className?: string;
@@ -62,7 +63,9 @@ export const GeminiUsageIndicator: React.FC<GeminiUsageIndicatorProps> = ({ clas
   const effectiveSessionColor = limitsAvailable ? sessionColor : 'muted';
   const strokeColor = colorClasses[effectiveSessionColor] || colorClasses.muted;
 
-  const tooltipContent = usage?.notStarted
+  const tooltipContent = usage?.error === ANTIGRAVITY_USAGE_UNAVAILABLE
+    ? ANTIGRAVITY_USAGE_UNAVAILABLE
+    : usage?.notStarted
     ? usage.error || 'Gemini usage will appear after your first request'
     : usage?.error
       ? `Gemini usage unavailable: ${usage.error}`

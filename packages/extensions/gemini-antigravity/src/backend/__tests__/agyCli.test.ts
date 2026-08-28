@@ -23,6 +23,10 @@ import {
 type MockChild = ChildProcess & {
   stdout: EventEmitter;
   stderr: EventEmitter;
+  stdin: EventEmitter & {
+    write: ReturnType<typeof vi.fn>;
+    end: ReturnType<typeof vi.fn>;
+  };
   kill: ReturnType<typeof vi.fn>;
 };
 
@@ -78,6 +82,10 @@ function mockChild({
   const child = new EventEmitter() as unknown as MockChild;
   child.stdout = new EventEmitter() as unknown as MockChild['stdout'];
   child.stderr = new EventEmitter() as unknown as MockChild['stderr'];
+  child.stdin = Object.assign(new EventEmitter(), {
+    write: vi.fn(),
+    end: vi.fn(),
+  }) as MockChild['stdin'];
   child.kill = vi.fn();
   queueMicrotask(() => {
     if (stdout) child.stdout.emit('data', Buffer.from(stdout));
@@ -88,6 +96,92 @@ function mockChild({
     }
   });
   return child;
+}
+
+function mockStreamChild({
+  conversationId = 'conv-stream',
+  responseForInput,
+  emitInit = true,
+}: {
+  conversationId?: string;
+  responseForInput: (line: string, child: MockChild, turn: number) => void;
+  emitInit?: boolean;
+}): MockChild {
+  const child = mockChild({ close: false });
+  let buffered = '';
+  let turn = 0;
+  child.stdin.write.mockImplementation((chunk: Buffer | string) => {
+    buffered += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : chunk;
+    let idx: number;
+    while ((idx = buffered.indexOf('\n')) >= 0) {
+      const line = buffered.slice(0, idx);
+      buffered = buffered.slice(idx + 1);
+      if (!line.trim()) continue;
+      turn += 1;
+      responseForInput(line, child, turn);
+    }
+    return true;
+  });
+  child.stdin.end.mockImplementation(() => {
+    child.emit('close', 0);
+  });
+  if (emitInit) {
+    queueMicrotask(() => {
+      child.stdout.emit('data', Buffer.from(JSON.stringify({
+        event: 'init',
+        conversation_id: conversationId,
+        init: { permission_mode: 'always-proceed' },
+      }) + '\n'));
+    });
+  }
+  return child;
+}
+
+function emitStreamResult(child: MockChild, conversationId: string, response: string): void {
+  child.stdout.emit('data', Buffer.from(JSON.stringify({
+    event: 'result',
+    result: {
+      conversation_id: conversationId,
+      status: 'SUCCESS',
+      response,
+      usage: {
+        input_tokens: 1,
+        output_tokens: 1,
+        thinking_tokens: 0,
+        cache_read_tokens: 0,
+        total_tokens: 2,
+      },
+    },
+  }) + '\n'));
+}
+
+function emitStreamErrorResult(child: MockChild, message: string, conversationId = ''): void {
+  child.stdout.emit('data', Buffer.from(JSON.stringify({
+    event: 'result',
+    result: {
+      conversation_id: conversationId,
+      status: 'ERROR',
+      response: '',
+      error: message,
+      usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+        thinking_tokens: 0,
+        cache_read_tokens: 0,
+        total_tokens: 0,
+      },
+    },
+  }) + '\n'));
+}
+
+function expectDefaultStreamArgs(args: unknown, model = 'gemini-3.6-flash-high'): void {
+  expect(args).toEqual([
+    '--input-format', 'stream-json',
+    '--output-format', 'stream-json',
+    '--print-timeout', '1500s',
+    '--model', model,
+    '--print=',
+  ]);
 }
 
 beforeEach(() => {
@@ -107,8 +201,11 @@ describe('agy CLI dynamic model catalog', () => {
       .mockReturnValueOnce(mockChild({
         stdout: 'Fetching available models...\ngemini-3.1-flash-low\tGemini 3.1 Flash (Low)\n',
       }))
-      .mockImplementationOnce(() => mockChild({
-        stdout: JSON.stringify({ result: 'dynamic', conversation_id: 'dynamic-1' }),
+      .mockImplementationOnce(() => mockStreamChild({
+        conversationId: 'dynamic-1',
+        responseForInput: (_line, child) => {
+          queueMicrotask(() => emitStreamResult(child, 'dynamic-1', 'dynamic'));
+        },
       }));
 
     const manager = freshManager();
@@ -117,12 +214,7 @@ describe('agy CLI dynamic model catalog', () => {
 
     await expect(manager.getModelResponse('one', 'gemini-3.1-flash-low'))
       .resolves.toBe('dynamic');
-    expect(spawnMock.mock.calls[1][1]).toEqual([
-      '-p', 'one',
-      '--model', 'gemini-3.1-flash-low',
-      '--output-format', 'json',
-      '--print-timeout', '120s',
-    ]);
+    expectDefaultStreamArgs(spawnMock.mock.calls[1][1], 'gemini-3.1-flash-low');
   });
 
   it('RED EO: retains third-party rows exactly as agy returned them instead of filtering or composing a tier', async () => {
@@ -330,11 +422,15 @@ describe('agy CLI dynamic model catalog', () => {
 });
 
 describe('agy CLI process boundary', () => {
-  it('detects CLI-only install and sends the raw one-shot model command', async () => {
+  it('detects CLI-only install and sends the raw stream-json model command', async () => {
     mockEnvironment({ desktop: false, agy: true });
-    spawnMock.mockReturnValue(mockChild({
-      stdout: JSON.stringify({ result: 'pong', conversation_id: 'conv-1' }),
-    }));
+    const streamChild = mockStreamChild({
+      conversationId: 'conv-1',
+      responseForInput: (_line, child) => {
+        queueMicrotask(() => emitStreamResult(child, 'conv-1', 'pong'));
+      },
+    });
+    spawnMock.mockReturnValue(streamChild);
 
     const manager = freshManager();
     expect(AntigravityServerManager.isInstalled()).toBe(true);
@@ -349,18 +445,22 @@ describe('agy CLI process boundary', () => {
     expect(spawnMock).toHaveBeenCalledTimes(1);
     const [binary, args] = spawnMock.mock.calls[0];
     expect(binary).toBe('/fixture/home/.local/bin/agy');
-    expect(args).toEqual([
-      '-p', 'Reply with one word: pong',
-      '--model', 'gemini-3.6-flash-high',
-      '--output-format', 'json',
-      '--print-timeout', '2s',
-    ]);
+    expectDefaultStreamArgs(args);
+    expect(streamChild.stdin.write).toHaveBeenCalledWith(
+      JSON.stringify({
+        event: 'user',
+        message: { role: 'user', content: 'Reply with one word: pong' },
+      }) + '\n',
+    );
   });
 
   it('green EX-3c: forwards Gemini’s actual agy mode and permission-skip flags', async () => {
     mockEnvironment({ desktop: false, agy: true });
-    spawnMock.mockReturnValue(mockChild({
-      stdout: JSON.stringify({ result: 'policy applied', conversation_id: 'conv-policy' }),
+    spawnMock.mockReturnValue(mockStreamChild({
+      conversationId: 'conv-policy',
+      responseForInput: (_line, child) => {
+        queueMicrotask(() => emitStreamResult(child, 'conv-policy', 'policy applied'));
+      },
     }));
 
     const manager = freshManager();
@@ -374,43 +474,136 @@ describe('agy CLI process boundary', () => {
     )).resolves.toBe('policy applied');
 
     expect(spawnMock.mock.calls[0][1]).toEqual([
-      '-p', 'read the workspace',
+      '--input-format', 'stream-json',
+      '--output-format', 'stream-json',
+      '--print-timeout', '1500s',
       '--model', 'gemini-3.6-flash-high',
       '--mode', 'plan',
       '--dangerously-skip-permissions',
-      '--output-format', 'json',
-      '--print-timeout', '2s',
+      '--print=',
     ]);
   });
 
-  it('continues the same agy conversation on later calls', async () => {
+  it('GREEN FF-137: restarts a killed stream process with --conversation for the next turn', async () => {
     mockEnvironment({ desktop: false, agy: true });
-    spawnMock.mockReturnValueOnce(mockChild({
-      stdout: JSON.stringify({ result: 'first', session_id: 'conv-42' }),
-    }));
+    const firstChild = mockStreamChild({
+      conversationId: 'conv-42',
+      responseForInput: (_line, child) => {
+        queueMicrotask(() => emitStreamResult(child, 'conv-42', 'first'));
+      },
+    });
+    spawnMock
+      .mockReturnValueOnce(firstChild)
+      .mockImplementationOnce(() => mockStreamChild({
+        conversationId: 'conv-42',
+        responseForInput: (_line, child) => {
+          queueMicrotask(() => emitStreamResult(child, 'conv-42', 'second'));
+        },
+      }));
 
     const manager = freshManager();
     await expect(manager.getModelResponse('one', 'gemini-3.6-flash-high', 2_000, 'session-2'))
       .resolves.toBe('first');
-    spawnMock.mockReturnValueOnce(mockChild({
-      stdout: JSON.stringify({ result: 'second' }),
-    }));
+    firstChild.emit('close', 1);
     await expect(manager.getModelResponse('two', 'gemini-3.6-flash-high', 2_000, 'session-2'))
       .resolves.toBe('second');
 
     expect(spawnMock.mock.calls[1][1]).toEqual([
-      '-p', 'two',
+      '--input-format', 'stream-json',
+      '--output-format', 'stream-json',
+      '--print-timeout', '1500s',
       '--conversation', 'conv-42',
-      '--output-format', 'json',
-      '--print-timeout', '2s',
+      '--print=',
     ]);
+  });
+
+  it('GREEN FF-137: keeps an active stream-json turn alive past the old 180-second print wall', async () => {
+    vi.useFakeTimers();
+    try {
+      mockEnvironment({ desktop: false, agy: true });
+      const child = mockStreamChild({
+        conversationId: 'conv-active',
+        responseForInput: (_line, streamChild) => {
+          setTimeout(() => {
+            streamChild.stdout.emit('data', Buffer.from(JSON.stringify({
+              event: 'step_update',
+              step_update: {
+                conversation_id: 'conv-active',
+                step_index: 1,
+                state: 'ACTIVE',
+                step_type: 'agent_response',
+                text_delta: 'still working',
+              },
+            }) + '\n'));
+          }, 90_000);
+          setTimeout(() => {
+            emitStreamResult(streamChild, 'conv-active', 'finished after old wall');
+          }, 181_000);
+        },
+      });
+      spawnMock.mockReturnValue(child);
+
+      const resultPromise = freshManager().getModelResponse(
+        'slow active turn',
+        'gemini-3.6-flash-high',
+        180_000,
+        'session-active',
+      );
+      await vi.runAllTicks();
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(child.kill).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(91_000);
+
+      await expect(resultPromise).resolves.toBe('finished after old wall');
+      expect(child.kill).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('GREEN FF-137: reuses one stream-json agy process for multiple turns in the same session', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    const streamChild = mockStreamChild({
+      conversationId: 'conv-reuse',
+      responseForInput: (_line, child, turn) => {
+        queueMicrotask(() => {
+          emitStreamResult(child, 'conv-reuse', turn === 1 ? 'first' : 'second');
+        });
+      },
+    });
+    spawnMock.mockImplementation((_binary, args) => {
+      if (Array.isArray(args) && args.includes('--input-format')) {
+        return streamChild;
+      }
+      return mockChild({
+        stdout: JSON.stringify({
+          result: spawnMock.mock.calls.length === 1 ? 'first' : 'second',
+          conversation_id: 'conv-reuse',
+        }),
+      });
+    });
+
+    const manager = freshManager();
+    await expect(manager.getModelResponse('one', 'gemini-3.6-flash-high', 2_000, 'session-reuse'))
+      .resolves.toBe('first');
+    await expect(manager.getModelResponse('two', 'gemini-3.6-flash-high', 2_000, 'session-reuse'))
+      .resolves.toBe('second');
+
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+    expect(streamChild.stdin.write).toHaveBeenCalledTimes(2);
+    expectDefaultStreamArgs(spawnMock.mock.calls[0][1]);
   });
 
   it('RED EO: sends an unlisted explicit model to agy unchanged instead of host-rejecting it', async () => {
     mockEnvironment({ desktop: false, agy: true });
-    spawnMock.mockReturnValue(mockChild({
-      code: 1,
-      stderr: 'Print mode: invalid --model "future-engine-model"',
+    spawnMock.mockReturnValue(mockStreamChild({
+      conversationId: 'conv-invalid',
+      responseForInput: (_line, child) => {
+        queueMicrotask(() => {
+          emitStreamErrorResult(child, 'Print mode: invalid --model "future-engine-model"');
+          child.emit('close', 1);
+        });
+      },
     }));
     const manager = freshManager();
 
@@ -426,9 +619,17 @@ describe('agy CLI process boundary', () => {
 
   it('does not mistake agy’s invalid-model list for a model reply', async () => {
     mockEnvironment({ desktop: false, agy: true });
-    spawnMock.mockReturnValue(mockChild({
-      code: 1,
-      stderr: 'Print mode: invalid --model "gemini-3.6-flash-high"\nAvailable models:\n  Gemini 3.6 Flash (High)',
+    spawnMock.mockReturnValue(mockStreamChild({
+      conversationId: 'conv-invalid',
+      responseForInput: (_line, child) => {
+        queueMicrotask(() => {
+          emitStreamErrorResult(
+            child,
+            'Print mode: invalid --model "gemini-3.6-flash-high"\nAvailable models:\n  Gemini 3.6 Flash (High)',
+          );
+          child.emit('close', 1);
+        });
+      },
     }));
     const manager = freshManager();
 
@@ -450,9 +651,14 @@ describe('agy CLI process boundary', () => {
 
   it('surfaces agy auth failure with the terminal-login guidance', async () => {
     mockEnvironment({ desktop: false, agy: true });
-    spawnMock.mockReturnValue(mockChild({
-      code: 1,
-      stderr: 'not authenticated: run agy login in a terminal',
+    spawnMock.mockReturnValue(mockStreamChild({
+      conversationId: 'conv-auth',
+      responseForInput: (_line, child) => {
+        queueMicrotask(() => {
+          emitStreamErrorResult(child, 'not authenticated: run agy login in a terminal');
+          child.emit('close', 1);
+        });
+      },
     }));
     const manager = freshManager();
 
@@ -501,8 +707,11 @@ describe('agy CLI process boundary', () => {
 
   it('does not pass credential environment variables or tokens to agy', async () => {
     mockEnvironment({ desktop: false, agy: true });
-    spawnMock.mockReturnValue(mockChild({
-      stdout: JSON.stringify({ result: 'pong', conversation_id: 'conv-env' }),
+    spawnMock.mockReturnValue(mockStreamChild({
+      conversationId: 'conv-env',
+      responseForInput: (_line, child) => {
+        queueMicrotask(() => emitStreamResult(child, 'conv-env', 'pong'));
+      },
     }));
     const originalGoogleApiKey = process.env.GOOGLE_API_KEY;
     const originalAntigravityToken = process.env.ANTIGRAVITY_ACCESS_TOKEN;
@@ -524,21 +733,103 @@ describe('agy CLI process boundary', () => {
     }
   });
 
-  it('kills a hung print process at the outer timeout', async () => {
-    mockEnvironment({ desktop: false, agy: true });
-    const child = mockChild({ close: false });
-    spawnMock.mockReturnValue(child);
-    const manager = freshManager();
+  it('GREEN FF-137: reports a no-activity timeout when stream-json emits no turn events', async () => {
+    vi.useFakeTimers();
+    try {
+      mockEnvironment({ desktop: false, agy: true });
+      const child = mockStreamChild({
+        conversationId: 'conv-idle',
+        responseForInput: () => {
+          /* stay silent after receiving the turn */
+        },
+      });
+      spawnMock.mockReturnValue(child);
+      const manager = freshManager();
 
-    const error = await manager.getModelResponse('one', 'gemini-3.6-flash-high', 10)
-      .catch((err) => err);
-    expect(error).toBeInstanceOf(AntigravityAgyTimeoutError);
-    expect(error).toMatchObject({
-      name: 'AntigravityAgyTimeoutError',
-      message: expect.stringMatching(
-        /^agy print mode timed out after \d+s \(\d+ms elapsed; limit 1s\)$/,
-      ),
-    });
-    expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+      const errorPromise = manager.getModelResponse('one', 'gemini-3.6-flash-high', 10_000)
+        .catch((err) => err);
+      await vi.runAllTicks();
+      await vi.advanceTimersByTimeAsync(240_000);
+
+      const error = await errorPromise;
+      expect(error).toBeInstanceOf(AntigravityAgyTimeoutError);
+      expect(error).toMatchObject({
+        name: 'AntigravityAgyTimeoutError',
+        message: expect.stringMatching(/无活动超时/),
+      });
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('GREEN FF-137: reports a total-duration timeout separately from no-activity timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      mockEnvironment({ desktop: false, agy: true });
+      const child = mockStreamChild({
+        conversationId: 'conv-total',
+        responseForInput: (_line, streamChild) => {
+          for (let elapsed = 60_000; elapsed < 1_500_000; elapsed += 60_000) {
+            setTimeout(() => {
+              streamChild.stdout.emit('data', Buffer.from(JSON.stringify({
+                event: 'step_update',
+                step_update: {
+                  conversation_id: 'conv-total',
+                  state: 'ACTIVE',
+                  step_type: 'agent_response',
+                  text_delta: '.',
+                },
+              }) + '\n'));
+            }, elapsed);
+          }
+        },
+      });
+      spawnMock.mockReturnValue(child);
+      const manager = freshManager();
+
+      const errorPromise = manager.getModelResponse('one', 'gemini-3.6-flash-high', 10_000)
+        .catch((err) => err);
+      await vi.runAllTicks();
+      await vi.advanceTimersByTimeAsync(1_500_000);
+
+      const error = await errorPromise;
+      expect(error).toBeInstanceOf(AntigravityAgyTimeoutError);
+      expect(error).toMatchObject({
+        name: 'AntigravityAgyTimeoutError',
+        message: expect.stringMatching(/总时长超限/),
+      });
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('GREEN FF-137: falls back visibly to one-shot mode when stream-json cannot start', async () => {
+    mockEnvironment({ desktop: false, agy: true });
+    spawnMock
+      .mockImplementationOnce(() => mockChild({
+        code: 2,
+        stderr: 'flag provided but not defined: --input-format',
+      }))
+      .mockImplementationOnce(() => mockChild({
+        stdout: JSON.stringify({ result: 'fallback answer', conversation_id: 'conv-fallback' }),
+      }));
+
+    const response = await freshManager().getModelResponse(
+      'one',
+      'gemini-3.6-flash-high',
+      10_000,
+      'session-fallback',
+    );
+
+    expect(response).toBe('已回落一句话模式\n\nfallback answer');
+    expect(spawnMock).toHaveBeenCalledTimes(2);
+    expect(spawnMock.mock.calls[1][1]).toEqual([
+      '-p', 'one',
+      '--model', 'gemini-3.6-flash-high',
+      '--output-format', 'json',
+      '--print-timeout', '1500s',
+    ]);
   });
 });
