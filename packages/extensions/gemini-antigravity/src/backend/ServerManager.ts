@@ -145,6 +145,12 @@ export interface AgyParsedResponse {
 export interface AgyExecutionOptions {
   mode?: 'plan' | 'accept-edits';
   dangerouslySkipPermissions?: boolean;
+  skills?: {
+    include_only: string[];
+    preToolUse?: {
+      include_only: string[];
+    };
+  };
 }
 
 export type GeminiLoginProbeState = 'logged-in' | 'logged-out' | 'unknown';

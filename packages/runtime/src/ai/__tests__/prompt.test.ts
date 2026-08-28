@@ -129,8 +129,13 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('same planId');
     expect(prompt).toContain("The boss can change a module's provider-qualified model, thinking effort, permission scope, and interruption level directly on the approval card.");
     expect(prompt).toContain('Do not debate model or permission choices in plan prose');
+    expect(prompt).toContain('The boss can also change the final skill list directly on the approval card.');
+    expect(prompt).toContain('Do not debate skill choices in plan prose');
     expect(prompt).toContain('permissionScope');
     expect(prompt).toContain('disturbanceLevel');
+    expect(prompt).toContain('skillBundleName');
+    expect(prompt).toContain('skillIds');
+    expect(prompt).toContain('Omitted skills mean no skills are granted');
   });
 
   it('green EZ-1: forbids Head native Claude plan mode while preserving the formal plan-card route', () => {
@@ -146,6 +151,7 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('only call `mcp__nimbalyst-meta-agent__submit_plan`');
     expect(prompt).toContain('Treat a plan written in chat as invalid');
     expect(prompt).toContain('Do not debate model or permission choices in plan prose');
+    expect(prompt).toContain('Do not debate skill choices in plan prose');
   });
 
   it('green FC-4: tells Head to use searchable output file names and full file names in chat', () => {

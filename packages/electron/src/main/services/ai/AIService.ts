@@ -32,6 +32,7 @@ import {
   OpenAICodexProvider,
 } from '@nimbalyst/runtime/ai/server';
 import { readDispatchPermissionResolution } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
+import { readDispatchSkillResolution } from '@nimbalyst/runtime/ai/server/dispatchSkills';
 import { ClaudeCodeCliProvider } from '@nimbalyst/runtime/ai/server/providers/ClaudeCodeCliProvider';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
 import { parseContextUsageMessage } from '@nimbalyst/runtime/ai/server/utils/contextUsage';
@@ -2586,12 +2587,16 @@ export class AIService {
     const dispatchPermission = readDispatchPermissionResolution(
       (session.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
     );
+    const dispatchSkills = readDispatchSkillResolution(
+      (session.metadata as Record<string, unknown> | undefined)?.dispatchSkills,
+    );
     const config: ProviderConfig = {
       maxTokens: (session.providerConfig as any)?.maxTokens,
       temperature: (session.providerConfig as any)?.temperature,
       ...(apiKey ? { apiKey } : {}),
       ...(effortLevel && { effortLevel }),
       ...(dispatchPermission ? { dispatchPermission } : {}),
+      ...(dispatchSkills ? { dispatchSkills } : {}),
     };
 
     // Omit a missing model and let the native SDK select its own default.
@@ -3876,10 +3881,14 @@ export class AIService {
       const dispatchPermission = readDispatchPermissionResolution(
         (session.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
       );
+      const dispatchSkills = readDispatchSkillResolution(
+        (session.metadata as Record<string, unknown> | undefined)?.dispatchSkills,
+      );
       const initConfig: any = {
         maxTokens: (session.providerConfig as any)?.maxTokens,
         temperature: (session.providerConfig as any)?.temperature,
         ...(dispatchPermission ? { dispatchPermission } : {}),
+        ...(dispatchSkills ? { dispatchSkills } : {}),
       };
 
       // Claude Code can use a dedicated API key, but must never use anthropic.

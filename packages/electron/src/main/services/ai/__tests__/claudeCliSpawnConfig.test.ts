@@ -359,6 +359,50 @@ describe('buildClaudeCliSpawnConfig', () => {
     expect(cfg.args).not.toContain('--dangerously-skip-permissions');
   });
 
+  it('green FD-5: emits Claude CLI skill controls as native flags within the verified boundary', () => {
+    const cfg = buildClaudeCliSpawnConfig({
+      ...base,
+      dispatchSkills: {
+        engine: 'claude',
+        requested: { skillIds: ['claude:user:implement'] },
+        effective: { skillIds: ['claude:user:implement'] },
+        effectiveSkillNames: ['implement'],
+        native: {
+          claudeCli: {
+            skills: ['implement'],
+            allowedTools: ['Skill(implement)'],
+          },
+        },
+      },
+    });
+
+    const allowedStart = cfg.args.indexOf('--allowedTools');
+    const disallowedStart = cfg.args.indexOf('--disallowedTools');
+    expect(cfg.args.slice(allowedStart + 1, disallowedStart)).toEqual(['Skill(implement)']);
+    expect(cfg.args).not.toContain('--disable-slash-commands');
+  });
+
+  it('green FD-5: disables Claude CLI slash skills when dispatch grants no skills', () => {
+    const cfg = buildClaudeCliSpawnConfig({
+      ...base,
+      dispatchSkills: {
+        engine: 'claude',
+        requested: { skillIds: [] },
+        effective: { skillIds: [] },
+        effectiveSkillNames: [],
+        native: {
+          claudeCli: {
+            skills: [],
+            allowedTools: [],
+            disableSlashCommands: true,
+          },
+        },
+      },
+    });
+
+    expect(cfg.args).toContain('--disable-slash-commands');
+  });
+
   it('still denies the built-in AskUserQuestion under --dangerously-skip-permissions (MCP routing kept)', () => {
     // Skipping permission checks must NOT re-enable the native TUI question prompt;
     // we still force the model onto our MCP question tool.

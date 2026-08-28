@@ -16,6 +16,7 @@ import {
   META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
 } from '../../services/McpConfigService';
 import type { DispatchPermissionResolution } from '../../dispatchPermissionKnobs';
+import type { DispatchSkillResolution } from '../../dispatchSkills';
 
 type SessionMode = 'planning' | 'agent' | 'auto' | undefined;
 
@@ -54,6 +55,7 @@ export interface BuildSdkOptionsDeps {
     effortLevel?: string;
     allowedTools?: string[];
     dispatchPermission?: DispatchPermissionResolution;
+    dispatchSkills?: DispatchSkillResolution;
   };
   abortController: AbortController;
 }
@@ -214,6 +216,7 @@ export async function buildSdkOptions(
   const customPath = ClaudeCodeDeps.customClaudeCodePathLoader?.(workspacePath) || '';
   const effectivePath = customPath || resolvedBinaryPath;
   const dispatchPermission = config.dispatchPermission?.native.claudeSdk;
+  const dispatchSkills = config.dispatchSkills?.native.claudeSdk;
   const dispatchDisallowedTools = dispatchPermission?.disallowedTools ?? [];
   const metaAgentDisallowedTools = isMetaAgent ? ['Agent', 'Task'] : [];
   const disallowedTools = [...new Set([
@@ -224,6 +227,12 @@ export async function buildSdkOptions(
     ...(config.allowedTools ?? []),
     ...(dispatchPermission?.allowedTools ?? []),
   ])];
+  const availabilityTools = dispatchPermission?.tools
+    ? [...new Set([
+        ...dispatchPermission.tools,
+        ...(dispatchSkills ? ['Skill'] : []),
+      ])]
+    : undefined;
   // console.log(`[CLAUDE-CODE] Binary path: custom=${customPath || '(none)'} resolved=${resolvedBinaryPath ?? '(none)'} effective=${effectivePath ?? '(none)'}`);
 
   const options: any = {
@@ -259,7 +268,8 @@ export async function buildSdkOptions(
     permissionMode: isMetaAgent
       ? 'default'
       : dispatchPermission?.permissionMode ?? resolvePermissionMode(currentMode),
-    ...(dispatchPermission?.tools ? { tools: dispatchPermission.tools } : {}),
+    ...(availabilityTools ? { tools: availabilityTools } : {}),
+    ...(dispatchSkills ? { skills: dispatchSkills.skills } : {}),
     ...(allowedTools.length > 0 ? { allowedTools } : {}),
     ...(dispatchPermission?.allowDangerouslySkipPermissions
       ? { allowDangerouslySkipPermissions: true }

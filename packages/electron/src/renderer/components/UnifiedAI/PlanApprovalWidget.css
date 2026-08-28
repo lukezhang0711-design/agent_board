@@ -25,6 +25,7 @@
 
   .plan-module-model-field,
   .plan-module-effort-field,
+  .plan-module-skill-field,
   .plan-module-done-criteria {
     grid-column: 1 / -1;
   }

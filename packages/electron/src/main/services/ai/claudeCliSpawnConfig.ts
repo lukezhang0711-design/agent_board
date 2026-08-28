@@ -23,6 +23,7 @@ import {
   META_AGENT_PLAN_APPROVAL_TIMEOUT_MS,
 } from '@nimbalyst/runtime/ai/server';
 import type { DispatchPermissionResolution } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
+import type { DispatchSkillResolution } from '@nimbalyst/runtime/ai/server/dispatchSkills';
 
 /**
  * Resolve only the host's provider namespace before passing a selected value to
@@ -99,6 +100,8 @@ export interface ClaudeCliSpawnInput {
   dangerouslySkipPermissions?: boolean;
   /** Per-dispatch native policy; takes precedence over workspace-wide trust. */
   dispatchPermission?: DispatchPermissionResolution;
+  /** Per-dispatch native skill policy. Empty grants use the CLI's real disable flag. */
+  dispatchSkills?: DispatchSkillResolution;
   /**
    * Extra directories to pre-authorize for the CLI's file tools via `--add-dir`
    * (NIM-806 — input integration). Pasted chat attachments are written OUTSIDE
@@ -264,6 +267,7 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
     args.push('--session-id', input.sessionId);
   }
   const dispatchPermission = input.dispatchPermission?.native.claudeCli;
+  const dispatchSkills = input.dispatchSkills?.native.claudeCli;
   const permissionMode = input.isMetaAgent
     ? 'manual'
     : dispatchPermission?.permissionMode;
@@ -313,6 +317,9 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
   for (const dir of pluginDirs) {
     args.push('--plugin-dir', dir);
   }
+  if (dispatchSkills?.disableSlashCommands) {
+    args.push('--disable-slash-commands');
+  }
   // `--tools` is Claude CLI's real tool-availability list. It is distinct from
   // `--allowedTools`, which only pre-approves tools that remain available.
   if (dispatchPermission?.tools && dispatchPermission.tools.length > 0) {
@@ -335,6 +342,7 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
   const allowedTools = [...new Set([
     ...allowedServerEntries,
     ...(dispatchPermission?.allowedTools ?? []),
+    ...(dispatchSkills?.allowedTools ?? []),
   ])];
   if (allowedTools.length > 0) {
     args.push('--allowedTools', ...allowedTools);

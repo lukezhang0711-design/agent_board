@@ -511,6 +511,7 @@ export class CodexSDKProtocol implements AgentProtocol {
       systemPrompt,
       codexConfigOverrides: _codexConfigOverrides,
       effortLevel: _effortLevel,
+      dispatchSkills: _dispatchSkills,
       additionalDirectories: rawAdditionalDirectories,
       ...otherRawOptions
     } = options.raw || {};

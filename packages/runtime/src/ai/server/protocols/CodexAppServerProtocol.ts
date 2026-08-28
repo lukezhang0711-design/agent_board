@@ -30,6 +30,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { buildDocumentAttachmentPromptText } from '../providers/codex/documentAttachmentPrompt';
 import { readDispatchPermissionResolution } from '../dispatchPermissionKnobs';
+import { readDispatchSkillResolution } from '../dispatchSkills';
 import { describeCodexConfigError } from './codexConfigError';
 import { isInteractivePromptToolName } from './CodexSDKProtocol';
 import { reverseCodexPatch, type CodexPatchKind } from '../providers/codex/patchReverse';
@@ -754,6 +755,9 @@ export class CodexAppServerProtocol implements AgentProtocol {
     const dispatchPermission = readDispatchPermissionResolution(
       options.raw?.dispatchPermission,
     );
+    const dispatchSkills = readDispatchSkillResolution(
+      options.raw?.dispatchSkills,
+    );
     const sandbox: ThreadStartParams['sandbox'] =
       dispatchPermission?.native.codex?.sandbox
       ?? (options.permissionMode === 'bypass-all' ? 'danger-full-access' : 'workspace-write');
@@ -780,6 +784,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
     // settings (MCP, network access, web search), while model discovery and
     // model-specific reasoning stay outside that generic override channel.
     const rawConfig = options.raw?.codexConfigOverrides as Record<string, unknown> | undefined;
+    const skillConfig = dispatchSkills?.native.codex?.config ?? {};
     // Model discovery is picker-only. It must never become a host-maintained
     // execution allow-list, and reasoning is derived only from the selected
     // model's declared level above.
@@ -790,6 +795,7 @@ export class CodexAppServerProtocol implements AgentProtocol {
     } = rawConfig ?? {};
     const config: Record<string, unknown> = {
       ...threadConfig,
+      ...skillConfig,
       ...(effortLevel ? { model_reasoning_effort: effortLevel } : {}),
     };
 

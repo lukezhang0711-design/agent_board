@@ -15,6 +15,7 @@ export * from './providers/CopilotCLIProvider';
 export * from './utils/errorDetection';
 export * from './preferredAgentLanguageConfig';
 export * from './dispatchPermissionKnobs';
+export * from './dispatchSkills';
 export {
   McpConfigService,
   META_AGENT_PLAN_APPROVAL_TIMEOUT_ENV,

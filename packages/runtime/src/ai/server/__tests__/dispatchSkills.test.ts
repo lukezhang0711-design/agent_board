@@ -1,0 +1,84 @@
+import { describe, expect, it } from 'vitest';
+import {
+  CODEX_SKILL_CONTROL_NOTICE,
+  resolveDispatchSkills,
+  sanitizeDispatchSkillSettingsForLibrary,
+  type DispatchSkillDescriptor,
+} from '../dispatchSkills';
+
+const skills: DispatchSkillDescriptor[] = [
+  { id: 'claude:user:implement', name: 'implement', engine: 'claude', source: 'user', scope: 'global' },
+  { id: 'claude:user:review', name: 'review', engine: 'claude', source: 'user', scope: 'global' },
+  { id: 'codex:user:implement', name: 'implement', engine: 'codex', source: 'user', scope: 'global' },
+  { id: 'codex:user:review', name: 'review', engine: 'codex', source: 'user', scope: 'global' },
+  { id: 'gemini:builtin:antigravity_guide', name: 'antigravity_guide', engine: 'gemini', source: 'builtin', scope: 'global' },
+  { id: 'gemini:builtin:disabled', name: 'disabled', engine: 'gemini', source: 'builtin', scope: 'global' },
+];
+
+const settings = {
+  disabledSkillIds: ['gemini:builtin:disabled'],
+  bundles: [
+    {
+      id: 'construction',
+      name: '施工包',
+      skillIds: ['claude:user:implement', 'codex:user:implement', 'gemini:builtin:disabled'],
+    },
+  ],
+};
+
+describe('dispatch skill resolution', () => {
+  it('green FD-1/FD-2: removes disabled and missing skills from bundles before grant', () => {
+    expect(sanitizeDispatchSkillSettingsForLibrary(settings, skills)).toEqual({
+      disabledSkillIds: ['gemini:builtin:disabled'],
+      bundles: [{
+        id: 'construction',
+        name: '施工包',
+        skillIds: ['claude:user:implement', 'codex:user:implement'],
+      }],
+    });
+  });
+
+  it('green FD-5: maps Claude Agent SDK grants to the native skills option', () => {
+    const resolution = resolveDispatchSkills(
+      'claude-code',
+      { skillIds: ['claude:user:implement', 'codex:user:implement'] },
+      skills,
+      settings,
+    );
+    expect(resolution?.effectiveSkillNames).toEqual(['implement']);
+    expect(resolution?.native.claudeSdk).toEqual({ skills: ['implement'] });
+  });
+
+  it('green FD-5: maps Gemini grants to include_only and PreToolUse guards', () => {
+    const resolution = resolveDispatchSkills(
+      'antigravity-gemini-agent',
+      { skillIds: ['gemini:builtin:antigravity_guide', 'gemini:builtin:disabled'] },
+      skills,
+      settings,
+    );
+    expect(resolution?.native.gemini).toEqual({
+      include_only: ['antigravity_guide'],
+      preToolUse: { include_only: ['antigravity_guide'] },
+    });
+  });
+
+  it('green FD-5/FD-6: maps Codex grants to session-level config write and explicit downgrade notice', () => {
+    const resolution = resolveDispatchSkills(
+      'openai-codex',
+      { skillIds: ['codex:user:implement'] },
+      skills,
+      settings,
+    );
+    expect(resolution?.native.codex).toMatchObject({
+      control: 'skills/config/write',
+      includeOnly: ['implement'],
+      disabledSkillNames: ['review'],
+      config: {
+        'skills.include_only': ['implement'],
+        'skills.disabled': ['review'],
+      },
+      notice: CODEX_SKILL_CONTROL_NOTICE,
+    });
+    expect(resolution?.notice).toBe(CODEX_SKILL_CONTROL_NOTICE);
+  });
+});

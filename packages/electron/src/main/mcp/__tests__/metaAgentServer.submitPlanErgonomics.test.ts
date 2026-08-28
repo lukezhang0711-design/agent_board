@@ -117,6 +117,8 @@ describe('submit_plan ergonomics', () => {
     expect(submitPlanTool?.function.description).toContain('risks is a required array of strings');
     expect(submitPlanTool?.function.description).toContain('model taken from a list_models id');
     expect(submitPlanTool?.function.description).toContain('resolvedModel is display-only');
+    expect(submitPlanTool?.function.description).toContain('skillBundleName/skillIds');
+    expect(submitPlanTool?.function.description).toContain('Omitted skills mean no skills are granted');
     expect(schema).toMatchObject({
       properties: {
         title: { type: 'string' },
@@ -143,11 +145,17 @@ describe('submit_plan ergonomics', () => {
           intent: { type: 'string' },
           permissionScope: { type: 'string' },
           disturbanceLevel: { type: 'string' },
+          skillBundleName: { type: 'string' },
+          skillIds: { type: 'array' },
           doneCriteria: { type: 'string' },
           candidates: {
             type: 'array',
             items: {
               required: ['name', 'approach', 'pros', 'cons', 'risks', 'provider', 'model'],
+              properties: {
+                skillBundleName: { type: 'string' },
+                skillIds: { type: 'array' },
+              },
             },
           },
         },
@@ -179,6 +187,8 @@ describe('submit_plan ergonomics', () => {
         provider: 'openai-codex',
         model: 'gpt-5.4-mini',
         effortLevel: 'medium',
+        skillBundleName: '施工包',
+        skillIds: [],
         doneCriteria: 'Matrix and approval payload are tested.',
         candidates: [{
           name: '方案 A',
@@ -189,6 +199,8 @@ describe('submit_plan ergonomics', () => {
           provider: 'openai-codex',
           model: 'gpt-5.4-mini',
           effortLevel: 'low',
+          skillBundleName: '施工包',
+          skillIds: ['codex:user:implement'],
         }],
       }],
     };
@@ -242,6 +254,8 @@ describe('submit_plan ergonomics', () => {
         provider: ' openai-codex ',
         model: ' gpt-5.4-mini ',
         effortLevel: 'medium',
+        skillBundleName: '  施工包  ',
+        skillIds: ['  codex:user:implement  '],
         doneCriteria: '  Result exists.  ',
         candidates: [{
           name: '  A  ',
@@ -252,6 +266,8 @@ describe('submit_plan ergonomics', () => {
           provider: ' openai-codex ',
           model: ' gpt-5.4-mini ',
           effortLevel: 'low',
+          skillBundleName: '  调研包  ',
+          skillIds: [],
         }],
       }],
     })).toEqual({
@@ -266,6 +282,8 @@ describe('submit_plan ergonomics', () => {
         provider: 'openai-codex',
         model: 'gpt-5.4-mini',
         effortLevel: 'medium',
+        skillBundleName: '施工包',
+        skillIds: ['codex:user:implement'],
         intent: 'implementation',
         permissionScope: 'workspace-write',
         disturbanceLevel: 'on-failure',
@@ -279,6 +297,8 @@ describe('submit_plan ergonomics', () => {
           provider: 'openai-codex',
           model: 'gpt-5.4-mini',
           effortLevel: 'low',
+          skillBundleName: '调研包',
+          skillIds: [],
           intent: 'implementation',
           permissionScope: 'workspace-write',
           disturbanceLevel: 'on-failure',
