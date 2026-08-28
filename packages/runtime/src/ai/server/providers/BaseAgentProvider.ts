@@ -33,6 +33,7 @@ export abstract class BaseAgentProvider extends BaseAIProvider {
     'mcp__nimbalyst-meta-agent__list_models',
     'mcp__nimbalyst-meta-agent__list_worktrees',
     'mcp__nimbalyst-meta-agent__submit_plan',
+    'mcp__nimbalyst-meta-agent__request_redispatch',
     'mcp__nimbalyst-meta-agent__create_session',
     'mcp__nimbalyst-meta-agent__get_session_status',
     'mcp__nimbalyst-meta-agent__get_session_result',

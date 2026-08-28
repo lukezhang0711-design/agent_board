@@ -631,6 +631,752 @@ export function hasPendingSubmittedPlanApproval(
   });
 }
 
+interface RedispatchWorkOrderParameters {
+  provider: string;
+  model: string;
+  effortLevel?: PlanEffortLevel;
+  prompt: string;
+  permissionScope: DispatchPermissionScope;
+  disturbanceLevel: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds: string[];
+}
+
+interface RedispatchWorkOrderArgs {
+  redispatchRequestId: string;
+  trackerItemId: string;
+  title: string;
+  attemptCount: number;
+  failureReason?: string;
+  changeSummary?: string;
+  original: RedispatchWorkOrderParameters;
+  suggested: RedispatchWorkOrderParameters;
+}
+
+function readRedispatchParameters(
+  value: unknown,
+): RedispatchWorkOrderParameters | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const provider = getDisplayString(record.provider, '');
+  const model = getDisplayString(record.model, '');
+  const prompt = getDisplayString(record.prompt, '');
+  if (
+    !provider
+    || !model
+    || !prompt
+    || !isDispatchPermissionScope(record.permissionScope)
+    || !isDispatchDisturbanceLevel(record.disturbanceLevel)
+  ) {
+    return null;
+  }
+  const effortLevel = getEffortLevel(record.effortLevel);
+  const skillBundleName = getOptionalSkillBundleName(record.skillBundleName);
+  return {
+    provider,
+    model,
+    ...(effortLevel ? { effortLevel } : {}),
+    prompt,
+    permissionScope: record.permissionScope,
+    disturbanceLevel: record.disturbanceLevel,
+    ...(skillBundleName ? { skillBundleName } : {}),
+    skillIds: getSkillIds(record.skillIds),
+  };
+}
+
+function getRedispatchWorkOrderArgs(value: unknown): RedispatchWorkOrderArgs | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const redispatchRequestId = getDisplayString(record.redispatchRequestId, '');
+  const trackerItemId = getDisplayString(record.trackerItemId, '');
+  const title = getDisplayString(record.title, '');
+  const original = readRedispatchParameters(record.original);
+  const suggested = readRedispatchParameters(record.suggested);
+  if (!redispatchRequestId || !trackerItemId || !title || !original || !suggested) {
+    return null;
+  }
+  const attemptCount =
+    typeof record.attemptCount === 'number' && Number.isSafeInteger(record.attemptCount)
+      ? record.attemptCount
+      : 0;
+  const failureReason = getDisplayString(record.failureReason, '');
+  const changeSummary = getDisplayString(record.changeSummary, '');
+  return {
+    redispatchRequestId,
+    trackerItemId,
+    title,
+    attemptCount,
+    ...(failureReason ? { failureReason } : {}),
+    ...(changeSummary ? { changeSummary } : {}),
+    original,
+    suggested,
+  };
+}
+
+function parseRedispatchResult(value: unknown): { approved: boolean } | null {
+  if (!value) return null;
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const record = parsed as Record<string, unknown>;
+    if (record.approved === true) return { approved: true };
+    if (record.approved === false) return { approved: false };
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function formatRedispatchParameter(
+  parameters: RedispatchWorkOrderParameters,
+  field: keyof RedispatchWorkOrderParameters,
+  skillsById: Map<string, DispatchSkillDescriptor>,
+): string {
+  if (field === 'permissionScope') {
+    return getDispatchPermissionScopeLabel(parameters.permissionScope);
+  }
+  if (field === 'disturbanceLevel') {
+    return getDispatchDisturbanceLevelLabel(parameters.disturbanceLevel);
+  }
+  if (field === 'skillIds') {
+    return formatSkillSelection(parameters, skillsById);
+  }
+  const value = parameters[field];
+  if (Array.isArray(value)) return value.join('、') || '不授予';
+  return typeof value === 'string' && value.trim() ? value.trim() : '未提供';
+}
+
+const RedispatchTrace: React.FC<{
+  label: string;
+  original: string;
+  suggested: string;
+  current: string;
+  testId: string;
+}> = ({ label, original, suggested, current, testId }) => (
+  <div data-testid={testId} className="min-w-0">
+    <dt className="text-xs font-semibold text-nim-muted">{label}</dt>
+    <dd className="mt-1 min-w-0 text-[13px] text-nim">
+      <div className="break-words text-nim-muted">原参数：{original}</div>
+      <div className="break-words">
+        Head 建议：{suggested} → 当前：{current}
+      </div>
+    </dd>
+  </div>
+);
+
+export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props) => {
+  const args = getRedispatchWorkOrderArgs(props.message.toolCall?.arguments);
+  const { message, sessionId, workspacePath } = props;
+  const toolCall = message.toolCall;
+  const host = useAtomValue(interactiveWidgetHostAtom(sessionId));
+  const effectiveWorkspacePath = workspacePath || host?.workspacePath;
+  const [modelCatalog, setModelCatalog] = useState<PlanCatalogState>({
+    status: (
+      window as unknown as {
+        electronAPI?: { aiGetModels?: () => Promise<unknown> };
+      }
+    ).electronAPI?.aiGetModels ? 'loading' : 'failed',
+    models: [],
+  });
+  const [skillLibrary, setSkillLibrary] = useState<DispatchSkillLibraryState>({
+    status: 'loading',
+    skills: [],
+    settings: readDispatchSkillSettings(undefined),
+  });
+  const [routeSelection, setRouteSelection] = useState<ModuleRouteSelection>({
+    model: args?.suggested.model ?? '',
+    ...(args?.suggested.effortLevel ? { effortLevel: args.suggested.effortLevel } : {}),
+  });
+  const [dispatchSelection, setDispatchSelection] = useState<ModuleDispatchSelection>({
+    permissionScope: args?.suggested.permissionScope ?? 'workspace-write',
+    disturbanceLevel: args?.suggested.disturbanceLevel ?? 'on-failure',
+  });
+  const [skillSelection, setSkillSelection] = useState<DispatchSkillSelection>({
+    ...(args?.suggested.skillBundleName ? { skillBundleName: args.suggested.skillBundleName } : {}),
+    skillIds: args?.suggested.skillIds ?? [],
+  });
+  const [prompt, setPrompt] = useState(args?.suggested.prompt ?? '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localResult, setLocalResult] = useState<{ approved: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!args) return;
+    setRouteSelection({
+      model: args.suggested.model,
+      ...(args.suggested.effortLevel ? { effortLevel: args.suggested.effortLevel } : {}),
+    });
+    setDispatchSelection({
+      permissionScope: args.suggested.permissionScope,
+      disturbanceLevel: args.suggested.disturbanceLevel,
+    });
+    setSkillSelection({
+      ...(args.suggested.skillBundleName ? { skillBundleName: args.suggested.skillBundleName } : {}),
+      skillIds: args.suggested.skillIds,
+    });
+    setPrompt(args.suggested.prompt);
+    setLocalResult(null);
+  }, [args?.redispatchRequestId]);
+
+  useEffect(() => {
+    let disposed = false;
+    const loadModels = (
+      window as unknown as {
+        electronAPI?: { aiGetModels?: () => Promise<unknown> };
+      }
+    ).electronAPI?.aiGetModels;
+    if (!loadModels) return undefined;
+    setModelCatalog({ status: 'loading', models: [] });
+    void loadModels()
+      .then((response) => {
+        if (disposed) return;
+        const models = parseLiveCatalogModels(response);
+        setModelCatalog(
+          models === null
+            ? { status: 'failed', models: [] }
+            : { status: 'ready', models },
+        );
+      })
+      .catch(() => {
+        if (!disposed) setModelCatalog({ status: 'failed', models: [] });
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [args?.redispatchRequestId]);
+
+  useEffect(() => {
+    let disposed = false;
+    const invoke = window.electronAPI?.invoke;
+    if (!invoke) {
+      setSkillLibrary({
+        status: 'ready',
+        skills: [],
+        settings: readDispatchSkillSettings(undefined),
+      });
+      return undefined;
+    }
+    setSkillLibrary((current) => ({ ...current, status: 'loading' }));
+    void Promise.all([
+      invoke('dispatch-skills:list', effectiveWorkspacePath),
+      invoke('app-settings:get', DISPATCH_SKILL_SETTINGS_KEY),
+    ])
+      .then(([listResult, stored]) => {
+        if (disposed) return;
+        const skills = Array.isArray(listResult?.skills) ? listResult.skills : [];
+        const settings = sanitizeDispatchSkillSettingsForLibrary(
+          readDispatchSkillSettings(stored),
+          skills,
+        );
+        setSkillLibrary({ status: 'ready', skills, settings });
+      })
+      .catch(() => {
+        if (!disposed) {
+          setSkillLibrary((current) => ({ ...current, status: 'failed' }));
+        }
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [args?.redispatchRequestId, effectiveWorkspacePath]);
+
+  const completedResult = localResult ?? parseRedispatchResult(toolCall?.result);
+  const isPending = !completedResult && toolCall?.status === 'running';
+  const catalogModelsById = useMemo(
+    () => new Map(modelCatalog.models.map((model) => [model.id, model])),
+    [modelCatalog.models],
+  );
+  const skillsById = useMemo(
+    () => new Map(skillLibrary.skills.map((skill) => [skill.id, skill])),
+    [skillLibrary.skills],
+  );
+  const routeModel = catalogModelsById.get(routeSelection.model);
+  const route = routeModel
+    ? {
+        provider: routeModel.provider,
+        model: routeModel.id,
+        ...(resolveModuleEffortLevel(routeModel, routeSelection.effortLevel)
+          ? { effortLevel: resolveModuleEffortLevel(routeModel, routeSelection.effortLevel)! }
+          : {}),
+      }
+    : null;
+  const dispatchCapabilities = getDispatchPermissionCapabilities(
+    route?.provider ?? args?.suggested.provider ?? '',
+  );
+  const dispatchPermission = resolveDispatchPermission(
+    route?.provider ?? args?.suggested.provider ?? '',
+    dispatchSelection,
+  );
+  const resolvedSkillSelection = expandDispatchSkillSelection(
+    skillSelection,
+    route?.provider ?? args?.suggested.provider ?? '',
+    skillLibrary,
+  );
+  const grantableSkills = getProviderGrantableSkills(
+    skillLibrary.skills,
+    skillLibrary.settings,
+    route?.provider ?? args?.suggested.provider ?? '',
+  );
+  const selectedSkills = resolvedSkillSelection.skillIds
+    .map((skillId) => skillsById.get(skillId))
+    .filter((skill): skill is DispatchSkillDescriptor => Boolean(skill));
+  const addableSkills = grantableSkills.filter(
+    (skill) => !resolvedSkillSelection.skillIds.includes(skill.id),
+  );
+  const selectedBundle = getBundleByNameOrId(
+    skillLibrary.settings,
+    resolvedSkillSelection.skillBundleName,
+  );
+  const electronInvoke = window.electronAPI?.invoke;
+
+  const handleModelChange = useCallback((modelId: string) => {
+    const model = catalogModelsById.get(modelId);
+    if (!model) {
+      setRouteSelection({ model: '' });
+      return;
+    }
+    const effortLevel = resolveModuleEffortLevel(model, undefined);
+    setRouteSelection({
+      model: model.id,
+      ...(effortLevel ? { effortLevel } : {}),
+    });
+  }, [catalogModelsById]);
+
+  const handleEffortChange = useCallback((effortLevel: string) => {
+    const model = catalogModelsById.get(routeSelection.model);
+    if (!model || !isPlanEffortLevel(effortLevel)) return;
+    if (!model.supportedEffortLevels.includes(effortLevel)) return;
+    setRouteSelection((current) => ({
+      model: current.model,
+      effortLevel,
+    }));
+  }, [catalogModelsById, routeSelection.model]);
+
+  const handleSkillBundleChange = useCallback((bundleId: string) => {
+    if (bundleId === '') {
+      setSkillSelection({ skillIds: [] });
+      return;
+    }
+    const bundle = skillLibrary.settings.bundles.find((item) => item.id === bundleId);
+    if (!bundle) return;
+    setSkillSelection(expandDispatchSkillSelection(
+      { skillBundleName: bundle.name, skillIds: bundle.skillIds },
+      route?.provider ?? args?.suggested.provider ?? '',
+      skillLibrary,
+    ));
+  }, [args?.suggested.provider, route?.provider, skillLibrary]);
+
+  const handleSkillRemove = useCallback((skillId: string) => {
+    setSkillSelection((current) => ({
+      ...(current.skillBundleName ? { skillBundleName: current.skillBundleName } : {}),
+      skillIds: current.skillIds.filter((id) => id !== skillId),
+    }));
+  }, []);
+
+  const handleSkillAdd = useCallback((skillId: string) => {
+    if (!skillId) return;
+    setSkillSelection((current) => current.skillIds.includes(skillId)
+      ? current
+      : {
+          ...(current.skillBundleName ? { skillBundleName: current.skillBundleName } : {}),
+          skillIds: [...current.skillIds, skillId],
+        });
+  }, []);
+
+  const submitDecision = useCallback(async (approved: boolean) => {
+    const invoke = electronInvoke;
+    if (!args || !effectiveWorkspacePath || !invoke || isSubmitting || completedResult) return;
+    const requestId = args.redispatchRequestId;
+    setIsSubmitting(true);
+    try {
+      const channel = approved
+        ? 'meta-agent:approve-redispatch-request'
+        : 'meta-agent:reject-redispatch-request';
+      const payload = approved
+        ? {
+            workspaceId: effectiveWorkspacePath,
+            requestId,
+            trackerItemId: args.trackerItemId,
+            provider: route?.provider ?? args.suggested.provider,
+            model: route?.model ?? routeSelection.model,
+            ...(route?.effortLevel ? { effortLevel: route.effortLevel } : {}),
+            prompt,
+            permissionScope: dispatchPermission.requested.permissionScope,
+            disturbanceLevel: dispatchPermission.requested.disturbanceLevel,
+            ...(resolvedSkillSelection.skillBundleName
+              ? { skillBundleName: resolvedSkillSelection.skillBundleName }
+              : {}),
+            skillIds: resolvedSkillSelection.skillIds,
+          }
+        : {
+            workspaceId: effectiveWorkspacePath,
+            requestId,
+            trackerItemId: args.trackerItemId,
+            reason: 'Owner rejected redispatch.',
+          };
+      const response = await invoke(channel, payload);
+      if (!response?.success) {
+        throw new Error(response?.error || 'Redispatch response failed');
+      }
+      setLocalResult({ approved });
+    } catch (error) {
+      console.error('[RedispatchWorkOrderWidget] Failed to submit redispatch response:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    args,
+    completedResult,
+    dispatchPermission.requested.disturbanceLevel,
+    dispatchPermission.requested.permissionScope,
+    electronInvoke,
+    effectiveWorkspacePath,
+    isSubmitting,
+    prompt,
+    resolvedSkillSelection.skillBundleName,
+    resolvedSkillSelection.skillIds,
+    route?.effortLevel,
+    route?.model,
+    route?.provider,
+    routeSelection.model,
+  ]);
+
+  if (!args || !toolCall) {
+    return (
+      <InteractivePromptStatusCard
+        testId="redispatch-work-order-status"
+        title="Redispatch approval"
+        status="unavailable"
+        detail="重派确认卡参数无效。"
+      />
+    );
+  }
+
+  const routeModelUnavailable = modelCatalog.status !== 'ready' || !route;
+  const currentParameters: RedispatchWorkOrderParameters = {
+    provider: route?.provider ?? args.suggested.provider,
+    model: route?.model ?? routeSelection.model,
+    ...(route?.effortLevel ? { effortLevel: route.effortLevel } : {}),
+    prompt,
+    permissionScope: dispatchPermission.requested.permissionScope,
+    disturbanceLevel: dispatchPermission.requested.disturbanceLevel,
+    ...(resolvedSkillSelection.skillBundleName
+      ? { skillBundleName: resolvedSkillSelection.skillBundleName }
+      : {}),
+    skillIds: resolvedSkillSelection.skillIds,
+  };
+
+  return (
+    <div
+      data-testid="redispatch-work-order-widget"
+      data-state={completedResult ? (completedResult.approved ? 'approved' : 'rejected') : 'pending'}
+      className="plan-approval-widget rounded-lg overflow-visible border border-nim-primary bg-nim-secondary"
+    >
+      <div className="flex items-start justify-between gap-3 border-b border-nim bg-nim-tertiary px-4 py-3">
+        <div className="min-w-0">
+          <div className="mb-1 text-xs font-medium text-nim">Redispatch approval</div>
+          <div className="break-words text-sm font-semibold text-nim">{args.title}</div>
+          <div className="mt-1 text-xs text-nim-muted">
+            工单 {args.trackerItemId} · attempts {args.attemptCount}
+          </div>
+        </div>
+        <span className="shrink-0 text-xs text-nim-muted">
+          {completedResult
+            ? completedResult.approved ? 'Redispatch approved' : 'Redispatch rejected'
+            : 'Awaiting review'}
+        </span>
+      </div>
+
+      <div className="space-y-4 p-4">
+        {args.failureReason && (
+          <div
+            data-testid="redispatch-failure-reason"
+            className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-xs leading-5 text-nim"
+          >
+            {args.failureReason}
+          </div>
+        )}
+        {args.changeSummary && (
+          <div
+            data-testid="redispatch-change-summary"
+            className="rounded-md bg-nim-tertiary p-3 text-xs leading-5 text-nim-muted"
+          >
+            {args.changeSummary}
+          </div>
+        )}
+
+        <dl
+          data-testid="redispatch-param-grid"
+          className="plan-module-fields text-[13px]"
+        >
+          <RedispatchTrace
+            label="引擎"
+            testId="redispatch-provider-trace"
+            original={args.original.provider}
+            suggested={args.suggested.provider}
+            current={currentParameters.provider}
+          />
+          <div data-testid="redispatch-model-field" className="plan-module-model-field min-w-0">
+            <dt className="text-xs font-semibold text-nim-muted">模型</dt>
+            <dd className="mt-1 min-w-0">
+              <div className="mb-1 break-words text-xs text-nim-muted">
+                原参数：{args.original.model}
+              </div>
+              <select
+                data-testid="redispatch-model-select"
+                aria-label="重派模型"
+                value={route?.model ?? ''}
+                onChange={(event) => handleModelChange(event.target.value)}
+                disabled={isSubmitting || completedResult !== null || modelCatalog.status !== 'ready'}
+                className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">请选择模型</option>
+                {modelCatalog.models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.id}
+                  </option>
+                ))}
+              </select>
+              <p data-testid="redispatch-model-trace" className="mt-1 text-xs text-nim-muted">
+                Head 建议：{args.suggested.model} → 当前：{currentParameters.model || '未选择'}
+              </p>
+            </dd>
+          </div>
+          {routeModel && routeModel.supportedEffortLevels.length > 0 ? (
+            <div data-testid="redispatch-effort-field" className="plan-module-effort-field min-w-0">
+              <dt className="text-xs font-semibold text-nim-muted">思考强度</dt>
+              <dd className="mt-1 min-w-0">
+                <div className="mb-1 break-words text-xs text-nim-muted">
+                  原参数：{args.original.effortLevel ?? '未提供'}
+                </div>
+                <select
+                  data-testid="redispatch-effort-select"
+                  aria-label="重派思考强度"
+                  value={route?.effortLevel ?? ''}
+                  onChange={(event) => handleEffortChange(event.target.value)}
+                  disabled={isSubmitting || completedResult !== null}
+                  className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {routeModel.supportedEffortLevels.map((effortLevel) => (
+                    <option key={effortLevel} value={effortLevel}>
+                      {effortLevel}
+                    </option>
+                  ))}
+                </select>
+                <p data-testid="redispatch-effort-trace" className="mt-1 text-xs text-nim-muted">
+                  Head 建议：{args.suggested.effortLevel ?? '未提供'} → 当前：{currentParameters.effortLevel ?? '未提供'}
+                </p>
+              </dd>
+            </div>
+          ) : (
+            <RedispatchTrace
+              label="思考强度"
+              testId="redispatch-effort-trace"
+              original={args.original.effortLevel ?? '未提供'}
+              suggested={args.suggested.effortLevel ?? '未提供'}
+              current={currentParameters.effortLevel ?? '未提供'}
+            />
+          )}
+          <div data-testid="redispatch-permission-scope-field" className="min-w-0">
+            <dt className="text-xs font-semibold text-nim-muted">权限范围</dt>
+            <dd className="mt-1 min-w-0">
+              <div className="mb-1 break-words text-xs text-nim-muted">
+                原参数：{getDispatchPermissionScopeLabel(args.original.permissionScope)}
+              </div>
+              <select
+                data-testid="redispatch-permission-scope-select"
+                aria-label="重派权限范围"
+                value={
+                  dispatchCapabilities.permissionScopes.includes(dispatchPermission.effective.permissionScope)
+                    ? dispatchPermission.effective.permissionScope
+                    : ''
+                }
+                onChange={(event) => {
+                  const permissionScope = event.target.value;
+                  if (!isDispatchPermissionScope(permissionScope)) return;
+                  setDispatchSelection((current) => ({
+                    permissionScope,
+                    disturbanceLevel: current.disturbanceLevel,
+                  }));
+                }}
+                disabled={isSubmitting || completedResult !== null || dispatchCapabilities.permissionScopes.length === 0}
+                className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {dispatchCapabilities.permissionScopes.map((scope) => (
+                  <option key={scope} value={scope}>
+                    {getDispatchPermissionScopeLabel(scope)}
+                  </option>
+                ))}
+              </select>
+              <p data-testid="redispatch-permission-scope-trace" className="mt-1 text-xs text-nim-muted">
+                Head 建议：{getDispatchPermissionScopeLabel(args.suggested.permissionScope)} → 当前：{getDispatchPermissionScopeLabel(currentParameters.permissionScope)}
+              </p>
+            </dd>
+          </div>
+          <div data-testid="redispatch-disturbance-level-field" className="min-w-0">
+            <dt className="text-xs font-semibold text-nim-muted">打扰程度</dt>
+            <dd className="mt-1 min-w-0">
+              <div className="mb-1 break-words text-xs text-nim-muted">
+                原参数：{getDispatchDisturbanceLevelLabel(args.original.disturbanceLevel)}
+              </div>
+              <select
+                data-testid="redispatch-disturbance-level-select"
+                aria-label="重派打扰程度"
+                value={
+                  dispatchCapabilities.disturbanceLevels.includes(dispatchPermission.effective.disturbanceLevel)
+                    ? dispatchPermission.effective.disturbanceLevel
+                    : ''
+                }
+                onChange={(event) => {
+                  const disturbanceLevel = event.target.value;
+                  if (!isDispatchDisturbanceLevel(disturbanceLevel)) return;
+                  setDispatchSelection((current) => ({
+                    permissionScope: current.permissionScope,
+                    disturbanceLevel,
+                  }));
+                }}
+                disabled={isSubmitting || completedResult !== null || dispatchCapabilities.disturbanceLevels.length === 0}
+                className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {dispatchCapabilities.disturbanceLevels.map((level) => (
+                  <option key={level} value={level}>
+                    {getDispatchDisturbanceLevelLabel(level)}
+                  </option>
+                ))}
+              </select>
+              <p data-testid="redispatch-disturbance-level-trace" className="mt-1 text-xs text-nim-muted">
+                Head 建议：{getDispatchDisturbanceLevelLabel(args.suggested.disturbanceLevel)} → 当前：{getDispatchDisturbanceLevelLabel(currentParameters.disturbanceLevel)}
+              </p>
+              {dispatchPermission.notice && (
+                <p data-testid="redispatch-dispatch-downgrade" className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                  {dispatchPermission.notice}
+                </p>
+              )}
+            </dd>
+          </div>
+          <div data-testid="redispatch-skill-field" className="plan-module-skill-field min-w-0">
+            <dt className="text-xs font-semibold text-nim-muted">技能</dt>
+            <dd className="mt-1 min-w-0">
+              <div className="mb-1 break-words text-xs text-nim-muted">
+                原参数：{formatRedispatchParameter(args.original, 'skillIds', skillsById)}
+              </div>
+              <select
+                data-testid="redispatch-skill-bundle-select"
+                aria-label="重派技能包"
+                value={selectedBundle?.id ?? ''}
+                onChange={(event) => handleSkillBundleChange(event.target.value)}
+                disabled={isSubmitting || completedResult !== null || skillLibrary.status === 'loading'}
+                className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">不授予</option>
+                {skillLibrary.settings.bundles.map((bundle) => (
+                  <option key={bundle.id} value={bundle.id}>
+                    {bundle.name}
+                  </option>
+                ))}
+              </select>
+              <div data-testid="redispatch-skill-tags" className="mt-2 flex min-w-0 flex-wrap gap-1.5">
+                {selectedSkills.length > 0 ? selectedSkills.map((skill) => (
+                  <span
+                    key={skill.id}
+                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-nim bg-nim-secondary px-2 py-0.5 text-xs text-nim"
+                  >
+                    <span className="truncate">{skill.name}</span>
+                    <button
+                      type="button"
+                      aria-label={`移除 ${skill.name}`}
+                      disabled={isSubmitting || completedResult !== null}
+                      onClick={() => handleSkillRemove(skill.id)}
+                      className="text-nim-muted hover:text-nim disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )) : (
+                  <span className="text-xs text-nim-muted">不授予任何技能</span>
+                )}
+              </div>
+              <select
+                data-testid="redispatch-skill-add-select"
+                aria-label="重派添加技能"
+                value=""
+                onChange={(event) => {
+                  handleSkillAdd(event.target.value);
+                  event.currentTarget.value = '';
+                }}
+                disabled={isSubmitting || completedResult !== null || addableSkills.length === 0}
+                className="mt-2 w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">搜索添加技能</option>
+                {addableSkills.map((skill) => (
+                  <option key={skill.id} value={skill.id}>
+                    {skill.name}
+                  </option>
+                ))}
+              </select>
+              <p data-testid="redispatch-skill-trace" className="mt-1 text-xs text-nim-muted">
+                Head 建议：{formatRedispatchParameter(args.suggested, 'skillIds', skillsById)} → 当前：{formatSkillSelection(resolvedSkillSelection, skillsById)}
+              </p>
+              {(route?.provider ?? args.suggested.provider) === 'openai-codex' && (
+                <p data-testid="redispatch-skill-codex-notice" className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                  {CODEX_SKILL_CONTROL_NOTICE}
+                </p>
+              )}
+            </dd>
+          </div>
+          <div data-testid="redispatch-prompt-field" className="plan-module-done-criteria min-w-0">
+            <dt className="text-xs font-semibold text-nim-muted">任务书</dt>
+            <dd className="mt-1 min-w-0">
+              <div className="mb-1 whitespace-pre-wrap break-words text-xs text-nim-muted">
+                原参数：{args.original.prompt}
+              </div>
+              <textarea
+                data-testid="redispatch-prompt-input"
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                rows={5}
+                disabled={isSubmitting || completedResult !== null}
+                className="w-full resize-y rounded-md border border-nim bg-nim-secondary px-3 py-2 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p data-testid="redispatch-prompt-trace" className="mt-1 whitespace-pre-wrap break-words text-xs text-nim-muted">
+                Head 建议：{args.suggested.prompt} → 当前：{currentParameters.prompt || '未提供'}
+              </p>
+            </dd>
+          </div>
+        </dl>
+
+        {routeModelUnavailable && isPending && (
+          <div data-testid="redispatch-model-invalid" className="text-xs text-amber-800 dark:text-amber-200">
+            Head 建议的模型不在当前清单里，请重新选一个。
+          </div>
+        )}
+
+        {isPending && (
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-nim pt-3">
+            <button
+              type="button"
+              data-testid="redispatch-reject"
+              onClick={() => void submitDecision(false)}
+              disabled={isSubmitting}
+              className="rounded-md border border-nim bg-transparent px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              拒绝
+            </button>
+            <button
+              type="button"
+              data-testid="redispatch-approve"
+              onClick={() => void submitDecision(true)}
+              disabled={isSubmitting || routeModelUnavailable || !prompt.trim() || !effectiveWorkspacePath}
+              className="rounded-md bg-[var(--nim-primary)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              批准重派
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const SubmittedPlanApprovalCard: React.FC<{
   props: CustomToolWidgetProps;
   args: SubmittedPlanArgs;
@@ -2537,6 +3283,7 @@ export const PlanApprovalWidget: React.FC<CustomToolWidgetProps> = (props) => {
 export function registerPlanApprovalWidget(): void {
   setTranscriptToolWidgets(PLAN_APPROVAL_WIDGET_SOURCE, {
     ExitPlanMode: PlanApprovalWidget,
+    RedispatchWorkOrder: RedispatchWorkOrderWidget,
   });
 }
 

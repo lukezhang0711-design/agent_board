@@ -29,6 +29,7 @@ function installToolFns(
     listWorktrees: async () => '[]',
     submitPlan: async (_sessionId, _workspaceId, args, _signal, mcpCall) =>
       submitPlan(args as Record<string, unknown>, mcpCall),
+    requestRedispatch: async () => '{}',
     createSession: async () => '{}',
     spawnSession: async () => '{}',
     getSessionStatus: async () => '{}',

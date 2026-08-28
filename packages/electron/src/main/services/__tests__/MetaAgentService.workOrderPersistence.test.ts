@@ -263,6 +263,46 @@ describe('MetaAgentService work-order persistence', () => {
     return prompt!;
   }
 
+  async function listRedispatchPrompts(): Promise<Array<{
+    requestId: string;
+    input: Record<string, unknown>;
+  }>> {
+    const { rows } = await db.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+       ORDER BY created_at ASC, id ASC`,
+      ['head-session'],
+    );
+    return rows.flatMap((row) => {
+      try {
+        const content = parseStoredJson<any>(row.content);
+        return content.type === 'nimbalyst_tool_use'
+          && content.name === 'RedispatchWorkOrder'
+          && typeof content.id === 'string'
+          && content.input
+          && typeof content.input === 'object'
+          ? [{ requestId: content.id, input: content.input }]
+          : [];
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  async function waitForRedispatchPrompt(excludedRequestIds: string[] = []): Promise<{
+    requestId: string;
+    input: Record<string, unknown>;
+  }> {
+    let prompt: { requestId: string; input: Record<string, unknown> } | undefined;
+    await vi.waitFor(async () => {
+      const prompts = await listRedispatchPrompts();
+      prompt = prompts.find((candidate) => !excludedRequestIds.includes(candidate.requestId));
+      expect(prompt).toBeDefined();
+    }, { timeout: 3000, interval: 10 });
+    return prompt!;
+  }
+
   async function persistPlanApprovalResponse(
     requestId: string,
     approved: boolean,
@@ -401,6 +441,60 @@ describe('MetaAgentService work-order persistence', () => {
       );
     }
     return sessionIds;
+  }
+
+  async function createFailedWorkOrder(args: {
+    title?: string;
+    prompt?: string;
+    provider?: string;
+    model?: string;
+    planId?: string;
+    failureReason?: string;
+  } = {}): Promise<{
+    child: { sessionId: string };
+    trackerItemId: string;
+    data: Record<string, unknown>;
+  }> {
+    const child = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: args.title ?? 'Failed retry module',
+        prompt: args.prompt ?? 'Create a failed card for redispatch',
+        provider: args.provider ?? 'antigravity-gemini-agent',
+        model: args.model ?? 'antigravity-gemini-agent:gemini-3.7-flash-high',
+        intent: 'investigation',
+        planId: args.planId ?? 'plan-fg-redispatch',
+      },
+    ));
+    await AgentMessagesRepository.create({
+      sessionId: child.sessionId,
+      source: 'claude-code',
+      direction: 'output',
+      content: JSON.stringify({
+        type: 'error',
+        error: args.failureReason ?? 'Gemini timed out after 180s',
+        is_error: true,
+      }),
+      createdAt: new Date(),
+      hidden: false,
+    });
+    await (service as any).handleChildSessionEvent(child.sessionId, 'session:error');
+    const { rows } = await db.query<any>(
+      `SELECT id, data
+       FROM tracker_items
+       WHERE type = 'work-order'
+         AND workspace = $1
+       ORDER BY created DESC
+       LIMIT 1`,
+      [workspacePath],
+    );
+    const row = rows[0];
+    return {
+      child,
+      trackerItemId: row.id,
+      data: parseStoredJson<Record<string, unknown>>(row.data),
+    };
   }
 
   beforeEach(async () => {
@@ -1209,7 +1303,7 @@ describe('MetaAgentService work-order persistence', () => {
     );
   });
 
-  it('RED FB-085: denies an agent retry until a new Head user message arrives', async () => {
+  it('green FG-5: denies direct Head create_session for a failed work-order even after text authorization', async () => {
     const planId = 'plan-fb-085';
     const moduleTitle = 'Module 1';
     const firstAttemptError = await (service as any).createChildSession(
@@ -1275,19 +1369,21 @@ describe('MetaAgentService work-order persistence', () => {
       messageKind: 'user',
     });
 
-    const retry = JSON.parse(await (service as any).createChildSession(
+    const textDeniedLog = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await expect((service as any).createChildSession(
       'head-session',
       workspacePath,
       {
         title: moduleTitle,
-        prompt: 'Run Module 1 with the corrected engine configuration',
+        prompt: 'Run Module 1 with the corrected engine configuration after text authorization',
         provider: 'claude-code',
         model: 'claude-code:haiku',
         intent: 'investigation',
         planId,
       },
-    ));
-    await (service as any).handleChildSessionEvent(retry.sessionId, 'session:completed');
+    )).rejects.toThrow('此类失败需老板指示后才能重试');
+    expect(textDeniedLog).toHaveBeenCalledWith(expect.stringContaining('owner button confirmation missing'));
+    textDeniedLog.mockRestore();
 
     const { rows } = await db.query<any>(
       `SELECT data, source_ref
@@ -1297,8 +1393,8 @@ describe('MetaAgentService work-order persistence', () => {
     );
     expect(rows).toHaveLength(1);
     const data = parseStoredJson<any>(rows[0].data);
-    expect(data.status).toBe('completed');
-    expect(data.attempts).toHaveLength(2);
+    expect(data.status).toBe('failed');
+    expect(data.attempts).toHaveLength(1);
     expect(data.attempts[0]).toMatchObject({
       attempt: 1,
       engine: 'claude-code',
@@ -1307,13 +1403,7 @@ describe('MetaAgentService work-order persistence', () => {
       failureReason: rawFailureReason,
       failureClass: 'agent',
     });
-    expect(data.attempts[1]).toMatchObject({
-      attempt: 2,
-      engine: 'claude-code',
-      model: 'claude-code:haiku',
-      outcome: 'success',
-    });
-    expect(rows[0].source_ref).toBe(`meta-agent-work-order:${retry.sessionId}`);
+    expect(rows[0].source_ref).toMatch(/^meta-agent-work-order:/);
   });
 
   it('allows one infra retry, then sends the next retry to the owner', async () => {
@@ -1369,7 +1459,7 @@ describe('MetaAgentService work-order persistence', () => {
     expect(data.attempts[1]).toMatchObject({ failureClass: 'infra', failureReason: 'request timed out after 30s' });
   });
 
-  it('lets the failed-card owner retry once and records the manual authorization', async () => {
+  it('red FG-1 baseline: retryWorkOrder retries with the original failed parameters only', async () => {
     const child = JSON.parse(await (service as any).createChildSession(
       'head-session',
       workspacePath,
@@ -1404,8 +1494,15 @@ describe('MetaAgentService work-order persistence', () => {
     const trackerItemId = failedRows[0].id as string;
 
     const retry = await (service as any).retryWorkOrder(workspacePath, trackerItemId);
-    expect(retry).toMatchObject({ sessionId: expect.any(String) });
+    expect(retry).toMatchObject({
+      sessionId: expect.any(String),
+      provider: 'claude-code',
+      model: 'claude-code:haiku',
+    });
     expect(retry.sessionId).not.toBe(child.sessionId);
+    const retryMessages = await AgentMessagesRepository.list(retry.sessionId, { limit: 10 });
+    expect(retryMessages.find((message) => message.direction === 'input')?.content)
+      .toContain('Create a failed card for manual retry');
 
     const { rows: retriedRows } = await db.query<any>(
       `SELECT id, data, source_ref FROM tracker_items WHERE type = 'work-order' AND workspace = $1`,
@@ -1436,6 +1533,281 @@ describe('MetaAgentService work-order persistence', () => {
       retryReason: '老板手动重试',
     });
     expect(completedRows[0].source_ref).toBe(`meta-agent-work-order:${retry.sessionId}`);
+  });
+
+  it('green FG-1: Head request_redispatch renders an owner confirmation card with original and suggested parameters', async () => {
+    await service.start((service as any).aiService);
+    const { trackerItemId } = await createFailedWorkOrder({
+      title: 'Gemini timeout module',
+      prompt: 'Original Gemini task brief',
+      failureReason: 'Gemini timed out after 180s',
+    });
+    const existingCards = await listRedispatchPrompts();
+
+    const result = JSON.parse(await testState.metaAgentToolFns.requestRedispatch(
+      'head-session',
+      workspacePath,
+      {
+        trackerItemId,
+        provider: 'openai-codex',
+        model: 'gpt-5.6-sol',
+        effortLevel: 'high',
+        prompt: 'Revised Codex task brief',
+        changeSummary: 'Switch away from the timed-out Gemini route.',
+        permissionScope: 'workspace-write',
+        disturbanceLevel: 'on-failure',
+        skillIds: ['codex:user:implement'],
+      },
+    ));
+
+    const prompt = await waitForRedispatchPrompt(existingCards.map((card) => card.requestId));
+    expect(result).toMatchObject({
+      status: 'awaiting-owner-approval',
+      requestId: prompt.requestId,
+      trackerItemId,
+      headSessionId: 'head-session',
+    });
+    expect(prompt.input).toMatchObject({
+      trackerItemId,
+      title: 'Gemini timeout module',
+      attemptCount: 1,
+      failureReason: 'Gemini timed out after 180s',
+      changeSummary: 'Switch away from the timed-out Gemini route.',
+      original: {
+        provider: 'antigravity-gemini-agent',
+        model: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+        prompt: 'Original Gemini task brief',
+        permissionScope: 'read-only',
+        disturbanceLevel: 'never',
+        skillIds: [],
+      },
+      suggested: {
+        provider: 'openai-codex',
+        model: 'openai-codex:gpt-5.6-sol',
+        effortLevel: 'high',
+        prompt: 'Revised Codex task brief',
+        permissionScope: 'workspace-write',
+        disturbanceLevel: 'on-failure',
+        skillIds: ['codex:user:implement'],
+      },
+    });
+  });
+
+  it('green FG-2: owner approval dispatches with card-final parameters and records retry parameter history on the same work-order', async () => {
+    await service.start((service as any).aiService);
+    const { trackerItemId, child } = await createFailedWorkOrder({
+      title: 'Editable retry module',
+      prompt: 'Original task brief',
+      failureReason: 'Gemini timed out after 180s',
+    });
+    const existingCards = await listRedispatchPrompts();
+    const request = JSON.parse(await testState.metaAgentToolFns.requestRedispatch(
+      'head-session',
+      workspacePath,
+      {
+        trackerItemId,
+        provider: 'openai-codex',
+        model: 'openai-codex:gpt-5.6-sol',
+        effortLevel: 'high',
+        prompt: 'Head suggested task brief',
+        changeSummary: 'Switch model and task brief.',
+        permissionScope: 'workspace-write',
+        disturbanceLevel: 'on-failure',
+        skillBundleName: '施工包',
+        skillIds: ['codex:user:implement'],
+      },
+    ));
+    await waitForRedispatchPrompt(existingCards.map((card) => card.requestId));
+
+    const approved = await service.approveRedispatchRequest(workspacePath, {
+      requestId: request.requestId,
+      trackerItemId,
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.4-mini',
+      effortLevel: 'ultra',
+      prompt: 'Owner final task brief',
+      permissionScope: 'read-only',
+      disturbanceLevel: 'on-request',
+      skillBundleName: '施工包',
+      skillIds: ['codex:user:implement', 'codex:user:review'],
+    });
+    expect(approved.result).toMatchObject({
+      sessionId: expect.any(String),
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.4-mini',
+    });
+    expect(approved.result?.sessionId).not.toBe(child.sessionId);
+
+    const retrySession = await AISessionsRepository.get(approved.result!.sessionId);
+    expect(retrySession).toMatchObject({
+      provider: 'openai-codex',
+      model: 'openai-codex:gpt-5.4-mini',
+      createdBySessionId: 'head-session',
+    });
+    expect((retrySession?.metadata as Record<string, unknown>).effortLevel).toBe('ultra');
+    const retryMessages = await AgentMessagesRepository.list(approved.result!.sessionId, { limit: 10 });
+    expect(retryMessages.find((message) => message.direction === 'input')?.content)
+      .toContain('Owner final task brief');
+
+    const { rows: retriedRows } = await db.query<any>(
+      `SELECT id, data, source_ref
+       FROM tracker_items
+       WHERE type = 'work-order'
+         AND workspace = $1`,
+      [workspacePath],
+    );
+    expect(retriedRows).toHaveLength(1);
+    expect(retriedRows[0].id).toBe(trackerItemId);
+    const retriedData = parseStoredJson<any>(retriedRows[0].data);
+    expect(retriedData).toMatchObject({
+      status: 'dispatched',
+      childSessionId: approved.result!.sessionId,
+      taskSummary: 'Owner final task brief',
+      retryReason: '老板手动重试',
+      retryParameterChange: {
+        requestId: request.requestId,
+        original: {
+          provider: 'antigravity-gemini-agent',
+          model: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+          prompt: 'Original task brief',
+        },
+        suggested: {
+          provider: 'openai-codex',
+          model: 'openai-codex:gpt-5.6-sol',
+          prompt: 'Head suggested task brief',
+        },
+        approved: {
+          provider: 'openai-codex',
+          model: 'openai-codex:gpt-5.4-mini',
+          effortLevel: 'ultra',
+          prompt: 'Owner final task brief',
+          permissionScope: 'read-only',
+          disturbanceLevel: 'on-request',
+          skillBundleName: '施工包',
+          skillIds: ['codex:user:implement', 'codex:user:review'],
+        },
+      },
+    });
+    expect(retriedData.attempts).toHaveLength(1);
+
+    await (service as any).handleChildSessionEvent(approved.result!.sessionId, 'session:completed');
+    const { rows: completedRows } = await db.query<any>(
+      `SELECT data, source_ref
+       FROM tracker_items
+       WHERE id = $1`,
+      [trackerItemId],
+    );
+    const completedData = parseStoredJson<any>(completedRows[0].data);
+    expect(completedData.status).toBe('completed');
+    expect(completedData.attempts).toHaveLength(2);
+    expect(completedData.attempts[1]).toMatchObject({
+      attempt: 2,
+      engine: 'openai-codex',
+      model: 'openai-codex:gpt-5.4-mini',
+      outcome: 'success',
+      retryReason: '老板手动重试',
+      retryParameterChange: {
+        requestId: request.requestId,
+        approved: {
+          prompt: 'Owner final task brief',
+          permissionScope: 'read-only',
+          disturbanceLevel: 'on-request',
+          skillIds: ['codex:user:implement', 'codex:user:review'],
+        },
+      },
+    });
+    expect(completedRows[0].source_ref).toBe(`meta-agent-work-order:${approved.result!.sessionId}`);
+  });
+
+  it('green FG-3: rejection does not dispatch and duplicate identical requests reuse one active card', async () => {
+    await service.start((service as any).aiService);
+    const { trackerItemId } = await createFailedWorkOrder({
+      title: 'Reject redispatch module',
+      prompt: 'Retry prefill task',
+      failureReason: 'Gemini timed out after 180s',
+    });
+    const beforeCount = await db.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM ai_sessions
+       WHERE created_by_session_id = $1`,
+      ['head-session'],
+    );
+
+    const first = await service.openRedispatchConfirmationForWorkOrder(
+      workspacePath,
+      trackerItemId,
+      'board-retry',
+    );
+    const second = await service.openRedispatchConfirmationForWorkOrder(
+      workspacePath,
+      trackerItemId,
+      'board-retry',
+    );
+    expect(second).toMatchObject({
+      requestId: first.requestId,
+      deduped: true,
+    });
+    const cards = (await listRedispatchPrompts()).filter((card) =>
+      card.input.trackerItemId === trackerItemId
+      && card.input.changeSummary === '预填原参数，等待老板调整或批准。',
+    );
+    expect(cards).toHaveLength(1);
+
+    await service.rejectRedispatchRequest(workspacePath, {
+      requestId: first.requestId,
+      trackerItemId,
+      reason: '老板拒绝继续撞墙。',
+    });
+    const afterCount = await db.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM ai_sessions
+       WHERE created_by_session_id = $1`,
+      ['head-session'],
+    );
+    expect(afterCount.rows[0].count).toBe(beforeCount.rows[0].count);
+  });
+
+  it('green FG-4/FG-5: failure notification and board Retry open the same card while direct create_session stays blocked', async () => {
+    await service.start((service as any).aiService);
+    const { trackerItemId } = await createFailedWorkOrder({
+      title: 'Inline retry entry module',
+      prompt: 'Original inline retry brief',
+      failureReason: 'Model "missing-model" is not supported',
+    });
+    const notificationCard = await waitForRedispatchPrompt();
+    expect(notificationCard.input).toMatchObject({
+      trackerItemId,
+      source: 'failure-notification',
+      changeSummary: '预填原参数，等待老板调整或批准。',
+    });
+
+    const handler = testState.ipcHandlers.get('meta-agent:retry-work-order');
+    expect(handler).toBeTypeOf('function');
+    const boardResult = await handler?.({}, { workspaceId: workspacePath, trackerItemId });
+    expect(boardResult).toMatchObject({
+      success: true,
+      result: {
+        requestId: notificationCard.requestId,
+        deduped: true,
+      },
+    });
+    const cards = (await listRedispatchPrompts()).filter((card) =>
+      card.input.trackerItemId === trackerItemId,
+    );
+    expect(cards).toHaveLength(1);
+
+    await expect((service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Inline retry entry module',
+        prompt: 'Direct create_session must still be blocked',
+        provider: 'openai-codex',
+        model: 'openai-codex:gpt-5.6-sol',
+        intent: 'investigation',
+        planId: 'plan-fg-redispatch',
+      },
+    )).rejects.toThrow('此类失败需老板指示后才能重试');
   });
 
   it('FB-090 RED→GREEN: retries a legacy card by resolving its plan owner and backfills it', async () => {

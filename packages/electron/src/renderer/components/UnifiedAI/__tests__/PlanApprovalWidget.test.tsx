@@ -18,6 +18,7 @@ import type { TranscriptViewMessage } from '@nimbalyst/runtime/ai/server/transcr
 import { getTranscriptToolWidget } from '@nimbalyst/runtime/ui/AgentTranscript/contributions';
 import {
   PlanApprovalWidget,
+  RedispatchWorkOrderWidget,
   formatPlanOutputPath,
   hasPendingSubmittedPlanApproval,
   registerPlanApprovalWidget,
@@ -151,6 +152,44 @@ function installSkillLibrary(): void {
   });
 }
 
+function installRedispatchRendererEnvironment(): ReturnType<typeof vi.fn> {
+  const skills = [
+    { id: 'codex:user:implement', name: 'implement', engine: 'codex', source: 'user', scope: 'global' },
+    { id: 'codex:user:review', name: 'review', engine: 'codex', source: 'user', scope: 'global' },
+    { id: 'claude:user:implement', name: 'implement', engine: 'claude', source: 'user', scope: 'global' },
+  ];
+  const settings = {
+    disabledSkillIds: [],
+    bundles: [
+      {
+        id: 'construction',
+        name: '施工包',
+        skillIds: ['codex:user:implement'],
+      },
+    ],
+  };
+  const invoke = vi.fn().mockImplementation(async (channel: string) => {
+    if (channel === 'sessions:get') {
+      return { success: true, session: { agentRole: 'meta-agent' } };
+    }
+    if (channel === 'dispatch-skills:list') {
+      return { success: true, skills };
+    }
+    if (channel === 'app-settings:get') {
+      return settings;
+    }
+    return { success: true };
+  });
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: {
+      aiGetModels: vi.fn().mockResolvedValue(liveModelCatalog()),
+      invoke,
+    },
+  });
+  return invoke;
+}
+
 function makeMessage(
   arguments_: Record<string, unknown>,
   providerToolCallId: string | null = compositeRequestId,
@@ -176,6 +215,20 @@ function makeMessage(
   };
 }
 
+function makeRedispatchMessage(
+  arguments_: Record<string, unknown>,
+  providerToolCallId = 'redispatch-request-1',
+): TranscriptViewMessage {
+  return {
+    ...makeMessage(arguments_, providerToolCallId),
+    toolCall: {
+      ...makeMessage(arguments_, providerToolCallId).toolCall!,
+      toolName: 'RedispatchWorkOrder',
+      toolDisplayName: 'RedispatchWorkOrder',
+    },
+  };
+}
+
 function renderWidget(
   arguments_: Record<string, unknown>,
   hostOverrides: Partial<InteractiveWidgetHost> = {},
@@ -195,6 +248,28 @@ function renderWidget(
         onToggle={() => {}}
         sessionId={sessionId}
         {...widgetOverrides}
+      />
+    </JotaiProvider>,
+  );
+}
+
+function renderRedispatchWidget(
+  arguments_: Record<string, unknown>,
+  providerToolCallId = 'redispatch-request-1',
+) {
+  const jotaiStore = createStore();
+  jotaiStore.set(interactiveWidgetHostAtom(sessionId), {
+    ...noopInteractiveWidgetHost,
+    workspacePath: '/workspace',
+  });
+  return render(
+    <JotaiProvider store={jotaiStore}>
+      <RedispatchWorkOrderWidget
+        message={makeRedispatchMessage(arguments_, providerToolCallId)}
+        isExpanded={false}
+        onToggle={() => {}}
+        sessionId={sessionId}
+        workspacePath="/workspace"
       />
     </JotaiProvider>,
   );
@@ -294,6 +369,33 @@ const dispatchKnobPlanArguments = {
   }],
 };
 
+const redispatchArguments = {
+  redispatchRequestId: 'redispatch-request-1',
+  trackerItemId: 'work-order-1',
+  title: '失败模块重派',
+  attemptCount: 1,
+  failureReason: 'Gemini timed out after 180s',
+  changeSummary: '切到 Codex，并收窄任务书。',
+  original: {
+    provider: 'antigravity-gemini-agent',
+    model: 'antigravity-gemini-agent:gemini-3.7-flash-high',
+    prompt: '原任务书：完整处理失败模块。',
+    permissionScope: 'workspace-write',
+    disturbanceLevel: 'on-request',
+    skillIds: [],
+  },
+  suggested: {
+    provider: 'openai-codex',
+    model: 'openai-codex:gpt-5.6-sol',
+    effortLevel: 'high',
+    prompt: '新任务书：只处理失败原因并交付验证。',
+    permissionScope: 'workspace-write',
+    disturbanceLevel: 'on-failure',
+    skillBundleName: '施工包',
+    skillIds: ['codex:user:implement'],
+  },
+};
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -306,9 +408,88 @@ describe('PlanApprovalWidget', () => {
     try {
       registerPlanApprovalWidget();
       expect(getTranscriptToolWidget('ExitPlanMode')).toBe(PlanApprovalWidget);
+      expect(getTranscriptToolWidget('RedispatchWorkOrder')).toBe(RedispatchWorkOrderWidget);
     } finally {
       unregisterPlanApprovalWidget();
     }
+  });
+
+  it('green FG-UI: renders redispatch confirmation and submits owner-edited final parameters', async () => {
+    const invoke = installRedispatchRendererEnvironment();
+    renderRedispatchWidget(redispatchArguments);
+
+    expect(screen.getByTestId('redispatch-work-order-widget')).toBeTruthy();
+    expect(screen.getByText('失败模块重派')).toBeTruthy();
+    expect(screen.getByTestId('redispatch-failure-reason').textContent)
+      .toContain('Gemini timed out after 180s');
+    expect(screen.getByTestId('redispatch-change-summary').textContent)
+      .toContain('切到 Codex');
+    expect(screen.getByTestId('redispatch-provider-trace').textContent)
+      .toContain('Head 建议：openai-codex → 当前：openai-codex');
+
+    const modelSelect = await screen.findByTestId('redispatch-model-select') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+    fireEvent.change(modelSelect, {
+      target: { value: 'openai-codex:gpt-5.4-mini' },
+    });
+    const effortSelect = screen.getByTestId('redispatch-effort-select') as HTMLSelectElement;
+    expect(effortSelect.value).toBe('medium');
+    fireEvent.change(effortSelect, { target: { value: 'high' } });
+    fireEvent.change(screen.getByTestId('redispatch-permission-scope-select'), {
+      target: { value: 'read-only' },
+    });
+    fireEvent.change(screen.getByTestId('redispatch-disturbance-level-select'), {
+      target: { value: 'on-request' },
+    });
+    fireEvent.change(screen.getByTestId('redispatch-skill-add-select'), {
+      target: { value: 'codex:user:review' },
+    });
+    fireEvent.change(screen.getByTestId('redispatch-prompt-input'), {
+      target: { value: '老板改后的任务书。' },
+    });
+    fireEvent.click(screen.getByTestId('redispatch-approve'));
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith(
+        'meta-agent:approve-redispatch-request',
+        expect.objectContaining({
+          workspaceId: '/workspace',
+          requestId: 'redispatch-request-1',
+          trackerItemId: 'work-order-1',
+          provider: 'openai-codex',
+          model: 'openai-codex:gpt-5.4-mini',
+          effortLevel: 'high',
+          prompt: '老板改后的任务书。',
+          permissionScope: 'read-only',
+          disturbanceLevel: 'on-request',
+          skillBundleName: '施工包',
+          skillIds: ['codex:user:implement', 'codex:user:review'],
+        }),
+      );
+    });
+  });
+
+  it('green FG-UI: reject closes through the redispatch rejection IPC without dispatch payload', async () => {
+    const invoke = installRedispatchRendererEnvironment();
+    renderRedispatchWidget(redispatchArguments);
+
+    fireEvent.click(screen.getByTestId('redispatch-reject'));
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith(
+        'meta-agent:reject-redispatch-request',
+        {
+          workspaceId: '/workspace',
+          requestId: 'redispatch-request-1',
+          trackerItemId: 'work-order-1',
+          reason: 'Owner rejected redispatch.',
+        },
+      );
+    });
+    expect(invoke).not.toHaveBeenCalledWith(
+      'meta-agent:approve-redispatch-request',
+      expect.anything(),
+    );
   });
 
   it('shows submitted plan details and plan-specific actions', () => {

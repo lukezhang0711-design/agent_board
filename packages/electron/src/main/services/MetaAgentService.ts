@@ -10,12 +10,15 @@ import {
   SessionManager,
 } from '@nimbalyst/runtime/ai/server';
 import {
+  getDefaultDispatchPermissionKnobs,
   isDispatchDisturbanceLevel,
   isDispatchPermissionScope,
   readDispatchPermissionResolution,
   resolveDispatchPermission,
+  type DispatchDisturbanceLevel,
   type DispatchPermissionKnobs,
   type DispatchPermissionResolution,
+  type DispatchPermissionScope,
 } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 import {
   DISPATCH_SKILL_SETTINGS_KEY,
@@ -429,12 +432,33 @@ interface WorkOrderReceipt {
   dispatchSkills?: DispatchSkillResolution;
 }
 
+interface WorkOrderRedispatchParameters {
+  provider: string;
+  model: string;
+  effortLevel?: EffortLevel;
+  prompt: string;
+  permissionScope: DispatchPermissionScope;
+  disturbanceLevel: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds: string[];
+}
+
+interface WorkOrderRetryParameterChange {
+  requestId: string;
+  approvedAt: string;
+  changeSummary?: string;
+  original: WorkOrderRedispatchParameters;
+  suggested: WorkOrderRedispatchParameters;
+  approved: WorkOrderRedispatchParameters;
+}
+
 interface WorkOrderAttempt extends WorkOrderReceipt {
   attempt: number;
   failureReason?: string;
   failureClass?: FailureClass;
   retryReason?: string;
   sessionId?: string;
+  retryParameterChange?: WorkOrderRetryParameterChange;
 }
 
 interface WorkOrderSettlement {
@@ -449,6 +473,73 @@ interface WorkOrderSettlement {
 
 interface WorkOrderCompletionCriteria {
   outputFiles?: string[];
+}
+
+type RedispatchRequestSource = 'head-request' | 'failure-notification' | 'board-retry';
+
+interface RedispatchRequestArgs {
+  trackerItemId?: string;
+  provider?: string;
+  model?: string;
+  effortLevel?: EffortLevel;
+  prompt?: string;
+  changeSummary?: string;
+  permissionScope?: DispatchPermissionScope;
+  disturbanceLevel?: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds?: string[];
+}
+
+interface RedispatchApprovalArgs {
+  requestId: string;
+  trackerItemId: string;
+  provider: string;
+  model: string;
+  effortLevel?: EffortLevel;
+  prompt: string;
+  permissionScope: DispatchPermissionScope;
+  disturbanceLevel: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds?: string[];
+}
+
+interface RedispatchConfirmationInput {
+  redispatchRequestId: string;
+  redispatchKey: string;
+  trackerItemId: string;
+  title: string;
+  source: RedispatchRequestSource;
+  status: 'pending';
+  attemptCount: number;
+  failureReason?: string;
+  changeSummary?: string;
+  original: WorkOrderRedispatchParameters;
+  suggested: WorkOrderRedispatchParameters;
+  createdAt: string;
+}
+
+interface RedispatchConfirmationResult {
+  requestId: string;
+  trackerItemId: string;
+  headSessionId: string;
+  deduped: boolean;
+  input: RedispatchConfirmationInput;
+}
+
+interface RetryWorkOrderContext {
+  workspaceId: string;
+  workOrder: { id: string; data: Record<string, unknown> };
+  previousSession: Awaited<ReturnType<typeof AISessionsRepository.get>> | null;
+  receipt: WorkOrderReceipt | null;
+  headSessionId: string;
+  intent: SessionIntent;
+  planId?: string;
+  title: string;
+  prompt: string;
+  parameters: WorkOrderRedispatchParameters;
+  notifyParent?: boolean;
+  attemptCount: number;
+  failureReason?: string;
 }
 
 class RetryGateDeniedError extends Error {
@@ -641,6 +732,69 @@ function readWorkOrderOutputFiles(data: Record<string, unknown>): string[] {
   ])];
 }
 
+function readStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.flatMap((candidate) => {
+    const normalized = readNonEmptyString(candidate);
+    return normalized ? [normalized] : [];
+  }))];
+}
+
+function readWorkOrderRedispatchParameters(
+  value: unknown,
+): WorkOrderRedispatchParameters | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const provider = readNonEmptyString(record.provider);
+  const model = readNonEmptyString(record.model);
+  const prompt = readNonEmptyString(record.prompt);
+  if (
+    !provider
+    || !model
+    || !prompt
+    || !isDispatchPermissionScope(record.permissionScope)
+    || !isDispatchDisturbanceLevel(record.disturbanceLevel)
+  ) {
+    return null;
+  }
+  const effortLevel = readNonEmptyString(record.effortLevel);
+  const skillBundleName = readNonEmptyString(record.skillBundleName);
+  return {
+    provider,
+    model,
+    ...(effortLevel ? { effortLevel } : {}),
+    prompt,
+    permissionScope: record.permissionScope,
+    disturbanceLevel: record.disturbanceLevel,
+    ...(skillBundleName ? { skillBundleName } : {}),
+    skillIds: readStringList(record.skillIds),
+  };
+}
+
+function readWorkOrderRetryParameterChange(
+  value: unknown,
+): WorkOrderRetryParameterChange | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const requestId = readNonEmptyString(record.requestId);
+  const approvedAt = readNonEmptyString(record.approvedAt);
+  const original = readWorkOrderRedispatchParameters(record.original);
+  const suggested = readWorkOrderRedispatchParameters(record.suggested);
+  const approved = readWorkOrderRedispatchParameters(record.approved);
+  if (!requestId || !approvedAt || !original || !suggested || !approved) {
+    return undefined;
+  }
+  const changeSummary = readNonEmptyString(record.changeSummary);
+  return {
+    requestId,
+    approvedAt,
+    ...(changeSummary ? { changeSummary } : {}),
+    original,
+    suggested,
+    approved,
+  };
+}
+
 function readWorkOrderAttempts(data: Record<string, unknown>): WorkOrderAttempt[] {
   const attempts = Array.isArray(data.attempts)
     ? data.attempts.flatMap((candidate, index) => {
@@ -657,6 +811,9 @@ function readWorkOrderAttempts(data: Record<string, unknown>): WorkOrderAttempt[
           attempt,
           ...(isFailureClass(rawAttempt.failureClass) ? { failureClass: rawAttempt.failureClass } : {}),
           ...(typeof rawAttempt.retryReason === 'string' ? { retryReason: rawAttempt.retryReason } : {}),
+          ...(readWorkOrderRetryParameterChange(rawAttempt.retryParameterChange)
+            ? { retryParameterChange: readWorkOrderRetryParameterChange(rawAttempt.retryParameterChange) }
+            : {}),
         } as WorkOrderAttempt];
       })
     : [];
@@ -670,6 +827,9 @@ function readWorkOrderAttempts(data: Record<string, unknown>): WorkOrderAttempt[
       ...(typeof data.failureReason === 'string' ? { failureReason: data.failureReason } : {}),
       ...(isFailureClass(data.failureClass) ? { failureClass: data.failureClass } : {}),
       ...(typeof data.retryReason === 'string' ? { retryReason: data.retryReason } : {}),
+      ...(readWorkOrderRetryParameterChange(data.retryParameterChange)
+        ? { retryParameterChange: readWorkOrderRetryParameterChange(data.retryParameterChange) }
+        : {}),
     }];
   }
   return attempts;
@@ -682,6 +842,7 @@ function appendWorkOrderAttempt(
   failureClass: FailureClass | undefined,
   sessionId: string | undefined,
   retryReason?: string,
+  retryParameterChange?: WorkOrderRetryParameterChange,
 ): void {
   const attempts = readWorkOrderAttempts(data);
   const existingIndex = sessionId
@@ -697,6 +858,7 @@ function appendWorkOrderAttempt(
     ...(failureReason ? { failureReason } : {}),
     ...(failureClass ? { failureClass } : {}),
     ...(retryReason ? { retryReason } : {}),
+    ...(retryParameterChange ? { retryParameterChange } : {}),
   };
   if (existingIndex >= 0) {
     attempts[existingIndex] = attempt;
@@ -1060,6 +1222,7 @@ type InternalCreateChildSessionArgs = CreateChildSessionArgs & {
   workOrderSourceRef?: string;
   workOrderTrackerIdOverride?: string;
   retryReason?: string;
+  retryParameterChange?: WorkOrderRetryParameterChange;
   notifyParent?: boolean;
   /** Owner-selected card routing retained on the work-order for reconciliation. */
   modelSelectionOverride?: ModelSelectionOverride;
@@ -1753,6 +1916,8 @@ export class MetaAgentService {
             resolveOriginalMcpCall: mcpCall?.resolveOriginalMcpCall,
             onPlanSubmitted: mcpCall?.setSubmittedPlanId,
           }),
+        requestRedispatch: (metaSessionId, workspaceId, args) =>
+          this.requestRedispatch(metaSessionId, workspaceId, args),
         createSession: (metaSessionId, workspaceId, args) =>
           this.createChildSession(metaSessionId, workspaceId, args),
         spawnSession: (callerSessionId, workspaceId, args) =>
@@ -1969,6 +2134,128 @@ export class MetaAgentService {
     workspaceId: string,
     trackerItemId: string,
   ): Promise<ChildDispatchResult> {
+    const context = await this.getRetryWorkOrderContext(workspaceId, trackerItemId);
+    return this.dispatchRetryWorkOrder(context);
+  }
+
+  public async requestRedispatch(
+    metaSessionId: string,
+    workspaceId: string,
+    args: RedispatchRequestArgs,
+  ): Promise<string> {
+    const confirmation = await this.ensureRedispatchConfirmationCard(
+      metaSessionId,
+      workspaceId,
+      args,
+      'head-request',
+    );
+    return JSON.stringify({
+      status: confirmation.deduped ? 'already-pending' : 'awaiting-owner-approval',
+      requestId: confirmation.requestId,
+      trackerItemId: confirmation.trackerItemId,
+      headSessionId: confirmation.headSessionId,
+      message:
+        'Redispatch confirmation card is waiting for the owner. Do not call create_session for this failed work-order.',
+    }, null, 2);
+  }
+
+  public async openRedispatchConfirmationForWorkOrder(
+    workspaceId: string,
+    trackerItemId: string,
+    source: RedispatchRequestSource = 'board-retry',
+  ): Promise<RedispatchConfirmationResult> {
+    return this.ensureRedispatchConfirmationCard(
+      null,
+      workspaceId,
+      {
+        trackerItemId,
+        changeSummary: '预填原参数，等待老板调整或批准。',
+      },
+      source,
+    );
+  }
+
+  public async approveRedispatchRequest(
+    workspaceId: string,
+    args: RedispatchApprovalArgs,
+  ): Promise<{ approved: true; result?: ChildDispatchResult; alreadyResolved?: boolean }> {
+    if (!readNonEmptyString(args.requestId) || !readNonEmptyString(args.trackerItemId)) {
+      throw new Error('requestId and trackerItemId are required');
+    }
+    const context = await this.getRetryWorkOrderContext(workspaceId, args.trackerItemId);
+    const prompt = await this.readRedispatchConfirmationByRequestId(
+      context.headSessionId,
+      args.requestId,
+    );
+    if (!prompt || prompt.trackerItemId !== args.trackerItemId) {
+      throw new Error('Redispatch confirmation is no longer active; reopen the retry card');
+    }
+    if (await this.hasRedispatchToolResult(context.headSessionId, args.requestId)) {
+      return {
+        approved: true,
+        alreadyResolved: true,
+      };
+    }
+
+    const approved = this.normalizeRedispatchApprovalParameters(args);
+    const approvedAt = new Date().toISOString();
+    const retryParameterChange: WorkOrderRetryParameterChange = {
+      requestId: args.requestId,
+      approvedAt,
+      ...(prompt.changeSummary ? { changeSummary: prompt.changeSummary } : {}),
+      original: prompt.original,
+      suggested: prompt.suggested,
+      approved,
+    };
+    const result = await this.dispatchRetryWorkOrder(context, retryParameterChange);
+    await persistInteractivePromptToolResult({
+      sessionId: context.headSessionId,
+      toolUseId: args.requestId,
+      result: {
+        approved: true,
+        approvedAt,
+        dispatchResult: result,
+        parameters: retryParameterChange,
+      },
+    });
+    broadcastMessageLogged(context.headSessionId, workspaceId);
+    return { approved: true, result };
+  }
+
+  public async rejectRedispatchRequest(
+    workspaceId: string,
+    args: { requestId?: string; trackerItemId?: string; reason?: string },
+  ): Promise<{ approved: false; alreadyResolved?: boolean }> {
+    const requestId = readNonEmptyString(args.requestId);
+    const trackerItemId = readNonEmptyString(args.trackerItemId);
+    if (!requestId || !trackerItemId) {
+      throw new Error('requestId and trackerItemId are required');
+    }
+    const context = await this.getRetryWorkOrderContext(workspaceId, trackerItemId);
+    const prompt = await this.readRedispatchConfirmationByRequestId(context.headSessionId, requestId);
+    if (!prompt || prompt.trackerItemId !== trackerItemId) {
+      throw new Error('Redispatch confirmation is no longer active; reopen the retry card');
+    }
+    if (await this.hasRedispatchToolResult(context.headSessionId, requestId)) {
+      return { approved: false, alreadyResolved: true };
+    }
+    await persistInteractivePromptToolResult({
+      sessionId: context.headSessionId,
+      toolUseId: requestId,
+      result: {
+        approved: false,
+        rejectedAt: new Date().toISOString(),
+        reason: readNonEmptyString(args.reason) ?? 'Owner rejected redispatch.',
+      },
+    });
+    broadcastMessageLogged(context.headSessionId, workspaceId);
+    return { approved: false };
+  }
+
+  private async getRetryWorkOrderContext(
+    workspaceId: string,
+    trackerItemId: string,
+  ): Promise<RetryWorkOrderContext> {
     if (!this.aiService) {
       throw new Error('AI service not initialized');
     }
@@ -2005,6 +2292,10 @@ export class MetaAgentService {
     if (retryOwner.recoveredFromPlan) {
       await this.backfillWorkOrderHeadSession(workOrder.id, workOrder.data, headSessionId);
     }
+    const headSession = await AISessionsRepository.get(headSessionId);
+    if (!headSession || headSession.workspacePath !== workspaceId) {
+      throw new Error(WORK_ORDER_RETRY_OWNER_UNAVAILABLE_REASON);
+    }
 
     const rawIntent = workOrder.data.intent;
     const intent: SessionIntent = rawIntent === 'investigation' ? 'investigation' : 'implementation';
@@ -2016,32 +2307,468 @@ export class MetaAgentService {
     const prompt = typeof workOrder.data.taskSummary === 'string' && workOrder.data.taskSummary.trim()
       ? workOrder.data.taskSummary.trim()
       : title;
-    const provider = previousSession?.provider
-      || (receipt?.engine && receipt.engine !== 'unknown' ? receipt.engine : undefined);
-    const model = previousSession?.model || receipt?.model || undefined;
-    const notifyParent = previousSession?.metadata?.notifyParent;
+    const routingOverride = parseWorkOrderData(workOrder.data.modelSelectionOverride);
+    const storedApprovedRouting = readModuleRouting(routingOverride.approved);
+    const previousMetadata = (previousSession?.metadata as Record<string, unknown> | undefined) ?? {};
+    const provider = storedApprovedRouting?.provider
+      || previousSession?.provider
+      || (receipt?.engine && receipt.engine !== 'unknown' ? receipt.engine : undefined)
+      || headSession.provider;
+    const model = storedApprovedRouting?.model
+      || previousSession?.model
+      || receipt?.model
+      || headSession.model
+      || undefined;
+    const effortLevel = storedApprovedRouting?.effortLevel
+      || readNonEmptyString(previousMetadata.effortLevel);
+    const notifyParent = previousMetadata.notifyParent;
+    if (!provider?.trim() || !model?.trim()) {
+      throw new Error('无法读取失败工单原引擎/模型，请从失败卡重试入口重新打开确认卡');
+    }
 
-    return this.dispatchOrQueueChildSession(
-      headSessionId,
+    const permission = this.readWorkOrderDispatchPermission(
+      workOrder.data,
+      intent,
+      previousSession,
+      receipt,
+    );
+    const skillSelection = this.readWorkOrderSkillSelection(
+      workOrder.data,
+      previousSession,
+      receipt,
+    );
+
+    return {
       workspaceId,
-      {
-        title,
-        prompt,
+      workOrder,
+      previousSession,
+      receipt,
+      headSessionId,
+      intent,
+      ...(planId ? { planId } : {}),
+      title,
+      prompt,
+      parameters: {
         provider,
         model,
-        intent,
-        planId,
-        moduleIndex: readWorkOrderModuleIndex(workOrder.data),
-        outputFiles: readWorkOrderOutputFiles(workOrder.data),
-        worktreeId: previousSession?.worktreeId ?? undefined,
-        parentSessionIdOverride: previousSession?.parentSessionId ?? null,
-        workOrderTrackerIdOverride: trackerItemId,
+        ...(effortLevel ? { effortLevel } : {}),
+        prompt,
+        permissionScope: permission.permissionScope,
+        disturbanceLevel: permission.disturbanceLevel,
+        ...(skillSelection.skillBundleName ? { skillBundleName: skillSelection.skillBundleName } : {}),
+        skillIds: skillSelection.skillIds,
+      },
+      ...(typeof notifyParent === 'boolean' ? { notifyParent } : {}),
+      attemptCount: readWorkOrderAttempts(workOrder.data).length,
+      ...(typeof workOrder.data.failureReason === 'string' && workOrder.data.failureReason.trim()
+        ? { failureReason: workOrder.data.failureReason.trim() }
+        : {}),
+    };
+  }
+
+  private dispatchRetryWorkOrder(
+    context: RetryWorkOrderContext,
+    retryParameterChange?: WorkOrderRetryParameterChange,
+  ): Promise<ChildDispatchResult> {
+    const approved = retryParameterChange?.approved ?? context.parameters;
+    const original = retryParameterChange?.original ?? context.parameters;
+    const approvedRouting = {
+      provider: approved.provider,
+      model: approved.model,
+      ...(approved.effortLevel ? { effortLevel: approved.effortLevel } : {}),
+    };
+    const originalRouting = {
+      provider: original.provider,
+      model: original.model,
+      ...(original.effortLevel ? { effortLevel: original.effortLevel } : {}),
+    };
+    const approvedPermission: DispatchPermissionKnobs = {
+      permissionScope: approved.permissionScope,
+      disturbanceLevel: approved.disturbanceLevel,
+    };
+    const originalPermission: DispatchPermissionKnobs = {
+      permissionScope: original.permissionScope,
+      disturbanceLevel: original.disturbanceLevel,
+    };
+    const approvedSkillSelection: DispatchSkillSelection = {
+      ...(approved.skillBundleName ? { skillBundleName: approved.skillBundleName } : {}),
+      skillIds: approved.skillIds,
+    };
+    const originalSkillSelection: DispatchSkillSelection = {
+      ...(original.skillBundleName ? { skillBundleName: original.skillBundleName } : {}),
+      skillIds: original.skillIds,
+    };
+
+    return this.dispatchOrQueueChildSession(
+      context.headSessionId,
+      context.workspaceId,
+      {
+        title: context.title,
+        prompt: approved.prompt,
+        provider: approved.provider,
+        model: approved.model,
+        effortLevel: approved.effortLevel,
+        intent: context.intent,
+        planId: context.planId,
+        moduleIndex: readWorkOrderModuleIndex(context.workOrder.data),
+        outputFiles: readWorkOrderOutputFiles(context.workOrder.data),
+        dispatchPermissionKnobs: approvedPermission,
+        dispatchSkillSelection: approvedSkillSelection,
+        ...(!sameModuleRouting(originalRouting, approvedRouting)
+          ? { modelSelectionOverride: { original: originalRouting, approved: approvedRouting } }
+          : {}),
+        ...(!sameDispatchPermissionKnobs(originalPermission, approvedPermission)
+          ? {
+              dispatchPermissionSelectionOverride: {
+                original: originalPermission,
+                approved: approvedPermission,
+              },
+            }
+          : {}),
+        ...(!sameDispatchSkillSelection(originalSkillSelection, approvedSkillSelection)
+          ? {
+              dispatchSkillSelectionOverride: {
+                original: originalSkillSelection,
+                approved: approvedSkillSelection,
+              },
+            }
+          : {}),
+        worktreeId: context.previousSession?.worktreeId ?? undefined,
+        parentSessionIdOverride: context.previousSession?.parentSessionId ?? null,
+        workOrderTrackerIdOverride: context.workOrder.id,
         retryReason: '老板手动重试',
-        ...(typeof notifyParent === 'boolean' ? { notifyParent } : {}),
+        ...(retryParameterChange ? { retryParameterChange } : {}),
+        ...(typeof context.notifyParent === 'boolean' ? { notifyParent: context.notifyParent } : {}),
       },
       'create_session',
       { manualRetry: true },
     );
+  }
+
+  private readWorkOrderDispatchPermission(
+    data: Record<string, unknown>,
+    intent: SessionIntent,
+    previousSession: Awaited<ReturnType<typeof AISessionsRepository.get>> | null,
+    receipt: WorkOrderReceipt | null,
+  ): DispatchPermissionKnobs {
+    const override = parseWorkOrderData(data.dispatchPermissionSelectionOverride);
+    const previousMetadata = (previousSession?.metadata as Record<string, unknown> | undefined) ?? {};
+    return readModuleDispatchPermission(override.approved)
+      ?? readDispatchPermissionResolution(data.dispatchPermission)?.requested
+      ?? receipt?.dispatchPermission?.requested
+      ?? readDispatchPermissionResolution(previousMetadata.dispatchPermission)?.requested
+      ?? readModuleDispatchPermission(data)
+      ?? getDefaultDispatchPermissionKnobs(intent);
+  }
+
+  private readWorkOrderSkillSelection(
+    data: Record<string, unknown>,
+    previousSession: Awaited<ReturnType<typeof AISessionsRepository.get>> | null,
+    receipt: WorkOrderReceipt | null,
+  ): DispatchSkillSelection {
+    const override = parseWorkOrderData(data.dispatchSkillSelectionOverride);
+    const previousMetadata = (previousSession?.metadata as Record<string, unknown> | undefined) ?? {};
+    return readModuleDispatchSkillSelection(override.approved)
+      ?? readDispatchSkillResolution(data.dispatchSkills)?.requested
+      ?? receipt?.dispatchSkills?.requested
+      ?? readDispatchSkillResolution(previousMetadata.dispatchSkills)?.requested
+      ?? readModuleDispatchSkillSelection(data)
+      ?? { skillIds: [] };
+  }
+
+  private normalizeRedispatchSuggestedParameters(
+    original: WorkOrderRedispatchParameters,
+    args: RedispatchRequestArgs,
+  ): WorkOrderRedispatchParameters {
+    const provider = readNonEmptyString(args.provider) ?? original.provider;
+    const rawModel = readNonEmptyString(args.model) ?? original.model;
+    const model = rawModel.includes(':') ? rawModel : `${provider}:${rawModel}`;
+    const prompt = readNonEmptyString(args.prompt) ?? original.prompt;
+    const effortLevel = args.effortLevel === undefined
+      ? original.effortLevel
+      : readNonEmptyString(args.effortLevel);
+    if (args.effortLevel !== undefined && !effortLevel) {
+      throw new Error('effortLevel must be a non-empty string when provided');
+    }
+    if (args.permissionScope !== undefined && !isDispatchPermissionScope(args.permissionScope)) {
+      throw new Error('permissionScope must be read-only, workspace-write, or danger-full-access');
+    }
+    if (args.disturbanceLevel !== undefined && !isDispatchDisturbanceLevel(args.disturbanceLevel)) {
+      throw new Error('disturbanceLevel must be never, on-failure, or on-request');
+    }
+    const skillBundleName = args.skillBundleName === undefined
+      ? original.skillBundleName
+      : readNonEmptyString(args.skillBundleName);
+    const skillIds = args.skillIds === undefined ? original.skillIds : readStringList(args.skillIds);
+    return {
+      provider,
+      model,
+      ...(effortLevel ? { effortLevel } : {}),
+      prompt,
+      permissionScope: args.permissionScope ?? original.permissionScope,
+      disturbanceLevel: args.disturbanceLevel ?? original.disturbanceLevel,
+      ...(skillBundleName ? { skillBundleName } : {}),
+      skillIds,
+    };
+  }
+
+  private normalizeRedispatchApprovalParameters(
+    args: RedispatchApprovalArgs,
+  ): WorkOrderRedispatchParameters {
+    const provider = readNonEmptyString(args.provider);
+    const rawModel = readNonEmptyString(args.model);
+    const prompt = readNonEmptyString(args.prompt);
+    if (!provider || !rawModel || !prompt) {
+      throw new Error('provider, model, and prompt are required');
+    }
+    if (!isDispatchPermissionScope(args.permissionScope)) {
+      throw new Error('permissionScope must be read-only, workspace-write, or danger-full-access');
+    }
+    if (!isDispatchDisturbanceLevel(args.disturbanceLevel)) {
+      throw new Error('disturbanceLevel must be never, on-failure, or on-request');
+    }
+    const effortLevel = args.effortLevel === undefined
+      ? undefined
+      : readNonEmptyString(args.effortLevel);
+    if (args.effortLevel !== undefined && !effortLevel) {
+      throw new Error('effortLevel must be a non-empty string when provided');
+    }
+    const skillBundleName = readNonEmptyString(args.skillBundleName);
+    const model = rawModel.includes(':') ? rawModel : `${provider}:${rawModel}`;
+    return {
+      provider,
+      model,
+      ...(effortLevel ? { effortLevel } : {}),
+      prompt,
+      permissionScope: args.permissionScope,
+      disturbanceLevel: args.disturbanceLevel,
+      ...(skillBundleName ? { skillBundleName } : {}),
+      skillIds: readStringList(args.skillIds),
+    };
+  }
+
+  private buildRedispatchKey(
+    trackerItemId: string,
+    suggested: WorkOrderRedispatchParameters,
+    changeSummary: string | undefined,
+  ): string {
+    return JSON.stringify({
+      trackerItemId,
+      changeSummary: changeSummary ?? '',
+      suggested: {
+        provider: suggested.provider,
+        model: suggested.model,
+        effortLevel: suggested.effortLevel ?? '',
+        prompt: suggested.prompt,
+        permissionScope: suggested.permissionScope,
+        disturbanceLevel: suggested.disturbanceLevel,
+        skillBundleName: suggested.skillBundleName ?? '',
+        skillIds: [...suggested.skillIds].sort(),
+      },
+    });
+  }
+
+  private async ensureRedispatchConfirmationCard(
+    requestedByHeadSessionId: string | null,
+    workspaceId: string,
+    args: RedispatchRequestArgs,
+    source: RedispatchRequestSource,
+  ): Promise<RedispatchConfirmationResult> {
+    const trackerItemId = readNonEmptyString(args.trackerItemId);
+    if (!workspaceId?.trim() || !trackerItemId) {
+      throw new Error('workspaceId and trackerItemId are required');
+    }
+    const context = await this.getRetryWorkOrderContext(workspaceId, trackerItemId);
+    if (
+      requestedByHeadSessionId
+      && requestedByHeadSessionId.trim() !== context.headSessionId
+    ) {
+      throw new Error('Failed work-order belongs to another Head session');
+    }
+    const changeSummary = readNonEmptyString(args.changeSummary)
+      ?? (source === 'head-request' ? 'Head 请求重派，等待老板确认参数。' : '预填原参数，等待老板调整或批准。');
+    const suggested = this.normalizeRedispatchSuggestedParameters(
+      context.parameters,
+      args,
+    );
+    const redispatchKey = this.buildRedispatchKey(trackerItemId, suggested, changeSummary);
+    const existing = await this.findActiveRedispatchConfirmation(
+      context.headSessionId,
+      redispatchKey,
+    );
+    if (existing) {
+      return {
+        requestId: existing.redispatchRequestId,
+        trackerItemId,
+        headSessionId: context.headSessionId,
+        deduped: true,
+        input: existing,
+      };
+    }
+
+    const requestId = randomUUID();
+    const input: RedispatchConfirmationInput = {
+      redispatchRequestId: requestId,
+      redispatchKey,
+      trackerItemId,
+      title: context.title,
+      source,
+      status: 'pending',
+      attemptCount: context.attemptCount,
+      ...(context.failureReason ? { failureReason: context.failureReason } : {}),
+      changeSummary,
+      original: context.parameters,
+      suggested,
+      createdAt: new Date().toISOString(),
+    };
+    await persistInteractivePromptToolUse({
+      sessionId: context.headSessionId,
+      toolUseId: requestId,
+      toolName: 'RedispatchWorkOrder',
+      input,
+    });
+    broadcastMessageLogged(context.headSessionId, workspaceId);
+    return {
+      requestId,
+      trackerItemId,
+      headSessionId: context.headSessionId,
+      deduped: false,
+      input,
+    };
+  }
+
+  private async findActiveRedispatchConfirmation(
+    headSessionId: string,
+    redispatchKey: string,
+  ): Promise<RedispatchConfirmationInput | null> {
+    const { rows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND direction = 'output'
+         AND (hidden = FALSE OR hidden IS NULL)
+         AND content LIKE '%"type":"nimbalyst_tool_use"%'
+         AND content LIKE '%"name":"RedispatchWorkOrder"%'
+       ORDER BY created_at DESC, id DESC
+       LIMIT 50`,
+      [headSessionId],
+    );
+    for (const row of rows) {
+      const input = this.parseRedispatchConfirmationContent(row.content);
+      if (!input || input.redispatchKey !== redispatchKey) continue;
+      if (!(await this.hasRedispatchToolResult(headSessionId, input.redispatchRequestId))) {
+        return input;
+      }
+    }
+    return null;
+  }
+
+  private async readRedispatchConfirmationByRequestId(
+    headSessionId: string,
+    requestId: string,
+  ): Promise<RedispatchConfirmationInput | null> {
+    const { rows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND direction = 'output'
+         AND (hidden = FALSE OR hidden IS NULL)
+         AND content LIKE '%"type":"nimbalyst_tool_use"%'
+         AND content LIKE '%"name":"RedispatchWorkOrder"%'
+         AND content LIKE $2
+       ORDER BY created_at DESC, id DESC
+       LIMIT 20`,
+      [headSessionId, `%"id":"${this.escapeLikePattern(requestId)}"%`],
+    );
+    for (const row of rows) {
+      const input = this.parseRedispatchConfirmationContent(row.content);
+      if (input?.redispatchRequestId === requestId) return input;
+    }
+    return null;
+  }
+
+  private parseRedispatchConfirmationContent(
+    value: unknown,
+  ): RedispatchConfirmationInput | null {
+    try {
+      const content = typeof value === 'string' ? JSON.parse(value) : value;
+      if (
+        !content
+        || typeof content !== 'object'
+        || Array.isArray(content)
+        || (content as Record<string, unknown>).type !== 'nimbalyst_tool_use'
+        || (content as Record<string, unknown>).name !== 'RedispatchWorkOrder'
+      ) {
+        return null;
+      }
+      const input = (content as Record<string, unknown>).input;
+      if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+      const record = input as Record<string, unknown>;
+      const redispatchRequestId = readNonEmptyString(record.redispatchRequestId);
+      const redispatchKey = readNonEmptyString(record.redispatchKey);
+      const trackerItemId = readNonEmptyString(record.trackerItemId);
+      const title = readNonEmptyString(record.title);
+      const original = readWorkOrderRedispatchParameters(record.original);
+      const suggested = readWorkOrderRedispatchParameters(record.suggested);
+      if (!redispatchRequestId || !redispatchKey || !trackerItemId || !title || !original || !suggested) {
+        return null;
+      }
+      const source = record.source === 'head-request'
+        || record.source === 'failure-notification'
+        || record.source === 'board-retry'
+        ? record.source
+        : 'head-request';
+      const createdAt = readNonEmptyString(record.createdAt) ?? new Date(0).toISOString();
+      const attemptCount = typeof record.attemptCount === 'number'
+        && Number.isSafeInteger(record.attemptCount)
+        && record.attemptCount >= 0
+        ? record.attemptCount
+        : 0;
+      const failureReason = readNonEmptyString(record.failureReason);
+      const changeSummary = readNonEmptyString(record.changeSummary);
+      return {
+        redispatchRequestId,
+        redispatchKey,
+        trackerItemId,
+        title,
+        source,
+        status: 'pending',
+        attemptCount,
+        ...(failureReason ? { failureReason } : {}),
+        ...(changeSummary ? { changeSummary } : {}),
+        original,
+        suggested,
+        createdAt,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async hasRedispatchToolResult(
+    headSessionId: string,
+    requestId: string,
+  ): Promise<boolean> {
+    const { rows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND direction = 'output'
+         AND content LIKE '%"type":"nimbalyst_tool_result"%'
+         AND content LIKE $2
+       ORDER BY created_at DESC, id DESC
+       LIMIT 50`,
+      [headSessionId, `%"tool_use_id":"${this.escapeLikePattern(requestId)}"%`],
+    );
+    return rows.some((row) => {
+      try {
+        const content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+        return content?.type === 'nimbalyst_tool_result'
+          && content.tool_use_id === requestId;
+      } catch {
+        return false;
+      }
+    });
   }
 
   public async canRetryWorkOrder(
@@ -2087,8 +2814,32 @@ export class MetaAgentService {
 
     safeHandle('meta-agent:retry-work-order', async (_event, payload: { trackerItemId: string; workspaceId: string }) => {
       try {
-        const result = await this.retryWorkOrder(payload?.workspaceId, payload?.trackerItemId);
+        const result = await this.openRedispatchConfirmationForWorkOrder(
+          payload?.workspaceId,
+          payload?.trackerItemId,
+          'board-retry',
+        );
         return { success: true, result };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    safeHandle('meta-agent:approve-redispatch-request', async (_event, payload: RedispatchApprovalArgs & { workspaceId: string }) => {
+      try {
+        const { workspaceId, ...args } = payload;
+        const result = await this.approveRedispatchRequest(workspaceId, args);
+        return { success: true, ...result };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    safeHandle('meta-agent:reject-redispatch-request', async (_event, payload: { workspaceId: string; requestId?: string; trackerItemId?: string; reason?: string }) => {
+      try {
+        const { workspaceId, ...args } = payload;
+        const result = await this.rejectRedispatchRequest(workspaceId, args);
+        return { success: true, ...result };
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : String(error) };
       }
@@ -2685,6 +3436,7 @@ export class MetaAgentService {
         trackerItemId: args.workOrderTrackerIdOverride,
         headSessionId: metaSessionId,
         retryReason: args.retryReason,
+        retryParameterChange: args.retryParameterChange,
         moduleIndex: readModuleIndex(args.moduleIndex),
         outputFiles: args.outputFiles,
         completionCriteria: args.completionCriteria,
@@ -3131,6 +3883,7 @@ export class MetaAgentService {
             trackerItemId: args.workOrderTrackerIdOverride,
             headSessionId: metaSessionId,
             retryReason: args.retryReason,
+            retryParameterChange: args.retryParameterChange,
             moduleIndex: readModuleIndex(args.moduleIndex),
             outputFiles: args.outputFiles,
             completionCriteria: args.completionCriteria,
@@ -3178,7 +3931,7 @@ export class MetaAgentService {
       `Error: ${errorMessage}`,
       `Failure reason: ${errorMessage}`,
       `Receipt: startedAt=${receipt.startedAt} endedAt=${receipt.endedAt}`,
-      'Report this exact failure to the user; do not mark it completed or write the child deliverable. Platform instability may be retried automatically once; an agent-side failure must be reported and wait for the owner\'s instruction before retrying. The failed card\'s Retry button is owner authorization.',
+      'Report this exact failure to the user; do not mark it completed or write the child deliverable. Platform instability may be retried automatically once; an agent-side failure must be reported and wait for owner button confirmation before retrying. Failed work-order redispatch must use request_redispatch; the failed card\'s Retry button opens the same owner confirmation card.',
       'The next queued item will still be attempted automatically.',
     ].join('\n');
     try {
@@ -3189,6 +3942,15 @@ export class MetaAgentService {
         undefined,
         'child_session_event',
       );
+      await this.ensureRedispatchConfirmationForFailedSession(
+        item.workspaceId,
+        item.reservedSessionId,
+      ).catch((error) => {
+        console.error(
+          `[MetaAgentService] Failed to create redispatch confirmation for ${item.reservedSessionId}:`,
+          error,
+        );
+      });
       const headStatus = await this.getSessionStatusRow(item.headSessionId, item.workspaceId);
       if (headStatus?.status === 'idle' || headStatus?.status === 'interrupted' || headStatus?.status === 'error') {
         await this.aiService.triggerQueuedPromptProcessingForSession(item.headSessionId, item.workspaceId);
@@ -4188,6 +4950,7 @@ export class MetaAgentService {
             trackerItemId: args.workOrderTrackerIdOverride,
             headSessionId: metaSessionId,
             retryReason: args.retryReason,
+            retryParameterChange: args.retryParameterChange,
             moduleIndex: readModuleIndex(args.moduleIndex),
             outputFiles: args.outputFiles,
             completionCriteria: args.completionCriteria,
@@ -4865,6 +5628,17 @@ export class MetaAgentService {
         undefined,
         'child_session_event',
       );
+      if (failureReason && workOrderUpdated) {
+        await this.ensureRedispatchConfirmationForFailedSession(
+          session.workspacePath,
+          sessionId,
+        ).catch((error) => {
+          console.error(
+            `[MetaAgentService] Failed to create redispatch confirmation for ${sessionId}:`,
+            error,
+          );
+        });
+      }
 
       // All four child event types use the same internal delivery path. When
       // the parent can run, trigger its queue so the event reaches the model.
@@ -4880,6 +5654,29 @@ export class MetaAgentService {
         });
       }
     }
+  }
+
+  private async ensureRedispatchConfirmationForFailedSession(
+    workspaceId: string,
+    sessionId: string,
+  ): Promise<void> {
+    const { rows } = await databaseWorker.query<{ id: string }>(
+      `SELECT id
+       FROM tracker_items
+       WHERE type = 'work-order'
+         AND workspace = $1
+         AND source_ref = $2
+         AND (archived = FALSE OR archived IS NULL)
+       LIMIT 1`,
+      [workspaceId, `meta-agent-work-order:${sessionId}`],
+    );
+    const trackerItemId = rows[0]?.id;
+    if (!trackerItemId) return;
+    await this.openRedispatchConfirmationForWorkOrder(
+      workspaceId,
+      trackerItemId,
+      'failure-notification',
+    );
   }
 
   private buildNotificationMessage(
@@ -4963,7 +5760,7 @@ export class MetaAgentService {
       if (receipt) {
         lines.push(`Receipt: startedAt=${receipt.startedAt} endedAt=${receipt.endedAt}`);
       }
-      lines.push('Head action required: report this exact failure to the user; do not mark the work-order completed or write the child deliverable. Platform instability may be retried automatically once; your own failure must be reported and wait for the owner\'s instruction before retrying. The failed card\'s Retry button is owner authorization.');
+      lines.push('Head action required: report this exact failure to the user; do not mark the work-order completed or write the child deliverable. Platform instability may be retried automatically once; your own failure must be reported and wait for owner button confirmation before retrying. Failed work-order redispatch must use request_redispatch; the failed card\'s Retry button opens the same owner confirmation card.');
     }
     if (eventType === 'session:interrupted' && settlement?.interruption) {
       lines.push(`Interruption reason: ${settlement.interruption.reason}`);
@@ -5428,41 +6225,6 @@ export class MetaAgentService {
     return null;
   }
 
-  /**
-   * Only a real user message after the persisted failure can authorize an
-   * agent-side retry. `message_kind` is populated by the canonical write path;
-   * internal Head notifications and system reminders therefore cannot satisfy
-   * this check merely by being input-direction rows.
-   */
-  private async hasNewHeadUserMessageAfter(
-    headSessionId: string,
-    failureEndedAt: string,
-  ): Promise<boolean> {
-    const failureTime = Date.parse(failureEndedAt);
-    if (!Number.isFinite(failureTime)) {
-      return false;
-    }
-    try {
-      const { rows } = await databaseWorker.query<{ id: string }>(
-        `SELECT id
-         FROM ai_agent_messages
-         WHERE session_id = $1
-           AND direction = 'input'
-           AND message_kind = 'user'
-           AND created_at > $2
-         ORDER BY created_at ASC, id ASC
-         LIMIT 1`,
-        [headSessionId, new Date(failureTime)],
-      );
-      return rows.length > 0;
-    } catch (error) {
-      // A missing/old message index must not open the retry gate. The safe
-      // failure mode is the same as an absent user instruction: deny.
-      console.warn('[RetryGate] user-message check unavailable; denying retry', error);
-      return false;
-    }
-  }
-
   private async assertRetryGate(
     metaSessionId: string,
     workspaceId: string,
@@ -5502,16 +6264,8 @@ export class MetaAgentService {
       return;
     }
 
-    const failureEndedAt = latestFailure?.endedAt
-      || (isWorkOrderReceipt(reusable.data.receipt) ? reusable.data.receipt.endedAt : '');
-    const userSpoke = await this.hasNewHeadUserMessageAfter(metaSessionId, failureEndedAt);
-    if (userSpoke) {
-      console.info(`[RetryGate] allowed after new user message module=${moduleTitle} attempts=${attemptCount + 1}`);
-      return;
-    }
-
     console.warn(
-      `[RetryGate] denied module=${moduleTitle} class=${failureClass} attempts=${attemptCount}: owner instruction missing`,
+      `[RetryGate] denied module=${moduleTitle} class=${failureClass} attempts=${attemptCount}: owner button confirmation missing`,
     );
     throw new RetryGateDeniedError(`failureClass=${failureClass}`);
   }
@@ -5541,6 +6295,7 @@ export class MetaAgentService {
       dispatchSkillSelectionOverride?: DispatchSkillSelectionOverride;
       dispatchPermission?: DispatchPermissionResolution;
       dispatchSkills?: DispatchSkillResolution;
+      retryParameterChange?: WorkOrderRetryParameterChange;
     } = {},
   ): Promise<string> {
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
@@ -5607,8 +6362,12 @@ export class MetaAgentService {
         delete data.acceptanceStatus;
         delete data.receipt;
         delete data.retryReason;
+        delete data.retryParameterChange;
         if (options.retryReason) {
           data.retryReason = options.retryReason;
+        }
+        if (options.retryParameterChange) {
+          data.retryParameterChange = options.retryParameterChange;
         }
         if (options.receipt) {
           data.receipt = options.receipt;
@@ -5616,7 +6375,15 @@ export class MetaAgentService {
             data.failureReason = options.failureReason;
             data.failureClass = failureClass;
           }
-          appendWorkOrderAttempt(data, options.receipt, options.failureReason, failureClass, sessionId);
+          appendWorkOrderAttempt(
+            data,
+            options.receipt,
+            options.failureReason,
+            failureClass,
+            sessionId,
+            options.retryReason,
+            options.retryParameterChange,
+          );
         }
 
         await databaseWorker.query(
@@ -5666,12 +6433,14 @@ export class MetaAgentService {
               ...(options.failureReason ? { failureReason: options.failureReason } : {}),
               ...(failureClass ? { failureClass } : {}),
               ...(options.retryReason ? { retryReason: options.retryReason } : {}),
+              ...(options.retryParameterChange ? { retryParameterChange: options.retryParameterChange } : {}),
             } satisfies WorkOrderAttempt]
           : [],
         ...(planId ? { planId } : {}),
         ...(options.failureReason ? { failureReason: options.failureReason } : {}),
         ...(failureClass ? { failureClass } : {}),
         ...(options.retryReason ? { retryReason: options.retryReason } : {}),
+        ...(options.retryParameterChange ? { retryParameterChange: options.retryParameterChange } : {}),
         ...(options.receipt ? { receipt: options.receipt } : {}),
       };
 
@@ -5966,6 +6735,7 @@ export class MetaAgentService {
         failureClass,
         typeof data.childSessionId === 'string' ? data.childSessionId : undefined,
         typeof data.retryReason === 'string' ? data.retryReason : undefined,
+        readWorkOrderRetryParameterChange(data.retryParameterChange),
       );
       data.receipt = normalizedSettlement.receipt;
       if (normalizedSettlement.receipt.outcome === 'success' && !normalizedSettlement.failureReason) {

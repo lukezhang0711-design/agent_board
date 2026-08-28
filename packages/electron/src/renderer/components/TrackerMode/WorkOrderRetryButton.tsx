@@ -59,8 +59,8 @@ export const WorkOrderRetryButton: React.FC<WorkOrderRetryButtonProps> = ({
 
   const disabled = retrying || !availability.canRetry;
   const title = retrying
-    ? '老板手动授权重试'
-    : availability.reason || '老板手动授权重试';
+    ? '正在打开重试确认'
+    : availability.reason || '打开老板重试确认';
   const handleClick = () => {
     if (!disabled) onRetry();
   };
@@ -76,7 +76,7 @@ export const WorkOrderRetryButton: React.FC<WorkOrderRetryButtonProps> = ({
         data-testid="work-order-retry"
       >
         <MaterialSymbol icon={retrying ? 'hourglass_empty' : 'refresh'} size={15} />
-        {retrying ? '重试中…' : '重试'}
+        {retrying ? '打开中…' : '重试'}
       </button>
       {!retrying && !availability.canRetry && availability.reason && (
         <span className="text-[10px] text-nim-muted" data-testid="work-order-retry-reason">

@@ -45,6 +45,7 @@ describe('submit_plan ergonomics', () => {
     setMetaAgentToolFns({
       listWorktrees: vi.fn(),
       submitPlan,
+      requestRedispatch: vi.fn(),
       createSession: vi.fn(),
       spawnSession: vi.fn(),
       getSessionStatus: vi.fn(),

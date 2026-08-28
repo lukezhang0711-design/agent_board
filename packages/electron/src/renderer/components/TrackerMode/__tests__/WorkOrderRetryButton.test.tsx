@@ -44,7 +44,7 @@ describe('WorkOrderRetryButton', () => {
       view.rerender(<WorkOrderRetryButton onRetry={onRetry} retrying workspaceId="/workspace" trackerItemId="work-order-1" />);
       const retryingButton = screen.getByTestId('work-order-retry') as HTMLButtonElement;
       expect(retryingButton.disabled).toBe(true);
-      expect(retryingButton.textContent).toContain('重试中…');
+      expect(retryingButton.textContent).toContain('打开中…');
     });
   });
 
