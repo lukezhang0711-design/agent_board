@@ -309,14 +309,11 @@ describe('AIInput plan toggle scope', () => {
     expect(onModeChange).toHaveBeenCalledWith('agent');
   });
 
-  it('disables the engine mode toggle for Head sessions and blocks Shift+Tab', () => {
+  it('green EZ-2: does not render the engine mode toggle for Head sessions', () => {
     render(<ModeToggleHarness disabled />);
-    const toggle = screen.getByTestId('plan-mode-toggle') as HTMLButtonElement;
 
-    expect(toggle.disabled).toBe(true);
-    expect(toggle.title).toContain('Head');
+    expect(screen.queryByTestId('plan-mode-toggle')).toBeNull();
 
-    fireEvent.click(toggle);
     const textarea = screen.getByTestId('mode-toggle-input') as HTMLTextAreaElement;
     const event = new KeyboardEvent('keydown', {
       key: 'Tab',

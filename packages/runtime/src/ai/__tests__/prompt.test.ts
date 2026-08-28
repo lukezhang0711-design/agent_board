@@ -132,4 +132,19 @@ describe('extension agent self-identification (gemini)', () => {
     expect(prompt).toContain('permissionScope');
     expect(prompt).toContain('disturbanceLevel');
   });
+
+  it('green EZ-1: forbids Head native Claude plan mode while preserving the formal plan-card route', () => {
+    const prompt = buildMetaAgentSystemPrompt('claude', 'default', {
+      provider: 'claude-code',
+      model: 'opus',
+    });
+
+    expect(prompt).toContain('## Native Claude Plan Mode Discipline');
+    expect(prompt).toContain("Do NOT enter Claude Code's native Plan Mode");
+    expect(prompt).toContain('do NOT write native plan files for approval');
+    expect(prompt).toContain('do NOT call ExitPlanMode');
+    expect(prompt).toContain('only call `mcp__nimbalyst-meta-agent__submit_plan`');
+    expect(prompt).toContain('Treat a plan written in chat as invalid');
+    expect(prompt).toContain('Do not debate model or permission choices in plan prose');
+  });
 });

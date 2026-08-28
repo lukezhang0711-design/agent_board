@@ -873,13 +873,14 @@ export class SessionManager {
     const sessionId = uuidv4();
     const workspace = workspacePath;
     const normalizedModel = normalizeStoredModelIdentifier(provider, model);
+    const effectiveMode = agentRole === 'meta-agent' ? 'agent' : mode;
 
     await AISessionsRepository.create({
       id: sessionId,
       provider,
       model: normalizedModel,
       sessionType,
-      mode,
+      mode: effectiveMode,
       workspaceId: workspace,
       filePath: documentContext?.filePath,
       title: 'New conversation',
@@ -906,7 +907,7 @@ export class SessionManager {
       provider,
       model: normalizedModel,
       sessionType,
-      mode,
+      mode: effectiveMode,
       createdAt: now,
       updatedAt: now,
       messages: [],

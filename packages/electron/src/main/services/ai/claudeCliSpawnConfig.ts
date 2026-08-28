@@ -264,8 +264,11 @@ export function buildClaudeCliSpawnConfig(input: ClaudeCliSpawnInput): ClaudeCli
     args.push('--session-id', input.sessionId);
   }
   const dispatchPermission = input.dispatchPermission?.native.claudeCli;
-  if (dispatchPermission?.permissionMode) {
-    args.push('--permission-mode', dispatchPermission.permissionMode);
+  const permissionMode = input.isMetaAgent
+    ? 'manual'
+    : dispatchPermission?.permissionMode;
+  if (permissionMode) {
+    args.push('--permission-mode', permissionMode);
   }
   // Trusted "allow-all"/"bypass-all" workspaces skip the gate entirely via the
   // genuine CLI's own flag (NIM-806 Phase 4). Value-less boolean, safe before the

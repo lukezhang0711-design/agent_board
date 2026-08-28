@@ -167,6 +167,41 @@ function getSubmittedPlanArgs(value: unknown): SubmittedPlanArgs | null {
   return args as unknown as SubmittedPlanArgs;
 }
 
+function getNativePlanFilePath(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null;
+  const path = (value as Record<string, unknown>).planFilePath;
+  return typeof path === 'string' && path.trim() ? path.trim() : null;
+}
+
+function useSessionAgentRole(sessionId: string): SessionAgentRole {
+  const [agentRole, setAgentRole] = useState<SessionAgentRole>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    const invoke = window.electronAPI?.invoke;
+    if (!invoke) return undefined;
+
+    void invoke('sessions:get', sessionId)
+      .then((result) => {
+        if (disposed) return;
+        const role =
+          result?.success && result.session?.agentRole === 'meta-agent'
+            ? 'meta-agent'
+            : 'standard';
+        setAgentRole(role);
+      })
+      .catch(() => {
+        if (!disposed) setAgentRole(null);
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [sessionId]);
+
+  return agentRole;
+}
+
 function getDisplayString(value: unknown, fallback = '未提供'): string {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
 }
@@ -472,7 +507,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   const toolCall = message.toolCall!;
 
   const host = useAtomValue(interactiveWidgetHostAtom(sessionId));
-  const [agentRole, setAgentRole] = useState<SessionAgentRole>(null);
+  const agentRole = useSessionAgentRole(sessionId);
   const requestId = toolCall.providerToolCallId?.trim() || null;
   const title =
     typeof args.title === 'string' && args.title.trim()
@@ -773,29 +808,6 @@ const SubmittedPlanApprovalCard: React.FC<{
   const feedbackInputRef = useRef<HTMLTextAreaElement>(null);
   const feedbackCompositionRef = useRef(false);
   const stateReadErrorLoggedRef = useRef(false);
-
-  useEffect(() => {
-    let disposed = false;
-    const invoke = window.electronAPI?.invoke;
-    if (!invoke) return undefined;
-
-    void invoke('sessions:get', sessionId)
-      .then((result) => {
-        if (disposed) return;
-        const role =
-          result?.success && result.session?.agentRole === 'meta-agent'
-            ? 'meta-agent'
-            : 'standard';
-        setAgentRole(role);
-      })
-      .catch(() => {
-        if (!disposed) setAgentRole(null);
-      });
-
-    return () => {
-      disposed = true;
-    };
-  }, [sessionId]);
 
   useEffect(() => {
     if (showFeedbackInput) feedbackInputRef.current?.focus();
@@ -2048,9 +2060,60 @@ const SubmittedPlanApprovalCard: React.FC<{
   );
 };
 
+const HeadNativePlanModeBlockedCard: React.FC<{ planFilePath: string | null }> = ({
+  planFilePath,
+}) => (
+  <div
+    data-testid="head-native-exit-plan-mode-blocked"
+    data-state="invalid"
+    className="rounded-md border border-nim-warning/60 bg-nim-warning/10 text-nim"
+  >
+    <div className="flex items-center justify-between gap-3 border-b border-nim-warning/30 px-4 py-3">
+      <div className="text-sm font-semibold">Native Plan Mode disabled</div>
+      <span
+        data-testid="head-native-exit-plan-mode-invalid"
+        className="rounded px-2 py-0.5 text-[11px] font-semibold uppercase text-nim-warning"
+      >
+        Invalid
+      </span>
+    </div>
+    <div className="space-y-2 px-4 py-3 text-[13px] leading-5 text-nim-muted">
+      <p>
+        Head 的方案请走正牌方案卡：调用 `mcp__nimbalyst-meta-agent__submit_plan`
+        提交审批。这个 Claude 原生 ExitPlanMode 请求已失效，不会在 Head 中审批。
+      </p>
+      {planFilePath && (
+        <div className="break-all rounded bg-nim-bg-secondary px-2 py-1 text-xs">
+          Native plan file: {planFilePath}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const NativeExitPlanModeFallback: React.FC<CustomToolWidgetProps> = (props) => {
+  const agentRole = useSessionAgentRole(props.sessionId);
+  if (agentRole === 'meta-agent') {
+    return (
+      <HeadNativePlanModeBlockedCard
+        planFilePath={getNativePlanFilePath(props.message.toolCall?.arguments)}
+      />
+    );
+  }
+  if (agentRole === 'standard') return <ExitPlanModeWidget {...props} />;
+  return (
+    <div
+      data-testid="exit-plan-mode-role-checking"
+      className="rounded-md border border-nim-border bg-nim-bg-secondary px-4 py-3 text-sm text-nim-muted"
+    >
+      Checking plan approval availability…
+    </div>
+  );
+};
+
 export const PlanApprovalWidget: React.FC<CustomToolWidgetProps> = (props) => {
   const args = getSubmittedPlanArgs(props.message.toolCall?.arguments);
-  if (!args) return <ExitPlanModeWidget {...props} />;
+  if (!args) return <NativeExitPlanModeFallback {...props} />;
   return <SubmittedPlanApprovalCard props={props} args={args} />;
 };
 

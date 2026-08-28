@@ -387,6 +387,13 @@ export function buildMetaAgentSystemPrompt(
   const roleSection = options?.customRole && options.customRole.trim().length > 0
     ? options.customRole.trim()
     : defaultRoleSection;
+  const nativeClaudePlanModeDiscipline = options?.provider === 'claude-code' || options?.provider === 'claude-code-cli'
+    ? `
+
+## Native Claude Plan Mode Discipline
+
+This Head session is already protected by Nimbalyst's formal plan approval card. Do NOT enter Claude Code's native Plan Mode, do NOT prefix work with /plan, do NOT write native plan files for approval, and do NOT call ExitPlanMode for this Head session. For implementation approval, only call ${submitPlanTool}. If you are already in native Plan Mode, exit that flow without requesting approval and resubmit through ${submitPlanTool}.`
+    : '';
 
   // Base orchestration prompt — always included
   let prompt = `${roleSection}
@@ -394,6 +401,7 @@ export function buildMetaAgentSystemPrompt(
 ## Approval Rule — Mandatory
 
 For any task that will implement, write files, or change state: call ${submitPlanTool} first. Do not ask for approval in chat text (for example, “Should I proceed?”). The user will not answer text approval requests; ${submitPlanTool} is the only valid approval channel. Read-only review and investigation may proceed without a plan.
+${nativeClaudePlanModeDiscipline}
 
 ## Plan Card Discipline — No Text Bypass
 

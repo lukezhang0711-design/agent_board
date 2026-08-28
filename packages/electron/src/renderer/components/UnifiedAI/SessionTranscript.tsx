@@ -612,6 +612,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const isDataLoading = useAtomValue(sessionLoadingAtom(sessionId));
   const chatShowToolCalls = useAtomValue(chatShowToolCallsAtom);
   const [aiMode, setAiMode] = useAtom(sessionModeAtom(sessionId));
+  const effectiveAiMode = disableModeToggle ? 'agent' : aiMode;
   const [currentModel, setCurrentModel] = useAtom(sessionModelAtom(sessionId));
   const [isArchived, setIsArchived] = useAtom(sessionArchivedAtom(sessionId));
   const [isProcessing, setIsProcessing] = useAtom(sessionProcessingAtom(sessionId));
@@ -1446,10 +1447,18 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
     // Intercept /plan command - strip it and switch to planning mode
     // Match "/plan" only when followed by whitespace or end of string (not "/planning" or "/planify")
-    let overrideMode = aiMode;
+    let overrideMode = effectiveAiMode;
     const planCommandMatch = message.match(/^\/plan(?:\s|$)/);
 
-    if (planCommandMatch) {
+    if (planCommandMatch && disableModeToggle) {
+      message = message.slice(planCommandMatch[0].length).trim();
+      if (!message) {
+        setDraftInput('');
+        setDraftAttachments([]);
+        clearAIInputHistory(sessionId);
+        return;
+      }
+    } else if (planCommandMatch) {
       overrideMode = 'planning';
       // Remove /plan from the message, keeping the rest
       message = message.slice(planCommandMatch[0].length).trim();
@@ -1486,7 +1495,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
     // This allows the /implement command (or planning:implement) to actually code
     // Match "/implement", "/planning:implement", and the legacy "/nimbalyst-planning:implement" form
     const implementCommandMatch = message.match(/^\/(?:nimbalyst-planning:|planning:)?implement(?:\s|$)/);
-    if (implementCommandMatch && overrideMode === 'planning') {
+    if (implementCommandMatch && !disableModeToggle && overrideMode === 'planning') {
       // Switch to agent mode for implementation
       overrideMode = 'agent';
       setAiMode('agent');
@@ -1575,7 +1584,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       });
       setIsProcessing(false);
     }
-  }, [sessionId, sessionData, isLoading, getEffectiveDocumentContext, aiMode, workspacePath, setDraftInput, setDraftAttachments, setLastSubmitAt, resetHistory, updateSessionStore, handleQueue, setIsProcessing, messages, sessionHasMessages, startedCliSessionId, mode, onClearSession, onClearAgentSession, clearAIInputHistory, provider, recordClaudeActivity]);
+  }, [sessionId, sessionData, isLoading, getEffectiveDocumentContext, aiMode, effectiveAiMode, disableModeToggle, workspacePath, setDraftInput, setDraftAttachments, setLastSubmitAt, resetHistory, updateSessionStore, handleQueue, setIsProcessing, messages, sessionHasMessages, startedCliSessionId, mode, onClearSession, onClearAgentSession, clearAIInputHistory, provider, recordClaudeActivity]);
 
   const handleCodexWatchdogRetry = useCallback(async () => {
     const lastUserMessage = [...messages].reverse().find(
@@ -1929,13 +1938,22 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   }, [sessionId, setIsArchived]);
 
   const handleAIModeChange = useCallback(async (newMode: AIMode) => {
+    if (disableModeToggle) {
+      setAiMode('agent');
+      try {
+        await window.electronAPI.invoke('sessions:update-metadata', sessionId, { mode: 'agent' });
+      } catch (error) {
+        console.error('[SessionTranscript] Failed to keep Head mode in agent:', error);
+      }
+      return;
+    }
     setAiMode(newMode);
     try {
       await window.electronAPI.invoke('sessions:update-metadata', sessionId, { mode: newMode });
     } catch (error) {
       console.error('[SessionTranscript] Failed to update mode:', error);
     }
-  }, [sessionId, setAiMode]);
+  }, [disableModeToggle, sessionId, setAiMode]);
 
   const handleModelChange = useCallback(async (modelId: string) => {
     const previousModel = currentModel;
@@ -3247,7 +3265,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
               ? "Type your message... (Enter to send, Shift+Enter for new line, @ for files, @@ for sessions, / for commands)"
               : "Type your message... (Enter to send, Shift+Enter for new line, @ for files, @@ for sessions, / for commands)"
         }
-        mode={aiMode as AIMode}
+        mode={effectiveAiMode as AIMode}
         onModeChange={handleAIModeChange}
         disableModeToggle={disableModeToggle}
         currentModel={currentModel}

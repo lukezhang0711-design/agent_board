@@ -442,6 +442,9 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
       const updatedAt = new Date(updatedAtMs);
 
       const branchedAt = payload.branchedAt ? new Date(payload.branchedAt) : null;
+      const sessionMode = payload.agentRole === 'meta-agent'
+        ? 'agent'
+        : payload.mode ?? 'agent';
 
       await db.query(
         `INSERT INTO ai_sessions (
@@ -490,7 +493,7 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
           payload.model ?? null,
           payload.title ?? 'New conversation',
           payload.sessionType ?? 'session',
-          payload.mode ?? 'agent',
+          sessionMode,
           payload.agentRole ?? 'standard',
           payload.createdBySessionId ?? null,
           payload.documentContext ?? null,
@@ -514,6 +517,17 @@ export function createPGLiteSessionStore(db: PGliteLike, ensureDbReady?: EnsureR
 
     async updateMetadata(sessionId: string, metadata: UpdateSessionMetadataPayload): Promise<void> {
       await ensureReady();
+      if (metadata.mode !== undefined || metadata.agentRole === 'meta-agent') {
+        const { rows } = await db.query<{ agent_role: string | null }>(
+          `SELECT agent_role FROM ai_sessions WHERE id = $1`,
+          [sessionId],
+        );
+        const nextAgentRole = metadata.agentRole ?? rows[0]?.agent_role;
+        if (nextAgentRole === 'meta-agent') {
+          metadata = { ...metadata, mode: 'agent' };
+        }
+      }
+
       const updates: string[] = [];
       const values: any[] = [sessionId];
 

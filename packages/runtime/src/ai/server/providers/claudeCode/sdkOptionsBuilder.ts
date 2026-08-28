@@ -256,7 +256,9 @@ export async function buildSdkOptions(
     // Because escalation still hits `canUseTool`, Nimbalyst's workspace rules
     // (allow-all / bypass-all in immediateToolDecision.ts) continue to apply on
     // the escalation path.
-    permissionMode: dispatchPermission?.permissionMode ?? resolvePermissionMode(currentMode),
+    permissionMode: isMetaAgent
+      ? 'default'
+      : dispatchPermission?.permissionMode ?? resolvePermissionMode(currentMode),
     ...(dispatchPermission?.tools ? { tools: dispatchPermission.tools } : {}),
     ...(allowedTools.length > 0 ? { allowedTools } : {}),
     ...(dispatchPermission?.allowDangerouslySkipPermissions
@@ -287,7 +289,7 @@ export async function buildSdkOptions(
     ...(disallowedTools.length > 0 ? { disallowedTools } : {}),
   };
 
-  if (currentMode === 'planning') {
+  if (currentMode === 'planning' && !isMetaAgent) {
     console.log('[CLAUDE-CODE] Plan mode active: delegating tool restrictions to SDK permissionMode=plan');
   } else if (currentMode === 'auto') {
     console.log('[CLAUDE-CODE] Auto mode active: SDK classifier handling permission decisions');
