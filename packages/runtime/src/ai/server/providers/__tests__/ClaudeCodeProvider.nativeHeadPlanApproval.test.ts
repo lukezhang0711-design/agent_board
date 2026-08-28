@@ -1,13 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClaudeCodeProvider } from '../ClaudeCodeProvider';
 
-type NativeHeadApproval = {
-  approved: boolean;
-  planId: string;
-  feedback?: string;
-  deliveryMethod: 'direct' | 'revive';
-};
-
 function createExitPlanModeProbe(agentRole: 'meta-agent' | 'standard') {
   const provider = Object.create(ClaudeCodeProvider.prototype) as ClaudeCodeProvider;
   const logAgentMessage = vi.fn().mockResolvedValue(undefined);
@@ -35,12 +28,10 @@ afterEach(() => {
 });
 
 describe('ClaudeCodeProvider native Head plan approval bridge', () => {
-  it('routes a Head native ExitPlanMode through the durable handler without a legacy abort waiter', async () => {
+  it('green EZ-3: rejects Head native ExitPlanMode without opening a second approval bridge', async () => {
     const { provider, logAgentMessage, emit } = createExitPlanModeProbe('meta-agent');
-    let resolveApproval: ((value: NativeHeadApproval) => void) | undefined;
-    const durableHandler = vi.fn().mockImplementation(() => new Promise<NativeHeadApproval>((resolve) => {
-      resolveApproval = resolve;
-    }));
+    (provider as any).currentMode = 'agent';
+    const durableHandler = vi.fn();
     nativeHandlerSetter()(durableHandler);
 
     const controller = new AbortController();
@@ -48,19 +39,16 @@ describe('ClaudeCodeProvider native Head plan approval bridge', () => {
       planFilePath: '/workspace/.claude/plans/claude-head-plan.md',
       plan: '完整中文方案',
     };
-    const completion = (provider as any).handleExitPlanMode('head-session', input, {
+    const result = await (provider as any).handleExitPlanMode('head-session', input, {
       signal: controller.signal,
       toolUseID: 'toolu_01V5qt_native_head',
     });
 
-    await vi.waitFor(() => {
-      expect(durableHandler).toHaveBeenCalledWith(expect.objectContaining({
-        sessionId: 'head-session',
-        requestId: 'toolu_01V5qt_native_head',
-        planSummary: '完整中文方案',
-        planFilePath: input.planFilePath,
-      }));
+    expect(result).toEqual({
+      behavior: 'deny',
+      message: 'Head sessions do not use Claude Code native Plan Mode or ExitPlanMode. Submit the plan through mcp__nimbalyst-meta-agent__submit_plan instead.',
     });
+    expect(durableHandler).not.toHaveBeenCalled();
     controller.abort();
     await Promise.resolve();
 
@@ -72,20 +60,6 @@ describe('ClaudeCodeProvider native Head plan approval bridge', () => {
         requestId: 'toolu_01V5qt_native_head',
       }),
     ]);
-
-    resolveApproval?.({
-      approved: true,
-      planId: 'plan-fb-072',
-      deliveryMethod: 'revive',
-    });
-    await expect(completion).resolves.toEqual({
-      behavior: 'allow',
-      updatedInput: {
-        ...input,
-        planId: 'plan-fb-072',
-      },
-    });
-    expect((provider as any).currentMode).toBe('agent');
     expect(logAgentMessage.mock.calls.map((call) => JSON.parse(call[3]))).not.toContainEqual(
       expect.objectContaining({ type: 'exit_plan_mode_response', cancelled: true }),
     );

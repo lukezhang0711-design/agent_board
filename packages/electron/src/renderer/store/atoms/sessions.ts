@@ -716,11 +716,18 @@ export const sessionLoadingAtom = atomFamily((_sessionId: string) =>
  */
 export const sessionModeAtom = atomFamily((sessionId: string) =>
   atom(
-    (get) => get(sessionStoreAtom(sessionId))?.mode || 'agent',
+    (get) => {
+      const current = get(sessionStoreAtom(sessionId));
+      if (current?.agentRole === 'meta-agent') return 'agent';
+      return current?.mode || 'agent';
+    },
     (get, set, newMode: AIMode) => {
       const current = get(sessionStoreAtom(sessionId));
       if (current) {
-        set(sessionStoreAtom(sessionId), { ...current, mode: newMode });
+        set(sessionStoreAtom(sessionId), {
+          ...current,
+          mode: current.agentRole === 'meta-agent' ? 'agent' : newMode,
+        });
       }
     }
   )

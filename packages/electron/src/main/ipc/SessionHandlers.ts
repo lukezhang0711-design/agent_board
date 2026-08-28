@@ -392,6 +392,11 @@ export async function registerSessionHandlers() {
                 throw new Error('Session not found');
             }
 
+            const nextAgentRole = updates.agentRole ?? currentSession.agentRole;
+            if (nextAgentRole === 'meta-agent' && updates.mode !== 'agent') {
+                updates = { ...updates, mode: 'agent' };
+            }
+
             // When model is updated, extract and sync the provider from the model ID
             // Model IDs follow the format "provider:model-name" (e.g., "claude-code:opus", "openai:gpt-4o")
             let providerType: AIProviderType | undefined;
@@ -448,6 +453,7 @@ export async function registerSessionHandlers() {
             if (updates.provider !== undefined) rendererUpdate.provider = updates.provider;
             if (updates.model !== undefined) rendererUpdate.model = updates.model;
             if (updates.sessionType !== undefined) rendererUpdate.sessionType = updates.sessionType;
+            if (updates.mode !== undefined) rendererUpdate.mode = updates.mode;
             if (updates.parentSessionId !== undefined) rendererUpdate.parentSessionId = updates.parentSessionId;
             if (updates.worktreeId !== undefined) rendererUpdate.worktreeId = updates.worktreeId;
             if (updates.agentRole !== undefined) rendererUpdate.agentRole = updates.agentRole;

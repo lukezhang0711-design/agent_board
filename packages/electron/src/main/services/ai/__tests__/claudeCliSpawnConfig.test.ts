@@ -120,6 +120,15 @@ describe('buildClaudeCliSpawnConfig', () => {
     expect(standard.env.MCP_TOOL_TIMEOUT).toBeUndefined();
   });
 
+  it('green EZ-1: forces Head CLI permission mode to manual without changing ordinary sessions', () => {
+    const head = buildClaudeCliSpawnConfig({ ...base, isMetaAgent: true });
+    const standard = buildClaudeCliSpawnConfig({ ...base, isMetaAgent: false });
+
+    expect(head.args).toContain('--permission-mode');
+    expect(head.args[head.args.indexOf('--permission-mode') + 1]).toBe('manual');
+    expect(standard.args).not.toContain('--permission-mode');
+  });
+
   it('merges observation extraEnv (e.g. Phase 3 ANTHROPIC_BASE_URL) but still strips the API key', () => {
     const cfg = buildClaudeCliSpawnConfig({
       ...base,

@@ -84,6 +84,27 @@ function installModelCatalog(response: unknown = liveModelCatalog()): void {
   });
 }
 
+function installSessionRole(role: 'standard' | 'meta-agent' = 'standard'): void {
+  const rendererWindow = window as unknown as {
+    electronAPI?: Record<string, unknown>;
+  };
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: {
+      ...(rendererWindow.electronAPI ?? {}),
+      invoke: vi.fn().mockImplementation(async (channel: string) => {
+        if (channel === 'sessions:get') {
+          return {
+            success: true,
+            session: { agentRole: role },
+          };
+        }
+        return { success: true };
+      }),
+    },
+  });
+}
+
 function makeMessage(
   arguments_: Record<string, unknown>,
   providerToolCallId: string | null = compositeRequestId,
@@ -229,6 +250,7 @@ const dispatchKnobPlanArguments = {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   delete (window as unknown as { electronAPI?: unknown }).electronAPI;
 });
@@ -1179,12 +1201,25 @@ describe('PlanApprovalWidget', () => {
     );
   });
 
-  it('leaves ordinary ExitPlanMode prompts unchanged when planId is absent', () => {
+  it('leaves ordinary ExitPlanMode prompts unchanged when planId is absent', async () => {
+    installSessionRole('standard');
     renderWidget({ planFilePath: 'docs/plan.md' });
 
-    expect(screen.getByText('Ready to exit planning mode?')).toBeTruthy();
+    expect(await screen.findByText('Ready to exit planning mode?')).toBeTruthy();
     expect(screen.getByText('Would you like to proceed?')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Approve plan' })).toBeNull();
     expect(screen.queryByTestId('meta-agent-plan-marker')).toBeNull();
+  });
+
+  it('green EZ-3: renders a native ExitPlanMode card as invalid in Head sessions', async () => {
+    installSessionRole('meta-agent');
+    renderWidget({ planFilePath: 'nimbalyst-local/plans/gentle-dancing-pie.md' });
+
+    const card = await screen.findByTestId('head-native-exit-plan-mode-blocked');
+    expect(card.getAttribute('data-state')).toBe('invalid');
+    expect(screen.getByText(/Head 的方案请走正牌方案卡/)).toBeTruthy();
+    expect(screen.getByText(/gentle-dancing-pie\.md/)).toBeTruthy();
+    expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Proceed' })).toBeNull();
   });
 });

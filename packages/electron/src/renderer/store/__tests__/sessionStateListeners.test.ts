@@ -22,6 +22,7 @@ import {
   sessionRegistryAtom,
   sessionChildrenAtom,
   sessionLastActivityAtom,
+  sessionModeAtom,
   sessionStoreAtom,
   type SessionMeta,
 } from '../atoms/sessions';
@@ -114,6 +115,44 @@ function makeLongSession(sessionId: string, count = 10_000): SessionData {
     updatedAt: now,
   };
 }
+
+describe('FB-130 Head mode synchronization', () => {
+  it('red/green EZ-3: treats Head as agent even when stored data says planning', () => {
+    const sessionId = uniqueSessionId('head-plan-desync');
+    store.set(sessionStoreAtom(sessionId), {
+      ...makeLongSession(sessionId, 0),
+      agentRole: 'meta-agent',
+      mode: 'planning',
+    } as SessionData);
+
+    expect(store.get(sessionModeAtom(sessionId))).toBe('agent');
+
+    store.set(sessionModeAtom(sessionId), 'planning');
+
+    expect(store.get(sessionModeAtom(sessionId))).toBe('agent');
+    expect(store.get(sessionStoreAtom(sessionId))?.mode).toBe('agent');
+
+    sessionStoreAtom.remove(sessionId);
+    sessionModeAtom.remove(sessionId);
+  });
+
+  it('green EZ-4: ordinary sessions keep planning mode selectable', () => {
+    const sessionId = uniqueSessionId('ordinary-plan-mode');
+    store.set(sessionStoreAtom(sessionId), {
+      ...makeLongSession(sessionId, 0),
+      agentRole: 'standard',
+      mode: 'agent',
+    } as SessionData);
+
+    store.set(sessionModeAtom(sessionId), 'planning');
+
+    expect(store.get(sessionModeAtom(sessionId))).toBe('planning');
+    expect(store.get(sessionStoreAtom(sessionId))?.mode).toBe('planning');
+
+    sessionStoreAtom.remove(sessionId);
+    sessionModeAtom.remove(sessionId);
+  });
+});
 
 function makeAssistantEvent(sessionId: string, id: number, text: string): TranscriptEvent {
   return {

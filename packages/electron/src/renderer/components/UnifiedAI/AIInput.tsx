@@ -1300,6 +1300,19 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
       }
     }, []);
 
+    const showModeControl = !!(
+      onModeChange &&
+      provider === 'claude-code' &&
+      mode &&
+      !disableModeToggle
+    );
+    const showInlineControls = showModeControl
+      || onModelChange
+      || readOnlyModel
+      || resolvedModel
+      || workspacePath
+      || (tokenUsage && provider === 'claude-code');
+
     return (
       <div className={`ai-chat-input flex flex-col gap-1.5 px-3 py-1.5 border-t border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0 relative ${isMemoryMode ? 'memory-mode' : ''}`}>
         {/* Vertical resize handle at top of input area */}
@@ -1351,14 +1364,14 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
         />
 
         {/* Inline controls row - hidden in memory mode */}
-        {!isMemoryMode && (onModeChange || onModelChange || readOnlyModel || resolvedModel || workspacePath || (tokenUsage && provider === 'claude-code')) && (
+        {!isMemoryMode && showInlineControls && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
           }}>
-            {onModeChange && provider === 'claude-code' && mode && (
-              <ModeTag mode={mode} onModeChange={onModeChange} disabled={disableModeToggle} />
+            {showModeControl && (
+              <ModeTag mode={mode} onModeChange={onModeChange} />
             )}
 
             {(onModelChange || (readOnlyModel && currentModel)) && (

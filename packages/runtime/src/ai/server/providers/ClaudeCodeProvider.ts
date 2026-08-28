@@ -2620,11 +2620,6 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
     input: any,
     options: { signal: AbortSignal; toolUseID?: string },
   ): Promise<{ behavior: 'allow' | 'deny'; updatedInput?: any; message?: string }> {
-    // If not in planning mode, allow immediately (no confirmation needed)
-    if (this.currentMode !== 'planning') {
-      return { behavior: 'allow', updatedInput: input };
-    }
-
     const planFilePath = input?.planFilePath || '';
     if (!planFilePath) {
       return {
@@ -2633,12 +2628,17 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       };
     }
 
+    const isMetaAgent = await this.getAgentRole(sessionId) === 'meta-agent';
+    if (!isMetaAgent && this.currentMode !== 'planning') {
+      return { behavior: 'allow', updatedInput: input };
+    }
+
     const requestId = options.toolUseID || `exit-plan-${sessionId}-${Date.now()}`;
     const planSummary = input?.plan || '';
 
     // Retain the SDK-native request as audit evidence. It deliberately has no
-    // planId; Meta Heads immediately create a second, canonical tool-use row
-    // below via the durable approval state machine.
+    // planId. Head renders it as an invalid native-plan request; ordinary plan
+    // sessions use it as their existing interactive approval prompt.
     const exitPlanModeContent = {
       type: 'exit_plan_mode_request' as const,
       requestId,
@@ -2656,57 +2656,14 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
       );
     }
 
-    // A Meta Head must never use the provider-local map: its approval can outlive
-    // the SDK callback and needs the durable submit → respond → deliver → close
-    // lifecycle. Ordinary sessions deliberately retain their legacy behavior.
-    const isMetaAgent = await this.getAgentRole(sessionId) === 'meta-agent';
+    // Head does not use Claude Code's native Plan Mode at all. It has Nimbalyst's
+    // stricter submit_plan approval card, so a native ExitPlanMode request is an
+    // invalid second approval path, even when Nimbalyst's stored mode is `agent`.
     if (isMetaAgent) {
-      const handler = ClaudeCodeProvider.nativeHeadPlanApprovalHandler;
-      if (!handler || !sessionId) {
-        return {
-          behavior: 'deny',
-          message: 'The durable plan approval service is unavailable. Keep planning and retry ExitPlanMode once it is ready.',
-        };
-      }
-
-      try {
-        const approval = await handler({
-          sessionId,
-          requestId,
-          planSummary,
-          planFilePath,
-          signal: options.signal,
-        });
-        if (!approval) {
-          return {
-            behavior: 'deny',
-            message: 'The durable plan approval service could not confirm this Head session. Keep planning and retry ExitPlanMode.',
-          };
-        }
-        if (approval.approved) {
-          this.currentMode = 'agent';
-          return {
-            behavior: 'allow',
-            // ExitPlanModeInput permits extension fields. Preserve the native
-            // request while making the approved planId available to the next
-            // dispatch call, where FB-004 validates it.
-            updatedInput: { ...input, planId: approval.planId },
-          };
-        }
-        const feedbackText = approval.feedback
-          ? `\n\nUser feedback: "${approval.feedback}"`
-          : '';
-        return {
-          behavior: 'deny',
-          message: `The user chose to continue planning.${feedbackText}`,
-        };
-      } catch (error) {
-        console.error('[CLAUDE-CODE] Durable Head ExitPlanMode failed:', error);
-        return {
-          behavior: 'deny',
-          message: 'The durable plan approval could not be submitted. Keep planning and retry ExitPlanMode.',
-        };
-      }
+      return {
+        behavior: 'deny',
+        message: 'Head sessions do not use Claude Code native Plan Mode or ExitPlanMode. Submit the plan through mcp__nimbalyst-meta-agent__submit_plan instead.',
+      };
     }
 
     // Create a promise that will be resolved when user responds via the widget

@@ -235,6 +235,20 @@ describe('buildSdkOptions env-key hardening', () => {
     }
   });
 
+  it('green EZ-1: forces Head SDK permission mode to default even if stored mode says planning', async () => {
+    const head = await buildSdkOptions(
+      makeDeps(),
+      makeParams({ isMetaAgent: true, currentMode: 'planning' }),
+    );
+    const standard = await buildSdkOptions(
+      makeDeps(),
+      makeParams({ isMetaAgent: false, currentMode: 'planning' }),
+    );
+
+    expect(head.options.permissionMode).toBe('default');
+    expect(standard.options.permissionMode).toBe('plan');
+  });
+
   it.each([
     ['claude-code:opus-5', 'opus-5'],
     ['claude-code:sonnet-5', 'sonnet-5'],
