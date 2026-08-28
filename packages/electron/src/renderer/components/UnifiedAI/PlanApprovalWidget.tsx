@@ -167,6 +167,37 @@ function parseDurableDispatchSelections(
   }, {});
 }
 
+function parseDurableModuleRouteSelections(
+  value: unknown,
+): Record<number, ModuleRouteSelection> {
+  if (!Array.isArray(value)) return {};
+  return value.reduce<Record<number, ModuleRouteSelection>>((selections, candidate) => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      return selections;
+    }
+    const record = candidate as Record<string, unknown>;
+    if (
+      typeof record.moduleIndex !== 'number'
+      || !Number.isInteger(record.moduleIndex)
+      || record.moduleIndex < 0
+    ) {
+      return selections;
+    }
+    const provider = typeof record.provider === 'string' ? record.provider.trim() : '';
+    const model = typeof record.model === 'string' ? record.model.trim() : '';
+    const modelId = toProviderQualifiedModelId(provider, model);
+    if (!modelId) return selections;
+    const effortLevel = isPlanEffortLevel(record.effortLevel)
+      ? record.effortLevel.trim() as PlanEffortLevel
+      : undefined;
+    selections[record.moduleIndex] = {
+      model: modelId,
+      ...(effortLevel ? { effortLevel } : {}),
+    };
+    return selections;
+  }, {});
+}
+
 function parseDurableSkillSelections(
   value: unknown,
 ): Record<number, DispatchSkillSelection> {
@@ -724,6 +755,12 @@ const SubmittedPlanApprovalCard: React.FC<{
   );
   const durableState = useAtomValue(planApprovalStateAtom(approvalStateKey));
   const refreshPlanApprovalState = useSetAtom(refreshPlanApprovalStateAtom);
+  const durableModuleRouteSelections = useMemo(
+    () => durableState?.decision === 'approved'
+      ? parseDurableModuleRouteSelections(durableState.selectedCandidates)
+      : {},
+    [durableState?.decision, durableState?.selectedCandidates],
+  );
   const durableDispatchSelections = useMemo(
     () => durableState?.decision === 'approved'
       ? parseDurableDispatchSelections(durableState.selectedCandidates)
@@ -812,7 +849,8 @@ const SubmittedPlanApprovalCard: React.FC<{
   const moduleRoutes = useMemo<(ResolvedModuleRoute | null)[]>(
     () =>
       modules.map((module, moduleIndex) => {
-        const selection = moduleRouteSelections[moduleIndex];
+        const selection = moduleRouteSelections[moduleIndex]
+          ?? durableModuleRouteSelections[moduleIndex];
         const modelId = selection?.model
           ?? toProviderQualifiedModelId(module.provider, module.model);
         const model = catalogModelsById.get(modelId);
@@ -828,7 +866,7 @@ const SubmittedPlanApprovalCard: React.FC<{
             }
           : null;
       }),
-    [catalogModelsById, moduleRouteSelections, modules],
+    [catalogModelsById, durableModuleRouteSelections, moduleRouteSelections, modules],
   );
   const hasUnavailableModuleRoute =
     modules.length > 0
@@ -1655,6 +1693,38 @@ const SubmittedPlanApprovalCard: React.FC<{
               const selectedCandidate = selectedCandidateName
                 ? module.candidates.find((candidate) => candidate.name === selectedCandidateName)
                 : undefined;
+              const suggestedRouteProvider = selectedCandidate?.provider ?? module.provider;
+              const suggestedRouteModel = toProviderQualifiedModelId(
+                suggestedRouteProvider,
+                selectedCandidate?.model ?? module.model,
+              );
+              const suggestedRouteModelText =
+                suggestedRouteModel || getDisplayString(selectedCandidate?.model ?? module.model);
+              const providerChanged = Boolean(
+                moduleRoute
+                && suggestedRouteProvider
+                && moduleRoute.provider !== suggestedRouteProvider,
+              );
+              const modelChanged = Boolean(
+                moduleRoute
+                && suggestedRouteModel
+                && moduleRoute.model !== suggestedRouteModel,
+              );
+              const suggestedRouteModelRecord = suggestedRouteModel
+                ? catalogModelsById.get(suggestedRouteModel)
+                : undefined;
+              const suggestedEffortLevel = resolveModuleEffortLevel(
+                suggestedRouteModelRecord,
+                selectedCandidate?.effortLevel ?? module.effortLevel,
+              );
+              const effortLevelChanged = Boolean(
+                moduleRoute
+                && routeModel
+                && routeModel.supportedEffortLevels.length > 0
+                && suggestedEffortLevel
+                && moduleRoute.effortLevel
+                && suggestedEffortLevel !== moduleRoute.effortLevel,
+              );
               const providerForSkills = moduleRoute?.provider ?? module.provider;
               const skillSelection = moduleSkillSelectionsResolved[moduleIndex] ?? { skillIds: [] };
               const suggestedSkillSelection = expandDispatchSkillSelection(
@@ -1684,6 +1754,7 @@ const SubmittedPlanApprovalCard: React.FC<{
               const isModuleRejected = moduleApproval.status === 'rejected';
               const isModuleFeedbackOpen =
                 activeFeedbackModuleIndex === stableModuleIndex;
+              const moduleControlsDisabled = isSubmitting || displayResult !== null;
               return (
                 <section
                   key={`${moduleIndex}-${module.title}`}
@@ -1752,7 +1823,17 @@ const SubmittedPlanApprovalCard: React.FC<{
                         提供方
                       </dt>
                       <dd className="mt-1 break-words text-nim select-text">
-                        {moduleRoute?.provider ?? module.provider}
+                        <span data-testid={`plan-module-provider-value-${stableModuleIndex}`}>
+                          {moduleRoute?.provider ?? module.provider}
+                        </span>
+                        {providerChanged && moduleRoute && (
+                          <p
+                            data-testid={`plan-module-provider-trace-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-nim-muted"
+                          >
+                            Head 建议：{suggestedRouteProvider} → 当前：{moduleRoute.provider}
+                          </p>
+                        )}
                       </dd>
                     </div>
                     <div
@@ -1775,7 +1856,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             )
                           }
                           disabled={
-                            modelCatalog.status !== 'ready' || isSubmitting
+                            modelCatalog.status !== 'ready' || moduleControlsDisabled
                           }
                           className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
@@ -1801,6 +1882,14 @@ const SubmittedPlanApprovalCard: React.FC<{
                             Head 报的型号 <code>{module.model}</code> 不在当前清单里，请选一个
                           </p>
                         ) : null}
+                        {modelChanged && moduleRoute && (
+                          <p
+                            data-testid={`plan-module-model-trace-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-nim-muted"
+                          >
+                            Head 建议：{suggestedRouteModelText} → 当前：{moduleRoute.model}
+                          </p>
+                        )}
                       </dd>
                     </div>
                     {routeModel && routeModel.supportedEffortLevels.length > 0 && (
@@ -1823,7 +1912,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                                 event.target.value,
                               )
                             }
-                            disabled={isSubmitting}
+                            disabled={moduleControlsDisabled}
                             className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {routeModel.supportedEffortLevels.map((effortLevel) => (
@@ -1832,6 +1921,14 @@ const SubmittedPlanApprovalCard: React.FC<{
                               </option>
                             ))}
                           </select>
+                          {effortLevelChanged && moduleRoute && (
+                            <p
+                              data-testid={`plan-module-effort-trace-${stableModuleIndex}`}
+                              className="mt-1 text-xs text-nim-muted"
+                            >
+                              Head 建议：{suggestedEffortLevel} → 当前：{moduleRoute.effortLevel}
+                            </p>
+                          )}
                         </dd>
                       </div>
                     )}
@@ -1861,7 +1958,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             )
                           }
                           disabled={
-                            isSubmitting
+                            moduleControlsDisabled
                             || dispatchCapabilities.permissionScopes.length === 0
                           }
                           className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -1912,7 +2009,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             )
                           }
                           disabled={
-                            isSubmitting
+                            moduleControlsDisabled
                             || dispatchCapabilities.disturbanceLevels.length === 0
                           }
                           className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -1968,7 +2065,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           onChange={(event) =>
                             handleModuleSkillBundleChange(moduleIndex, event.target.value)
                           }
-                          disabled={isSubmitting || skillLibrary.status === 'loading'}
+                          disabled={moduleControlsDisabled || skillLibrary.status === 'loading'}
                           className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">不授予</option>
@@ -1993,7 +2090,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                                 <button
                                   type="button"
                                   aria-label={`移除 ${skill.name}`}
-                                  disabled={isSubmitting}
+                                  disabled={moduleControlsDisabled}
                                   onClick={() => handleModuleSkillRemove(moduleIndex, skill.id)}
                                   className="text-nim-muted hover:text-nim disabled:cursor-not-allowed disabled:opacity-50"
                                 >
@@ -2018,7 +2115,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             handleModuleSkillAdd(moduleIndex, event.target.value);
                             event.currentTarget.value = '';
                           }}
-                          disabled={isSubmitting || addableSkills.length === 0}
+                          disabled={moduleControlsDisabled || addableSkills.length === 0}
                           className="mt-2 w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">搜索添加技能</option>
@@ -2084,6 +2181,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                                   type="radio"
                                   name={`plan-candidate-${args.planId}-${moduleIndex}`}
                                   value={candidate.name}
+                                  disabled={moduleControlsDisabled}
                                   checked={
                                     selectedCandidateNames[moduleIndex] ===
                                     candidate.name
