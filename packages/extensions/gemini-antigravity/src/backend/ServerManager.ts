@@ -43,6 +43,11 @@ export {
 export type { AgyModelDescriptor } from './agyModelCatalog';
 
 const SERVICE = 'exa.language_server_pb.LanguageServerService';
+export const AGY_STREAM_IDLE_TIMEOUT_MS = 4 * 60_000;
+export const AGY_STREAM_TOTAL_TIMEOUT_MS = 25 * 60_000;
+const AGY_STREAM_START_TIMEOUT_MS = 120_000;
+const AGY_FALLBACK_EXIT_GRACE_MS = 5_000;
+const AGY_FALLBACK_NOTICE = '已回落一句话模式';
 
 // Fallback defaults if the host doesn't supply config (e.g. dev harness, tests).
 // Keep these in sync with the canonical runtime values. The host SHOULD always
@@ -136,6 +141,13 @@ class AgyProcessFailure extends Error {
   }
 }
 
+class AgyStreamUnavailableError extends AntigravityAgyError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AgyStreamUnavailableError';
+  }
+}
+
 export interface AgyParsedResponse {
   text: string;
   conversationId?: string;
@@ -151,6 +163,402 @@ export interface AgyExecutionOptions {
       include_only: string[];
     };
   };
+}
+
+interface AgyStreamSessionOptions {
+  binary: string;
+  modelKey?: string;
+  conversationId?: string;
+  workspacePath?: string;
+  executionOptions?: AgyExecutionOptions;
+  agySpawn: typeof spawn;
+}
+
+interface PendingAgyTurn {
+  resolve: (value: AgyParsedResponse) => void;
+  reject: (error: Error) => void;
+  text: string;
+  startedAt: number;
+  totalTimeoutMs: number;
+  idleTimer?: ReturnType<typeof setTimeout>;
+  totalTimer?: ReturnType<typeof setTimeout>;
+}
+
+interface AgyStreamStartState {
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timer?: ReturnType<typeof setTimeout>;
+  settled: boolean;
+}
+
+class AgyStreamSession {
+  private child: ChildProcess | null = null;
+  private starting: Promise<void> | null = null;
+  private startState: AgyStreamStartState | null = null;
+  private closed = false;
+  private stdoutBuffer = '';
+  private rawStdout = '';
+  private stderr = '';
+  private pending: PendingAgyTurn | null = null;
+  private conversationId?: string;
+
+  constructor(private readonly options: AgyStreamSessionOptions) {
+    this.conversationId = options.conversationId;
+  }
+
+  isClosed(): boolean {
+    return this.closed || this.child === null;
+  }
+
+  async runTurn(prompt: string, totalTimeoutMs: number): Promise<AgyParsedResponse> {
+    await this.ensureStarted();
+    if (!this.child || this.closed) {
+      throw new AgyStreamUnavailableError('agy stream-json process is not running');
+    }
+    if (this.pending) {
+      throw new AntigravityAgyProtocolError('agy stream-json turn requested while another turn is still pending');
+    }
+
+    return new Promise<AgyParsedResponse>((resolve, reject) => {
+      const pending: PendingAgyTurn = {
+        resolve,
+        reject,
+        text: '',
+        startedAt: Date.now(),
+        totalTimeoutMs,
+      };
+      this.pending = pending;
+      this.armTurnTimers(pending);
+      try {
+        const payload = JSON.stringify({
+          event: 'user',
+          message: { role: 'user', content: prompt },
+        }) + '\n';
+        if (!this.child?.stdin || typeof this.child.stdin.write !== 'function') {
+          throw new AgyStreamUnavailableError('agy stream-json process did not expose stdin');
+        }
+        this.child.stdin.write(payload);
+      } catch (err) {
+        this.rejectPending(
+          err instanceof Error ? err : new Error(String(err)),
+        );
+      }
+    });
+  }
+
+  dispose(): void {
+    this.closed = true;
+    this.finishStart(
+      new AgyStreamUnavailableError('agy stream-json process was disposed before it became ready'),
+    );
+    this.rejectPending(
+      new AgyProcessFailure('agy stream-json process was disposed', this.rawStdout, this.stderr, null),
+    );
+    if (this.child && !this.child.killed) {
+      try {
+        this.child.kill('SIGTERM');
+      } catch {
+        /* best effort */
+      }
+    }
+    this.child = null;
+  }
+
+  private ensureStarted(): Promise<void> {
+    if (this.child && !this.closed) return Promise.resolve();
+    if (this.starting) return this.starting;
+    this.closed = false;
+    this.stdoutBuffer = '';
+    this.rawStdout = '';
+    this.stderr = '';
+
+    this.starting = new Promise<void>((resolve, reject) => {
+      const startState: AgyStreamStartState = {
+        resolve,
+        reject,
+        settled: false,
+      };
+      this.startState = startState;
+      startState.timer = setTimeout(() => {
+        this.closed = true;
+        if (this.child && !this.child.killed) {
+          try {
+            this.child.kill('SIGTERM');
+          } catch {
+            /* best effort */
+          }
+        }
+        this.finishStart(new AgyStreamUnavailableError(
+          `agy stream-json did not emit init within ${Math.ceil(AGY_STREAM_START_TIMEOUT_MS / 1000)}s`,
+        ));
+      }, AGY_STREAM_START_TIMEOUT_MS);
+
+      const spawnOptions: SpawnOptions = {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        detached: false,
+        windowsHide: true,
+        env: sanitizedAgyEnvironment(),
+        ...(this.options.workspacePath && safeExists(this.options.workspacePath)
+          ? { cwd: this.options.workspacePath }
+          : {}),
+      };
+
+      try {
+        const child = this.options.agySpawn(this.options.binary, this.buildArgs(), spawnOptions);
+        this.child = child;
+        child.stdout?.on('data', (chunk: Buffer) => this.onStdout(chunk));
+        child.stderr?.on('data', (chunk: Buffer) => {
+          this.stderr = appendCapped(this.stderr, chunk);
+        });
+        child.on('error', (err) => {
+          const failure = new AgyProcessFailure(
+            `agy stream-json spawn failed: ${err instanceof Error ? err.message : String(err)}`,
+            this.rawStdout,
+            this.stderr,
+            null,
+          );
+          this.finishStart(failure);
+          this.rejectPending(failure);
+        });
+        child.on('close', (code) => this.onClose(code));
+      } catch (err) {
+        this.finishStart(new AgyProcessFailure(
+          `agy stream-json spawn failed: ${err instanceof Error ? err.message : String(err)}`,
+          this.rawStdout,
+          this.stderr,
+          null,
+        ));
+      }
+    }).finally(() => {
+      this.starting = null;
+    });
+
+    return this.starting;
+  }
+
+  private buildArgs(): string[] {
+    const args = [
+      '--input-format', 'stream-json',
+      '--output-format', 'stream-json',
+      '--print-timeout', formatAgyTimeout(AGY_STREAM_TOTAL_TIMEOUT_MS),
+    ];
+    if (this.conversationId) {
+      args.push('--conversation', this.conversationId);
+    } else if (this.options.modelKey) {
+      args.push('--model', extractAgyModelKey(this.options.modelKey));
+    }
+    if (this.options.executionOptions?.mode) {
+      args.push('--mode', this.options.executionOptions.mode);
+    }
+    if (this.options.executionOptions?.dangerouslySkipPermissions) {
+      args.push('--dangerously-skip-permissions');
+    }
+    args.push('--print=');
+    return args;
+  }
+
+  private onStdout(chunk: Buffer): void {
+    this.rawStdout = appendCapped(this.rawStdout, chunk);
+    this.stdoutBuffer += chunk.toString('utf8');
+    let newlineIndex: number;
+    while ((newlineIndex = this.stdoutBuffer.indexOf('\n')) >= 0) {
+      const line = this.stdoutBuffer.slice(0, newlineIndex);
+      this.stdoutBuffer = this.stdoutBuffer.slice(newlineIndex + 1);
+      if (!line.trim()) continue;
+      this.handleLine(line);
+    }
+  }
+
+  private handleLine(line: string): void {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(line) as unknown;
+    } catch {
+      return;
+    }
+    this.markActivity();
+    const record = asRecord(parsed);
+    const event = typeof record?.event === 'string' ? record.event : '';
+    this.captureConversationId(parsed);
+
+    if (event === 'init') {
+      this.finishStart(null);
+      return;
+    }
+
+    if (event === 'step_update') {
+      this.appendStepText(record?.step_update);
+      return;
+    }
+
+    if (event === 'result') {
+      this.handleResult(record?.result, line);
+    }
+  }
+
+  private captureConversationId(value: unknown): void {
+    const conversationId = findDeepString(value, [
+      'conversation_id', 'conversationId', 'conversationID',
+      'session_id', 'sessionId',
+    ]);
+    if (conversationId) this.conversationId = conversationId;
+  }
+
+  private appendStepText(value: unknown): void {
+    if (!this.pending) return;
+    const record = asRecord(value);
+    const textDelta = typeof record?.text_delta === 'string'
+      ? record.text_delta
+      : typeof record?.textDelta === 'string'
+        ? record.textDelta
+        : '';
+    if (textDelta) this.pending.text += textDelta;
+  }
+
+  private handleResult(value: unknown, rawLine: string): void {
+    const result = asRecord(value);
+    const status = typeof result?.status === 'string' ? result.status : '';
+    const errorText =
+      typeof result?.error === 'string' && result.error.trim()
+        ? result.error.trim()
+        : typeof result?.error_message === 'string' && result.error_message.trim()
+          ? result.error_message.trim()
+          : '';
+    if (status && status !== 'SUCCESS') {
+      const failure = new AgyProcessFailure(
+        `agy stream-json returned ${status}${errorText ? `: ${errorText}` : ''}`,
+        this.rawStdout || rawLine,
+        this.stderr,
+        null,
+      );
+      this.finishStart(failure);
+      this.rejectPending(failure);
+      return;
+    }
+
+    const response = typeof result?.response === 'string' ? result.response : '';
+    const parsed = parseAgyOutput(JSON.stringify({
+      result: response || this.pending?.text || '',
+      conversation_id: this.conversationId,
+    }));
+    this.resolvePending(parsed);
+  }
+
+  private onClose(code: number | null): void {
+    if (this.stdoutBuffer.trim()) {
+      this.handleLine(this.stdoutBuffer);
+      this.stdoutBuffer = '';
+    }
+    const failure = this.makeCloseFailure(code);
+    this.closed = true;
+    this.child = null;
+    if (this.startState && !this.startState.settled) {
+      this.finishStart(this.classifyStartFailure(failure));
+    }
+    if (this.pending) {
+      this.rejectPending(failure);
+    }
+  }
+
+  private makeCloseFailure(code: number | null): AgyProcessFailure {
+    const details = [this.stderr.trim(), this.rawStdout.trim()].filter(Boolean).join('\n');
+    return new AgyProcessFailure(
+      `agy stream-json exited with code ${code ?? 'unknown'}${details ? `: ${details}` : ''}`,
+      this.rawStdout,
+      this.stderr,
+      code,
+    );
+  }
+
+  private classifyStartFailure(failure: AgyProcessFailure): Error {
+    const raw = [failure.message, failure.stderr, failure.stdout].filter(Boolean).join('\n');
+    const looksLikeUnsupportedStream =
+      /unknown flag|flag provided but not defined|invalid input format|input-format|output-format|print-timeout|stream-json .*not supported|not support.*stream-json/i.test(raw)
+      && !/invalid .*model|model .*not recognized|available models|not.?logged.?in|not authenticated|unauthenticated|oauth|login|401/i.test(raw);
+    if (looksLikeUnsupportedStream) {
+      return new AgyStreamUnavailableError(`agy stream-json unavailable: ${truncate(raw)}`);
+    }
+    return failure;
+  }
+
+  private finishStart(error: Error | null): void {
+    const startState = this.startState;
+    if (!startState || startState.settled) return;
+    startState.settled = true;
+    if (startState.timer) clearTimeout(startState.timer);
+    this.startState = null;
+    if (error) startState.reject(error);
+    else startState.resolve();
+  }
+
+  private armTurnTimers(pending: PendingAgyTurn): void {
+    pending.idleTimer = setTimeout(() => {
+      this.failPendingTimeout(
+        '无活动超时',
+        AGY_STREAM_IDLE_TIMEOUT_MS,
+      );
+    }, AGY_STREAM_IDLE_TIMEOUT_MS);
+    pending.totalTimer = setTimeout(() => {
+      this.failPendingTimeout(
+        '总时长超限',
+        pending.totalTimeoutMs,
+      );
+    }, pending.totalTimeoutMs);
+  }
+
+  private markActivity(): void {
+    const pending = this.pending;
+    if (!pending) return;
+    if (pending.idleTimer) clearTimeout(pending.idleTimer);
+    pending.idleTimer = setTimeout(() => {
+      this.failPendingTimeout(
+        '无活动超时',
+        AGY_STREAM_IDLE_TIMEOUT_MS,
+      );
+    }, AGY_STREAM_IDLE_TIMEOUT_MS);
+  }
+
+  private failPendingTimeout(kind: '无活动超时' | '总时长超限', limitMs: number): void {
+    const pending = this.pending;
+    if (!pending) return;
+    const elapsedMs = Date.now() - pending.startedAt;
+    this.rejectPending(new AntigravityAgyTimeoutError(
+      `agy stream-json ${kind} after ${Math.ceil(elapsedMs / 1000)}s ` +
+      `(${elapsedMs}ms elapsed; limit ${Math.ceil(limitMs / 1000)}s)`,
+    ));
+    this.closed = true;
+    if (this.child && !this.child.killed) {
+      try {
+        this.child.kill('SIGTERM');
+      } catch {
+        /* best effort */
+      }
+    }
+  }
+
+  private clearPendingTimers(pending: PendingAgyTurn): void {
+    if (pending.idleTimer) clearTimeout(pending.idleTimer);
+    if (pending.totalTimer) clearTimeout(pending.totalTimer);
+  }
+
+  private resolvePending(value: AgyParsedResponse): void {
+    const pending = this.pending;
+    if (!pending) return;
+    this.pending = null;
+    this.clearPendingTimers(pending);
+    pending.resolve({
+      ...value,
+      conversationId: value.conversationId ?? this.conversationId,
+    });
+  }
+
+  private rejectPending(error: Error): void {
+    const pending = this.pending;
+    if (!pending) return;
+    this.pending = null;
+    this.clearPendingTimers(pending);
+    pending.reject(error);
+  }
 }
 
 export type GeminiLoginProbeState = 'logged-in' | 'logged-out' | 'unknown';
@@ -225,6 +633,8 @@ export class AntigravityServerManager {
   private enumCache = new Map<string, string>();
   /** Session key -> agy conversation id, owned only by this backend process. */
   private agyConversationIds = new Map<string, string>();
+  /** Session key -> persistent agy stream-json process. */
+  private agyStreamSessions = new Map<string, AgyStreamSession>();
   /** First-use model discovery cache; a failed probe is retryable and never fabricates rows. */
   private agyModelCatalogPromise: Promise<readonly AgyModelDescriptor[]> | null = null;
 
@@ -387,6 +797,10 @@ export class AntigravityServerManager {
     this.child = null;
     this.endpoint = null;
     this.enumCache.clear();
+    for (const session of this.agyStreamSessions.values()) {
+      session.dispose();
+    }
+    this.agyStreamSessions.clear();
     this.agyConversationIds.clear();
     this.agyModelCatalogPromise = null;
   }
@@ -473,7 +887,10 @@ export class AntigravityServerManager {
 
   /** Drop a CLI conversation id when the host creates or cleans up a session. */
   resetConversation(conversationKey = 'default'): void {
-    this.agyConversationIds.delete(conversationKey);
+    const key = conversationKey || 'default';
+    this.agyStreamSessions.get(key)?.dispose();
+    this.agyStreamSessions.delete(key);
+    this.agyConversationIds.delete(key);
   }
 
   // ---- RPC ---------------------------------------------------------------
@@ -682,7 +1099,61 @@ export class AntigravityServerManager {
     executionOptions?: AgyExecutionOptions,
   ): Promise<string> {
     const key = conversationKey || 'default';
-    const conversationId = this.agyConversationIds.get(key);
+    const totalTimeoutMs = Math.max(timeoutMs, AGY_STREAM_TOTAL_TIMEOUT_MS);
+    let session = this.agyStreamSessions.get(key);
+    if (!session || session.isClosed()) {
+      session = new AgyStreamSession({
+        binary,
+        modelKey: modelKey ? this.resolveAgyModel(modelKey) : undefined,
+        conversationId: this.agyConversationIds.get(key),
+        workspacePath,
+        executionOptions,
+        agySpawn: this.agySpawn,
+      });
+      this.agyStreamSessions.set(key, session);
+    }
+
+    try {
+      const parsed = await session.runTurn(prompt, totalTimeoutMs);
+      if (parsed.conversationId) {
+        this.agyConversationIds.set(conversationKey, parsed.conversationId);
+      }
+      if (!parsed.text) {
+        throw new AntigravityAgyProtocolError(
+          `agy stream-json returned no response text for conversation ${parsed.conversationId ?? '(unknown)'}`,
+        );
+      }
+      return parsed.text;
+    } catch (err) {
+      if (session.isClosed()) {
+        this.agyStreamSessions.delete(key);
+      }
+      if (err instanceof AgyStreamUnavailableError) {
+        const text = await this.getAgyModelResponseOneShot(
+          prompt,
+          modelKey,
+          totalTimeoutMs,
+          key,
+          workspacePath,
+          binary,
+          executionOptions,
+        );
+        return `${AGY_FALLBACK_NOTICE}\n\n${text}`;
+      }
+      throw this.normalizeAgyError(err);
+    }
+  }
+
+  private async getAgyModelResponseOneShot(
+    prompt: string,
+    modelKey: string | undefined,
+    timeoutMs: number,
+    conversationKey: string,
+    workspacePath: string | undefined,
+    binary: string,
+    executionOptions?: AgyExecutionOptions,
+  ): Promise<string> {
+    const conversationId = this.agyConversationIds.get(conversationKey);
     const args = ['-p', prompt];
     if (conversationId) {
       args.push('--conversation', conversationId);
@@ -706,7 +1177,12 @@ export class AntigravityServerManager {
     );
 
     try {
-      const stdout = await this.runAgy(binary, args, timeoutMs, workspacePath);
+      const stdout = await this.runAgy(
+        binary,
+        args,
+        timeoutMs + AGY_FALLBACK_EXIT_GRACE_MS,
+        workspacePath,
+      );
       const parsed = parseAgyOutput(stdout);
       if (!parsed.text) {
         throw new AntigravityAgyProtocolError(
@@ -720,7 +1196,7 @@ export class AntigravityServerManager {
             `Raw output: ${truncate(stdout)}`,
           );
         }
-        this.agyConversationIds.set(key, parsed.conversationId);
+        this.agyConversationIds.set(conversationKey, parsed.conversationId);
       }
       return parsed.text;
     } catch (err) {
@@ -1229,6 +1705,12 @@ function safeExists(candidate: string): boolean {
 
 function formatAgyTimeout(timeoutMs: number): string {
   return `${Math.max(1, Math.ceil(timeoutMs / 1000))}s`;
+}
+
+function appendCapped(current: string, chunk: Buffer, max = 256 * 1024): string {
+  return current.length >= max
+    ? current
+    : current + chunk.toString('utf8').slice(0, max - current.length);
 }
 
 function sanitizedAgyEnvironment(): NodeJS.ProcessEnv {
