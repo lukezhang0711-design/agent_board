@@ -20,6 +20,25 @@ function makeProto(getModelResponse: (p: string) => Promise<string>, maxIteratio
   return { proto, spy: server.getModelResponse as unknown as ReturnType<typeof vi.fn> };
 }
 
+function makeProtoWithExecutionOptions(
+  getModelResponse: (p: string) => Promise<string>,
+  maxIterations: number,
+) {
+  const server = { getModelResponse: vi.fn(getModelResponse) } as unknown as AntigravityServerManager;
+  const proto = new AntigravityToolLoopProtocol({
+    modelKey: 'MODEL_X',
+    maxIterations,
+    server,
+    executionOptions: {
+      skills: {
+        include_only: ['allowed-skill'],
+        preToolUse: { include_only: ['allowed-skill'] },
+      },
+    },
+  });
+  return { proto, spy: server.getModelResponse as unknown as ReturnType<typeof vi.fn> };
+}
+
 const LIST_TOOL = [{ type: 'function' as const, function: { name: 'list_files' } }];
 
 async function drain(gen: AsyncGenerator<unknown>): Promise<Ev[]> {
@@ -35,6 +54,51 @@ describe('AntigravityToolLoopProtocol convergence hardening', () => {
     await drain(proto.run('task', 'sys', LIST_TOOL, async () => 'unused'));
 
     expect(spy.mock.calls[0][2]).toBe(AGY_PRINT_TIMEOUT_MS);
+  });
+
+  it('green FD-7: rejects Gemini Skill calls outside include_only before host execution', async () => {
+    const { proto } = makeProtoWithExecutionOptions(
+      async () => '{"tool_call":{"name":"Skill","arguments":{"name":"blocked-skill"}}}',
+      1,
+    );
+    const executeToolCall = vi.fn(async () => 'should not run');
+
+    const events = await drain(proto.run(
+      'use a blocked skill',
+      'sys',
+      [{ type: 'function', function: { name: 'Skill' } }],
+      executeToolCall,
+    ));
+
+    expect(executeToolCall).not.toHaveBeenCalled();
+    expect(events).toEqual(expect.arrayContaining([
+      { type: 'tool_call', name: 'Skill', args: { name: 'blocked-skill' } },
+      expect.objectContaining({
+        type: 'tool_result',
+        name: 'Skill',
+        result: expect.stringContaining('not in include_only'),
+      }),
+    ]));
+  });
+
+  it('green FD-7: allows Gemini Skill calls listed in include_only to reach host execution', async () => {
+    const { proto } = makeProtoWithExecutionOptions(
+      async () => '{"tool_call":{"name":"Skill","arguments":{"name":"allowed-skill"}}}',
+      1,
+    );
+    const executeToolCall = vi.fn(async () => 'allowed-result');
+
+    const events = await drain(proto.run(
+      'use an allowed skill',
+      'sys',
+      [{ type: 'function', function: { name: 'Skill' } }],
+      executeToolCall,
+    ));
+
+    expect(executeToolCall).toHaveBeenCalledWith('Skill', { name: 'allowed-skill' });
+    expect(events).toEqual(expect.arrayContaining([
+      { type: 'tool_result', name: 'Skill', result: 'allowed-result' },
+    ]));
   });
 
   it('surfaces a progress ledger of prior tool calls in the next prompt', async () => {

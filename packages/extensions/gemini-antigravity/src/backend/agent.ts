@@ -66,6 +66,20 @@ const PROVIDER_ID = 'antigravity-gemini-agent';
  */
 const DEV_AGENT_TOOL_NAMES = new Set<string>(['read_file', 'list_files', 'search_files', 'write_file']);
 
+function resolveExecutionOptions(
+  input: Pick<CreateSessionInput, 'dispatchPermission' | 'dispatchSkills'>,
+): AgyExecutionOptions | undefined {
+  const permissionOptions = input.dispatchPermission?.native?.gemini;
+  const skillOptions = input.dispatchSkills?.native?.gemini;
+  if (!permissionOptions && !skillOptions) {
+    return undefined;
+  }
+  return {
+    ...(permissionOptions ?? {}),
+    ...(skillOptions ? { skills: skillOptions } : {}),
+  };
+}
+
 /**
  * Strip a provider prefix like "antigravity-gemini-agent:gemini-3-flash-agent"
  * down to the stable model key. Mirrors the renderer-side logic so the host
@@ -270,12 +284,13 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
   function buildSessionState(input: CreateSessionInput | ResumeSessionInput): SessionState {
     const modelKey = extractModelKey(input.model);
     const server = AntigravityServerManager.shared();
+    const executionOptions = resolveExecutionOptions(input);
     const toolLoop = new AntigravityToolLoopProtocol({
       modelKey,
       server,
       conversationKey: input.sessionId,
       workspacePath: input.workspacePath,
-      executionOptions: input.dispatchPermission?.native?.gemini,
+      executionOptions,
     });
     return {
       sessionId: input.sessionId,
@@ -284,7 +299,7 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
       systemPrompt: input.systemPrompt ?? '',
       tools: input.tools ?? [],
       documentContext: input.documentContext,
-      executionOptions: input.dispatchPermission?.native?.gemini,
+      executionOptions,
       toolLoop,
       abortController: null,
     };

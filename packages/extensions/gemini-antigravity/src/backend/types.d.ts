@@ -88,6 +88,16 @@ declare global {
         };
       };
     };
+    dispatchSkills?: {
+      native?: {
+        gemini?: {
+          include_only: string[];
+          preToolUse?: {
+            include_only: string[];
+          };
+        };
+      };
+    };
   }
 
   interface ResumeSessionInput {
@@ -100,6 +110,7 @@ declare global {
     /** Prior conversation history to seed the tool loop. */
     history?: BackendHistoryMessage[];
     dispatchPermission?: CreateSessionInput['dispatchPermission'];
+    dispatchSkills?: CreateSessionInput['dispatchSkills'];
   }
 
   interface SendMessageInput {
@@ -113,6 +124,7 @@ declare global {
     documentContext?: unknown;
     /** Optional override of session-level history for this turn. */
     history?: BackendHistoryMessage[];
+    dispatchSkills?: CreateSessionInput['dispatchSkills'];
   }
 
   // -------------------------------------------------------------------------

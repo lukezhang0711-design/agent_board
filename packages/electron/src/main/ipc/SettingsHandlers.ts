@@ -38,6 +38,7 @@ import {
 } from '../utils/store';
 import { getEnhancedPath } from '../services/CLIManager';
 import { logger } from '../utils/logger';
+import { dispatchSkillLibraryService } from '../services/DispatchSkillLibraryService';
 import { getSettingsService, isSettingKey } from '../services/SettingsService';
 import { SessionNamingService } from '../services/SessionNamingService';
 import { SoundNotificationService } from '../services/SoundNotificationService';
@@ -187,6 +188,13 @@ export function registerSettingsHandlers() {
             logger.main.info(`[SettingsHandlers] Plan auto-approval setting changed: enabled=${value === true}`);
         }
         return getAppSetting(key);
+    });
+
+    safeHandle('dispatch-skills:list', (_event, workspacePath?: string) => {
+        return {
+            success: true,
+            skills: dispatchSkillLibraryService.listSkills(workspacePath),
+        };
     });
 
     // Spellcheck toggle - controls Chromium's built-in spellchecker for all windows

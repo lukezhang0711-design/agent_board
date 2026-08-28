@@ -239,6 +239,75 @@ describe('OpenAICodexProvider', () => {
     expect(options.raw).not.toHaveProperty('effortLevel');
   });
 
+  it('green FD-5/FD-6: sends Codex skill pre-disable config to the app-server transport', async () => {
+    const createSession = vi.fn(async (_options: CodexCreateSessionOptions) => ({
+      id: 'thread-skill-config',
+      platform: 'codex-app-server',
+      raw: {},
+    }));
+    const protocol = {
+      platform: 'codex-app-server',
+      createSession,
+      resumeSession: vi.fn(),
+      forkSession: vi.fn(),
+      sendMessage: vi.fn(() => createAsyncEventStream([{
+        type: 'complete',
+        content: 'one response',
+        usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+      }])),
+      abortSession: vi.fn(),
+      cleanupSession: vi.fn(),
+    } as any;
+    const provider = new OpenAICodexProvider({}, { protocol, transport: 'app-server' });
+    await provider.initialize({
+      model: 'openai-codex:gpt-5.4',
+      dispatchSkills: {
+        engine: 'codex',
+        requested: { skillIds: ['codex:user:implement'] },
+        effective: { skillIds: ['codex:user:implement'] },
+        effectiveSkillNames: ['implement'],
+        native: {
+          codex: {
+            control: 'skills/config/write',
+            includeOnly: ['implement'],
+            disabledSkillNames: ['review'],
+            config: {
+              'skills.include_only': ['implement'],
+              'skills.disabled': ['review'],
+            },
+            notice: 'Codex：技能管控只能会话级禁用、无逐次审批。',
+          },
+        },
+        notice: 'Codex：技能管控只能会话级禁用、无逐次审批。',
+      },
+    });
+
+    for await (const _chunk of provider.sendMessage(
+      'use skill config',
+      undefined,
+      'session-skill-config',
+      [],
+      process.cwd(),
+    )) {
+      // drain
+    }
+
+    const options = createSession.mock.calls[0]?.[0];
+    if (!options) throw new Error('expected app-server createSession options');
+    expect(options.raw.dispatchSkills).toMatchObject({
+      native: {
+        codex: {
+          control: 'skills/config/write',
+          includeOnly: ['implement'],
+        },
+      },
+    });
+    expect(options.raw.codexConfigOverrides).toMatchObject({
+      'skills.include_only': ['implement'],
+      'skills.disabled': ['review'],
+    });
+  });
+
   it('normalizes only the provider prefix and never rewrites a missing model', () => {
     expect(OpenAICodexProvider.normalizeModelSelection('openai-codex:openai-codex-cli')).toBe('openai-codex:openai-codex-cli');
     expect(OpenAICodexProvider.normalizeModelSelection('openai-codex:default')).toBe('openai-codex:default');

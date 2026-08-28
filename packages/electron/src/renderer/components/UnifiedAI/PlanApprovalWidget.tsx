@@ -33,6 +33,18 @@ import {
   type DispatchPermissionScope,
 } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
 import {
+  CODEX_SKILL_CONTROL_NOTICE,
+  DISPATCH_SKILL_SETTINGS_KEY,
+  filterEnabledDispatchSkills,
+  getDispatchSkillEngineForProvider,
+  readDispatchSkillSettings,
+  sameDispatchSkillSelection,
+  sanitizeDispatchSkillSettingsForLibrary,
+  type DispatchSkillDescriptor,
+  type DispatchSkillSelection,
+  type DispatchSkillSettings,
+} from '../../utils/dispatchSkillLibrary';
+import {
   planApprovalStateAtom,
   refreshPlanApprovalStateAtom,
 } from '../../store/atoms/sessions';
@@ -64,6 +76,8 @@ interface RenderCandidate {
   intent: PlanWorkerIntent;
   permissionScope?: DispatchPermissionScope;
   disturbanceLevel?: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds: string[];
 }
 
 type PlanWorkerIntent = 'investigation' | 'implementation';
@@ -79,6 +93,8 @@ interface RenderModule {
   intent: PlanWorkerIntent;
   permissionScope?: DispatchPermissionScope;
   disturbanceLevel?: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds: string[];
   doneCriteria: string;
   candidates: RenderCandidate[];
 }
@@ -119,6 +135,12 @@ interface ModuleDispatchSelection {
   disturbanceLevel: DispatchDisturbanceLevel;
 }
 
+interface DispatchSkillLibraryState {
+  status: 'loading' | 'ready' | 'failed';
+  skills: DispatchSkillDescriptor[];
+  settings: DispatchSkillSettings;
+}
+
 function parseDurableDispatchSelections(
   value: unknown,
 ): Record<number, ModuleDispatchSelection> {
@@ -140,6 +162,36 @@ function parseDurableDispatchSelections(
     selections[record.moduleIndex] = {
       permissionScope: record.permissionScope,
       disturbanceLevel: record.disturbanceLevel,
+    };
+    return selections;
+  }, {});
+}
+
+function parseDurableSkillSelections(
+  value: unknown,
+): Record<number, DispatchSkillSelection> {
+  if (!Array.isArray(value)) return {};
+  return value.reduce<Record<number, DispatchSkillSelection>>((selections, candidate) => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      return selections;
+    }
+    const record = candidate as Record<string, unknown>;
+    if (
+      typeof record.moduleIndex !== 'number'
+      || !Number.isInteger(record.moduleIndex)
+      || record.moduleIndex < 0
+    ) {
+      return selections;
+    }
+    const skillBundleName = getOptionalSkillBundleName(record.skillBundleName);
+    const hasSkillIdsField = Array.isArray(record.skillIds);
+    const skillIds = getSkillIds(record.skillIds);
+    if (!skillBundleName && !hasSkillIdsField) {
+      return selections;
+    }
+    selections[record.moduleIndex] = {
+      ...(skillBundleName ? { skillBundleName } : {}),
+      skillIds,
     };
     return selections;
   }, {});
@@ -254,6 +306,14 @@ function getOptionalDisturbanceLevel(
   return isDispatchDisturbanceLevel(value) ? value : undefined;
 }
 
+function getOptionalSkillBundleName(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function getSkillIds(value: unknown): string[] {
+  return getDisplayStringList(value);
+}
+
 function getSuggestedDispatchPermission(
   module: Pick<RenderModule, 'intent' | 'permissionScope' | 'disturbanceLevel'>,
 ): DispatchPermissionKnobs {
@@ -262,6 +322,71 @@ function getSuggestedDispatchPermission(
     permissionScope: module.permissionScope ?? defaults.permissionScope,
     disturbanceLevel: module.disturbanceLevel ?? defaults.disturbanceLevel,
   };
+}
+
+function getSuggestedDispatchSkillSelection(
+  module: { skillBundleName?: string; skillIds: string[] },
+): DispatchSkillSelection {
+  return {
+    ...(module.skillBundleName ? { skillBundleName: module.skillBundleName } : {}),
+    skillIds: module.skillIds,
+  };
+}
+
+function getBundleByNameOrId(
+  settings: DispatchSkillSettings,
+  bundleNameOrId: string | undefined,
+) {
+  if (!bundleNameOrId) return undefined;
+  return settings.bundles.find(
+    (bundle) => bundle.id === bundleNameOrId || bundle.name === bundleNameOrId,
+  );
+}
+
+function getProviderGrantableSkills(
+  skills: DispatchSkillDescriptor[],
+  settings: DispatchSkillSettings,
+  provider: string,
+): DispatchSkillDescriptor[] {
+  const engine = getDispatchSkillEngineForProvider(provider);
+  return filterEnabledDispatchSkills(skills, settings).filter(
+    (skill) => !engine || skill.engine === engine,
+  );
+}
+
+function expandDispatchSkillSelection(
+  selection: DispatchSkillSelection | undefined,
+  provider: string,
+  library: DispatchSkillLibraryState,
+): DispatchSkillSelection {
+  if (!selection) {
+    return { skillIds: [] };
+  }
+  const bundle = getBundleByNameOrId(library.settings, selection.skillBundleName);
+  const idsFromSelection = selection.skillIds.length > 0;
+  const rawSkillIds = idsFromSelection
+    ? selection.skillIds
+    : bundle?.skillIds ?? [];
+  const grantableIds = new Set(
+    getProviderGrantableSkills(library.skills, library.settings, provider).map(
+      (skill) => skill.id,
+    ),
+  );
+  return {
+    ...(selection.skillBundleName ? { skillBundleName: selection.skillBundleName } : {}),
+    skillIds: rawSkillIds.filter((id) => grantableIds.has(id)),
+  };
+}
+
+function formatSkillSelection(
+  selection: DispatchSkillSelection,
+  skillsById: Map<string, DispatchSkillDescriptor>,
+): string {
+  if (selection.skillIds.length === 0) {
+    return selection.skillBundleName ? `${selection.skillBundleName}（空）` : '不授予';
+  }
+  const names = selection.skillIds.map((id) => skillsById.get(id)?.name ?? id);
+  return `${selection.skillBundleName ? `${selection.skillBundleName}：` : ''}${names.join('、')}`;
 }
 
 function parsePlanModules(value: unknown): RenderModule[] {
@@ -288,6 +413,10 @@ function parsePlanModules(value: unknown): RenderModule[] {
         ...(getOptionalDisturbanceLevel(module.disturbanceLevel)
           ? { disturbanceLevel: getOptionalDisturbanceLevel(module.disturbanceLevel) }
           : {}),
+        ...(getOptionalSkillBundleName(module.skillBundleName)
+          ? { skillBundleName: getOptionalSkillBundleName(module.skillBundleName) }
+          : {}),
+        skillIds: getSkillIds(module.skillIds),
         doneCriteria: getDisplayString(module.doneCriteria),
         candidates: Array.isArray(module.candidates)
           ? module.candidates
@@ -313,6 +442,10 @@ function parsePlanModules(value: unknown): RenderModule[] {
                 ...(getOptionalDisturbanceLevel(candidate.disturbanceLevel)
                   ? { disturbanceLevel: getOptionalDisturbanceLevel(candidate.disturbanceLevel) }
                   : {}),
+                ...(getOptionalSkillBundleName(candidate.skillBundleName)
+                  ? { skillBundleName: getOptionalSkillBundleName(candidate.skillBundleName) }
+                  : {}),
+                skillIds: getSkillIds(candidate.skillIds),
               }))
           : [],
       };
@@ -509,6 +642,7 @@ const SubmittedPlanApprovalCard: React.FC<{
   const host = useAtomValue(interactiveWidgetHostAtom(sessionId));
   const agentRole = useSessionAgentRole(sessionId);
   const requestId = toolCall.providerToolCallId?.trim() || null;
+  const effectiveWorkspacePath = workspacePath || host?.workspacePath;
   const title =
     typeof args.title === 'string' && args.title.trim()
       ? args.title.trim()
@@ -573,6 +707,14 @@ const SubmittedPlanApprovalCard: React.FC<{
   const [moduleDispatchSelections, setModuleDispatchSelections] = useState<
     Record<number, ModuleDispatchSelection>
   >({});
+  const [moduleSkillSelections, setModuleSkillSelections] = useState<
+    Record<number, DispatchSkillSelection>
+  >({});
+  const [skillLibrary, setSkillLibrary] = useState<DispatchSkillLibraryState>({
+    status: 'loading',
+    skills: [],
+    settings: readDispatchSkillSettings(undefined),
+  });
   const approvalStateKey = useMemo(
     () => ({
       sessionId,
@@ -585,6 +727,12 @@ const SubmittedPlanApprovalCard: React.FC<{
   const durableDispatchSelections = useMemo(
     () => durableState?.decision === 'approved'
       ? parseDurableDispatchSelections(durableState.selectedCandidates)
+      : {},
+    [durableState?.decision, durableState?.selectedCandidates],
+  );
+  const durableSkillSelections = useMemo(
+    () => durableState?.decision === 'approved'
+      ? parseDurableSkillSelections(durableState.selectedCandidates)
       : {},
     [durableState?.decision, durableState?.selectedCandidates],
   );
@@ -618,9 +766,48 @@ const SubmittedPlanApprovalCard: React.FC<{
     };
   }, [args.planId]);
 
+  useEffect(() => {
+    let disposed = false;
+    const invoke = window.electronAPI?.invoke;
+    if (!invoke) {
+      setSkillLibrary({
+        status: 'ready',
+        skills: [],
+        settings: readDispatchSkillSettings(undefined),
+      });
+      return undefined;
+    }
+    setSkillLibrary((current) => ({ ...current, status: 'loading' }));
+    void Promise.all([
+      invoke('dispatch-skills:list', effectiveWorkspacePath),
+      invoke('app-settings:get', DISPATCH_SKILL_SETTINGS_KEY),
+    ])
+      .then(([listResult, stored]) => {
+        if (disposed) return;
+        const skills = Array.isArray(listResult?.skills) ? listResult.skills : [];
+        const settings = sanitizeDispatchSkillSettingsForLibrary(
+          readDispatchSkillSettings(stored),
+          skills,
+        );
+        setSkillLibrary({ status: 'ready', skills, settings });
+      })
+      .catch(() => {
+        if (!disposed) {
+          setSkillLibrary((current) => ({ ...current, status: 'failed' }));
+        }
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [args.planId, effectiveWorkspacePath]);
+
   const catalogModelsById = useMemo(
     () => new Map(modelCatalog.models.map((model) => [model.id, model])),
     [modelCatalog.models],
+  );
+  const skillsById = useMemo(
+    () => new Map(skillLibrary.skills.map((skill) => [skill.id, skill])),
+    [skillLibrary.skills],
   );
   const moduleRoutes = useMemo<(ResolvedModuleRoute | null)[]>(
     () =>
@@ -656,6 +843,16 @@ const SubmittedPlanApprovalCard: React.FC<{
     }),
     [durableDispatchSelections, moduleDispatchSelections, moduleRoutes, modules],
   );
+  const moduleSkillSelectionsResolved = useMemo(
+    () => modules.map((module, moduleIndex) => {
+      const provider = moduleRoutes[moduleIndex]?.provider ?? module.provider;
+      const selected = moduleSkillSelections[moduleIndex]
+        ?? durableSkillSelections[moduleIndex]
+        ?? getSuggestedDispatchSkillSelection(module);
+      return expandDispatchSkillSelection(selected, provider, skillLibrary);
+    }),
+    [durableSkillSelections, moduleRoutes, moduleSkillSelections, modules, skillLibrary],
+  );
   const selectedCandidates = useMemo<SelectedPlanCandidate[]>(
     () =>
       modules.flatMap((module, moduleIndex) => {
@@ -673,7 +870,20 @@ const SubmittedPlanApprovalCard: React.FC<{
           || candidate?.disturbanceLevel !== undefined
           || module.permissionScope !== undefined
           || module.disturbanceLevel !== undefined;
-        if (!candidate && isSameModuleRoute(module, route) && !hasDispatchSelection) return [];
+        const skillSelection = moduleSkillSelectionsResolved[moduleIndex];
+        const hasSkillSelection =
+          moduleSkillSelections[moduleIndex] !== undefined
+          || durableSkillSelections[moduleIndex] !== undefined
+          || candidate?.skillBundleName !== undefined
+          || (candidate?.skillIds.length ?? 0) > 0
+          || module.skillBundleName !== undefined
+          || module.skillIds.length > 0;
+        if (
+          !candidate
+          && isSameModuleRoute(module, route)
+          && !hasDispatchSelection
+          && !hasSkillSelection
+        ) return [];
         // The route is the capability-checked source of truth. In particular,
         // a candidate may carry a historical effort string for a model (such
         // as Haiku) that declares no independent effort dimension.
@@ -709,13 +919,24 @@ const SubmittedPlanApprovalCard: React.FC<{
                   disturbanceLevel: dispatch.requested.disturbanceLevel,
                 }
               : {}),
+            ...(skillSelection && hasSkillSelection
+              ? {
+                  ...(skillSelection.skillBundleName
+                    ? { skillBundleName: skillSelection.skillBundleName }
+                    : {}),
+                  skillIds: skillSelection.skillIds,
+                }
+              : {}),
           },
         ];
       }),
     [
       moduleDispatchPermissions,
       moduleDispatchSelections,
+      moduleSkillSelections,
+      moduleSkillSelectionsResolved,
       durableDispatchSelections,
+      durableSkillSelections,
       moduleRoutes,
       modules,
       selectedCandidateNames,
@@ -737,7 +958,6 @@ const SubmittedPlanApprovalCard: React.FC<{
     isPending,
     getInteractivePromptStatus ? 'checking' : host ? 'available' : 'checking',
   );
-  const effectiveWorkspacePath = workspacePath || host?.workspacePath;
   const [moduleApprovalOverrides, setModuleApprovalOverrides] = useState<
     Record<number, RenderModuleApproval>
   >({});
@@ -1044,6 +1264,61 @@ const SubmittedPlanApprovalCard: React.FC<{
     [moduleDispatchPermissions],
   );
 
+  const handleModuleSkillBundleChange = useCallback(
+    (moduleIndex: number, bundleId: string) => {
+      if (bundleId === '') {
+        setModuleSkillSelections((current) => ({
+          ...current,
+          [moduleIndex]: { skillIds: [] },
+        }));
+        return;
+      }
+      const bundle = skillLibrary.settings.bundles.find((item) => item.id === bundleId);
+      if (!bundle) return;
+      const provider = moduleRoutes[moduleIndex]?.provider ?? modules[moduleIndex]?.provider ?? '';
+      const expanded = expandDispatchSkillSelection(
+        { skillBundleName: bundle.name, skillIds: bundle.skillIds },
+        provider,
+        skillLibrary,
+      );
+      setModuleSkillSelections((current) => ({
+        ...current,
+        [moduleIndex]: expanded,
+      }));
+    },
+    [moduleRoutes, modules, skillLibrary],
+  );
+
+  const handleModuleSkillRemove = useCallback(
+    (moduleIndex: number, skillId: string) => {
+      const current = moduleSkillSelectionsResolved[moduleIndex] ?? { skillIds: [] };
+      setModuleSkillSelections((selections) => ({
+        ...selections,
+        [moduleIndex]: {
+          ...(current.skillBundleName ? { skillBundleName: current.skillBundleName } : {}),
+          skillIds: current.skillIds.filter((id) => id !== skillId),
+        },
+      }));
+    },
+    [moduleSkillSelectionsResolved],
+  );
+
+  const handleModuleSkillAdd = useCallback(
+    (moduleIndex: number, skillId: string) => {
+      if (!skillId) return;
+      const current = moduleSkillSelectionsResolved[moduleIndex] ?? { skillIds: [] };
+      if (current.skillIds.includes(skillId)) return;
+      setModuleSkillSelections((selections) => ({
+        ...selections,
+        [moduleIndex]: {
+          ...(current.skillBundleName ? { skillBundleName: current.skillBundleName } : {}),
+          skillIds: [...current.skillIds, skillId],
+        },
+      }));
+    },
+    [moduleSkillSelectionsResolved],
+  );
+
   const handleCandidateSelection = useCallback(
     (moduleIndex: number, candidate: RenderCandidate) => {
       setSelectedCandidateNames((current) => ({
@@ -1080,8 +1355,19 @@ const SubmittedPlanApprovalCard: React.FC<{
           [moduleIndex]: requested,
         }));
       }
+      if (candidate.skillBundleName !== undefined || candidate.skillIds.length > 0) {
+        const provider = model?.provider ?? candidate.provider;
+        setModuleSkillSelections((current) => ({
+          ...current,
+          [moduleIndex]: expandDispatchSkillSelection(
+            getSuggestedDispatchSkillSelection(candidate),
+            provider,
+            skillLibrary,
+          ),
+        }));
+      }
     },
-    [catalogModelsById],
+    [catalogModelsById, skillLibrary],
   );
 
   const handleApprove = useCallback(async () => {
@@ -1365,6 +1651,36 @@ const SubmittedPlanApprovalCard: React.FC<{
               const disturbanceLevelChanged = dispatchPermission
                 && suggestedDispatchPermission.disturbanceLevel
                   !== dispatchPermission.effective.disturbanceLevel;
+              const selectedCandidateName = selectedCandidateNames[moduleIndex];
+              const selectedCandidate = selectedCandidateName
+                ? module.candidates.find((candidate) => candidate.name === selectedCandidateName)
+                : undefined;
+              const providerForSkills = moduleRoute?.provider ?? module.provider;
+              const skillSelection = moduleSkillSelectionsResolved[moduleIndex] ?? { skillIds: [] };
+              const suggestedSkillSelection = expandDispatchSkillSelection(
+                getSuggestedDispatchSkillSelection(selectedCandidate ?? module),
+                providerForSkills,
+                skillLibrary,
+              );
+              const skillSelectionChanged = !sameDispatchSkillSelection(
+                suggestedSkillSelection,
+                skillSelection,
+              );
+              const grantableSkills = getProviderGrantableSkills(
+                skillLibrary.skills,
+                skillLibrary.settings,
+                providerForSkills,
+              );
+              const selectedSkills = skillSelection.skillIds
+                .map((skillId) => skillsById.get(skillId))
+                .filter((skill): skill is DispatchSkillDescriptor => Boolean(skill));
+              const addableSkills = grantableSkills.filter(
+                (skill) => !skillSelection.skillIds.includes(skill.id),
+              );
+              const selectedBundle = getBundleByNameOrId(
+                skillLibrary.settings,
+                skillSelection.skillBundleName,
+              );
               const isModuleRejected = moduleApproval.status === 'rejected';
               const isModuleFeedbackOpen =
                 activeFeedbackModuleIndex === stableModuleIndex;
@@ -1625,6 +1941,107 @@ const SubmittedPlanApprovalCard: React.FC<{
                             className="mt-1 text-xs text-amber-800 dark:text-amber-200"
                           >
                             {dispatchPermission.notice}
+                          </p>
+                        )}
+                      </dd>
+                    </div>
+                    <div
+                      data-testid={`plan-module-skill-field-${stableModuleIndex}`}
+                      className="plan-module-skill-field min-w-0"
+                    >
+                      <dt className="flex items-center gap-2 text-xs font-semibold text-nim-muted">
+                        技能
+                        {skillSelectionChanged && (
+                          <span
+                            data-testid={`plan-module-skill-adjusted-${stableModuleIndex}`}
+                            className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-200"
+                          >
+                            已调整
+                          </span>
+                        )}
+                      </dt>
+                      <dd className="mt-1 min-w-0">
+                        <select
+                          data-testid={`plan-module-skill-bundle-select-${stableModuleIndex}`}
+                          aria-label={`${module.title} 技能包`}
+                          value={selectedBundle?.id ?? ''}
+                          onChange={(event) =>
+                            handleModuleSkillBundleChange(moduleIndex, event.target.value)
+                          }
+                          disabled={isSubmitting || skillLibrary.status === 'loading'}
+                          className="w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="">不授予</option>
+                          {skillLibrary.settings.bundles.map((bundle) => (
+                            <option key={bundle.id} value={bundle.id}>
+                              {bundle.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div
+                          data-testid={`plan-module-skill-tags-${stableModuleIndex}`}
+                          className="mt-2 flex min-w-0 flex-wrap gap-1.5"
+                        >
+                          {selectedSkills.length > 0 ? (
+                            selectedSkills.map((skill) => (
+                              <span
+                                key={skill.id}
+                                data-testid={`plan-module-skill-tag-${stableModuleIndex}`}
+                                className="inline-flex max-w-full items-center gap-1 rounded-full border border-nim bg-nim-secondary px-2 py-0.5 text-xs text-nim"
+                              >
+                                <span className="truncate">{skill.name}</span>
+                                <button
+                                  type="button"
+                                  aria-label={`移除 ${skill.name}`}
+                                  disabled={isSubmitting}
+                                  onClick={() => handleModuleSkillRemove(moduleIndex, skill.id)}
+                                  className="text-nim-muted hover:text-nim disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))
+                          ) : (
+                            <span
+                              data-testid={`plan-module-skill-empty-${stableModuleIndex}`}
+                              className="text-xs text-nim-muted"
+                            >
+                              不授予任何技能
+                            </span>
+                          )}
+                        </div>
+                        <select
+                          data-testid={`plan-module-skill-add-select-${stableModuleIndex}`}
+                          aria-label={`${module.title} 添加技能`}
+                          value=""
+                          onChange={(event) => {
+                            handleModuleSkillAdd(moduleIndex, event.target.value);
+                            event.currentTarget.value = '';
+                          }}
+                          disabled={isSubmitting || addableSkills.length === 0}
+                          className="mt-2 w-full min-w-0 rounded-md border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="">搜索添加技能</option>
+                          {addableSkills.map((skill) => (
+                            <option key={skill.id} value={skill.id}>
+                              {skill.name}
+                            </option>
+                          ))}
+                        </select>
+                        {skillSelectionChanged && (
+                          <p
+                            data-testid={`plan-module-skill-trace-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-nim-muted"
+                          >
+                            Head 建议：{formatSkillSelection(suggestedSkillSelection, skillsById)} → 当前：{formatSkillSelection(skillSelection, skillsById)}
+                          </p>
+                        )}
+                        {providerForSkills === 'openai-codex' && (
+                          <p
+                            data-testid={`plan-module-skill-codex-notice-${stableModuleIndex}`}
+                            className="mt-1 text-xs text-amber-800 dark:text-amber-200"
+                          >
+                            {CODEX_SKILL_CONTROL_NOTICE}
                           </p>
                         )}
                       </dd>

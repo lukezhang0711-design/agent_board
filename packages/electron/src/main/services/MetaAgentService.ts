@@ -17,12 +17,21 @@ import {
   type DispatchPermissionKnobs,
   type DispatchPermissionResolution,
 } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
+import {
+  DISPATCH_SKILL_SETTINGS_KEY,
+  normalizeDispatchSkillSelection,
+  readDispatchSkillResolution,
+  resolveDispatchSkills,
+  sameDispatchSkillSelection,
+  type DispatchSkillSelection,
+  type DispatchSkillResolution,
+} from '@nimbalyst/runtime/ai/server/dispatchSkills';
 import type { AIProviderType } from '@nimbalyst/runtime/ai/server/types';
 import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
 import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { AISessionsRepository, AgentMessagesRepository, SessionFilesRepository } from '@nimbalyst/runtime';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
-import { getDefaultAIModel, store } from '../utils/store';
+import { getAppSetting, getDefaultAIModel, store } from '../utils/store';
 import { toMillis } from '../utils/timestampUtils';
 import { createWorktreeStore } from './WorktreeStore';
 import { GitWorktreeService } from './GitWorktreeService';
@@ -76,6 +85,7 @@ import {
   type DispatchRequestKind,
   type DispatchQueueRequestSnapshot,
 } from './PGLiteDispatchQueueStore';
+import { dispatchSkillLibraryService } from './DispatchSkillLibraryService';
 
 type SessionStatusValue = 'idle' | 'running' | 'waiting_for_input' | 'error' | 'interrupted';
 type PromptType = 'permission_request' | 'ask_user_question_request' | 'exit_plan_mode_request';
@@ -392,6 +402,8 @@ interface WorkOrderReceipt {
   outcome: WorkOrderReceiptOutcome;
   /** The engine-native policy that actually applied to this dispatch. */
   dispatchPermission?: DispatchPermissionResolution;
+  /** The engine-native skill policy that actually applied to this dispatch. */
+  dispatchSkills?: DispatchSkillResolution;
 }
 
 interface WorkOrderAttempt extends WorkOrderReceipt {
@@ -717,6 +729,10 @@ interface CreateChildSessionArgs {
   maxParallelOverride?: number;
   /** Requested by the approved plan card; translated only after routing resolves. */
   dispatchPermissionKnobs?: DispatchPermissionKnobs;
+  /** Requested by the approved plan card; translated only after routing resolves. */
+  dispatchSkillSelection?: DispatchSkillSelection;
+  skillBundleName?: string;
+  skillIds?: string[];
 }
 
 interface ModuleRouting {
@@ -733,6 +749,11 @@ interface ModelSelectionOverride {
 interface DispatchPermissionSelectionOverride {
   original: DispatchPermissionKnobs;
   approved: DispatchPermissionKnobs;
+}
+
+interface DispatchSkillSelectionOverride {
+  original: DispatchSkillSelection;
+  approved: DispatchSkillSelection;
 }
 
 interface SubmitPlanArgs {
@@ -797,6 +818,8 @@ interface SelectedPlanCandidate {
   effortLevel?: EffortLevel;
   permissionScope?: DispatchPermissionKnobs['permissionScope'];
   disturbanceLevel?: DispatchPermissionKnobs['disturbanceLevel'];
+  skillBundleName?: string;
+  skillIds?: string[];
 }
 
 function buildNativeHeadPlanArgs(planSummary: string, planFilePath: string): SubmitPlanArgs {
@@ -949,6 +972,23 @@ function readModuleDispatchPermission(value: unknown): DispatchPermissionKnobs |
     : null;
 }
 
+function readModuleDispatchSkillSelection(value: unknown): DispatchSkillSelection | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const hasBundle = typeof record.skillBundleName === 'string'
+    && record.skillBundleName.trim().length > 0;
+  const hasSkillIds = Array.isArray(record.skillIds) || Array.isArray(record.skills);
+  const hasNestedSelection = record.dispatchSkillSelection
+    && typeof record.dispatchSkillSelection === 'object'
+    && !Array.isArray(record.dispatchSkillSelection);
+  if (!hasBundle && !hasSkillIds && !hasNestedSelection) {
+    return null;
+  }
+  return normalizeDispatchSkillSelection(
+    hasNestedSelection ? record.dispatchSkillSelection : record,
+  ) ?? { skillIds: [] };
+}
+
 function sameDispatchPermissionKnobs(
   left: DispatchPermissionKnobs,
   right: DispatchPermissionKnobs,
@@ -1002,8 +1042,12 @@ type InternalCreateChildSessionArgs = CreateChildSessionArgs & {
   modelSelectionOverride?: ModelSelectionOverride;
   /** Owner-selected card knobs retained alongside the original Head suggestion. */
   dispatchPermissionSelectionOverride?: DispatchPermissionSelectionOverride;
+  /** Owner-selected card skills retained alongside the original Head suggestion. */
+  dispatchSkillSelectionOverride?: DispatchSkillSelectionOverride;
   /** Resolved after provider routing; persisted and passed to the native adapter. */
   dispatchPermission?: DispatchPermissionResolution;
+  /** Resolved after provider routing; persisted and passed to the native adapter. */
+  dispatchSkills?: DispatchSkillResolution;
 };
 
 interface CreatedChildSessionResult {
@@ -1018,6 +1062,7 @@ interface CreatedChildSessionResult {
   queuedInitialPrompt: boolean;
   parentSessionId: string | null;
   dispatchPermission?: DispatchPermissionResolution;
+  dispatchSkills?: DispatchSkillResolution;
 }
 
 interface QueuedChildSessionResult {
@@ -1033,6 +1078,7 @@ interface QueuedChildSessionResult {
   parentSessionId: string | null;
   message: string;
   dispatchPermission?: DispatchPermissionResolution;
+  dispatchSkills?: DispatchSkillResolution;
 }
 
 type ChildDispatchResult = CreatedChildSessionResult | QueuedChildSessionResult;
@@ -2149,6 +2195,14 @@ export class MetaAgentService {
       : null;
     const effectiveRequestedDispatchPermission = approvedDispatchPermission
       ?? originalDispatchPermission;
+    const originalDispatchSkillSelection = readModuleDispatchSkillSelection(module);
+    const approvedDispatchSkillSelection = selectedCandidate
+      ? readModuleDispatchSkillSelection(selectedCandidate)
+      : null;
+    const directDispatchSkillSelection = readModuleDispatchSkillSelection(args);
+    const effectiveRequestedDispatchSkillSelection = approvedDispatchSkillSelection
+      ?? directDispatchSkillSelection
+      ?? originalDispatchSkillSelection;
 
     return {
       ...args,
@@ -2166,6 +2220,9 @@ export class MetaAgentService {
       ...(effectiveRequestedDispatchPermission
         ? { dispatchPermissionKnobs: effectiveRequestedDispatchPermission }
         : {}),
+      ...(effectiveRequestedDispatchSkillSelection
+        ? { dispatchSkillSelection: effectiveRequestedDispatchSkillSelection }
+        : {}),
       ...(originalDispatchPermission
         && approvedDispatchPermission
         && !sameDispatchPermissionKnobs(originalDispatchPermission, approvedDispatchPermission)
@@ -2173,6 +2230,16 @@ export class MetaAgentService {
             dispatchPermissionSelectionOverride: {
               original: originalDispatchPermission,
               approved: approvedDispatchPermission,
+            },
+          }
+        : {}),
+      ...(originalDispatchSkillSelection
+        && approvedDispatchSkillSelection
+        && !sameDispatchSkillSelection(originalDispatchSkillSelection, approvedDispatchSkillSelection)
+        ? {
+            dispatchSkillSelectionOverride: {
+              original: originalDispatchSkillSelection,
+              approved: approvedDispatchSkillSelection,
             },
           }
         : {}),
@@ -2499,6 +2566,14 @@ export class MetaAgentService {
           }
         : {}),
     };
+    const dispatchSkills = this.resolveDispatchSkillsForDispatch(
+      workspaceId,
+      routing.provider,
+      preparedArgs,
+    );
+    if (dispatchSkills) {
+      preparedArgs.dispatchSkills = dispatchSkills;
+    }
 
     return this.withDispatchLock(metaSessionId, async () => {
       if (!(await this.dispatchQueueStore.hasQueued(metaSessionId))) {
@@ -2546,6 +2621,19 @@ export class MetaAgentService {
     });
   }
 
+  private resolveDispatchSkillsForDispatch(
+    workspaceId: string,
+    provider: string,
+    args: InternalCreateChildSessionArgs,
+  ): DispatchSkillResolution | undefined {
+    const requested = args.dispatchSkillSelection
+      ?? readModuleDispatchSkillSelection(args)
+      ?? { skillIds: [] };
+    const settings = getAppSetting<unknown>(DISPATCH_SKILL_SETTINGS_KEY);
+    const knownSkills = dispatchSkillLibraryService.listSkills(workspaceId);
+    return resolveDispatchSkills(provider, requested, knownSkills, settings);
+  }
+
   private async enqueueChildDispatch(
     metaSessionId: string,
     workspaceId: string,
@@ -2577,7 +2665,9 @@ export class MetaAgentService {
         completionCriteria: args.completionCriteria,
         modelSelectionOverride: args.modelSelectionOverride,
         dispatchPermissionSelectionOverride: args.dispatchPermissionSelectionOverride,
+        dispatchSkillSelectionOverride: args.dispatchSkillSelectionOverride,
         dispatchPermission: args.dispatchPermission,
+        dispatchSkills: args.dispatchSkills,
       },
     );
 
@@ -2616,6 +2706,7 @@ export class MetaAgentService {
         parentSessionId: args.parentSessionIdOverride ?? null,
         message: `Dispatch queued at position ${position}; it will start automatically when a Head Agent slot opens.`,
         ...(args.dispatchPermission ? { dispatchPermission: args.dispatchPermission } : {}),
+        ...(args.dispatchSkills ? { dispatchSkills: args.dispatchSkills } : {}),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2625,6 +2716,7 @@ export class MetaAgentService {
         requestedAt,
         'failure',
         args.dispatchPermission,
+        args.dispatchSkills,
       );
       await this.updateWorkOrderStatusBySourceRef(
         sourceRef,
@@ -2794,6 +2886,7 @@ export class MetaAgentService {
             item.requestedAt,
             'failure',
             args.dispatchPermission,
+            args.dispatchSkills,
           );
           await this.dispatchQueueStore.markFailed(item.id, message);
           await this.updateWorkOrderStatusBySourceRef(
@@ -2946,6 +3039,7 @@ export class MetaAgentService {
     startedAt: unknown,
     outcome: WorkOrderReceiptOutcome,
     dispatchPermission?: DispatchPermissionResolution,
+    dispatchSkills?: DispatchSkillResolution,
   ): WorkOrderReceipt {
     const endedAt = new Date().toISOString();
     return {
@@ -2955,6 +3049,7 @@ export class MetaAgentService {
       endedAt,
       outcome,
       ...(dispatchPermission ? { dispatchPermission } : {}),
+      ...(dispatchSkills ? { dispatchSkills } : {}),
     };
   }
 
@@ -2975,6 +3070,7 @@ export class MetaAgentService {
       requestedAt,
       'failure',
       args.dispatchPermission,
+      args.dispatchSkills,
     );
 
     try {
@@ -3015,7 +3111,9 @@ export class MetaAgentService {
             completionCriteria: args.completionCriteria,
             modelSelectionOverride: args.modelSelectionOverride,
             dispatchPermissionSelectionOverride: args.dispatchPermissionSelectionOverride,
+            dispatchSkillSelectionOverride: args.dispatchSkillSelectionOverride,
             dispatchPermission: args.dispatchPermission,
+            dispatchSkills: args.dispatchSkills,
           },
         );
       }
@@ -4070,7 +4168,9 @@ export class MetaAgentService {
             completionCriteria: args.completionCriteria,
             modelSelectionOverride: args.modelSelectionOverride,
             dispatchPermissionSelectionOverride: args.dispatchPermissionSelectionOverride,
+            dispatchSkillSelectionOverride: args.dispatchSkillSelectionOverride,
             dispatchPermission: args.dispatchPermission,
+            dispatchSkills: args.dispatchSkills,
           },
         );
       }
@@ -4132,6 +4232,7 @@ export class MetaAgentService {
       queuedInitialPrompt: !!initialPrompt,
       parentSessionId: args.parentSessionIdOverride ?? null,
       ...(args.dispatchPermission ? { dispatchPermission: args.dispatchPermission } : {}),
+      ...(args.dispatchSkills ? { dispatchSkills: args.dispatchSkills } : {}),
     };
   }
 
@@ -4632,6 +4733,7 @@ export class MetaAgentService {
                 session.createdAt,
                 failureReason ? 'failure' : 'success',
                 readDispatchPermissionResolution(sessionMetadata.dispatchPermission),
+                readDispatchSkillResolution(sessionMetadata.dispatchSkills),
               ),
             }
           : interruption
@@ -5411,7 +5513,9 @@ export class MetaAgentService {
       completionCriteria?: WorkOrderCompletionCriteria;
       modelSelectionOverride?: ModelSelectionOverride;
       dispatchPermissionSelectionOverride?: DispatchPermissionSelectionOverride;
+      dispatchSkillSelectionOverride?: DispatchSkillSelectionOverride;
       dispatchPermission?: DispatchPermissionResolution;
+      dispatchSkills?: DispatchSkillResolution;
     } = {},
   ): Promise<string> {
     const title = this.deriveTitleFromPrompt(sessionTitle) || 'Meta Task';
@@ -5462,8 +5566,14 @@ export class MetaAgentService {
         if (options.dispatchPermissionSelectionOverride) {
           data.dispatchPermissionSelectionOverride = options.dispatchPermissionSelectionOverride;
         }
+        if (options.dispatchSkillSelectionOverride) {
+          data.dispatchSkillSelectionOverride = options.dispatchSkillSelectionOverride;
+        }
         if (options.dispatchPermission) {
           data.dispatchPermission = options.dispatchPermission;
+        }
+        if (options.dispatchSkills) {
+          data.dispatchSkills = options.dispatchSkills;
         }
         // A retry starts a clean current state. Its previous failure remains in
         // `attempts`; only the current top-level receipt/failure is replaced.
@@ -5514,8 +5624,14 @@ export class MetaAgentService {
         ...(options.dispatchPermissionSelectionOverride
           ? { dispatchPermissionSelectionOverride: options.dispatchPermissionSelectionOverride }
           : {}),
+        ...(options.dispatchSkillSelectionOverride
+          ? { dispatchSkillSelectionOverride: options.dispatchSkillSelectionOverride }
+          : {}),
         ...(options.dispatchPermission
           ? { dispatchPermission: options.dispatchPermission }
+          : {}),
+        ...(options.dispatchSkills
+          ? { dispatchSkills: options.dispatchSkills }
           : {}),
         attempts: options.receipt
           ? [{
@@ -5562,7 +5678,7 @@ export class MetaAgentService {
 
   private async applyChildSessionMetadata(
     sessionId: string,
-    args: Pick<InternalCreateChildSessionArgs, 'effortLevel' | 'toolScope' | 'notifyParent' | 'title' | 'dispatchPermission'>,
+    args: Pick<InternalCreateChildSessionArgs, 'effortLevel' | 'toolScope' | 'notifyParent' | 'title' | 'dispatchPermission' | 'dispatchSkills'>,
   ): Promise<void> {
     const metadata: Record<string, unknown> = {};
     // Record that this title came from the dispatch call, not from a model. The
@@ -5588,6 +5704,9 @@ export class MetaAgentService {
       || args.toolScope === 'full'
     ) {
       metadata.toolScope = args.toolScope;
+    }
+    if (args.dispatchSkills) {
+      metadata.dispatchSkills = args.dispatchSkills;
     }
     if (args.notifyParent !== undefined) {
       metadata.notifyParent = args.notifyParent;

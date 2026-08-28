@@ -147,6 +147,49 @@ describe('CodexAppServerProtocol', () => {
     protocol.cleanupSession(session);
   });
 
+  it('green FD-5/FD-6: passes Codex skill pre-disable config as actual thread/start config', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const sessionPromise = protocol.createSession({
+      workspacePath: '/tmp/ws',
+      raw: {
+        dispatchSkills: {
+          engine: 'codex',
+          requested: { skillIds: ['codex:user:implement'] },
+          effective: { skillIds: ['codex:user:implement'] },
+          effectiveSkillNames: ['implement'],
+          native: {
+            codex: {
+              control: 'skills/config/write',
+              includeOnly: ['implement'],
+              disabledSkillNames: ['review'],
+              config: {
+                'skills.include_only': ['implement'],
+                'skills.disabled': ['review'],
+              },
+              notice: 'Codex：技能管控只能会话级禁用、无逐次审批。',
+            },
+          },
+          notice: 'Codex：技能管控只能会话级禁用、无逐次审批。',
+        },
+      },
+    });
+
+    const initReq = await nextWrittenMatching(child, 'initialize');
+    child.emitLine({
+      id: initReq.id,
+      result: { codexHome: '/fake', platformFamily: 'unix', platformOs: 'macos', userAgent: 'fake/0' },
+    });
+    const startReq = await nextWrittenMatching(child, 'thread/start');
+    expect((startReq.params as { config?: Record<string, unknown> }).config).toMatchObject({
+      'skills.include_only': ['implement'],
+      'skills.disabled': ['review'],
+    });
+    child.emitLine({ id: startReq.id, result: { thread: { id: 'thread-fd-skills' } } });
+
+    const session = await sessionPromise;
+    protocol.cleanupSession(session);
+  });
+
   it('uses a healthy system binary after the initialize handshake', async () => {
     resolveSystemBinaryMock.mockReturnValue('/system/codex');
     resolveBundledBinaryMock.mockImplementation(() => { throw new Error('bundled binary must not be resolved'); });

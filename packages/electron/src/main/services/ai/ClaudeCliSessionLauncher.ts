@@ -37,6 +37,7 @@ import { resolveClaudeCliJsonlPath, shouldResumeClaudeCliSession } from './claud
 import type { TerminalSessionManager } from '../TerminalSessionManager';
 import type { ClaudeTurnState, ParsedClaudePidFile } from './claudeCliPidState';
 import type { DispatchPermissionResolution } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
+import type { DispatchSkillResolution } from '@nimbalyst/runtime/ai/server/dispatchSkills';
 
 export interface ClaudeCliSessionLauncherDeps {
   /**
@@ -227,6 +228,8 @@ export interface LaunchClaudeCliSessionInput {
   model?: string;
   /** Actual policy resolved from the approved plan card for this session. */
   dispatchPermission?: DispatchPermissionResolution;
+  /** Actual skill policy resolved from the approved plan card for this session. */
+  dispatchSkills?: DispatchSkillResolution;
   /** Resume an existing CLI session id (`--resume <id>`). */
   resumeSessionId?: string;
   cols?: number;
@@ -406,6 +409,7 @@ export class ClaudeCliSessionLauncher {
       settingsJson,
       dangerouslySkipPermissions,
       dispatchPermission: input.dispatchPermission,
+      dispatchSkills: input.dispatchSkills,
       additionalDirectories: input.additionalDirectories,
       pluginDirs,
       systemPromptAppend: input.systemPromptAppend,

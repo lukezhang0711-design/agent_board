@@ -426,11 +426,17 @@ Valid example: call ${submitPlanTool} with the title, planItems, workOrderCount,
 
 Keep \`planItems\` as a short ordered summary for backward compatibility. Put the useful detail in optional \`modules[]\` fields so the approval card can render it as labels and values instead of relying on Markdown formatting. Each module should include \`title\`, \`outputFiles\` (paths relative to the project root), \`inputs\`, the exact \`provider\`, and the exact full \`model\` ID（实名模型名）, \`effortLevel\`, \`intent\`, \`permissionScope\`, \`disturbanceLevel\`, and a concrete \`doneCriteria\`. For an implementation worker, omitted knobs default to \`workspace-write\` + \`on-failure\`; for an investigation worker, they default to \`read-only\` + \`never\`.
 
+For FD skill dispatch, a module may also include optional \`skillBundleName\`/\`skillIds\`. Omitted skills mean no skills are granted. Only suggest a \`skillBundleName\` that exists in the user's local Skill Library; otherwise use \`skillIds: []\`.
+
 When there are multiple modules, treat each module as parallel work: submit all modules in one planId, and expect the approval surface to render one module card per module beneath a plan header. A module card can be rejected independently. The rejection receipt includes the stable 1-based moduleIndex and the user's original feedback; use that exact moduleIndex to revise the matching module. Keep modules that were already approved unchanged, resubmit the revised plan with the same planId, and never dispatch while any module is rejected. Use the plan header's “全部批准” action when all currently un-rejected modules are ready; it approves them in one step.
 
 When a module has multiple viable approaches, you MUST fill \`modules[].candidates[]\` instead of writing A/B/C/D as serial long paragraphs. Each candidate includes \`name\`, \`approach\` (怎么干), \`pros\`, \`cons\`, \`risks\`, exact \`provider\`, exact \`model\`, \`effortLevel\`, and optional \`intent\`/\`permissionScope\`/\`disturbanceLevel\`. The user will see one “选这个” control per candidate; after approval, treat the returned \`selectedCandidates\` as authoritative dispatch parameters for the matching child module. Keep plan text concise（方案文字保持简短）; do not write multiple candidate alternatives as serial long paragraphs（不要把多个候选方案写成串行大段落）; details belong in these structured fields.
 
+Candidate alternatives may also carry optional \`skillBundleName\`/\`skillIds\` for the same FD skill dispatch rules.
+
 The boss can change a module's provider-qualified model, thinking effort, permission scope, and interruption level directly on the approval card. Do not debate model or permission choices in plan prose; after approval, use the returned \`selectedCandidates\` \`provider\`, \`model\`, \`effortLevel\`, \`permissionScope\`, and \`disturbanceLevel\` as the authoritative dispatch parameters.
+
+The boss can also change the final skill list directly on the approval card. Skill bundles are only shortcuts: the card expands the final granted skills into explicit tags, and tag edits win over the original bundle. Do not debate skill choices in plan prose; after approval, use the returned \`selectedCandidates\` \`skillBundleName\` and \`skillIds\` as the authoritative skill dispatch parameters.
 
 Complete structured example:
 
@@ -450,6 +456,8 @@ Complete structured example:
     "intent": "implementation",
     "permissionScope": "workspace-write",
     "disturbanceLevel": "on-failure",
+    "skillBundleName": "施工包",
+    "skillIds": [],
     "doneCriteria": "The card renders fields and tests the approval payload.",
     "candidates": [{
       "name": "方案 A",
@@ -462,7 +470,9 @@ Complete structured example:
       "effortLevel": "low",
       "intent": "implementation",
       "permissionScope": "workspace-write",
-      "disturbanceLevel": "on-failure"
+      "disturbanceLevel": "on-failure",
+      "skillBundleName": "施工包",
+      "skillIds": []
     }]
   }]
 }

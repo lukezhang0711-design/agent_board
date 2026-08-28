@@ -18,6 +18,7 @@ import { LMStudioPanel } from '../GlobalSettings/panels/LMStudioPanel';
 import { AdvancedPanel } from '../GlobalSettings/panels/AdvancedPanel';
 import { DatabasePanel } from '../GlobalSettings/panels/DatabasePanel';
 import { AgentFeaturesPanel } from './AgentFeaturesPanel';
+import { SkillLibraryPanel } from './SkillLibraryPanel';
 import { BetaFeaturesPanel } from '../GlobalSettings/panels/BetaFeaturesPanel';
 import { NotificationsPanel } from '../GlobalSettings/panels/NotificationsPanel';
 import { VoiceModePanel } from './VoiceModePanel';
@@ -363,6 +364,7 @@ export function SettingsView({
     'notifications',
     'voice-mode',
     'agent-features',
+    'skill-library',
     'advanced',
     'marketplace',
     'installed-extensions',
@@ -826,6 +828,8 @@ export function SettingsView({
         return <DatabasePanel />;
       case 'agent-features':
         return <AgentFeaturesPanel />;
+      case 'skill-library':
+        return <SkillLibraryPanel workspacePath={workspacePath ?? undefined} />;
       case 'beta-features':
         return <BetaFeaturesPanel />;
       case 'notifications':

@@ -29,6 +29,7 @@ vi.mock('@nimbalyst/runtime/ai/server', () => ({
   ClaudeCodeProvider: { setMetaAgentServerPort: vi.fn(), setNativeHeadPlanApprovalHandler: vi.fn() },
   OpenAICodexProvider: { setMetaAgentServerPort: vi.fn() },
   OpenAICodexACPProvider: { setMetaAgentServerPort: vi.fn() },
+  createDispatchSkillId: (engine: string, source: string, name: string) => `${engine}:${source}:${name}`,
   SessionManager: class {
     async initialize() {}
   },
@@ -80,6 +81,7 @@ vi.mock('../SyncManager', () => ({ getSyncProvider: () => ({ pushChange: vi.fn()
 vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn(), safeOn: vi.fn() }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
+  getAppSetting: () => undefined,
   isAnalyticsEnabled: () => false,
   store: { get: appStoreMock.get },
 }));

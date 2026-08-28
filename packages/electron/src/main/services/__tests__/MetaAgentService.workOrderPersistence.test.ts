@@ -27,6 +27,7 @@ vi.mock('@nimbalyst/runtime/ai/server', () => ({
   },
   OpenAICodexProvider: { setMetaAgentServerPort: vi.fn() },
   OpenAICodexACPProvider: { setMetaAgentServerPort: vi.fn() },
+  createDispatchSkillId: (engine: string, source: string, name: string) => `${engine}:${source}:${name}`,
   SessionManager: class { async initialize() {} },
 }));
 vi.mock('@nimbalyst/runtime/ai/server/SessionStateManager', async (importOriginal) => {
@@ -65,6 +66,7 @@ vi.mock('../../utils/ipcRegistry', () => ({
 }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
+  getAppSetting: () => undefined,
   getWorkspaceState: () => ({ issueKeyPrefix: 'NIM' }),
   store: { get: (key: string) => key === 'metaAgentMaxParallel'
     ? testState.maxParallel

@@ -23,6 +23,7 @@ export type SettingsCategory =
   | 'advanced'
   | 'database'
   | 'agent-features'
+  | 'skill-library'
   | 'beta-features'
   | 'mcp-servers'
   | 'installed-extensions'
@@ -163,6 +164,11 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           name: 'Agent Features',
           icon: <MaterialSymbol icon="science" size={16} />,
           isAlpha: true,
+        },
+        {
+          id: 'skill-library',
+          name: '技能库',
+          icon: <MaterialSymbol icon="school" size={16} />,
         },
 
         {

@@ -364,6 +364,9 @@ const bridge: ExtensionAgentBridge = {
       const dispatchPermission = sessionProviderConfigs.get(
         providerSessionKey(args.extensionId, args.contributionId, args.sessionId),
       )?.dispatchPermission;
+      const dispatchSkills = sessionProviderConfigs.get(
+        providerSessionKey(args.extensionId, args.contributionId, args.sessionId),
+      )?.dispatchSkills;
 
       // Ensure the backend session exists before streaming the turn. The
       // backend's sendMessage throws "session is not created" otherwise.
@@ -386,6 +389,7 @@ const bridge: ExtensionAgentBridge = {
           tools: args.tools,
           systemPrompt: args.systemPrompt,
           ...(dispatchPermission ? { dispatchPermission } : {}),
+          ...(dispatchSkills ? { dispatchSkills } : {}),
         },
         requiredPermission: null,
       });
@@ -432,6 +436,7 @@ const bridge: ExtensionAgentBridge = {
           workspacePath,
           tools: args.tools,
           systemPrompt: args.systemPrompt,
+          ...(dispatchSkills ? { dispatchSkills } : {}),
         },
         requiredPermission: null,
       });

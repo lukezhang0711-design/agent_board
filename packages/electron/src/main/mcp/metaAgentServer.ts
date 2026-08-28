@@ -47,6 +47,8 @@ export type PlanCandidate = {
   intent: SessionIntent;
   permissionScope: DispatchPermissionScope;
   disturbanceLevel: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds?: string[];
 };
 
 export type PlanModule = {
@@ -67,6 +69,8 @@ export type PlanModule = {
   intent: SessionIntent;
   permissionScope: DispatchPermissionScope;
   disturbanceLevel: DispatchDisturbanceLevel;
+  skillBundleName?: string;
+  skillIds?: string[];
   doneCriteria: string;
   candidates?: PlanCandidate[];
 };
@@ -87,6 +91,8 @@ type CreateSessionArgs = {
   /** Explicit file deliverables named by the module completion standard. */
   outputFiles?: string[];
   completionCriteria?: CompletionCriteria;
+  skillBundleName?: string;
+  skillIds?: string[];
   maxParallelOverride?: number;
 };
 
@@ -141,6 +147,8 @@ const SUBMIT_PLAN_EXAMPLE = {
       intent: "implementation",
       permissionScope: "workspace-write",
       disturbanceLevel: "on-failure",
+      skillBundleName: "施工包",
+      skillIds: [],
       doneCriteria: "The card renders the fields and the approval test passes.",
       candidates: [
         {
@@ -155,6 +163,8 @@ const SUBMIT_PLAN_EXAMPLE = {
           intent: "implementation",
           permissionScope: "workspace-write",
           disturbanceLevel: "on-failure",
+          skillBundleName: "施工包",
+          skillIds: [],
         },
       ],
     },
@@ -169,8 +179,8 @@ const SUBMIT_PLAN_DESCRIPTION = [
   "planItems is a non-empty array of non-empty strings and is required.",
   "workOrderCount is an optional non-negative integer; omit it to use planItems.length.",
   "risks is a required array of strings and may be empty; [] means no risks were declared.",
-  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, a model taken from a list_models id (or that id's portion after the colon), optional model-declared effortLevel, intent, permissionScope, disturbanceLevel, and doneCriteria. resolvedModel is display-only and must never be used as a model value. Omitted knobs default by intent: investigation = read-only + never; implementation = workspace-write + on-failure.",
-  "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, optional effortLevel, and optional intent/permissionScope/disturbanceLevel; do not write serial comparison paragraphs.",
+  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, a model taken from a list_models id (or that id's portion after the colon), optional model-declared effortLevel, intent, permissionScope, disturbanceLevel, optional skillBundleName/skillIds, and doneCriteria. resolvedModel is display-only and must never be used as a model value. Omitted knobs default by intent: investigation = read-only + never; implementation = workspace-write + on-failure. Omitted skills mean no skills are granted.",
+  "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, optional effortLevel, and optional intent/permissionScope/disturbanceLevel/skillBundleName/skillIds; do not write serial comparison paragraphs.",
 ].join("\n");
 
 function submitPlanValidationError(message: string, example: string): Error {
@@ -289,6 +299,20 @@ function normalizeStringList(value: unknown, fieldName: string): string[] {
   return normalized;
 }
 
+function normalizeOptionalSkillBundleName(value: unknown, fieldName: string): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  throw submitPlanValidationError(
+    `${fieldName} must be a non-empty string when provided`,
+    JSON.stringify(SUBMIT_PLAN_EXAMPLE),
+  );
+}
+
+function normalizeOptionalSkillIds(value: unknown, fieldName: string): string[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  return normalizeStringList(value, fieldName);
+}
+
 function normalizeStructuredText(value: unknown, fieldName: string): StructuredPlanText {
   if (typeof value === 'string') return normalizeNonEmptyString(value, fieldName);
   return normalizeStringList(value, fieldName);
@@ -365,6 +389,14 @@ function normalizePlanCandidate(
     moduleIntent,
   );
   const defaults = getDefaultDispatchPermissionKnobs(intent);
+  const skillBundleName = normalizeOptionalSkillBundleName(
+    candidate.skillBundleName,
+    `modules[${moduleIndex}].candidates[${candidateIndex}].skillBundleName`,
+  );
+  const skillIds = normalizeOptionalSkillIds(
+    candidate.skillIds,
+    `modules[${moduleIndex}].candidates[${candidateIndex}].skillIds`,
+  );
   return withRawModelForValidation({
     name: normalizeNonEmptyString(candidate.name, `modules[${moduleIndex}].candidates[${candidateIndex}].name`),
     approach: normalizeNonEmptyString(candidate.approach, `modules[${moduleIndex}].candidates[${candidateIndex}].approach`),
@@ -385,6 +417,8 @@ function normalizePlanCandidate(
       `modules[${moduleIndex}].candidates[${candidateIndex}].disturbanceLevel`,
       defaults.disturbanceLevel,
     ),
+    ...(skillBundleName ? { skillBundleName } : {}),
+    ...(skillIds !== undefined ? { skillIds } : {}),
   }, candidate.model);
 }
 
@@ -421,6 +455,14 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
       `modules[${moduleIndex}].intent`,
     );
     const defaults = getDefaultDispatchPermissionKnobs(intent);
+    const skillBundleName = normalizeOptionalSkillBundleName(
+      module.skillBundleName,
+      `modules[${moduleIndex}].skillBundleName`,
+    );
+    const skillIds = normalizeOptionalSkillIds(
+      module.skillIds,
+      `modules[${moduleIndex}].skillIds`,
+    );
     return withRawModelForValidation({
       title: normalizeNonEmptyString(module.title, `modules[${moduleIndex}].title`),
       outputFiles: normalizeStringList(module.outputFiles, `modules[${moduleIndex}].outputFiles`),
@@ -439,6 +481,8 @@ function normalizePlanModules(value: unknown): PlanModule[] | undefined {
         `modules[${moduleIndex}].disturbanceLevel`,
         defaults.disturbanceLevel,
       ),
+      ...(skillBundleName ? { skillBundleName } : {}),
+      ...(skillIds !== undefined ? { skillIds } : {}),
       doneCriteria: normalizeNonEmptyString(module.doneCriteria, `modules[${moduleIndex}].doneCriteria`),
       ...(rawCandidates === undefined
         ? {}
@@ -656,6 +700,8 @@ const META_AGENT_TOOL_DEFS: Array<{
               intent: { type: "string", enum: ["investigation", "implementation"], description: "Optional worker role. Omitted defaults to implementation; investigation defaults to read-only + never, implementation to workspace-write + on-failure." },
               permissionScope: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"], description: "Optional suggested permission scope. Omitted values use the worker-role default." },
               disturbanceLevel: { type: "string", enum: ["never", "on-failure", "on-request"], description: "Optional suggested owner-interruption level. Omitted values use the worker-role default." },
+              skillBundleName: { type: "string", minLength: 1, description: "Optional skill bundle suggestion from the user's Skill Library. It is a shortcut only; the approval card expands it into explicit skill tags." },
+              skillIds: { type: "array", items: { type: "string", minLength: 1 }, description: "Optional explicit skill id suggestions. Empty or omitted means grant no skills." },
               doneCriteria: { type: "string", minLength: 1, description: "Concrete completion standard." },
               candidates: {
                 type: "array",
@@ -674,6 +720,8 @@ const META_AGENT_TOOL_DEFS: Array<{
                     intent: { type: "string", enum: ["investigation", "implementation"], description: "Optional worker role; defaults to the module role." },
                     permissionScope: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"], description: "Optional suggested permission scope; defaults by role." },
                     disturbanceLevel: { type: "string", enum: ["never", "on-failure", "on-request"], description: "Optional suggested owner-interruption level; defaults by role." },
+                    skillBundleName: { type: "string", minLength: 1, description: "Optional skill bundle suggestion. The approval card expands it to explicit skill tags." },
+                    skillIds: { type: "array", items: { type: "string", minLength: 1 }, description: "Optional explicit skill id suggestions. Empty or omitted means grant no skills." },
                   },
                   required: ["name", "approach", "pros", "cons", "risks", "provider", "model"],
                 },
@@ -762,6 +810,15 @@ const META_AGENT_TOOL_DEFS: Array<{
           },
           description:
             "Optional structured completion standard. Only explicitly named outputFiles are checked; content requirements are not auto-checked.",
+        },
+        skillBundleName: {
+          type: "string",
+          description: "Optional skill bundle name from the user's Skill Library. Omitted means no skills are granted unless the approved plan module supplied a final skill list.",
+        },
+        skillIds: {
+          type: "array",
+          items: { type: "string", minLength: 1 },
+          description: "Optional explicit final skill ids for this child. The product filters disabled or missing skills before dispatch.",
         },
         maxParallelOverride: {
           type: "integer",

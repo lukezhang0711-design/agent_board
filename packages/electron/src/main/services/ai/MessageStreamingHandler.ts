@@ -25,6 +25,7 @@ import {
   type SessionManager,
 } from '@nimbalyst/runtime/ai/server';
 import { readDispatchPermissionResolution } from '@nimbalyst/runtime/ai/server/dispatchPermissionKnobs';
+import { readDispatchSkillResolution } from '@nimbalyst/runtime/ai/server/dispatchSkills';
 import {
   type Message,
   type AIProviderType,
@@ -740,6 +741,9 @@ export class MessageStreamingHandler {
       const dispatchPermission = readDispatchPermissionResolution(
         (session.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
       );
+      const dispatchSkills = readDispatchSkillResolution(
+        (session.metadata as Record<string, unknown> | undefined)?.dispatchSkills,
+      );
       const reinitConfig: any = {
         apiKey,
         maxTokens: (session.providerConfig as any)?.maxTokens,
@@ -748,6 +752,7 @@ export class MessageStreamingHandler {
         // effort value and Gemini receives no independent effort parameter.
         ...(reinitEffortLevel && { effortLevel: reinitEffortLevel }),
         ...(dispatchPermission ? { dispatchPermission } : {}),
+        ...(dispatchSkills ? { dispatchSkills } : {}),
       };
 
       // Add baseUrl for LMStudio
@@ -1361,12 +1366,16 @@ export class MessageStreamingHandler {
         const dispatchPermission = readDispatchPermissionResolution(
           (session.metadata as Record<string, unknown> | undefined)?.dispatchPermission,
         );
+        const dispatchSkills = readDispatchSkillResolution(
+          (session.metadata as Record<string, unknown> | undefined)?.dispatchSkills,
+        );
         const turnConfig: ProviderConfig = {
           apiKey: freshApiKey,
           maxTokens: (session.providerConfig as any)?.maxTokens,
           temperature: (session.providerConfig as any)?.temperature,
           ...(turnEffortLevel && { effortLevel: turnEffortLevel }),
           ...(dispatchPermission ? { dispatchPermission } : {}),
+          ...(dispatchSkills ? { dispatchSkills } : {}),
         };
         if (this.isRuntimeDynamicCatalogProvider(session.provider)) {
           const fullModel = session.model || session.providerConfig?.model;

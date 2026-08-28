@@ -105,6 +105,52 @@ function installSessionRole(role: 'standard' | 'meta-agent' = 'standard'): void 
   });
 }
 
+function installSkillLibrary(): void {
+  const rendererWindow = window as unknown as {
+    electronAPI?: Record<string, unknown>;
+  };
+  const skills = [
+    { id: 'codex:user:implement', name: 'implement', engine: 'codex', source: 'user', scope: 'global' },
+    { id: 'codex:user:review', name: 'review', engine: 'codex', source: 'user', scope: 'global' },
+    { id: 'codex:user:diagnosing-bugs', name: 'diagnosing-bugs', engine: 'codex', source: 'user', scope: 'global' },
+    { id: 'codex:user:disabled-skill', name: 'disabled-skill', engine: 'codex', source: 'user', scope: 'global' },
+    { id: 'claude:user:implement', name: 'implement', engine: 'claude', source: 'user', scope: 'global' },
+  ];
+  const settings = {
+    disabledSkillIds: ['codex:user:disabled-skill'],
+    bundles: [
+      {
+        id: 'construction',
+        name: '施工包',
+        skillIds: ['codex:user:implement', 'codex:user:review', 'codex:user:disabled-skill'],
+      },
+      { id: 'research', name: '调研包', skillIds: [] },
+      { id: 'docs', name: '文档包', skillIds: [] },
+    ],
+  };
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: {
+      ...(rendererWindow.electronAPI ?? {}),
+      invoke: vi.fn().mockImplementation(async (channel: string) => {
+        if (channel === 'sessions:get') {
+          return {
+            success: true,
+            session: { agentRole: 'standard' },
+          };
+        }
+        if (channel === 'dispatch-skills:list') {
+          return { success: true, skills };
+        }
+        if (channel === 'app-settings:get') {
+          return settings;
+        }
+        return { success: true };
+      }),
+    },
+  });
+}
+
 function makeMessage(
   arguments_: Record<string, unknown>,
   providerToolCallId: string | null = compositeRequestId,
@@ -556,6 +602,49 @@ describe('PlanApprovalWidget', () => {
           moduleIndex: 0,
           permissionScope: 'read-only',
           disturbanceLevel: 'on-request',
+        }),
+      ]);
+    });
+  });
+
+  it('green FD-3/FD-6: expands bundle tags, filters disabled skills, records tag edits, and submits final skill ids', async () => {
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    installModelCatalog();
+    installSkillLibrary();
+    renderWidget({
+      ...dispatchKnobPlanArguments,
+      modules: [{
+        ...dispatchKnobPlanArguments.modules[0],
+        skillBundleName: '施工包',
+      }],
+    }, { exitPlanModeApprove });
+
+    const bundleSelect = await screen.findByTestId('plan-module-skill-bundle-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(bundleSelect.value).toBe('construction'));
+    expect(screen.getByText('implement')).toBeTruthy();
+    expect(screen.getByText('review')).toBeTruthy();
+    expect(screen.queryByText('disabled-skill')).toBeNull();
+    expect(screen.getByTestId('plan-module-skill-codex-notice-1').textContent)
+      .toContain('会话级禁用、无逐次审批');
+
+    fireEvent.click(screen.getByRole('button', { name: '移除 implement' }));
+    expect(screen.getByTestId('plan-module-skill-tags-1').textContent)
+      .not.toContain('implement');
+    expect(screen.getByTestId('plan-module-skill-adjusted-1').textContent)
+      .toContain('已调整');
+
+    fireEvent.change(screen.getByTestId('plan-module-skill-add-select-1'), {
+      target: { value: 'codex:user:diagnosing-bugs' },
+    });
+    expect(screen.getByText('diagnosing-bugs')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    await waitFor(() => {
+      expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
+        expect.objectContaining({
+          moduleIndex: 0,
+          skillBundleName: '施工包',
+          skillIds: ['codex:user:review', 'codex:user:diagnosing-bugs'],
         }),
       ]);
     });

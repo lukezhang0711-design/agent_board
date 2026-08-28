@@ -768,6 +768,12 @@ export class OpenAICodexProvider extends BaseAgentProvider {
       }
 
       const resolvedModel = await this.getConfiguredModel();
+      const dispatchSkills = this.config?.dispatchSkills;
+      const codexSkillConfig = dispatchSkills?.native.codex?.config;
+      const codexConfigOverrides = {
+        ...(this.buildCodexConfigOverrides(mcpServers) ?? {}),
+        ...(codexSkillConfig ?? {}),
+      };
 
       // Sibling worktrees and the parent project root the agent is allowed to
       // write to, in addition to its workingDirectory. Without this, Codex's
@@ -789,12 +795,13 @@ export class OpenAICodexProvider extends BaseAgentProvider {
         } : {}),
         raw: {
           systemPrompt,
-          codexConfigOverrides: this.buildCodexConfigOverrides(mcpServers),
+          codexConfigOverrides,
           ...(codexEnv ? { codexEnv } : {}),
           ...(this.config?.effortLevel ? { effortLevel: this.config.effortLevel } : {}),
           ...(this.config?.dispatchPermission
             ? { dispatchPermission: this.config.dispatchPermission }
             : {}),
+          ...(dispatchSkills ? { dispatchSkills } : {}),
           ...(additionalDirectories.length > 0 ? { additionalDirectories } : {}),
         },
       } satisfies SessionOptions;

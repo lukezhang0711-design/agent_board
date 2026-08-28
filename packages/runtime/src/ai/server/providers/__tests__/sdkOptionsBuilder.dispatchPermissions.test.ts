@@ -63,4 +63,68 @@ describe('buildSdkOptions dispatch permissions', () => {
     });
     expect(options.disallowedTools).toBeUndefined();
   });
+
+  it('green FD-5: emits Claude Agent SDK skill allowlist options', async () => {
+    const dispatchPermission = resolveDispatchPermission('claude-code', {
+      permissionScope: 'read-only',
+      disturbanceLevel: 'never',
+    });
+
+    const { options } = await buildSdkOptions(
+      makeDeps({
+        config: {
+          dispatchPermission,
+          dispatchSkills: {
+            engine: 'claude',
+            requested: { skillIds: ['claude:user:implement'] },
+            effective: { skillIds: ['claude:user:implement'] },
+            effectiveSkillNames: ['implement'],
+            native: {
+              claudeSdk: { skills: ['implement'] },
+            },
+          },
+        },
+      }),
+      makeParams(),
+    );
+
+    // ClaudeCodeProvider passes this object directly as query({ options }).
+    expect(options).toMatchObject({
+      skills: ['implement'],
+      tools: ['Read', 'Glob', 'Grep', 'LS', 'Skill'],
+      allowedTools: ['Read', 'Glob', 'Grep', 'LS'],
+    });
+  });
+
+  it('green FD-7: emits an empty Claude Agent SDK skill allowlist when no skills are granted', async () => {
+    const dispatchPermission = resolveDispatchPermission('claude-code', {
+      permissionScope: 'read-only',
+      disturbanceLevel: 'never',
+    });
+
+    const { options } = await buildSdkOptions(
+      makeDeps({
+        config: {
+          dispatchPermission,
+          dispatchSkills: {
+            engine: 'claude',
+            requested: { skillIds: [] },
+            effective: { skillIds: [] },
+            effectiveSkillNames: [],
+            native: {
+              claudeSdk: { skills: [] },
+            },
+          },
+        },
+      }),
+      makeParams(),
+    );
+
+    // Claude Agent SDK treats skills: [] as no available skills.
+    expect(options).toMatchObject({
+      skills: [],
+      tools: ['Read', 'Glob', 'Grep', 'LS', 'Skill'],
+      allowedTools: ['Read', 'Glob', 'Grep', 'LS'],
+    });
+  });
 });

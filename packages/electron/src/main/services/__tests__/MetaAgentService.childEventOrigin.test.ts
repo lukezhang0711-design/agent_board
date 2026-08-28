@@ -11,6 +11,7 @@ vi.mock('@nimbalyst/runtime/ai/server', () => ({
   ClaudeCodeProvider: { setMetaAgentServerPort: vi.fn(), setNativeHeadPlanApprovalHandler: vi.fn() },
   OpenAICodexProvider: { setMetaAgentServerPort: vi.fn() },
   OpenAICodexACPProvider: { setMetaAgentServerPort: vi.fn() },
+  createDispatchSkillId: (engine: string, source: string, name: string) => `${engine}:${source}:${name}`,
   SessionManager: class { async initialize() {} },
 }));
 vi.mock('@nimbalyst/runtime/ai/server/types', () => ({
@@ -33,7 +34,10 @@ vi.mock('electron', () => ({
 }));
 vi.mock('../SyncManager', () => ({ getSyncProvider: () => null }));
 vi.mock('../../utils/ipcRegistry', () => ({ safeHandle: vi.fn(), safeOn: vi.fn() }));
-vi.mock('../../utils/store', () => ({ getDefaultAIModel: () => null }));
+vi.mock('../../utils/store', () => ({
+  getDefaultAIModel: () => null,
+  getAppSetting: () => undefined,
+}));
 vi.mock('../../utils/timestampUtils', () => ({ toMillis: (value: unknown) => value }));
 vi.mock('../WorktreeStore', () => ({ createWorktreeStore: vi.fn() }));
 vi.mock('../GitWorktreeService', () => ({ GitWorktreeService: class {} }));

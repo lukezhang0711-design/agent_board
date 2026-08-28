@@ -60,6 +60,10 @@ export interface SelectedPlanCandidate {
   permissionScope?: DispatchPermissionScope;
   /** Owner-adjusted per-dispatch interruption request. */
   disturbanceLevel?: DispatchDisturbanceLevel;
+  /** Owner-selected skill bundle name, if the final list came from a bundle shortcut. */
+  skillBundleName?: string;
+  /** Owner-approved explicit skill ids. Empty or omitted means no skills. */
+  skillIds?: string[];
 }
 
 export type PlanModuleApprovalStatus = 'pending' | 'approved' | 'rejected';

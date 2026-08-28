@@ -191,6 +191,27 @@ export class AntigravityToolLoopProtocol {
     this.aborted = true;
   }
 
+  private rejectDisallowedSkillCall(toolCall: ToolCallRequest): string | null {
+    const includeOnly = this.executionOptions?.skills?.include_only;
+    if (!includeOnly || toolCall.name.toLowerCase() !== 'skill') {
+      return null;
+    }
+    const requested = toolCall.arguments.name
+      ?? toolCall.arguments.skill
+      ?? toolCall.arguments.skillName
+      ?? toolCall.arguments.id;
+    const requestedName = typeof requested === 'string' ? requested.trim() : '';
+    if (requestedName && includeOnly.includes(requestedName)) {
+      return null;
+    }
+    return JSON.stringify({
+      isError: true,
+      error: requestedName
+        ? `Skill "${requestedName}" is not in include_only for this dispatch.`
+        : 'Skill call rejected: no skill name was provided.',
+    });
+  }
+
   /**
    * Keep the established five-argument call shape for ordinary Gemini turns.
    * A sixth argument is only meaningful for an EX dispatch that carries native
@@ -427,6 +448,18 @@ export class AntigravityToolLoopProtocol {
       this.history.push({ role: 'assistant', content: assistantEntry });
 
       yield { type: 'tool_call', name: toolCall.name, args: toolCall.arguments };
+
+      const skillRejection = this.rejectDisallowedSkillCall(toolCall);
+      if (skillRejection) {
+        const sanitizedErr = this.sanitizeToolResult(skillRejection);
+        this.history.push({
+          role: 'tool',
+          content: sanitizedErr,
+          toolName: toolCall.name,
+        });
+        yield { type: 'tool_result', name: toolCall.name, result: skillRejection };
+        continue;
+      }
 
       const ledgerArg = (() => {
         const a = (toolCall.arguments ?? {}) as Record<string, unknown>;
