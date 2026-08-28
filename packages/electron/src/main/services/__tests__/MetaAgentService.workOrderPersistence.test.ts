@@ -495,6 +495,32 @@ describe('MetaAgentService work-order persistence', () => {
     fs.rmSync(workspacePath, { recursive: true, force: true });
   });
 
+  it('green FC-4: injects output naming rules into dispatched child task prompts', async () => {
+    testState.headTurnUserPrompts = ['老板要做地图批核对，交一份 SQL。'];
+
+    const created = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: '地图批核对',
+        prompt: '生成 Supabase 可执行核对 SQL。',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'investigation',
+        toolScope: 'read',
+      },
+    ));
+
+    const messages = await AgentMessagesRepository.list(created.sessionId, { limit: 10 });
+    const kickoff = messages.find((message) => message.direction === 'input')?.content ?? '';
+    expect(String(kickoff)).toContain('生成 Supabase 可执行核对 SQL。');
+    expect(String(kickoff)).toContain('【输出语言】当前老板对话使用中文');
+    expect(String(kickoff)).toContain('【产出命名】');
+    expect(String(kickoff)).toContain('YYYY-MM-DD-主题-用途.后缀');
+    expect(String(kickoff)).toContain('2026-08-28-地图批-核对.sql');
+    expect(String(kickoff)).toContain('提及产出文件时必须写完整文件名');
+  });
+
   it('green FB-111: a Haiku-style text plan receives a formal submit_plan chase', async () => {
     testState.headTurnUserPrompts = ['先出方案卡，未经批准不许派发。'];
     testState.headTurnFinalText = `## 实施方案
@@ -912,8 +938,12 @@ describe('MetaAgentService work-order persistence', () => {
       });
       expect(aiService.queuePromptForSession).toHaveBeenCalledWith(
         expect.any(String),
-        'Start the delegated task now',
+        expect.stringContaining('Start the delegated task now'),
       );
+      const kickoffPrompt = aiService.queuePromptForSession.mock.calls
+        .map((call: unknown[]) => String(call[1]))
+        .find((prompt: string) => prompt.includes('Start the delegated task now'));
+      expect(kickoffPrompt).toContain('【产出命名】');
       expect(aiService.triggerQueuedPromptProcessingForSession).toHaveBeenCalledWith(
         expect.any(String),
         workspacePath,
@@ -952,8 +982,11 @@ describe('MetaAgentService work-order persistence', () => {
       expect(parseStoredJson<any>(rows[0].data)).toMatchObject({ status: 'dispatched' });
       expect(aiService.queuePromptForSession).toHaveBeenCalledWith(
         result.sessionId,
-        'Start the delegated task and report readiness',
+        expect.stringContaining('Start the delegated task and report readiness'),
       );
+      const queuedPrompt = aiService.queuePromptForSession.mock.calls
+        .find((call: unknown[]) => call[0] === result.sessionId)?.[1];
+      expect(String(queuedPrompt)).toContain('【产出命名】');
       expect(aiService.triggerQueuedPromptProcessingForSession).toHaveBeenCalledWith(
         result.sessionId,
         workspacePath,
@@ -1925,7 +1958,7 @@ describe('MetaAgentService work-order persistence', () => {
       workspaceId: workspacePath,
       args: {
         title: 'Queued investigation',
-        prompt: 'Run after the active child releases its slot',
+        prompt: expect.stringContaining('Run after the active child releases its slot'),
         provider: 'claude-code',
         model: 'claude-code:opus',
         effortLevel: 'max',
@@ -1933,6 +1966,7 @@ describe('MetaAgentService work-order persistence', () => {
         toolScope: 'read',
       },
     });
+    expect(snapshot.args.prompt).toContain('【产出命名】');
 
     const { rows: cardRows } = await db.query<any>(
       `SELECT data, source_ref FROM tracker_items WHERE source_ref = $1`,

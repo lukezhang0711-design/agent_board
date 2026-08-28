@@ -98,6 +98,10 @@ const PLAN_APPROVAL_STILL_PENDING_MESSAGE =
 
 type ConversationOutputLanguage = 'Chinese' | 'English';
 
+const CHILD_ARTIFACT_NAMING_MARKER = '【产出命名】';
+const CHILD_ARTIFACT_NAMING_INSTRUCTION =
+  `${CHILD_ARTIFACT_NAMING_MARKER}新产出文件必须命名为 \`YYYY-MM-DD-主题-用途.后缀\`，例如 \`2026-08-28-地图批-核对.sql\`；主题使用当前对话语言，文件名不含空格。对话里提及产出文件时必须写完整文件名。`;
+
 function inferConversationOutputLanguage(
   userPrompts: readonly string[],
 ): ConversationOutputLanguage | null {
@@ -123,7 +127,26 @@ function appendConversationLanguageInstruction(
   const instruction = language === 'Chinese'
     ? '【输出语言】当前老板对话使用中文。请使用中文撰写面向老板的说明、报告和交付物；代码、命令和专有名词可保留原样。'
     : '[Output language] The current user conversation is in English. Use English for user-facing explanations, reports, and deliverables; keep code, commands, and proper nouns as needed.';
-  return `${prompt.trim()}\n\n${instruction}`;
+  return appendInstructionIfMissing(prompt, language === 'Chinese' ? '【输出语言】' : '[Output language]', instruction);
+}
+
+function appendInstructionIfMissing(prompt: string, marker: string, instruction: string): string {
+  const trimmed = prompt.trim();
+  return trimmed.includes(marker) ? trimmed : `${trimmed}\n\n${instruction}`;
+}
+
+function appendChildDispatchInstructions(
+  prompt: string,
+  language: ConversationOutputLanguage | null,
+): string {
+  const languageAwarePrompt = language
+    ? appendConversationLanguageInstruction(prompt, language)
+    : prompt.trim();
+  return appendInstructionIfMissing(
+    languageAwarePrompt,
+    CHILD_ARTIFACT_NAMING_MARKER,
+    CHILD_ARTIFACT_NAMING_INSTRUCTION,
+  );
 }
 
 function serializePlanApprovalStillPending(planId: string, requestId: string): string {
@@ -1364,17 +1387,19 @@ export class MetaAgentService {
     try {
       const parentMessages = await AgentMessagesRepository.list(parentSessionId, { limit: 500 });
       const language = inferConversationOutputLanguage(extractUserPrompts(parentMessages));
-      if (!language) return args;
       return {
         ...args,
-        prompt: appendConversationLanguageInstruction(args.prompt, language),
+        prompt: appendChildDispatchInstructions(args.prompt, language),
       };
     } catch (error) {
       // Dispatch must remain available if history storage is temporarily unavailable.
       console.warn(
         `[MetaAgentService] Could not infer parent conversation language for child dispatch: ${error instanceof Error ? error.message : String(error)}`,
       );
-      return args;
+      return {
+        ...args,
+        prompt: appendChildDispatchInstructions(args.prompt, null),
+      };
     }
   }
 

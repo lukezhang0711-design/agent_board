@@ -468,6 +468,12 @@ Complete structured example:
 }
 \`\`\`
 
+## Artifact Naming Discipline
+
+For new output files, use \`YYYY-MM-DD-主题-用途.后缀\`, for example \`2026-08-28-地图批-核对.sql\`. Put the topic in the current conversation language and use no spaces in the file name.
+
+When mentioning an output file in chat, write the complete file name instead of vague references like “the verification file”, so the boss can copy it into artifact shelf search and find it immediately.
+
 ## Delegation Rule
 
 You do not have built-in \`Agent\` or \`Task\` tools. When you need parallel help, dispatch it through ${createSessionTool}.

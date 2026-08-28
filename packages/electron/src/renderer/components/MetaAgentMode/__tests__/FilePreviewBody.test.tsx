@@ -56,8 +56,12 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderBody(filePath: string, onOpenWithSystem = vi.fn()) {
-  render(<FilePreviewBody filePath={filePath} onOpenWithSystem={onOpenWithSystem} />);
+function renderBody(
+  filePath: string,
+  onOpenWithSystem = vi.fn(),
+  props: Partial<React.ComponentProps<typeof FilePreviewBody>> = {},
+) {
+  render(<FilePreviewBody filePath={filePath} onOpenWithSystem={onOpenWithSystem} {...props} />);
   return onOpenWithSystem;
 }
 
@@ -98,7 +102,10 @@ describe('FilePreviewBody formats', () => {
 
   it('renders HTML inside a locked-down sandbox and can flip to source', async () => {
     files['/ws/dashboard.html'] = { content: HOSTILE_HTML };
-    renderBody('/ws/dashboard.html');
+    const onOpenWithSystem = vi.fn();
+    const { rerender } = render(
+      <FilePreviewBody filePath="/ws/dashboard.html" onOpenWithSystem={onOpenWithSystem} htmlView="render" />,
+    );
 
     const frame = (await screen.findByTestId('file-preview-html-frame')) as HTMLIFrameElement;
 
@@ -126,12 +133,12 @@ describe('FilePreviewBody formats', () => {
       srcDoc.indexOf('https://evil.example.com/beacon.js'),
     );
 
-    fireEvent.click(screen.getByTestId('file-preview-html-mode-source'));
+    rerender(<FilePreviewBody filePath="/ws/dashboard.html" onOpenWithSystem={onOpenWithSystem} htmlView="source" />);
     const source = await screen.findByTestId('file-preview-html-source');
     expect(source.textContent).toContain('https://evil.example.com/beacon.js');
     expect(screen.queryByTestId('file-preview-html-frame')).toBeNull();
 
-    fireEvent.click(screen.getByTestId('file-preview-html-mode-render'));
+    rerender(<FilePreviewBody filePath="/ws/dashboard.html" onOpenWithSystem={onOpenWithSystem} htmlView="render" />);
     expect(await screen.findByTestId('file-preview-html-frame')).toBeTruthy();
   });
 
