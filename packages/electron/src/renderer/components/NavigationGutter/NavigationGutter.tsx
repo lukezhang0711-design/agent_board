@@ -10,9 +10,7 @@ import { ThemeToggleButton } from '../ThemeToggleButton/ThemeToggleButton';
 import { SyncStatusButton } from '../SyncStatusButton/SyncStatusButton';
 import { TrustIndicator } from '../TrustIndicator';
 import { ExtensionDevIndicator } from '../ExtensionDevIndicator';
-import { ClaudeUsageIndicator } from '../ClaudeUsageIndicator';
-import { CodexUsageIndicator } from '../CodexUsageIndicator';
-import { GeminiUsageIndicator } from '../GeminiUsageIndicator';
+import { AIUsageIndicator } from '../UsageIndicator';
 import { BackgroundTaskIndicator } from '../BackgroundTaskIndicator';
 import { VoiceModeButton } from '../UnifiedAI/VoiceModeButton';
 import { useExtensionGutterButtons, useExtensionBottomPanelButtons } from '../../extensions/panels/usePanels';
@@ -22,6 +20,7 @@ import {
   developerModeAtom,
   terminalFeatureAvailableAtom,
   syncEnabledAtom,
+  syncServerUrlAtom,
   syncEnabledProjectsAtom,
 } from '../../store/atoms/appSettings';
 import { workspaceHasTeamAtom } from '../../store/atoms/collabDocuments';
@@ -157,13 +156,15 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
     !!workspacePath &&
     prRemote.workspacePath === workspacePath;
 
-  // Check if mobile sync is configured for this workspace
+  // Check if mobile sync is configured
   const syncEnabled = useAtomValue(syncEnabledAtom);
+  const syncServerUrl = useAtomValue(syncServerUrlAtom);
   const syncEnabledProjects = useAtomValue(syncEnabledProjectsAtom);
-  const isSyncConfigured = syncEnabled && !!workspacePath && syncEnabledProjects.includes(workspacePath);
+  const isSyncConfigured = syncEnabled && Boolean(syncServerUrl && syncServerUrl.trim().length > 0);
+  const isProjectSyncConfigured = isSyncConfigured && !!workspacePath && syncEnabledProjects.includes(workspacePath);
 
   // User is "connected" to this project if they have a team or mobile sync configured
-  const isProjectConnected = hasTeam || isSyncConfigured;
+  const isProjectConnected = hasTeam || isProjectSyncConfigured;
 
   // When sync is enabled but the user isn't signed in (creds missing/expired),
   // surface a logged-out indicator on the user button so the broken-sync state
@@ -606,24 +607,10 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
       {/* Settings (bottom) */}
       <div className="nav-section nav-settings flex flex-col items-center gap-1 w-full px-1.5 py-1 mt-auto pt-2 border-t border-nim">
 
-        {/* Claude Usage Indicator - Shows API usage limits */}
-        {!isHidden('claude-usage') && (
-          <div onContextMenu={(e) => openContextMenu(e, 'claude-usage')}>
-            <ClaudeUsageIndicator />
-          </div>
-        )}
-
-        {/* Codex Usage Indicator - Shows Codex subscription usage limits */}
-        {!isHidden('codex-usage') && (
-          <div onContextMenu={(e) => openContextMenu(e, 'codex-usage')}>
-            <CodexUsageIndicator />
-          </div>
-        )}
-
-        {/* Gemini Usage Indicator - Shows Gemini (Antigravity) usage limits */}
-        {!isHidden('gemini-usage') && (
-          <div onContextMenu={(e) => openContextMenu(e, 'gemini-usage')}>
-            <GeminiUsageIndicator />
+        {/* AI Usage Indicator - Consolidated usage limits for Claude, Codex, Gemini */}
+        {!isHidden('ai-usage') && (
+          <div onContextMenu={(e) => openContextMenu(e, 'ai-usage')}>
+            <AIUsageIndicator />
           </div>
         )}
 
@@ -655,8 +642,8 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
           </div>
         )}
 
-        {/* Sync Status - Above Theme Toggle */}
-        {!isHidden('sync-status') && (
+        {/* Sync Status - Above Theme Toggle (Only rendered when sync is configured) */}
+        {!isHidden('sync-status') && isSyncConfigured && (
           <div onContextMenu={(e) => openContextMenu(e, 'sync-status')}>
             <SyncStatusButton
               workspacePath={workspacePath || undefined}

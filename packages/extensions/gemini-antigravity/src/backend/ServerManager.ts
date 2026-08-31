@@ -437,6 +437,13 @@ class AgyStreamSession {
     }
 
     const response = typeof result?.response === 'string' ? result.response : '';
+    const usage = asRecord(result?.usage);
+    const totalTokens = typeof usage?.total_tokens === 'number'
+      ? usage.total_tokens
+      : ((typeof usage?.input_tokens === 'number' ? usage.input_tokens : 0) + (typeof usage?.output_tokens === 'number' ? usage.output_tokens : 0));
+    if (totalTokens > 0) {
+      AntigravityServerManager.shared().recordTokenUsage(totalTokens);
+    }
     const parsed = parseAgyOutput(JSON.stringify({
       result: response || this.pending?.text || '',
       conversation_id: this.conversationId,
@@ -637,6 +644,20 @@ export class AntigravityServerManager {
   private agyStreamSessions = new Map<string, AgyStreamSession>();
   /** First-use model discovery cache; a failed probe is retryable and never fabricates rows. */
   private agyModelCatalogPromise: Promise<readonly AgyModelDescriptor[]> | null = null;
+  /** Self-accumulated token usage for stream-json turns. */
+  private accumulatedTokens = {
+    totalTokens: 0,
+    lastTokens: null as number | null,
+  };
+
+  recordTokenUsage(tokens: number): void {
+    this.accumulatedTokens.totalTokens += tokens;
+    this.accumulatedTokens.lastTokens = tokens;
+  }
+
+  getAccumulatedTokenUsage(): { totalTokens: number; lastTokens: number | null } {
+    return { ...this.accumulatedTokens };
+  }
 
   // Injected configuration. Falls back to the hardcoded defaults when the
   // host hasn't called configure() (dev harness, unit tests).

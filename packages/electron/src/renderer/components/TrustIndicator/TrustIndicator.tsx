@@ -92,8 +92,8 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
-  // Don't render if no workspace
-  if (!workspacePath) {
+  // Don't render if no workspace or if permission mode is default ('ask' or not set)
+  if (!workspacePath || !status?.permissionMode || status.permissionMode === 'ask') {
     return null;
   }
 

@@ -12,6 +12,18 @@ import { formatResetTime } from './claudeUsageAtoms';
 
 export { formatResetTime };
 
+export interface GeminiModelQuotaInfo {
+  model: string;
+  label: string;
+  utilization: number; // 0-100 percentage
+  resetsAt: string | null; // ISO timestamp
+}
+
+export interface GeminiGroupQuota {
+  groupName: string;
+  models: GeminiModelQuotaInfo[];
+}
+
 export interface GeminiUsageData {
   fiveHour: {
     utilization: number; // 0-100 percentage
@@ -21,6 +33,7 @@ export interface GeminiUsageData {
     utilization: number;
     resetsAt: string | null;
   };
+  groups?: GeminiGroupQuota[];
   credits?: {
     hasCredits: boolean;
     unlimited: boolean;

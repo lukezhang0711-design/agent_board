@@ -32,6 +32,18 @@ const GEMINI_BACKEND_MODULE_ID = 'antigravity-server';
 // "[PrivilegedExtensionHost] module not running" string.
 const GEMINI_NOT_STARTED_MESSAGE = 'Gemini usage will appear after your first request.';
 
+export interface GeminiModelQuotaInfo {
+  model: string;
+  label: string;
+  utilization: number; // 0-100 percentage
+  resetsAt: string | null; // ISO timestamp
+}
+
+export interface GeminiGroupQuota {
+  groupName: string;
+  models: GeminiModelQuotaInfo[];
+}
+
 export interface GeminiUsageData {
   fiveHour: {
     utilization: number; // 0-100 percentage
@@ -41,6 +53,7 @@ export interface GeminiUsageData {
     utilization: number;
     resetsAt: string | null;
   };
+  groups?: GeminiGroupQuota[];
   credits?: {
     hasCredits: boolean;
     unlimited: boolean;
@@ -88,8 +101,8 @@ interface AntigravityUsageSnapshot {
 }
 
 type GeminiUsageSnapshotResult =
-  | { available: true; snapshot: AntigravityUsageSnapshot }
-  | { available: false; error: string; notStarted?: boolean };
+  | { available: true; snapshot: AntigravityUsageSnapshot; tokenUsage?: { totalTokens: number; lastTokens: number | null } }
+  | { available: false; error: string; tokenUsage?: { totalTokens: number; lastTokens: number | null }; notStarted?: boolean };
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes before going to sleep
@@ -127,13 +140,14 @@ class GeminiUsageServiceImpl {
         const muted = this.makeUnavailable(
           result?.error ?? 'Gemini usage data unavailable',
           result?.notStarted ?? false,
+          result?.tokenUsage,
         );
         this.cachedUsage = muted;
         this.broadcastUpdate();
         return muted;
       }
 
-      const usageData = this.convertSnapshot(result.snapshot);
+      const usageData = this.convertSnapshot(result.snapshot, result.tokenUsage);
       this.cachedUsage = usageData;
       this.broadcastUpdate();
       return usageData;
@@ -240,12 +254,17 @@ class GeminiUsageServiceImpl {
     }
   }
 
-  private makeUnavailable(error: string, notStarted = false): GeminiUsageData {
+  private makeUnavailable(
+    error: string,
+    notStarted = false,
+    tokenUsage?: { totalTokens: number; lastTokens: number | null },
+  ): GeminiUsageData {
     return {
       fiveHour: { utilization: 0, resetsAt: null },
       sevenDay: { utilization: 0, resetsAt: null },
       limitsAvailable: false,
       available: false,
+      tokenUsage,
       lastUpdated: Date.now(),
       error,
       notStarted,
@@ -262,7 +281,10 @@ class GeminiUsageServiceImpl {
    * the next-most-constrained for the secondary ring. Account credits map onto
    * the optional `credits` block.
    */
-  private convertSnapshot(snapshot: AntigravityUsageSnapshot): GeminiUsageData {
+  private convertSnapshot(
+    snapshot: AntigravityUsageSnapshot,
+    tokenUsage?: { totalTokens: number; lastTokens: number | null },
+  ): GeminiUsageData {
     const quotas = Object.values(snapshot?.models ?? {}).filter(
       (q): q is AntigravityModelQuota =>
         !!q && typeof q.remainingFraction === 'number',
@@ -279,8 +301,35 @@ class GeminiUsageServiceImpl {
     const toUtilization = (q?: AntigravityModelQuota): number => {
       if (!q || typeof q.remainingFraction !== 'number') return 0;
       const util = (1 - q.remainingFraction) * 100;
-      return Math.max(0, Math.min(100, util));
+      return Math.max(0, Math.min(100, Math.round(util)));
     };
+
+    // Split into Antigravity's two groups: Gemini models and Claude & GPT models
+    const geminiModels: GeminiModelQuotaInfo[] = [];
+    const otherModels: GeminiModelQuotaInfo[] = [];
+
+    for (const q of quotas) {
+      const info: GeminiModelQuotaInfo = {
+        model: q.model,
+        label: q.label || q.model,
+        utilization: toUtilization(q),
+        resetsAt: q.resetTime ?? null,
+      };
+      const isGemini = /gemini/i.test(q.label || '') || /gemini/i.test(q.model);
+      if (isGemini) {
+        geminiModels.push(info);
+      } else {
+        otherModels.push(info);
+      }
+    }
+
+    const groups: GeminiGroupQuota[] = [];
+    if (geminiModels.length > 0) {
+      groups.push({ groupName: 'Gemini Models', models: geminiModels });
+    }
+    if (otherModels.length > 0) {
+      groups.push({ groupName: 'Claude & GPT Models', models: otherModels });
+    }
 
     const data: GeminiUsageData = {
       fiveHour: {
@@ -291,8 +340,10 @@ class GeminiUsageServiceImpl {
         utilization: toUtilization(secondary),
         resetsAt: secondary?.resetTime ?? null,
       },
+      groups: groups.length > 0 ? groups : undefined,
       limitsAvailable: quotas.length > 0,
       available: true,
+      tokenUsage,
       lastUpdated: Date.now(),
     };
 

@@ -32,6 +32,7 @@ import {
   AntigravityServerManager,
   type AgyExecutionOptions,
 } from './ServerManager';
+import { AntigravityUsageMeter } from './UsageMeter';
 import { AntigravityToolLoopProtocol } from './ToolLoopProtocol';
 
 // -------------------------------------------------------------------------
@@ -266,6 +267,7 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
   );
 
   const sessions = new Map<string, SessionState>();
+  const usageMeter = new AntigravityUsageMeter(AntigravityServerManager.shared());
 
   function getOrThrow(sessionId: string): SessionState {
     const s = sessions.get(sessionId);
@@ -525,10 +527,25 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
     },
 
     async getUsageSnapshot(): Promise<UsageSnapshotResult> {
-      // Read-only and truthful: agy stream-json exposes per-turn token counts,
-      // but no quota/remaining-limit API. Do not spawn the desktop language
-      // server just to synthesize a usage ring from a different protocol.
-      return { available: false, error: 'Antigravity 未提供用量查询' };
+      const server = AntigravityServerManager.shared();
+      const tokenUsage = server.getAccumulatedTokenUsage();
+      if (server.currentEndpoint() === null) {
+        return {
+          available: false,
+          error: '未检测到 Antigravity 桌面版',
+          tokenUsage,
+        };
+      }
+      try {
+        const snapshot = await usageMeter.getSnapshot();
+        return { available: true, snapshot, tokenUsage };
+      } catch (err) {
+        return {
+          available: false,
+          error: err instanceof Error ? err.message : String(err),
+          tokenUsage,
+        };
+      }
     },
   };
 

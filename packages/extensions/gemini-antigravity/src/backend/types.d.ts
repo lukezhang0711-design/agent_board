@@ -244,8 +244,8 @@ declare global {
    * module; the main-side service narrows it.
    */
   type UsageSnapshotResult =
-    | { available: true; snapshot: unknown }
-    | { available: false; error: string };
+    | { available: true; snapshot: unknown; tokenUsage?: { totalTokens: number; lastTokens: number | null } }
+    | { available: false; error: string; tokenUsage?: { totalTokens: number; lastTokens: number | null } };
 
   // -------------------------------------------------------------------------
   // The API the backend module returns from activate()
