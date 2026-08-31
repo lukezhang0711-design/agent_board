@@ -5,7 +5,7 @@ import {
   DISPATCH_SKILL_SETTINGS_KEY,
   filterEnabledDispatchSkills,
   formatTokenCount,
-  groupSkillsByFamily,
+  groupSkillsByCategory,
   mergeSkillsByName,
   readDispatchSkillSettings,
   sanitizeDispatchSkillSettingsForLibrary,
@@ -13,6 +13,7 @@ import {
   type DispatchSkillDescriptor,
   type DispatchSkillSettings,
   type MergedSkillCard,
+  type SkillCategory,
 } from '../../utils/dispatchSkillLibrary';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 
@@ -57,7 +58,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
   const [selectedBundleId, setSelectedBundleId] = useState<string>('construction');
   const [newBundleName, setNewBundleName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [collapsedFamilies, setCollapsedFamilies] = useState<Set<string>>(new Set());
+  const [expandedCategory, setExpandedCategory] = useState<SkillCategory | null>(null);
   const [expandedCardNames, setExpandedCardNames] = useState<Set<string>>(new Set());
   const [scanErrors, setScanErrors] = useState<string[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
@@ -134,12 +135,16 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     return mergedCards.filter(
       (card) =>
         card.name.toLowerCase().includes(query)
-        || card.summary.toLowerCase().includes(query)
+        || card.summaryZh.toLowerCase().includes(query)
         || (card.rawDescription && card.rawDescription.toLowerCase().includes(query)),
     );
   }, [mergedCards, searchQuery]);
 
-  const familyGroups = useMemo(() => groupSkillsByFamily(filteredCards), [filteredCards]);
+  const categoryGroups = useMemo(() => groupSkillsByCategory(mergedCards), [mergedCards]);
+  const searchGroups = useMemo(
+    () => (searchQuery.trim() ? groupSkillsByCategory(filteredCards).filter((g) => g.cards.length > 0) : []),
+    [filteredCards, searchQuery],
+  );
 
   const hasCodexSkills = useMemo(
     () => skills.some((s) => s.engine === 'codex'),
@@ -179,18 +184,6 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     });
   };
 
-  const toggleFamilyCollapse = (familyId: string) => {
-    setCollapsedFamilies((prev) => {
-      const next = new Set(prev);
-      if (next.has(familyId)) {
-        next.delete(familyId);
-      } else {
-        next.add(familyId);
-      }
-      return next;
-    });
-  };
-
   const toggleCardExpanded = (cardName: string) => {
     setExpandedCardNames((prev) => {
       const next = new Set(prev);
@@ -201,6 +194,127 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
       }
       return next;
     });
+  };
+
+  const renderCard = (card: MergedSkillCard) => {
+    const isExpanded = expandedCardNames.has(card.name);
+    return (
+      <div
+        key={card.name}
+        data-testid={`skill-card-${card.name}`}
+        className={`flex flex-col justify-between gap-3 rounded-lg border p-3.5 transition-all duration-150 bg-[var(--nim-bg)] ${
+          card.disabled
+            ? 'border-[var(--nim-border-subtle)] opacity-70'
+            : 'border-[var(--nim-border)] hover:border-[var(--nim-border-strong)] shadow-xs'
+        }`}
+      >
+        <div className="flex flex-col gap-2.5">
+          {/* Card Top: Name & Switch */}
+          <label className="flex items-start justify-between gap-2 cursor-pointer">
+            <span className="font-semibold text-sm text-[var(--nim-text)] leading-snug break-words">
+              {card.name}
+            </span>
+            <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--nim-text-muted)] select-none">
+              启用
+              <input
+                type="checkbox"
+                checked={!card.disabled}
+                onChange={(e) => toggleSkillDisabled(card, !e.currentTarget.checked)}
+              />
+            </span>
+          </label>
+
+          {/* Engine Badges & Content Comparison Badge */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
+                card.engines.claude
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
+              }`}
+            >
+              Claude {card.engines.claude ? '✓' : '✗'}
+            </span>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
+                card.engines.codex
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
+              }`}
+            >
+              Codex {card.engines.codex ? '✓' : '✗'}
+            </span>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
+                card.engines.gemini
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
+              }`}
+            >
+              Gemini {card.engines.gemini ? '✓' : '✗'}
+            </span>
+
+            {card.contentMatch === 'same' && (
+              <span className="px-1.5 py-0.5 rounded text-[11px] bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)]">
+                内容一致
+              </span>
+            )}
+            {card.contentMatch === 'different' && (
+              <span className="px-1.5 py-0.5 rounded text-[11px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
+                两家内容不一样
+              </span>
+            )}
+          </div>
+
+          {/* One-sentence Chinese summary */}
+          <div className="text-xs text-[var(--nim-text)] leading-relaxed">
+            {card.hasDescription ? (
+              card.enrichmentFailed ? (
+                <span className="text-amber-600 dark:text-amber-400">
+                  [生成未成功] {card.summaryZh}
+                </span>
+              ) : (
+                <span>{card.summaryZh}</span>
+              )
+            ) : (
+              <span className="text-[var(--nim-text-muted)] italic">这个技能没有自带说明</span>
+            )}
+          </div>
+
+          {/* Expanded full description */}
+          {isExpanded && card.rawDescription && (
+            <div className="mt-1 rounded-md bg-[var(--nim-bg-subtle)] p-2.5 text-xs text-[var(--nim-text-muted)] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto border border-[var(--nim-border-subtle)]">
+              {card.rawDescription}
+            </div>
+          )}
+        </div>
+
+        {/* Card Footer: Metadata & Expand button */}
+        <div className="pt-2 border-t border-[var(--nim-border-subtle)] flex flex-col gap-1.5 text-[11px] text-[var(--nim-text-muted)]">
+          <div className="flex items-center justify-between gap-2">
+            <span>约 {card.estimatedTokens} token (估算)</span>
+            {card.hasDescription && (
+              <button
+                type="button"
+                className="text-[11px] text-[var(--nim-primary)] hover:underline cursor-pointer border-none bg-transparent p-0"
+                onClick={() => toggleCardExpanded(card.name)}
+              >
+                {isExpanded ? '收起说明' : '展开说明'}
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span>
+              {card.scopes.map((s) => SCOPE_LABELS[s] ?? s).join('/')} · {card.sources.map((s) => SOURCE_LABELS[s] ?? s).join('/')}
+            </span>
+            <span>·</span>
+            <span>
+              {card.bundleNames.length > 0 ? `在「${card.bundleNames.join('」「')}」中` : '未加入包'}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const updateSelectedBundle = (updater: (bundle: DispatchSkillBundle) => DispatchSkillBundle) => {
@@ -322,34 +436,65 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         )}
       </div>
 
-      {/* Cards Section with Family Grouping */}
+      {/* Cards Section with Taxonomy Grouping & Default Collapsed View */}
       <section className="flex flex-col gap-4">
         {status === 'loading' ? (
           <div className="py-8 text-center text-sm text-[var(--nim-text-muted)]">读取中...</div>
-        ) : familyGroups.length === 0 ? (
+        ) : searchQuery.trim() ? (
+          searchGroups.length === 0 ? (
+            <div className="rounded-lg border border-[var(--nim-border)] px-4 py-8 text-center text-sm text-[var(--nim-text-muted)]">
+              没有找到匹配的技能。
+            </div>
+          ) : (
+            searchGroups.map((group) => (
+              <div key={group.category} className="flex flex-col gap-2 rounded-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
+                <div className="flex items-center justify-between gap-2 px-1 py-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-[var(--nim-text)]">{group.category}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
+                      {group.cards.length}
+                    </span>
+                    <span className="text-xs text-[var(--nim-text-muted)]">
+                      {group.representativeUsage}
+                    </span>
+                  </div>
+                  <span className="text-xs text-[var(--nim-text-muted)] font-mono">
+                    约 {formatTokenCount(group.totalTokens)} token
+                  </span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 pt-1">
+                  {group.cards.map((card) => renderCard(card))}
+                </div>
+              </div>
+            ))
+          )
+        ) : categoryGroups.length === 0 ? (
           <div className="rounded-lg border border-[var(--nim-border)] px-4 py-8 text-center text-sm text-[var(--nim-text-muted)]">
-            {searchQuery ? '没有找到匹配的技能。' : '未发现本机技能。'}
+            未发现本机技能。
           </div>
         ) : (
-          familyGroups.map((group) => {
-            const isCollapsed = collapsedFamilies.has(group.id) && !searchQuery;
+          categoryGroups.map((group) => {
+            const isExpanded = expandedCategory === group.category;
             return (
-              <div key={group.id} className="flex flex-col gap-2 rounded-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
-                {/* Family Group Header */}
+              <div key={group.category} className="flex flex-col gap-2 rounded-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
+                {/* Category Row Header */}
                 <button
                   type="button"
                   className="flex items-center justify-between gap-2 px-1 py-1 text-left cursor-pointer border-none bg-transparent hover:text-[var(--nim-text)]"
-                  onClick={() => toggleFamilyCollapse(group.id)}
+                  onClick={() => setExpandedCategory(isExpanded ? null : group.category)}
                 >
                   <div className="flex items-center gap-2">
                     <MaterialSymbol
-                      icon={isCollapsed ? 'chevron_right' : 'expand_more'}
+                      icon={isExpanded ? 'expand_more' : 'chevron_right'}
                       size={18}
                       className="text-[var(--nim-text-muted)]"
                     />
-                    <span className="font-semibold text-sm text-[var(--nim-text)]">{group.name} 家族</span>
+                    <span className="font-semibold text-sm text-[var(--nim-text)]">{group.category}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
                       {group.cards.length}
+                    </span>
+                    <span className="text-xs text-[var(--nim-text-muted)]">
+                      {group.representativeUsage}
                     </span>
                   </div>
                   <span className="text-xs text-[var(--nim-text-muted)] font-mono">
@@ -357,123 +502,10 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                   </span>
                 </button>
 
-                {/* Cards in Family */}
-                {!isCollapsed && (
+                {/* Cards in Category (rendered ONLY when expanded) */}
+                {isExpanded && (
                   <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 pt-1">
-                    {group.cards.map((card) => {
-                      const isExpanded = expandedCardNames.has(card.name);
-                      return (
-                        <div
-                          key={card.name}
-                          data-testid={`skill-card-${card.name}`}
-                          className={`flex flex-col justify-between gap-3 rounded-lg border p-3.5 transition-all duration-150 bg-[var(--nim-bg)] ${
-                            card.disabled
-                              ? 'border-[var(--nim-border-subtle)] opacity-70'
-                              : 'border-[var(--nim-border)] hover:border-[var(--nim-border-strong)] shadow-xs'
-                          }`}
-                        >
-                          <div className="flex flex-col gap-2.5">
-                            {/* Card Top: Name & Switch */}
-                            <label className="flex items-start justify-between gap-2 cursor-pointer">
-                              <span className="font-semibold text-sm text-[var(--nim-text)] leading-snug break-words">
-                                {card.name}
-                              </span>
-                              <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--nim-text-muted)] select-none">
-                                启用
-                                <input
-                                  type="checkbox"
-                                  checked={!card.disabled}
-                                  onChange={(e) => toggleSkillDisabled(card, !e.currentTarget.checked)}
-                                />
-                              </span>
-                            </label>
-
-                            {/* Engine Badges & Content Comparison Badge */}
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
-                                  card.engines.claude
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
-                                }`}
-                              >
-                                Claude {card.engines.claude ? '✓' : '✗'}
-                              </span>
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
-                                  card.engines.codex
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
-                                }`}
-                              >
-                                Codex {card.engines.codex ? '✓' : '✗'}
-                              </span>
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
-                                  card.engines.gemini
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
-                                }`}
-                              >
-                                Gemini {card.engines.gemini ? '✓' : '✗'}
-                              </span>
-
-                              {card.contentMatch === 'same' && (
-                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)]">
-                                  内容一致
-                                </span>
-                              )}
-                              {card.contentMatch === 'different' && (
-                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
-                                  两家内容不一样
-                                </span>
-                              )}
-                            </div>
-
-                            {/* One-sentence summary */}
-                            <div className="text-xs text-[var(--nim-text)] leading-relaxed">
-                              {card.hasDescription ? (
-                                <span>{card.summary}</span>
-                              ) : (
-                                <span className="text-[var(--nim-text-muted)] italic">这个技能没有自带说明</span>
-                              )}
-                            </div>
-
-                            {/* Expanded full description */}
-                            {isExpanded && card.rawDescription && (
-                              <div className="mt-1 rounded-md bg-[var(--nim-bg-subtle)] p-2.5 text-xs text-[var(--nim-text-muted)] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto border border-[var(--nim-border-subtle)]">
-                                {card.rawDescription}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Card Footer: Metadata & Expand button */}
-                          <div className="pt-2 border-t border-[var(--nim-border-subtle)] flex flex-col gap-1.5 text-[11px] text-[var(--nim-text-muted)]">
-                            <div className="flex items-center justify-between gap-2">
-                              <span>约 {card.estimatedTokens} token (估算)</span>
-                              {card.hasDescription && (
-                                <button
-                                  type="button"
-                                  className="text-[11px] text-[var(--nim-primary)] hover:underline cursor-pointer border-none bg-transparent p-0"
-                                  onClick={() => toggleCardExpanded(card.name)}
-                                >
-                                  {isExpanded ? '收起说明' : '展开说明'}
-                                </button>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                              <span>
-                                {card.scopes.map((s) => SCOPE_LABELS[s] ?? s).join('/')} · {card.sources.map((s) => SOURCE_LABELS[s] ?? s).join('/')}
-                              </span>
-                              <span>·</span>
-                              <span>
-                                {card.bundleNames.length > 0 ? `在「${card.bundleNames.join('」「')}」中` : '未加入包'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {group.cards.map((card) => renderCard(card))}
                   </div>
                 )}
               </div>
