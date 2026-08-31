@@ -40,6 +40,7 @@ export interface ChannelHealthProbeResult {
   completionMs?: number;
   summary?: string;
   guidance?: string;
+  rawOutput?: string;
 }
 
 /**
@@ -63,6 +64,7 @@ export interface ChannelHealthResult extends ChannelHealthChannel {
   exitCode?: number;
   summary?: string;
   guidance?: string;
+  rawOutput?: string;
 }
 
 export interface ChannelHealthSnapshot {
@@ -362,6 +364,7 @@ export class ChannelHealthService {
         firstResponseMs,
         completionMs,
         ...(failureKind ? { failureKind } : {}),
+        ...(probeResult.rawOutput ? { rawOutput: probeResult.rawOutput } : {}),
         summary: probeResult.summary ?? copy?.summary ?? (state === 'slow' ? '响应较慢' : state === 'healthy' ? '已登录' : '检测状态未知'),
         ...(probeResult.guidance ?? copy?.guidance ? { guidance: probeResult.guidance ?? copy?.guidance } : {}),
       };
@@ -372,6 +375,7 @@ export class ChannelHealthService {
       const exitCode = error instanceof ChannelHealthError ? error.exitCode : undefined;
       const copy = channelHealthFailureCopy(channel.id, failureKind, exitCode);
       const state = this.stateForFailure(failureKind);
+      const rawOutput = error instanceof Error ? error.message : String(error);
       const result: ChannelHealthResult = {
         ...channel,
         state,
@@ -380,6 +384,7 @@ export class ChannelHealthService {
         completionMs: Math.max(0, this.now() - startedAt),
         failureKind,
         ...(typeof exitCode === 'number' ? { exitCode } : {}),
+        ...(rawOutput ? { rawOutput } : {}),
         ...copy,
       };
       this.results.set(channel.id, result);

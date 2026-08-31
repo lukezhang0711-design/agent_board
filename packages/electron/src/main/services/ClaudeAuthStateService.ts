@@ -10,6 +10,13 @@ import { resolveClaudeCodeExecutablePath } from '@nimbalyst/runtime/electron/cla
 export type ClaudeAuthStateKind = 'logged-in' | 'logged-out' | 'check-failed' | 'unknown';
 export type ClaudeAuthStateTrigger = 'automatic' | 'focus' | 'manual' | 'usage-401-recovery' | 'usage-refresh';
 
+export interface AuthDropForensicSnapshot {
+  transitionTime: string;
+  rawEngineOutput: string;
+  otherProcessesRunning: boolean;
+  credentialsFileMtime: string | null;
+}
+
 export interface ClaudeAuthState {
   status: ClaudeAuthStateKind;
   source: 'claude-cli-auth-status';
@@ -20,6 +27,7 @@ export interface ClaudeAuthState {
   organization?: string;
   subscriptionType?: string;
   error?: string;
+  rawOutput?: string;
 }
 
 interface AuthStatusCommandResult {
@@ -38,6 +46,8 @@ interface ClaudeAuthStateServiceOptions {
   cacheTtlMs?: number;
   runAuthStatus?: () => Promise<AuthStatusCommandResult>;
   publishState?: (state: ClaudeAuthState) => void;
+  getCredentialsMtime?: () => Promise<string | null> | string | null;
+  checkOtherProcesses?: () => Promise<boolean> | boolean;
 }
 
 interface ClaudeAuthStatusJson {
@@ -234,24 +244,84 @@ export function buildSystemClaudeCliCommand(
     : null;
 }
 
+export function getClaudeCredentialsFileMtime(customHomedir?: string): string | null {
+  const homedir = customHomedir ?? os.homedir();
+  const configDir = process.env.CLAUDE_CONFIG_DIR;
+  const candidates = [
+    ...(configDir ? [path.join(configDir, '.claude.json'), configDir] : []),
+    path.join(homedir, '.claude.json'),
+    path.join(homedir, '.claude', 'credentials.json'),
+    path.join(homedir, '.claude'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) {
+        const stat = fs.statSync(candidate);
+        return stat.mtime.toISOString();
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+export async function checkOtherClaudeProcessesRunning(): Promise<boolean> {
+  const isWin = process.platform === 'win32';
+  return new Promise((resolve) => {
+    if (isWin) {
+      execFile('tasklist', ['/FI', 'IMAGENAME eq claude.exe'], { timeout: 3000 }, (error, stdout) => {
+        if (error || !stdout) {
+          resolve(false);
+          return;
+        }
+        resolve(/claude\.exe/i.test(stdout));
+      });
+    } else {
+      execFile('pgrep', ['-l', 'claude'], { timeout: 3000 }, (error, stdout) => {
+        if (error || !stdout) {
+          resolve(false);
+          return;
+        }
+        const lines = stdout.trim().split('\n').filter((l) => l.trim().length > 0);
+        const otherLines = lines.filter((line) => {
+          const pid = parseInt(line.trim().split(/\s+/)[0], 10);
+          return pid !== process.pid;
+        });
+        resolve(otherLines.length > 0);
+      });
+    }
+  });
+}
+
 export class ClaudeAuthStateService {
   private cachedState: ClaudeAuthState = unknownState();
   private inflightCheck: Promise<ClaudeAuthState> | null = null;
   private generation = 0;
+  private lastForensicSnapshot: AuthDropForensicSnapshot | null = null;
+  private lastKnownGoodStatus: ClaudeAuthStateKind = 'unknown';
   private readonly now: () => number;
   private readonly cacheTtlMs: number;
   private readonly runAuthStatus: () => Promise<AuthStatusCommandResult>;
   private readonly publishState: (state: ClaudeAuthState) => void;
+  private readonly getCredentialsMtime: () => Promise<string | null> | string | null;
+  private readonly checkOtherProcesses: () => Promise<boolean> | boolean;
 
   constructor(options: ClaudeAuthStateServiceOptions = {}) {
     this.now = options.now ?? Date.now;
     this.cacheTtlMs = options.cacheTtlMs ?? AUTH_CACHE_TTL_MS;
     this.runAuthStatus = options.runAuthStatus ?? (() => this.runCliAuthStatus());
     this.publishState = options.publishState ?? ((state) => this.broadcastState(state));
+    this.getCredentialsMtime = options.getCredentialsMtime ?? (() => getClaudeCredentialsFileMtime());
+    this.checkOtherProcesses = options.checkOtherProcesses ?? (() => checkOtherClaudeProcessesRunning());
   }
 
   getCachedState(): ClaudeAuthState {
     return this.cachedState;
+  }
+
+  getLastForensicSnapshot(): AuthDropForensicSnapshot | null {
+    return this.lastForensicSnapshot;
   }
 
   async getState(options: { forceRefresh?: boolean; trigger?: ClaudeAuthStateTrigger } = {}): Promise<ClaudeAuthState> {
@@ -314,11 +384,17 @@ export class ClaudeAuthStateService {
     try {
       result = await this.runAuthStatus();
     } catch (error) {
+      const raw = error instanceof Error ? error.message : String(error);
       return this.checkFailed(
         checkedAt,
-        `Claude authentication check failed: ${error instanceof Error ? error.message : String(error)}`,
+        `Claude authentication check failed: ${raw}`,
+        raw,
       );
     }
+
+    const rawStdout = result.stdout.trim();
+    const rawStderr = result.stderr.trim();
+    const rawOutput = rawStdout || rawStderr || result.error?.message || '';
 
     const timedOut = result.error?.code === 'ETIMEDOUT'
       || result.error?.killed === true
@@ -332,15 +408,16 @@ export class ClaudeAuthStateService {
 
     let parsed: ClaudeAuthStatusJson;
     try {
-      parsed = JSON.parse(result.stdout.trim()) as ClaudeAuthStatusJson;
+      parsed = JSON.parse(rawStdout) as ClaudeAuthStatusJson;
     } catch (error) {
       return this.checkFailed(
         checkedAt,
         `Claude authentication check returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+        rawOutput || (error instanceof Error ? error.message : String(error)),
       );
     }
 
-    const parsedState = this.stateFromPayload(parsed, checkedAt);
+    const parsedState = this.stateFromPayload(parsed, checkedAt, rawOutput);
     const exitedNonZero = typeof result.exitCode === 'number' && result.exitCode !== 0;
     const commandFailed = Boolean(result.error) || result.exitCode !== 0;
 
@@ -358,20 +435,20 @@ export class ClaudeAuthStateService {
     return parsedState;
   }
 
-  private stateFromPayload(parsed: ClaudeAuthStatusJson, checkedAt: number): ClaudeAuthState {
+  private stateFromPayload(parsed: ClaudeAuthStatusJson, checkedAt: number, rawOutput?: string): ClaudeAuthState {
     if (!parsed || typeof parsed !== 'object' || typeof parsed.loggedIn !== 'boolean') {
-      return this.checkFailed(checkedAt, 'Claude authentication check returned an incomplete status payload.');
+      return this.checkFailed(checkedAt, 'Claude authentication check returned an incomplete status payload.', rawOutput);
     }
 
     const authMethod = optionalString(parsed.authMethod);
     const apiProvider = optionalString(parsed.apiProvider);
     if (!apiProvider || apiProvider === 'none') {
-      return this.checkFailed(checkedAt, 'Claude authentication status did not identify an API provider.');
+      return this.checkFailed(checkedAt, 'Claude authentication status did not identify an API provider.', rawOutput);
     }
 
     if (parsed.loggedIn === true) {
       if (!authMethod || authMethod === 'none') {
-        return this.checkFailed(checkedAt, 'Claude reported logged in without a valid authentication method.');
+        return this.checkFailed(checkedAt, 'Claude reported logged in without a valid authentication method.', rawOutput);
       }
       return {
         status: 'logged-in',
@@ -382,11 +459,12 @@ export class ClaudeAuthStateService {
         email: optionalString(parsed.email),
         organization: optionalString(parsed.orgName),
         subscriptionType: optionalString(parsed.subscriptionType),
+        rawOutput,
       };
     }
 
     if (authMethod !== 'none') {
-      return this.checkFailed(checkedAt, 'Claude reported logged out with an inconsistent authentication method.');
+      return this.checkFailed(checkedAt, 'Claude reported logged out with an inconsistent authentication method.', rawOutput);
     }
 
     return {
@@ -395,6 +473,7 @@ export class ClaudeAuthStateService {
       checkedAt,
       authMethod,
       apiProvider,
+      rawOutput,
     };
   }
 
@@ -403,24 +482,59 @@ export class ClaudeAuthStateService {
     result: AuthStatusCommandResult,
     timedOut: boolean,
   ): ClaudeAuthState {
+    const rawOutput = result.stderr.trim() || result.stdout.trim() || result.error?.message || `exit code ${result.exitCode}`;
     const detail = timedOut
       ? `Claude authentication check timed out after ${AUTH_CHECK_TIMEOUT_MS}ms.`
       : result.stderr.trim()
         || result.error?.message
         || `claude auth status exited with code ${String(result.exitCode)}.`;
-    return this.checkFailed(checkedAt, detail);
+    return this.checkFailed(checkedAt, detail, rawOutput);
   }
 
   private commitState(state: ClaudeAuthState, trigger: ClaudeAuthStateTrigger): ClaudeAuthState {
     const previousStatus = this.cachedState.status;
+    const wasLoggedIn = previousStatus === 'logged-in' || this.lastKnownGoodStatus === 'logged-in';
     this.cachedState = state;
     if (previousStatus !== state.status) {
       logger.main.info(
         `[ClaudeAuthStateService] Auth state transition ${previousStatus} -> ${state.status} trigger=${trigger} at=${state.checkedAt ?? 'none'}`,
       );
+      if (state.status === 'logged-in') {
+        this.lastKnownGoodStatus = 'logged-in';
+      } else if (state.checkedAt !== null && wasLoggedIn && (state.status === 'logged-out' || state.status === 'check-failed')) {
+        this.lastKnownGoodStatus = state.status;
+        void this.recordAuthDropForensicSnapshot(state);
+      }
     }
     this.publishState(state);
     return state;
+  }
+
+  private async recordAuthDropForensicSnapshot(state: ClaudeAuthState): Promise<AuthDropForensicSnapshot> {
+    const transitionTime = new Date(this.now()).toISOString();
+    const rawEngineOutput = state.rawOutput || state.error || '';
+    let otherProcessesRunning = false;
+    try {
+      otherProcessesRunning = await this.checkOtherProcesses();
+    } catch {
+      otherProcessesRunning = false;
+    }
+    let credentialsFileMtime: string | null = null;
+    try {
+      credentialsFileMtime = await this.getCredentialsMtime();
+    } catch {
+      credentialsFileMtime = null;
+    }
+
+    const snapshot: AuthDropForensicSnapshot = {
+      transitionTime,
+      rawEngineOutput,
+      otherProcessesRunning,
+      credentialsFileMtime,
+    };
+    this.lastForensicSnapshot = snapshot;
+    logger.main.warn(`[ClaudeAuthStateService] Auth drop forensic snapshot: ${JSON.stringify(snapshot)}`);
+    return snapshot;
   }
 
   private broadcastState(state: ClaudeAuthState): void {
@@ -431,13 +545,14 @@ export class ClaudeAuthStateService {
     }
   }
 
-  private checkFailed(checkedAt: number, error: string): ClaudeAuthState {
+  private checkFailed(checkedAt: number, error: string, rawOutput?: string): ClaudeAuthState {
     logger.main.warn('[ClaudeAuthStateService] Authentication status check failed:', error);
     return {
       status: 'check-failed',
       source: 'claude-cli-auth-status',
       checkedAt,
       error,
+      rawOutput: rawOutput ?? error,
     };
   }
 

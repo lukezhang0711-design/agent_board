@@ -48,6 +48,7 @@ export function ClaudeCodePanel({
 }: ClaudeCodePanelProps) {
   const loginStatus = useAtomValue(claudeAuthStateAtom);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [copiedLoginCmd, setCopiedLoginCmd] = useState(false);
   const [selectedAuthMethod, setSelectedAuthMethod] = useState<AuthMethod>(
     config.authMethod as AuthMethod || 'login'
   );
@@ -541,6 +542,11 @@ export function ClaudeCodePanel({
                         <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
                           Your Claude login is no longer active. Log in again with your Claude Pro or Team subscription.
                         </p>
+                        {(loginStatus.rawOutput || loginStatus.error) && (
+                          <div className="mb-3 p-2 rounded bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] font-mono text-[11px] text-[var(--nim-text-muted)] break-all" data-testid="claude-code-raw-output">
+                            <span className="font-sans text-[var(--nim-text-faint)]">引擎原话：</span>{loginStatus.rawOutput || loginStatus.error}
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <button
                             className="nim-btn-primary flex-1"
@@ -551,6 +557,26 @@ export function ClaudeCodePanel({
                           </button>
                           <button className="nim-btn-secondary" onClick={checkLoginStatus}>
                             Refresh
+                          </button>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-[var(--nim-border)] flex items-center justify-between gap-2 text-xs">
+                          <div className="flex items-center gap-1.5 text-[var(--nim-text)]">
+                            <span className="text-[var(--nim-text-muted)]">终端重登命令：</span>
+                            <code className="rounded bg-[var(--nim-bg-tertiary)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--nim-text)] border border-[var(--nim-border)]" data-testid="claude-code-relogin-command">
+                              claude /login
+                            </code>
+                          </div>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] px-2 py-1 text-[11px] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors cursor-pointer"
+                            onClick={() => {
+                              void navigator.clipboard.writeText('claude /login');
+                              setCopiedLoginCmd(true);
+                              setTimeout(() => setCopiedLoginCmd(false), 2000);
+                            }}
+                            data-testid="claude-code-copy-login"
+                          >
+                            {copiedLoginCmd ? '已复制' : '复制命令'}
                           </button>
                         </div>
                         <p className="text-[11px] leading-relaxed text-[var(--nim-text-faint)] mt-2">

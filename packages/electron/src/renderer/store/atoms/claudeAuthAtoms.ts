@@ -17,6 +17,7 @@ export interface ClaudeAuthState {
   organization?: string;
   subscriptionType?: string;
   error?: string;
+  rawOutput?: string;
 }
 
 export function unknownClaudeAuthState(): ClaudeAuthState {

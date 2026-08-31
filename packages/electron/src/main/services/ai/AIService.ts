@@ -791,7 +791,12 @@ export class AIService {
         return { state: 'healthy', summary: '已登录', completionMs: completion() };
       }
       if (state.status === 'logged-out') {
-        return { state: 'failed', failureKind: 'not_logged_in', completionMs: completion() };
+        return {
+          state: 'failed',
+          failureKind: 'not_logged_in',
+          completionMs: completion(),
+          rawOutput: state.rawOutput || state.error,
+        };
       }
       return {
         state: 'unknown',
@@ -799,6 +804,7 @@ export class AIService {
           ? 'auth_check_timeout'
           : 'auth_check_unknown',
         completionMs: completion(),
+        rawOutput: state.rawOutput || state.error,
       };
     }
 

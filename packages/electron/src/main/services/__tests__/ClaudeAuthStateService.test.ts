@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { execFileMock, resolveSharedExecutableMock, getAllWindowsMock, infoMock } = vi.hoisted(() => ({
+const { execFileMock, resolveSharedExecutableMock, getAllWindowsMock, infoMock, warnMock } = vi.hoisted(() => ({
   execFileMock: vi.fn(),
   resolveSharedExecutableMock: vi.fn(),
   getAllWindowsMock: vi.fn(),
   infoMock: vi.fn(),
+  warnMock: vi.fn(),
 }));
 
 vi.mock('child_process', () => ({
@@ -27,7 +28,7 @@ vi.mock('../../utils/logger', () => ({
   logger: {
     main: {
       info: infoMock,
-      warn: vi.fn(),
+      warn: warnMock,
       error: vi.fn(),
       debug: vi.fn(),
     },
@@ -38,6 +39,8 @@ import {
   buildClaudeCliCommand,
   buildSystemClaudeCliCommand,
   ClaudeAuthStateService,
+  getClaudeCredentialsFileMtime,
+  checkOtherClaudeProcessesRunning,
 } from '../ClaudeAuthStateService';
 
 const loggedInJson = JSON.stringify({
@@ -412,6 +415,124 @@ describe('ClaudeAuthStateService', () => {
     await expect(service.getState()).resolves.toMatchObject({
       status: 'check-failed',
       error: expect.stringContaining('timed out after 10000ms'),
+    });
+  });
+
+  describe('Forensic Snapshot on Auth Drop (FN requirements)', () => {
+    it('GREEN 1 & 2: captures forensic snapshot with 4 exact fields and verbatim engine error when login drops', async () => {
+      const verbatimCliErrorJson = JSON.stringify({
+        loggedIn: false,
+        authMethod: 'none',
+        apiProvider: 'firstParty',
+      });
+      const expectedTimestamp = 1725100000000;
+      const expectedIso = new Date(expectedTimestamp).toISOString();
+      const expectedMtime = '2026-08-31T12:00:00.000Z';
+
+      const service = new ClaudeAuthStateService({
+        now: () => expectedTimestamp,
+        runAuthStatus: vi.fn()
+          .mockResolvedValueOnce(result(loggedInJson))
+          .mockResolvedValueOnce(result(verbatimCliErrorJson)),
+        getCredentialsMtime: () => expectedMtime,
+        checkOtherProcesses: () => true,
+      });
+
+      // 1. Initial check -> logged-in
+      const firstState = await service.getState();
+      expect(firstState.status).toBe('logged-in');
+      expect(service.getLastForensicSnapshot()).toBeNull();
+
+      // 2. Drop check -> logged-out
+      const secondState = await service.getState({ forceRefresh: true });
+      expect(secondState.status).toBe('logged-out');
+
+      const snapshot = service.getLastForensicSnapshot();
+      expect(snapshot).not.toBeNull();
+
+      // Field 1: transitionTime
+      expect(snapshot?.transitionTime).toBe(expectedIso);
+
+      // Field 2: rawEngineOutput equals verbatim string from engine fixture (GREEN 2)
+      expect(snapshot?.rawEngineOutput).toBe(verbatimCliErrorJson);
+      expect(snapshot?.rawEngineOutput).not.toBe('未登录');
+
+      // Field 3: otherProcessesRunning
+      expect(snapshot?.otherProcessesRunning).toBe(true);
+
+      // Field 4: credentialsFileMtime
+      expect(snapshot?.credentialsFileMtime).toBe(expectedMtime);
+
+      // Structured warning log emitted
+      expect(warnMock).toHaveBeenCalledWith(
+        expect.stringContaining('[ClaudeAuthStateService] Auth drop forensic snapshot:'),
+      );
+      const warnCall = warnMock.mock.calls.find((call: any[]) =>
+        typeof call[0] === 'string' && call[0].includes('Auth drop forensic snapshot:'),
+      );
+      expect(warnCall).toBeDefined();
+      const loggedPayload = JSON.parse(warnCall![0].split('Auth drop forensic snapshot: ')[1]);
+      expect(loggedPayload).toEqual({
+        transitionTime: expectedIso,
+        rawEngineOutput: verbatimCliErrorJson,
+        otherProcessesRunning: true,
+        credentialsFileMtime: expectedMtime,
+      });
+    });
+
+    it('GREEN 2: captures raw stderr / process error string verbatim on check-failed transition', async () => {
+      const verbatimStderr = 'OAuth token refresh failed: invalid_grant (expired session)';
+      const service = new ClaudeAuthStateService({
+        now: () => 1000,
+        runAuthStatus: vi.fn()
+          .mockResolvedValueOnce(result(loggedInJson))
+          .mockResolvedValueOnce(result('', 1, Object.assign(new Error(verbatimStderr), { code: 1 }))),
+        getCredentialsMtime: () => null,
+        checkOtherProcesses: () => false,
+      });
+
+      await service.getState();
+      await service.getState({ forceRefresh: true });
+
+      const snapshot = service.getLastForensicSnapshot();
+      expect(snapshot).toMatchObject({
+        transitionTime: new Date(1000).toISOString(),
+        rawEngineOutput: expect.stringContaining(verbatimStderr),
+        otherProcessesRunning: false,
+        credentialsFileMtime: null,
+      });
+    });
+
+    it('does not record a forensic snapshot when state transitions from unknown/logged-out to logged-in', async () => {
+      const service = new ClaudeAuthStateService({
+        runAuthStatus: vi.fn()
+          .mockResolvedValueOnce(result(loggedOutJson))
+          .mockResolvedValueOnce(result(loggedInJson)),
+        getCredentialsMtime: () => null,
+        checkOtherProcesses: () => false,
+      });
+
+      await service.getState();
+      expect(service.getLastForensicSnapshot()).toBeNull();
+
+      await service.getState({ forceRefresh: true });
+      expect(service.getLastForensicSnapshot()).toBeNull();
+    });
+
+    it('getClaudeCredentialsFileMtime returns null for non-existent path', () => {
+      const mtime = getClaudeCredentialsFileMtime('/non-existent/dir');
+      expect(mtime).toBeNull();
+    });
+
+    it('checkOtherClaudeProcessesRunning executes pgrep and detects processes', async () => {
+      execFileMock.mockImplementation((file, args, options, callback) => {
+        expect(file).toBe('pgrep');
+        expect(args).toEqual(['-l', 'claude']);
+        callback(null, '99999 claude\n', '');
+      });
+
+      const running = await checkOtherClaudeProcessesRunning();
+      expect(running).toBe(true);
     });
   });
 });
