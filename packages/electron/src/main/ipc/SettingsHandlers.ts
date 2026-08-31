@@ -191,9 +191,12 @@ export function registerSettingsHandlers() {
     });
 
     safeHandle('dispatch-skills:list', (_event, workspacePath?: string) => {
+        const { skills, errors } = dispatchSkillLibraryService.listSkillsDetailed(workspacePath);
         return {
-            success: true,
-            skills: dispatchSkillLibraryService.listSkills(workspacePath),
+            success: errors.length === 0,
+            skills,
+            errors: errors.length > 0 ? errors : undefined,
+            error: errors.length > 0 ? errors.join('\n') : undefined,
         };
     });
 
