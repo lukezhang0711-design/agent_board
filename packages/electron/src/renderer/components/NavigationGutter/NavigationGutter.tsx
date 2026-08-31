@@ -200,7 +200,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
     {
       id: 'tracker-mode',
       icon: 'assignment',
-      label: `Tracker (${getShortcutDisplay(KeyboardShortcuts.view.trackerMode)})`,
+      label: `Tracker · 工作区全部事项 (${getShortcutDisplay(KeyboardShortcuts.view.trackerMode)})`,
       contentMode: 'tracker',
     },
   ];
@@ -373,6 +373,8 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
                   onExtensionPanelChange?.(null);
                   handleButtonClick(button);
                 }}
+                title={button.label}
+                aria-label={button.label}
                 aria-pressed={contentMode === button.contentMode && !activeExtensionPanel}
                 data-mode={button.contentMode || button.id}
                 data-testid={testId}

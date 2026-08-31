@@ -1368,6 +1368,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
           <div style={{
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             gap: '8px',
           }}>
             {showModeControl && (
@@ -1398,8 +1399,8 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
             {resolvedModel && (
               <span
                 data-testid="resolved-model-receipt"
-                className="text-xs text-[var(--nim-text-muted)] whitespace-nowrap"
-                title="Engine-reported model"
+                className="text-xs text-[var(--nim-text-muted)] truncate max-w-[200px]"
+                title={`Engine-reported model: ${resolvedModel}`}
               >
                 Model: {resolvedModel}
               </span>

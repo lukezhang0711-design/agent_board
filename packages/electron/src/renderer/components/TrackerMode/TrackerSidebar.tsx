@@ -134,8 +134,9 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
           }
         />
       )}
-      <div className="px-3 py-1.5 border-b border-nim text-[11px] font-semibold text-nim-muted uppercase tracking-wider">
-        Trackers
+      <div className="px-3 py-1.5 border-b border-nim text-[11px] font-semibold text-nim-muted uppercase tracking-wider flex items-center justify-between" data-testid="tracker-sidebar-header">
+        <span>Trackers</span>
+        <span className="text-[10px] font-normal text-nim-faint normal-case">工作区全部事项</span>
       </div>
 
       <div className="flex-1 overflow-y-auto">

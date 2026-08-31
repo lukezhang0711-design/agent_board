@@ -99,6 +99,7 @@ import {
   clearSessionError,
   loadInitialQueuedPrompts,
 } from '../../store';
+import { sessionInterruptedAtom } from '../../store/atoms/sessionKanban';
 import { streamCompletionSignalAtom } from '../../store/atoms/sessionTranscript';
 import { convertToWorkstreamAtom, sessionPromptAdditionsAtom, sessionLastSubmitAtAtom, sessionDraftLocalModifiedAtAtom, nextOptimisticId } from '../../store/atoms/sessions';
 import { clearAIInputHistoryAtom } from '../../store/atoms/aiInputUndo';
@@ -640,6 +641,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
   const sessionWorktreePath = useAtomValue(sessionWorktreePathAtom(sessionId));
   const sessionDocumentContext = useAtomValue(sessionDocumentContextAtom(sessionId));
   const rawEffortLevel = useAtomValue(sessionEffortLevelRawAtom(sessionId));
+  const isInterrupted = useAtomValue(sessionInterruptedAtom(sessionId));
   const loadSessionData = useSetAtom(loadSessionDataAtom);
   const updateSessionStore = useSetAtom(updateSessionStoreAtom);
 
@@ -661,7 +663,12 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
           || current.phase === 'failed')
       ) {
         cancelRequestInFlightRef.current = false;
-        return { ...current, phase: 'stopped' };
+        // Bind to actual abort result: only display "stopped" if truly interrupted
+        // or if there are paused queued prompts to manage; otherwise resolve to idle.
+        if (isInterrupted || (current.pausedCount !== undefined && current.pausedCount > 0)) {
+          return { ...current, phase: 'stopped' };
+        }
+        return { phase: 'idle' };
       }
       if (
         isProcessing
@@ -672,7 +679,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
       }
       return current;
     });
-  }, [isProcessing, cancelFeedback.phase]);
+  }, [isProcessing, cancelFeedback.phase, isInterrupted]);
 
   // Child session creation for "start new session" option
   const createChildSession = useSetAtom(createChildSessionAtom);

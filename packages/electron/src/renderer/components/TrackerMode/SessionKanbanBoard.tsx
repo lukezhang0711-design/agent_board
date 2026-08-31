@@ -37,6 +37,7 @@ import {
   sessionsByPhaseAtom,
   sessionKanbanFilterAtom,
   sessionKanbanTotalCountAtom,
+  sessionKanbanGroupedChildCountAtom,
   sessionKanbanTagsAtom,
   setSessionPhaseAtom,
   childRunStatesAtom,
@@ -92,6 +93,7 @@ const RUN_STATE_SEGMENTS = [
   { key: 'running' as const, label: 'running', color: '#60a5fa' },
   { key: 'waiting' as const, label: 'waiting', color: '#f97316' },
   { key: 'review' as const, label: 'review', color: '#a78bfa' },
+  { key: 'failed' as const, label: 'failed', color: '#ef4444' },
   { key: 'idle' as const, label: 'idle', color: '#666666' },
   { key: 'done' as const, label: 'done', color: '#4ade80' },
 ];
@@ -196,12 +198,13 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   const isParent = cardType !== 'session';
   const hasChildRunning = isParent && childStates.running > 0;
   const hasChildWaiting = isParent && childStates.waiting > 0;
+  const hasChildFailed = isParent && childStates.failed > 0;
   const isWorkOrderFailed = useAtomValue(sessionWorkOrderFailedAtom(sessionId));
 
-  if (isWorkOrderFailed) {
+  if (isWorkOrderFailed || (isParent && hasChildFailed && !hasChildRunning && !hasChildWaiting)) {
     return {
       state: 'failed',
-      badgeLabel: 'failed',
+      badgeLabel: isParent && hasChildFailed ? `${childStates.failed} failed` : 'failed',
       badgeIcon: 'error',
       badgeColor: '#ef4444',
       spinIcon: false,
@@ -1266,17 +1269,16 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
   const inputValue = showTagDropdown
     ? (filter.search ? filter.search + ' ' : '') + '#' + tagQuery
     : filter.search;
-  const groupedChildSessionCount = useMemo(() => (
-    [...sessionRegistry.values()].filter(session => (
-      Boolean(session.parentSessionId)
-      && !session.isArchived
-      && session.sessionType !== 'workstream'
-      && session.sessionType !== 'blitz'
-    )).length
-  ), [sessionRegistry]);
+  const groupedChildSessionCount = useAtomValue(sessionKanbanGroupedChildCountAtom);
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 border-b border-nim bg-nim shrink-0" data-testid="kanban-toolbar">
+      {/* Scope Title */}
+      <div className="flex items-center gap-1.5 shrink-0 pr-2 border-r border-nim" data-testid="kanban-scope-header">
+        <span className="text-xs font-semibold text-nim">Kanban</span>
+        <span className="text-[11px] text-nim-faint">本次派发相关</span>
+      </div>
+
       {/* Search with tag typeahead */}
       <div className="relative flex-1 max-w-[280px]">
         <MaterialSymbol
