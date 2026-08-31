@@ -227,6 +227,46 @@ async function persistProviderError(
   });
 }
 
+function asUsageNumber(value: unknown): number | null {
+  if (value == null) return null;
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+async function persistUsageLedger(input: {
+  sessionId: string;
+  engine: string;
+  model: string | null;
+  firstResponseMs: number | null;
+  totalDurationMs: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadInputTokens: number | null;
+  cacheCreationInputTokens: number | null;
+}): Promise<void> {
+  await AgentMessagesRepository.create({
+    sessionId: input.sessionId,
+    source: input.engine,
+    direction: 'output',
+    content: '{}',
+    metadata: {
+      eventType: 'usage_ledger',
+      engine: input.engine,
+      model: input.model,
+      firstResponseMs: input.firstResponseMs,
+      totalDurationMs: input.totalDurationMs,
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+      cacheReadInputTokens: input.cacheReadInputTokens,
+      cacheCreationInputTokens: input.cacheCreationInputTokens,
+    },
+    createdAt: new Date(),
+    hidden: true,
+    searchable: false,
+    messageKind: 'meta',
+  });
+}
+
 /**
  * Structural view of the AIService members this handler needs. Keeping it
  * declared here (rather than reaching into the AIService class via `private`
@@ -2340,6 +2380,10 @@ export class MessageStreamingHandler {
 
             // Capture token usage if available
             const tokenUsage = chunk.usage;
+            let ledgerInputTokens = asUsageNumber(tokenUsage?.input_tokens);
+            let ledgerOutputTokens = asUsageNumber(tokenUsage?.output_tokens);
+            const ledgerCacheReadInputTokens = asUsageNumber(tokenUsage?.cache_read_input_tokens);
+            const ledgerCacheCreationInputTokens = asUsageNumber(tokenUsage?.cache_creation_input_tokens);
             // Capture modelUsage for claude-code provider (provides per-model breakdown with input/output tokens)
             const modelUsage = chunk.modelUsage;
             // Context fill from last assistant message (actual tokens in context window)
@@ -2528,6 +2572,9 @@ export class MessageStreamingHandler {
                   ? Math.max(cumulativeOutput - previousCumulativeOutput, 0)
                   : (isResumedCodexThread ? 0 : cumulativeOutput);
 
+                ledgerInputTokens = deltaInput;
+                ledgerOutputTokens = deltaOutput;
+
                 nextInputTokens = currentUsage.inputTokens + deltaInput;
                 nextOutputTokens = currentUsage.outputTokens + deltaOutput;
                 nextTotalTokens = currentUsage.totalTokens + deltaInput + deltaOutput;
@@ -2581,6 +2628,18 @@ export class MessageStreamingHandler {
               // Update local session reference for next iteration
               session.tokenUsage = updatedUsage;
             }
+
+            await persistUsageLedger({
+              sessionId: session.id,
+              engine: session.provider,
+              model: session.model ?? null,
+              firstResponseMs: firstChunkTime === undefined ? null : firstChunkTime - startTime,
+              totalDurationMs: perfLog.totalTime,
+              inputTokens: ledgerInputTokens,
+              outputTokens: ledgerOutputTokens,
+              cacheReadInputTokens: ledgerCacheReadInputTokens,
+              cacheCreationInputTokens: ledgerCacheCreationInputTokens,
+            });
 
             // Only add assistant message if there's actual content or edits
             if (fullResponse && fullResponse.trim() !== '') {

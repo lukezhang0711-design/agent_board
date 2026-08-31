@@ -11,6 +11,9 @@ interface TimeSeriesDataPoint {
   outputTokens: number;
   totalTokens: number;
   sessionCount: number;
+  cacheReadInputTokens?: number | null;
+  cacheCreationInputTokens?: number | null;
+  cacheDataIncomplete?: boolean;
 }
 
 export const HistoricalGraph: React.FC<HistoricalGraphProps> = ({ workspaceId }) => {
@@ -55,10 +58,15 @@ export const HistoricalGraph: React.FC<HistoricalGraphProps> = ({ workspaceId })
   const chartData = data.map((point) => ({
     // Use UTC date formatting since timestamps are truncated to UTC midnight
     date: new Date(point.timestamp).toLocaleDateString(undefined, { timeZone: 'UTC' }),
-    'Input Tokens': point.inputTokens,
-    'Output Tokens': point.outputTokens,
+    'Normal Input': point.inputTokens,
+    'Cache Read': point.cacheReadInputTokens ?? null,
+    'Cache Creation': point.cacheCreationInputTokens ?? null,
+    Output: point.outputTokens,
     Sessions: point.sessionCount,
   }));
+  const cacheDataIncomplete = data.some((point) => point.cacheDataIncomplete === true
+    || point.cacheReadInputTokens == null
+    || point.cacheCreationInputTokens == null);
 
   return (
     <div className="historical-graph flex flex-col gap-6">
@@ -96,12 +104,19 @@ export const HistoricalGraph: React.FC<HistoricalGraphProps> = ({ workspaceId })
               }}
             />
             <Legend />
-            <Line type="monotone" dataKey="Input Tokens" stroke="#8884d8" strokeWidth={2} />
-            <Line type="monotone" dataKey="Output Tokens" stroke="#82ca9d" strokeWidth={2} />
+            <Line type="monotone" dataKey="Normal Input" stroke="#8884d8" strokeWidth={2} />
+            <Line type="monotone" dataKey="Cache Read" stroke="#38bdf8" strokeWidth={2} />
+            <Line type="monotone" dataKey="Cache Creation" stroke="#f59e0b" strokeWidth={2} />
+            <Line type="monotone" dataKey="Output" stroke="#82ca9d" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       ) : (
         <div className="no-data flex items-center justify-center min-h-[400px] text-nim-muted text-base">No data available for this time range</div>
+      )}
+      {cacheDataIncomplete && (
+        <div className="text-[11px] text-[var(--nim-text-muted)]">
+          Some engines did not report cache usage; gaps are unavailable data, not zero cache use.
+        </div>
       )}
     </div>
   );

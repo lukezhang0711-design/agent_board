@@ -1314,8 +1314,8 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
                 usage: {
                   input_tokens: totalInputTokens,
                   output_tokens: totalOutputTokens,
-                  cache_read_input_tokens: usageData?.cache_read_input_tokens || 0,
-                  cache_creation_input_tokens: usageData?.cache_creation_input_tokens || 0,
+                  cache_read_input_tokens: usageData?.cache_read_input_tokens,
+                  cache_creation_input_tokens: usageData?.cache_creation_input_tokens,
                   total_tokens: totalInputTokens + totalOutputTokens
                 }
               } : {}),
@@ -1534,8 +1534,8 @@ export class ClaudeCodeProvider extends BaseAgentProvider {
             usage: {
               input_tokens: totalInputTokens,
               output_tokens: totalOutputTokens,
-              cache_read_input_tokens: usageData?.cache_read_input_tokens || 0,
-              cache_creation_input_tokens: usageData?.cache_creation_input_tokens || 0,
+              cache_read_input_tokens: usageData?.cache_read_input_tokens,
+              cache_creation_input_tokens: usageData?.cache_creation_input_tokens,
               total_tokens: totalInputTokens + totalOutputTokens
             }
           } : {}),

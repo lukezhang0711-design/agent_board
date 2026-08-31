@@ -216,6 +216,89 @@ describe('UsageAnalyticsService on SQLite', () => {
       expect(a!.sessionCount).toBe(1);
       expect(a!.lastActivity).toBe(1_700_000_000_000);
     });
+
+    it('leaves aggregate cache data blank when an engine does not report it', async () => {
+      const timestamp = Date.UTC(2026, 5, 3, 12, 0, 0);
+      await insertSession(db, {
+        id: 'cache-reported',
+        provider: 'claude',
+        model: 'claude-sonnet-4',
+        createdAtMs: timestamp,
+        metadata: { tokenUsage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 } },
+      });
+      await insertSession(db, {
+        id: 'cache-unreported',
+        provider: 'openai',
+        model: 'gpt-4.1',
+        createdAtMs: timestamp,
+        metadata: { tokenUsage: { inputTokens: 40, outputTokens: 10, totalTokens: 50 } },
+      });
+      await insertMessage(db, {
+        sessionId: 'cache-reported',
+        direction: 'output',
+        content: {},
+        metadata: {
+          eventType: 'usage_ledger',
+          engine: 'claude',
+          model: 'claude-sonnet-4',
+          inputTokens: 100,
+          outputTokens: 20,
+          cacheReadInputTokens: 80,
+          cacheCreationInputTokens: 10,
+          firstResponseMs: 120,
+          totalDurationMs: 420,
+        },
+        createdAtMs: timestamp,
+      });
+      await insertMessage(db, {
+        sessionId: 'cache-unreported',
+        direction: 'output',
+        content: {},
+        metadata: {
+          eventType: 'usage_ledger',
+          engine: 'openai',
+          model: 'gpt-4.1',
+          inputTokens: 40,
+          outputTokens: 10,
+          cacheReadInputTokens: null,
+          cacheCreationInputTokens: null,
+          firstResponseMs: 100,
+          totalDurationMs: 300,
+        },
+        createdAtMs: timestamp,
+      });
+
+      const overall = await svc.getOverallTokenUsage() as any;
+      expect(overall.totalCacheReadInputTokens).toBeNull();
+      expect(overall.totalCacheCreationInputTokens).toBeNull();
+      expect(overall.cacheHitRate).toBeNull();
+      expect(overall.cacheDataIncomplete).toBe(true);
+
+      const providers = await svc.getUsageByProvider() as any[];
+      const reported = providers.find((row) => row.provider === 'claude');
+      expect(reported).toMatchObject({
+        totalCacheReadInputTokens: 80,
+        totalCacheCreationInputTokens: 10,
+      });
+      expect(reported.cacheHitRate).toBeCloseTo(80 / 190);
+      expect(reported.averageFirstResponseMs).toBe(120);
+      expect(reported.averageTotalDurationMs).toBe(420);
+
+      const unreported = providers.find((row) => row.provider === 'openai');
+      expect(unreported.totalCacheReadInputTokens).toBeNull();
+      expect(unreported.totalCacheCreationInputTokens).toBeNull();
+      expect(unreported.cacheHitRate).toBeNull();
+      expect(unreported.cacheDataIncomplete).toBe(true);
+
+      const series = await svc.getTimeSeriesData(timestamp - 1, timestamp + 1, 'day') as any[];
+      expect(series).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          timestamp: Date.UTC(2026, 5, 3),
+          cacheReadInputTokens: null,
+          cacheCreationInputTokens: null,
+        }),
+      ]));
+    });
   });
 
   describe('getAllSessionCount', () => {

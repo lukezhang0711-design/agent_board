@@ -10,6 +10,10 @@ interface TokenUsageStats {
   totalTokens: number;
   sessionCount: number;
   messageCount: number;
+  totalCacheReadInputTokens: number | null;
+  totalCacheCreationInputTokens: number | null;
+  cacheHitRate: number | null;
+  cacheDataIncomplete: boolean;
 }
 
 interface ProviderUsageStats {
@@ -19,6 +23,26 @@ interface ProviderUsageStats {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalTokens: number;
+  totalCacheReadInputTokens: number | null;
+  totalCacheCreationInputTokens: number | null;
+  cacheHitRate: number | null;
+  cacheDataIncomplete: boolean;
+  averageFirstResponseMs: number | null;
+  averageTotalDurationMs: number | null;
+  turnCount: number;
+}
+
+function formatTokens(value: number | null | undefined): string {
+  return value == null ? '—' : value.toLocaleString();
+}
+
+function formatRate(value: number | null | undefined): string {
+  return value == null ? '—' : `${(value * 100).toFixed(1)}%`;
+}
+
+function formatDuration(value: number | null | undefined): string {
+  if (value == null) return '—';
+  return value >= 1_000 ? `${(value / 1_000).toFixed(1)}s` : `${Math.round(value)}ms`;
 }
 
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceId }) => {
@@ -92,7 +116,43 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
             {overallStats.totalTokens.toLocaleString()}
           </div>
           <div className="stat-detail text-[11px] text-[var(--nim-text-muted)]">
-            {overallStats.totalInputTokens.toLocaleString()} in / {overallStats.totalOutputTokens.toLocaleString()} out
+            {overallStats.totalInputTokens.toLocaleString()} normal in / {overallStats.totalOutputTokens.toLocaleString()} out
+          </div>
+        </div>
+
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+            Normal Input
+          </div>
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5" data-testid="normal-input-tokens">
+            {formatTokens(overallStats.totalInputTokens)}
+          </div>
+        </div>
+
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+            Cache Read
+          </div>
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5" data-testid="cache-read-input-tokens">
+            {formatTokens(overallStats.totalCacheReadInputTokens)}
+          </div>
+        </div>
+
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+            Cache Creation
+          </div>
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5" data-testid="cache-creation-input-tokens">
+            {formatTokens(overallStats.totalCacheCreationInputTokens)}
+          </div>
+        </div>
+
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+            Cache Hit Rate
+          </div>
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5" data-testid="cache-hit-rate">
+            {formatRate(overallStats.cacheHitRate)}
           </div>
         </div>
 
@@ -110,6 +170,14 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           </div>
         )}
       </div>
+
+      {(overallStats.cacheDataIncomplete
+        || overallStats.totalCacheReadInputTokens == null
+        || overallStats.totalCacheCreationInputTokens == null) && (
+        <div className="text-[11px] text-[var(--nim-text-muted)]" data-testid="cache-data-note">
+          Some engines did not report cache usage; a blank cache value is unavailable data, not no cache.
+        </div>
+      )}
 
       {providerStats.length > 0 && (
         <div className="provider-breakdown mt-2">
@@ -138,6 +206,12 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
                       className="provider-bar-fill h-full bg-[var(--nim-primary)] rounded-sm transition-[width] duration-300 ease-out"
                       style={{ width: `${percentage}%` }}
                     />
+                  </div>
+                  <div className="text-[11px] text-[var(--nim-text-muted)]">
+                    Normal {formatTokens(provider.totalInputTokens)} · Cache read {formatTokens(provider.totalCacheReadInputTokens)} · Cache creation {formatTokens(provider.totalCacheCreationInputTokens)} · Hit {formatRate(provider.cacheHitRate)}
+                  </div>
+                  <div className="text-[11px] text-[var(--nim-text-muted)]">
+                    Avg first response {formatDuration(provider.averageFirstResponseMs)} · Avg total {formatDuration(provider.averageTotalDurationMs)}
                   </div>
                 </div>
               );

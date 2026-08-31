@@ -28,9 +28,9 @@ export const AIUsageReport: React.FC<AIUsageReportProps> = ({ onClose }) => {
           <div className="dashboard-section bg-nim-secondary border border-nim rounded-md p-4">
             <HistoricalGraph workspaceId={workspaceFilter} />
           </div>
-          {/*<div className="dashboard-section bg-nim-secondary border border-nim rounded-md p-4">*/}
-          {/*  <ModelComparison workspaceId={workspaceFilter} />*/}
-          {/*</div>*/}
+          <div className="dashboard-section bg-nim-secondary border border-nim rounded-md p-4">
+            <ModelComparison workspaceId={workspaceFilter} />
+          </div>
         </div>
 
 
