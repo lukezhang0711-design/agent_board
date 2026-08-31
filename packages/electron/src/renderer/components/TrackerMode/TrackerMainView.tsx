@@ -677,8 +677,11 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
       <TrackerSyncRejectionBanner workspacePath={workspacePath} />
       {/* Toolbar */}
       <div className="tracker-toolbar flex items-center gap-2 px-3 py-2 border-b border-nim bg-nim shrink-0">
-        {/* Title */}
-        <span className="text-sm font-semibold text-nim shrink-0">{title}</span>
+        {/* Title & Scope */}
+        <div className="flex items-center gap-1.5 shrink-0" data-testid="tracker-scope-header">
+          <span className="text-sm font-semibold text-nim">{title}</span>
+          <span className="text-[11px] text-nim-faint">工作区全部事项</span>
+        </div>
 
         {/* Search */}
         <div className="relative flex-1 max-w-[360px] min-w-0">

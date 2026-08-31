@@ -36,6 +36,7 @@ export interface ChildRunStateSummary {
   running: number;
   waiting: number;
   review: number;
+  failed: number;
   idle: number;
   done: number;
   total: number;
@@ -350,6 +351,31 @@ export const sessionKanbanTotalCountAtom = atom((get) => {
   return total;
 });
 
+/** Derived: count of child sessions grouped under currently visible parent workstreams */
+export const sessionKanbanGroupedChildCountAtom = atom((get) => {
+  const grouped = get(sessionsByPhaseAtom);
+  const registry = get(sessionRegistryAtom);
+  const visibleParentIds = new Set<string>();
+  for (const sessions of grouped.values()) {
+    for (const session of sessions) {
+      visibleParentIds.add(session.id);
+    }
+  }
+  let count = 0;
+  for (const session of registry.values()) {
+    if (
+      session.parentSessionId
+      && visibleParentIds.has(session.parentSessionId)
+      && !session.isArchived
+      && session.sessionType !== 'workstream'
+      && session.sessionType !== 'blitz'
+    ) {
+      count++;
+    }
+  }
+  return count;
+});
+
 /** Derived: all unique tags from root sessions (with counts) */
 export const sessionKanbanTagsAtom = atom((get) => {
   const registry = get(sessionRegistryAtom);
@@ -449,7 +475,7 @@ export const childRunStatesAtom = atomFamily((sessionId: string) =>
   atom((get): ChildRunStateSummary => {
     const registry = get(sessionRegistryAtom);
     const summary: ChildRunStateSummary = {
-      running: 0, waiting: 0, review: 0, idle: 0, done: 0, total: 0,
+      running: 0, waiting: 0, review: 0, failed: 0, idle: 0, done: 0, total: 0,
     };
 
     for (const [_id, meta] of registry) {
@@ -458,11 +484,14 @@ export const childRunStatesAtom = atomFamily((sessionId: string) =>
 
       const isProcessing = get(sessionProcessingAtom(meta.id));
       const hasPendingPrompt = get(sessionHasPendingInteractivePromptAtom(meta.id));
+      const isWorkOrderFailed = get(sessionWorkOrderFailedAtom(meta.id));
 
       if (isProcessing) {
         summary.running++;
       } else if (hasPendingPrompt) {
         summary.waiting++;
+      } else if (isWorkOrderFailed) {
+        summary.failed++;
       } else if (meta.isArchived) {
         summary.done++;
       } else if (meta.uncommittedCount > 0) {
