@@ -94,12 +94,6 @@ export const CODEX_SKILL_CONTROL_NOTICE =
 export const CLAUDE_CLI_SKILL_CONTROL_NOTICE =
   'Claude CLI：本机 CLI 只验证到禁用全部技能，未验证到指定技能白名单参数；完整白名单走 Claude Agent SDK。';
 
-export const DEFAULT_DISPATCH_SKILL_BUNDLES: readonly DispatchSkillBundle[] = [
-  { id: 'construction', name: '施工包', skillIds: [] },
-  { id: 'research', name: '调研包', skillIds: [] },
-  { id: 'docs', name: '文档包', skillIds: [] },
-];
-
 function normalizeString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim();
@@ -127,13 +121,11 @@ export function readDispatchSkillSettings(value: unknown): DispatchSkillSettings
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
       disabledSkillIds: [],
-      bundles: DEFAULT_DISPATCH_SKILL_BUNDLES.map((bundle) => ({ ...bundle })),
+      bundles: [],
     };
   }
   const record = value as Record<string, unknown>;
-  const bundlesInput = Array.isArray(record.bundles)
-    ? record.bundles
-    : DEFAULT_DISPATCH_SKILL_BUNDLES;
+  const bundlesInput = Array.isArray(record.bundles) ? record.bundles : [];
   const bundles = bundlesInput.flatMap((candidate) => {
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
       return [];

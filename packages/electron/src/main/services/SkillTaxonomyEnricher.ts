@@ -261,22 +261,14 @@ export function generateSkillEnrichment(
     };
   }
 
-  // If English description, summarize concisely based on description
+  // If not Chinese and not in catalog: mark as untranslated (enrichmentFailed: true)
   let cleanDesc = trimmedDesc.replace(/^A\s+/i, '').replace(/^An\s+/i, '');
   const firstSentence = cleanDesc.split(/\.|\n/)[0].trim();
+  const rawSummary = firstSentence || trimmedDesc;
 
-  if (firstSentence.length > 0) {
-    return {
-      category,
-      summaryZh: truncateTo30(firstSentence),
-      enrichmentFailed: false,
-    };
-  }
-
-  // Generation failed fallback: keep original English and mark
   return {
     category,
-    summaryZh: trimmedDesc.slice(0, 100),
+    summaryZh: rawSummary.length > 120 ? rawSummary.slice(0, 120) + '...' : rawSummary,
     enrichmentFailed: true,
   };
 }

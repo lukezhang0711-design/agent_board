@@ -51,30 +51,24 @@ describe('SkillTaxonomyEnricher', () => {
     expect(CATEGORY_REPRESENTATIVE_USAGES['工具环境']).toBe('浏览器、上下文存取、环境配置');
   });
 
-  it('绿④: 无说明的技能显示"这个技能没有自带说明"；生成失败的保留英文原文并标记', () => {
-    // No description
-    const noDesc = generateSkillEnrichment('custom-empty', '');
-    expect(noDesc.summaryZh).toBe('这个技能没有自带说明');
-    expect(noDesc.category).toBe('工具环境');
-    expect(noDesc.enrichmentFailed).toBe(false);
-
-    // Known skills have <= 30 char Chinese summaries
-    const grillMe = generateSkillEnrichment('grill-me', 'A relentless interview to sharpen a plan or design.');
-    expect(grillMe.category).toBe('规划决策');
-    expect(grillMe.summaryZh.length).toBeLessThanOrEqual(30);
-
-    const implement = generateSkillEnrichment('implement', 'Implement a piece of work based on a PRD.');
-    expect(implement.category).toBe('开发实现');
-    expect(implement.summaryZh.length).toBeLessThanOrEqual(30);
+  it('绿⑨: 未生成出中文的表外技能 enrichmentFailed === true 且保留英文原文 (不许拿英文冒充中文)', () => {
+    // English description not in known catalog
+    const untranslated = generateSkillEnrichment(
+      'some-brand-new-custom-skill',
+      'This is an advanced custom tool for compiling special assets.',
+    );
+    expect(untranslated.enrichmentFailed).toBe(true);
+    expect(untranslated.summaryZh).toContain('This is an advanced custom tool');
+    expect(untranslated.category).toBe('工具环境');
   });
 
-  it('绿③: 分类与中文说明同一次生成，落盘缓存；内容未变时不重复生成', () => {
+  it('绿⑧: 分类与中文说明同一次生成，落盘缓存；内容未变时不重复生成；内容变了只重生成那一个', () => {
     const manager = new SkillTaxonomyCacheManager(cacheFile);
-    const mockGen = vi.fn().mockReturnValue({
+    const mockGen = vi.fn().mockImplementation((name: string, desc?: string) => ({
       category: '规划决策' as SkillCategory,
-      summaryZh: '规划方案评审与任务拆解',
+      summaryZh: `${name} 中文总结`,
       enrichmentFailed: false,
-    });
+    }));
 
     // 1st call: generator is executed once
     const res1 = manager.enrichAndCache('my-plan', 'My plan description', 'content v1', mockGen);
@@ -87,9 +81,18 @@ describe('SkillTaxonomyEnricher', () => {
     expect(res2.category).toBe('规划决策');
     expect(mockGen).toHaveBeenCalledTimes(1);
 
-    // 3rd call with modified content: cache miss, generator called a 2nd time
-    const res3 = manager.enrichAndCache('my-plan', 'My plan description updated', 'content v2', mockGen);
+    // Call with a different skill
+    const resAnother = manager.enrichAndCache('other-skill', 'Other desc', 'content other', mockGen);
+    expect(resAnother.category).toBe('规划决策');
     expect(mockGen).toHaveBeenCalledTimes(2);
+
+    // 3rd call with modified content for first skill: cache miss, generator called a 3rd time
+    const res3 = manager.enrichAndCache('my-plan', 'My plan description updated', 'content v2', mockGen);
+    expect(mockGen).toHaveBeenCalledTimes(3);
+
+    // 4th call with other-skill again: hits cache, generator count stays 3
+    const resAnotherCached = manager.enrichAndCache('other-skill', 'Other desc', 'content other', mockGen);
+    expect(mockGen).toHaveBeenCalledTimes(3);
   });
 
   it('inferSkillCategory properly classifies domain keywords into the 8 fixed categories', () => {

@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CODEX_SKILL_CONTROL_NOTICE,
-  DEFAULT_DISPATCH_SKILL_BUNDLES,
   DISPATCH_SKILL_SETTINGS_KEY,
-  filterEnabledDispatchSkills,
   formatTokenCount,
   groupSkillsByCategory,
   mergeSkillsByName,
@@ -40,23 +38,14 @@ function makeBundleId(name: string): string {
   return `bundle-${name.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-').replace(/^-+|-+$/g, '') || Date.now()}`;
 }
 
-function ensureBundleNames(settings: DispatchSkillSettings): DispatchSkillSettings {
-  if (settings.bundles.length > 0) {
-    return settings;
-  }
-  return {
-    ...settings,
-    bundles: DEFAULT_DISPATCH_SKILL_BUNDLES.map((bundle) => ({ ...bundle })),
-  };
-}
-
 export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
   const [skills, setSkills] = useState<DispatchSkillDescriptor[]>([]);
   const [settings, setSettings] = useState<DispatchSkillSettings>(() =>
-    ensureBundleNames(readDispatchSkillSettings(undefined)),
+    readDispatchSkillSettings(undefined),
   );
-  const [selectedBundleId, setSelectedBundleId] = useState<string>('construction');
-  const [newBundleName, setNewBundleName] = useState('');
+  const [editingBundleId, setEditingBundleId] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<SkillCategory | null>(null);
   const [expandedCardNames, setExpandedCardNames] = useState<Set<string>>(new Set());
@@ -91,7 +80,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
 
         const discovered = Array.isArray(listResult?.skills) ? listResult.skills : [];
         const normalized = sanitizeDispatchSkillSettingsForLibrary(
-          ensureBundleNames(readDispatchSkillSettings(stored)),
+          readDispatchSkillSettings(stored),
           discovered,
         );
 
@@ -103,7 +92,6 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
 
         setSkills(discovered);
         setSettings(normalized);
-        setSelectedBundleId(normalized.bundles[0]?.id ?? 'construction');
         setStatus('ready');
       } catch (err: any) {
         if (!cancelled) {
@@ -118,8 +106,6 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
       cancelled = true;
     };
   }, [workspacePath]);
-
-  const enabledSkills = useMemo(() => filterEnabledDispatchSkills(skills, settings), [skills, settings]);
 
   const mergedCards = useMemo(() => mergeSkillsByName(skills, settings), [skills, settings]);
 
@@ -151,12 +137,98 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     [skills],
   );
 
-  const selectedBundle = settings.bundles.find((bundle) => bundle.id === selectedBundleId)
-    ?? settings.bundles[0]
-    ?? null;
+  const editingBundle = useMemo(
+    () => settings.bundles.find((bundle) => bundle.id === editingBundleId) ?? null,
+    [settings.bundles, editingBundleId],
+  );
 
   const updateSettings = (updater: (current: DispatchSkillSettings) => DispatchSkillSettings) => {
     void persistSettings(updater(settings));
+  };
+
+  const handleCreateBundle = () => {
+    const baseName = '新技能包';
+    let name = baseName;
+    let counter = 1;
+    const existingNames = new Set(settings.bundles.map((b) => b.name));
+    while (existingNames.has(name)) {
+      counter += 1;
+      name = `${baseName} ${counter}`;
+    }
+    const id = makeBundleId(name);
+    const nextBundle: DispatchSkillBundle = { id, name, skillIds: [] };
+    updateSettings((current) => ({
+      ...current,
+      bundles: [...current.bundles, nextBundle],
+    }));
+    setEditingBundleId(id);
+    setRenameValue(name);
+    setIsRenaming(true);
+  };
+
+  const handleSaveRename = () => {
+    const trimmed = renameValue.trim();
+    if (trimmed && editingBundle) {
+      updateSettings((current) => ({
+        ...current,
+        bundles: current.bundles.map((bundle) =>
+          bundle.id === editingBundle.id ? { ...bundle, name: trimmed } : bundle,
+        ),
+      }));
+    }
+    setIsRenaming(false);
+  };
+
+  const handleDeleteBundle = () => {
+    if (!editingBundle) return;
+    updateSettings((current) => ({
+      ...current,
+      bundles: current.bundles.filter((bundle) => bundle.id !== editingBundle.id),
+    }));
+    setEditingBundleId(null);
+    setIsRenaming(false);
+  };
+
+  const toggleBundleSkillForCard = (card: MergedSkillCard, checked: boolean) => {
+    if (!editingBundle) return;
+    const descriptorIds = card.descriptors.map((d) => d.id);
+    updateSettings((current) => ({
+      ...current,
+      bundles: current.bundles.map((bundle) => {
+        if (bundle.id !== editingBundle.id) return bundle;
+        const ids = new Set(bundle.skillIds);
+        if (checked) {
+          for (const id of descriptorIds) ids.add(id);
+        } else {
+          for (const id of descriptorIds) ids.delete(id);
+        }
+        return { ...bundle, skillIds: Array.from(ids) };
+      }),
+    }));
+  };
+
+  const handleSaveSearchToBundle = () => {
+    if (filteredCards.length === 0) return;
+    const query = searchQuery.trim();
+    const baseName = query ? `${query}包` : '新技能包';
+    let name = baseName;
+    let counter = 1;
+    const existingNames = new Set(settings.bundles.map((b) => b.name));
+    while (existingNames.has(name)) {
+      counter += 1;
+      name = `${baseName} ${counter}`;
+    }
+    const id = makeBundleId(name);
+    const skillIds = Array.from(
+      new Set(filteredCards.flatMap((card) => card.descriptors.map((d) => d.id))),
+    );
+    const nextBundle: DispatchSkillBundle = { id, name, skillIds };
+    updateSettings((current) => ({
+      ...current,
+      bundles: [...current.bundles, nextBundle],
+    }));
+    setEditingBundleId(id);
+    setIsRenaming(false);
   };
 
   const toggleSkillDisabled = (card: MergedSkillCard, disabled: boolean) => {
@@ -198,6 +270,10 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
 
   const renderCard = (card: MergedSkillCard) => {
     const isExpanded = expandedCardNames.has(card.name);
+    const isCardInEditingBundle = editingBundle
+      ? card.descriptors.some((d) => editingBundle.skillIds.includes(d.id))
+      : false;
+
     return (
       <div
         key={card.name}
@@ -209,20 +285,36 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         }`}
       >
         <div className="flex flex-col gap-2.5">
-          {/* Card Top: Name & Switch */}
-          <label className="flex items-start justify-between gap-2 cursor-pointer">
-            <span className="font-semibold text-sm text-[var(--nim-text)] leading-snug break-words">
-              {card.name}
-            </span>
-            <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--nim-text-muted)] select-none">
+          {/* Card Top: Name (with bundle checkbox in editing mode) & Switch */}
+          <div className="flex items-start justify-between gap-2">
+            {editingBundle ? (
+              <label className="flex items-center gap-2 cursor-pointer select-none min-w-0">
+                <input
+                  type="checkbox"
+                  data-testid={`bundle-skill-checkbox-${card.name}`}
+                  checked={isCardInEditingBundle}
+                  onChange={(e) => toggleBundleSkillForCard(card, e.target.checked)}
+                  className="rounded text-[var(--nim-primary)] cursor-pointer mt-0.5"
+                />
+                <span className="font-semibold text-sm text-[var(--nim-text)] leading-snug break-words">
+                  {card.name}
+                </span>
+              </label>
+            ) : (
+              <span className="font-semibold text-sm text-[var(--nim-text)] leading-snug break-words">
+                {card.name}
+              </span>
+            )}
+
+            <label className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--nim-text-muted)] cursor-pointer select-none">
               启用
               <input
                 type="checkbox"
                 checked={!card.disabled}
                 onChange={(e) => toggleSkillDisabled(card, !e.currentTarget.checked)}
               />
-            </span>
-          </label>
+            </label>
+          </div>
 
           {/* Engine Badges & Content Comparison Badge */}
           <div className="flex flex-wrap items-center gap-1.5">
@@ -266,12 +358,12 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
             )}
           </div>
 
-          {/* One-sentence Chinese summary */}
+          {/* One-sentence Chinese summary or untranslated notice */}
           <div className="text-xs text-[var(--nim-text)] leading-relaxed">
             {card.hasDescription ? (
               card.enrichmentFailed ? (
                 <span className="text-amber-600 dark:text-amber-400">
-                  [生成未成功] {card.summaryZh}
+                  [未翻译] {card.summaryZh}
                 </span>
               ) : (
                 <span>{card.summaryZh}</span>
@@ -315,56 +407,6 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         </div>
       </div>
     );
-  };
-
-  const updateSelectedBundle = (updater: (bundle: DispatchSkillBundle) => DispatchSkillBundle) => {
-    if (!selectedBundle) {
-      return;
-    }
-    updateSettings((current) => ({
-      ...current,
-      bundles: current.bundles.map((bundle) =>
-        bundle.id === selectedBundle.id ? updater(bundle) : bundle,
-      ),
-    }));
-  };
-
-  const addBundle = () => {
-    const name = newBundleName.trim();
-    if (!name) {
-      return;
-    }
-    const id = makeBundleId(name);
-    const nextBundle = { id, name, skillIds: [] };
-    setNewBundleName('');
-    setSelectedBundleId(id);
-    updateSettings((current) => ({
-      ...current,
-      bundles: [...current.bundles, nextBundle],
-    }));
-  };
-
-  const deleteSelectedBundle = () => {
-    if (!selectedBundle) {
-      return;
-    }
-    updateSettings((current) => {
-      const bundles = current.bundles.filter((bundle) => bundle.id !== selectedBundle.id);
-      setSelectedBundleId(bundles[0]?.id ?? '');
-      return { ...current, bundles };
-    });
-  };
-
-  const toggleBundleSkill = (skillId: string, checked: boolean) => {
-    updateSelectedBundle((bundle) => {
-      const ids = new Set(bundle.skillIds);
-      if (checked) {
-        ids.add(skillId);
-      } else {
-        ids.delete(skillId);
-      }
-      return { ...bundle, skillIds: Array.from(ids) };
-    });
   };
 
   return (
@@ -411,28 +453,192 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         </div>
       )}
 
-      {/* Search Bar */}
-      <div className="relative">
-        <MaterialSymbol
-          icon="search"
-          size={18}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--nim-text-muted)] pointer-events-none"
-        />
-        <input
-          type="text"
-          className="w-full rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] pl-9 pr-3 py-2 text-sm text-[var(--nim-text)] placeholder-[var(--nim-text-muted)] focus:outline-none focus:border-[var(--nim-primary)]"
-          placeholder="搜索技能名称或说明..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        {searchQuery && (
-          <button
-            type="button"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] cursor-pointer"
-            onClick={() => setSearchQuery('')}
+      {/* Bundles Section - Above the skill cards wall */}
+      <div className="flex flex-col gap-3">
+        {settings.bundles.length === 0 ? (
+          <div
+            data-testid="bundle-empty-guide"
+            className="flex items-center justify-between gap-3 p-3 rounded-lg border border-[var(--nim-border)] bg-[var(--nim-bg-subtle)] text-sm text-[var(--nim-text-muted)]"
           >
-            清空
-          </button>
+            <span>选中几个技能，存成一个包</span>
+            <button
+              type="button"
+              data-testid="create-bundle-btn"
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
+              onClick={handleCreateBundle}
+            >
+              + 新建
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2" data-testid="bundle-tags-list">
+            {settings.bundles.map((bundle) => {
+              const isEditing = editingBundleId === bundle.id;
+              return (
+                <button
+                  key={bundle.id}
+                  type="button"
+                  data-testid={`bundle-tag-${bundle.id}`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                    isEditing
+                      ? 'bg-[var(--nim-primary)] text-white border-[var(--nim-primary)]'
+                      : 'bg-[var(--nim-bg)] text-[var(--nim-text)] border-[var(--nim-border)] hover:border-[var(--nim-border-strong)]'
+                  }`}
+                  onClick={() => {
+                    if (isEditing) {
+                      setEditingBundleId(null);
+                      setIsRenaming(false);
+                    } else {
+                      setEditingBundleId(bundle.id);
+                      setIsRenaming(false);
+                    }
+                  }}
+                >
+                  <span>{bundle.name}</span>
+                  <span
+                    className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono ${
+                      isEditing
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)]'
+                    }`}
+                  >
+                    {bundle.skillIds.length}
+                  </span>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              data-testid="create-bundle-btn"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs border border-dashed border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:border-[var(--nim-border-strong)] cursor-pointer bg-transparent"
+              onClick={handleCreateBundle}
+            >
+              + 新建
+            </button>
+          </div>
+        )}
+
+        {/* Persistent Editing Banner */}
+        {editingBundle && (
+          <div
+            data-testid="bundle-editing-bar"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border border-[var(--nim-primary)]/40 bg-[var(--nim-primary)]/5"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              {isRenaming ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    autoFocus
+                    data-testid="bundle-rename-input"
+                    className="rounded border border-[var(--nim-primary)] bg-[var(--nim-bg)] px-2 py-1 text-sm font-medium text-[var(--nim-text)] focus:outline-none"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveRename();
+                      } else if (e.key === 'Escape') {
+                        setIsRenaming(false);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    data-testid="bundle-rename-save-btn"
+                    className="text-xs px-2 py-1 rounded bg-[var(--nim-primary)] text-white cursor-pointer border-none"
+                    onClick={handleSaveRename}
+                  >
+                    保存
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm font-medium text-[var(--nim-text)] truncate">
+                    正在编辑「{editingBundle.name}」· 已选 {editingBundle.skillIds.length}
+                  </span>
+                  <button
+                    type="button"
+                    data-testid="bundle-rename-btn"
+                    aria-label="改名"
+                    title="改名"
+                    className="p-1 rounded text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer border-none bg-transparent flex items-center"
+                    onClick={() => {
+                      setRenameValue(editingBundle.name);
+                      setIsRenaming(true);
+                    }}
+                  >
+                    <MaterialSymbol icon="edit" size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                data-testid="bundle-delete-btn"
+                className="px-2.5 py-1 text-xs rounded border border-[var(--nim-border)] text-[var(--nim-danger)] hover:bg-[var(--nim-danger-subtle)] cursor-pointer bg-transparent"
+                onClick={handleDeleteBundle}
+              >
+                删除
+              </button>
+              <button
+                type="button"
+                data-testid="bundle-finish-btn"
+                className="px-3 py-1 text-xs rounded font-medium bg-[var(--nim-primary)] text-white hover:opacity-90 cursor-pointer border-none"
+                onClick={() => {
+                  setEditingBundleId(null);
+                  setIsRenaming(false);
+                }}
+              >
+                完成
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Search Bar + Save Search to Bundle action */}
+      <div className="flex flex-col gap-2">
+        <div className="relative">
+          <MaterialSymbol
+            icon="search"
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--nim-text-muted)] pointer-events-none"
+          />
+          <input
+            type="text"
+            className="w-full rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] pl-9 pr-3 py-2 text-sm text-[var(--nim-text)] placeholder-[var(--nim-text-muted)] focus:outline-none focus:border-[var(--nim-primary)]"
+            placeholder="搜索技能名称或说明..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] cursor-pointer border-none bg-transparent"
+              onClick={() => setSearchQuery('')}
+            >
+              清空
+            </button>
+          )}
+        </div>
+
+        {searchQuery.trim() && filteredCards.length > 0 && (
+          <div className="flex items-center justify-between gap-2 px-1">
+            <span className="text-xs text-[var(--nim-text-muted)]">
+              找到 {filteredCards.length} 个技能
+            </span>
+            <button
+              type="button"
+              data-testid="save-search-to-bundle-btn"
+              className="px-2.5 py-1 text-xs rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
+              onClick={handleSaveSearchToBundle}
+            >
+              把这 {filteredCards.length} 个存成技能包
+            </button>
+          </div>
         )}
       </div>
 
@@ -446,27 +652,40 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               没有找到匹配的技能。
             </div>
           ) : (
-            searchGroups.map((group) => (
-              <div key={group.category} className="flex flex-col gap-2 rounded-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
-                <div className="flex items-center justify-between gap-2 px-1 py-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm text-[var(--nim-text)]">{group.category}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
-                      {group.cards.length}
-                    </span>
-                    <span className="text-xs text-[var(--nim-text-muted)]">
-                      {group.representativeUsage}
+            searchGroups.map((group) => {
+              const selectedCountInGroup = editingBundle
+                ? group.cards.filter((card) =>
+                    card.descriptors.some((d) => editingBundle.skillIds.includes(d.id)),
+                  ).length
+                : 0;
+
+              return (
+                <div key={group.category} className="flex flex-col gap-2 rounded-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
+                  <div className="flex items-center justify-between gap-2 px-1 py-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-[var(--nim-text)]">{group.category}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
+                        {group.cards.length}
+                      </span>
+                      {editingBundle && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-primary)]/10 text-[var(--nim-primary)] border border-[var(--nim-primary)]/20 font-medium">
+                          已选 {selectedCountInGroup}
+                        </span>
+                      )}
+                      <span className="text-xs text-[var(--nim-text-muted)]">
+                        {group.representativeUsage}
+                      </span>
+                    </div>
+                    <span className="text-xs text-[var(--nim-text-muted)] font-mono">
+                      约 {formatTokenCount(group.totalTokens)} token
                     </span>
                   </div>
-                  <span className="text-xs text-[var(--nim-text-muted)] font-mono">
-                    约 {formatTokenCount(group.totalTokens)} token
-                  </span>
+                  <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 pt-1">
+                    {group.cards.map((card) => renderCard(card))}
+                  </div>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 pt-1">
-                  {group.cards.map((card) => renderCard(card))}
-                </div>
-              </div>
-            ))
+              );
+            })
           )
         ) : categoryGroups.length === 0 ? (
           <div className="rounded-lg border border-[var(--nim-border)] px-4 py-8 text-center text-sm text-[var(--nim-text-muted)]">
@@ -475,6 +694,12 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         ) : (
           categoryGroups.map((group) => {
             const isExpanded = expandedCategory === group.category;
+            const selectedCountInGroup = editingBundle
+              ? group.cards.filter((card) =>
+                  card.descriptors.some((d) => editingBundle.skillIds.includes(d.id)),
+                ).length
+              : 0;
+
             return (
               <div key={group.category} className="flex flex-col gap-2 rounded-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
                 {/* Category Row Header */}
@@ -493,6 +718,11 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
                       {group.cards.length}
                     </span>
+                    {editingBundle && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-primary)]/10 text-[var(--nim-primary)] border border-[var(--nim-primary)]/20 font-medium">
+                        已选 {selectedCountInGroup}
+                      </span>
+                    )}
                     <span className="text-xs text-[var(--nim-text-muted)]">
                       {group.representativeUsage}
                     </span>
@@ -512,75 +742,6 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
             );
           })
         )}
-      </section>
-
-      {/* Bundles Section */}
-      <section className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-[var(--nim-text)]">技能包</h3>
-          <div className="flex flex-col overflow-hidden rounded-lg border border-[var(--nim-border)]">
-            {settings.bundles.map((bundle) => (
-              <button
-                key={bundle.id}
-                type="button"
-                className={`flex items-center justify-between gap-3 px-3 py-2 text-left text-sm ${bundle.id === selectedBundle?.id ? 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text)]' : 'text-[var(--nim-text-muted)]'}`}
-                onClick={() => setSelectedBundleId(bundle.id)}
-              >
-                <span className="truncate">{bundle.name}</span>
-                <span className="text-xs font-mono">{bundle.skillIds.length}</span>
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              className="min-w-0 flex-1 rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] px-2 py-1.5 text-sm text-[var(--nim-text)]"
-              value={newBundleName}
-              onChange={(event) => setNewBundleName(event.currentTarget.value)}
-              placeholder="新包名"
-            />
-            <button type="button" className="rounded-md border border-[var(--nim-border)] px-3 py-1.5 text-sm text-[var(--nim-text)] cursor-pointer hover:bg-[var(--nim-bg-subtle)]" onClick={addBundle}>
-              新建
-            </button>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-[var(--nim-border)] p-4 bg-[var(--nim-bg)]">
-          {selectedBundle ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <input
-                  className="min-w-0 flex-1 rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg-subtle)] px-2 py-1.5 text-sm font-medium text-[var(--nim-text)]"
-                  value={selectedBundle.name}
-                  onChange={(event) => updateSelectedBundle((bundle) => ({ ...bundle, name: event.currentTarget.value }))}
-                />
-                <button type="button" className="rounded-md border border-[var(--nim-border)] px-3 py-1.5 text-sm text-[var(--nim-text)] cursor-pointer hover:bg-[var(--nim-bg-subtle)]" onClick={deleteSelectedBundle}>
-                  删除
-                </button>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {enabledSkills.map((skill) => (
-                  <label key={skill.id} className="flex min-w-0 items-start gap-2 rounded-md border border-[var(--nim-border-subtle)] p-2.5 text-sm text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 shrink-0"
-                      checked={selectedBundle.skillIds.includes(skill.id)}
-                      onChange={(event) => toggleBundleSkill(skill.id, event.currentTarget.checked)}
-                    />
-                    <span className="min-w-0 flex flex-col gap-0.5">
-                      <span className="block truncate font-medium">{skill.name}</span>
-                      <span className="block text-xs text-[var(--nim-text-muted)]">
-                        {skill.engine} · {SCOPE_LABELS[skill.scope] ?? skill.scope}
-                        {skill.description ? ` · ${skill.description.slice(0, 50)}...` : ''}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm text-[var(--nim-text-muted)]">选择或新建一个技能包。</div>
-          )}
-        </div>
       </section>
 
       <div className="text-xs text-[var(--nim-text-muted)]">
