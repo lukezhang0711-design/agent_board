@@ -1171,7 +1171,7 @@ function readModuleDispatchSkillSelection(value: unknown): DispatchSkillSelectio
   }
   return normalizeDispatchSkillSelection(
     hasNestedSelection ? record.dispatchSkillSelection : record,
-  ) ?? { skillIds: [] };
+  ) ?? null;
 }
 
 function sameDispatchPermissionKnobs(
@@ -3403,8 +3403,7 @@ export class MetaAgentService {
     args: InternalCreateChildSessionArgs,
   ): DispatchSkillResolution | undefined {
     const requested = args.dispatchSkillSelection
-      ?? readModuleDispatchSkillSelection(args)
-      ?? { skillIds: [] };
+      ?? readModuleDispatchSkillSelection(args);
     const settings = getAppSetting<unknown>(DISPATCH_SKILL_SETTINGS_KEY);
     const knownSkills = dispatchSkillLibraryService.listSkills(workspaceId);
     return resolveDispatchSkills(provider, requested, knownSkills, settings);

@@ -893,6 +893,7 @@ describe('PlanApprovalWidget', () => {
     expect(modelSelect.value).toBe('claude-code:default');
     expect((screen.getByTestId('plan-module-effort-select-1') as HTMLSelectElement).value)
       .toBe('medium');
+    fireEvent.click(screen.getByTestId('plan-module-skill-adjust-1'));
 
     fireEvent.change(modelSelect, {
       target: { value: 'antigravity-gemini-agent:gemini-3.7-flash-high' },
@@ -963,6 +964,7 @@ describe('PlanApprovalWidget', () => {
 
     const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
     await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+    fireEvent.click(screen.getByTestId('plan-module-skill-adjust-1'));
     expect(modelSelect.value).toBe('antigravity-gemini-agent:gemini-3.7-flash-high');
     expect(screen.getByTestId('plan-module-provider-value-1').textContent)
       .toBe(fb136FinalSelectedCandidate.provider);
@@ -976,7 +978,7 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getByText('Plan approved')).toBeTruthy();
   });
 
-  it('green FB-136-4: dispatch payload matches the final values visible on the card', async () => {
+  it('green FB-136-4: dispatch payload retains hidden engine skills while current tags stay filtered', async () => {
     const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
     installModelCatalog(fb136ModelCatalog());
     installSkillLibrary();
@@ -984,6 +986,7 @@ describe('PlanApprovalWidget', () => {
 
     const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
     await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+    fireEvent.click(screen.getByTestId('plan-module-skill-adjust-1'));
     fireEvent.change(modelSelect, {
       target: { value: 'antigravity-gemini-agent:gemini-3.7-flash-high' },
     });
@@ -1011,7 +1014,11 @@ describe('PlanApprovalWidget', () => {
           permissionScope: visibleFinalState.permissionScope,
           disturbanceLevel: visibleFinalState.disturbanceLevel,
           skillBundleName: '施工包',
-          skillIds: ['gemini:user:review'],
+          skillIds: [
+            'codex:user:implement',
+            'codex:user:review',
+            'gemini:user:review',
+          ],
         }),
       ]);
     });
@@ -1033,6 +1040,7 @@ describe('PlanApprovalWidget', () => {
       }],
     }, { exitPlanModeApprove });
 
+    fireEvent.click(screen.getByTestId('plan-module-skill-adjust-1'));
     const bundleSelect = await screen.findByTestId('plan-module-skill-bundle-select-1') as HTMLSelectElement;
     await waitFor(() => expect(bundleSelect.value).toBe('construction'));
     expect(screen.getByText('implement')).toBeTruthy();
@@ -1058,7 +1066,74 @@ describe('PlanApprovalWidget', () => {
         expect.objectContaining({
           moduleIndex: 0,
           skillBundleName: '施工包',
-          skillIds: ['codex:user:review', 'codex:user:diagnosing-bugs'],
+          skillIds: [
+            'codex:user:review',
+            'gemini:user:review',
+            'codex:user:diagnosing-bugs',
+          ],
+        }),
+      ]);
+    });
+  });
+
+  it('green FI-3: condenses native-default skills until the owner opens adjustment', async () => {
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    installModelCatalog();
+    installSkillLibrary();
+    renderWidget(dispatchKnobPlanArguments, { exitPlanModeApprove });
+
+    const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+    await waitFor(() => expect(
+      screen.getByTestId('plan-module-skill-summary-1').textContent,
+    ).toContain('技能：全部（3）'));
+    expect(screen.queryByTestId('plan-module-skill-tags-1')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('plan-module-skill-adjust-1'));
+    expect(screen.getByTestId('plan-module-skill-tags-1').textContent)
+      .toContain('implement');
+    expect(screen.getByTestId('plan-module-skill-bundle-select-1')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    await waitFor(() => expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId));
+  });
+
+  it('green FI-4/FI-5: editing a new engine keeps hidden ids and explains their temporary unavailability', async () => {
+    const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
+    installModelCatalog();
+    installSkillLibrary();
+    renderWidget({
+      ...dispatchKnobPlanArguments,
+      modules: [{
+        ...dispatchKnobPlanArguments.modules[0],
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        skillIds: ['claude:user:implement', 'gemini:user:review'],
+      }],
+    }, { exitPlanModeApprove });
+
+    const modelSelect = screen.getByTestId('plan-module-model-select-1') as HTMLSelectElement;
+    await waitFor(() => expect(modelSelect.options.length).toBeGreaterThan(1));
+    fireEvent.click(screen.getByTestId('plan-module-skill-adjust-1'));
+    fireEvent.change(modelSelect, {
+      target: { value: 'antigravity-gemini-agent:gemini-3.7-flash-high' },
+    });
+    await waitFor(() => expect(screen.getByText('gemini-review')).toBeTruthy());
+    expect(screen.getByTestId('plan-module-skill-unavailable-1').textContent)
+      .toContain('1 个技能在当前引擎不可用（换回 Claude 引擎会恢复）');
+
+    fireEvent.click(screen.getByRole('button', { name: '移除 gemini-review' }));
+    fireEvent.change(modelSelect, { target: { value: 'claude-code:haiku' } });
+
+    await waitFor(() => expect(
+      screen.getByTestId('plan-module-skill-tags-1').textContent,
+    ).toContain('implement'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    await waitFor(() => {
+      expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
+        expect.objectContaining({
+          skillIds: ['claude:user:implement'],
         }),
       ]);
     });

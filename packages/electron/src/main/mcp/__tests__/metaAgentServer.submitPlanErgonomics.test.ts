@@ -119,7 +119,9 @@ describe('submit_plan ergonomics', () => {
     expect(submitPlanTool?.function.description).toContain('model taken from a list_models id');
     expect(submitPlanTool?.function.description).toContain('resolvedModel is display-only');
     expect(submitPlanTool?.function.description).toContain('skillBundleName/skillIds');
-    expect(submitPlanTool?.function.description).toContain('Omitted skills mean no skills are granted');
+    expect(submitPlanTool?.function.description).toContain('Omit skillBundleName and skillIds unless skills must be narrowed');
+    expect(submitPlanTool?.function.description).not.toContain('Omitted skills mean no skills are granted');
+    expect(submitPlanTool?.function.description).not.toContain('"skillIds": []');
     expect(schema).toMatchObject({
       properties: {
         title: { type: 'string' },
@@ -147,7 +149,10 @@ describe('submit_plan ergonomics', () => {
           permissionScope: { type: 'string' },
           disturbanceLevel: { type: 'string' },
           skillBundleName: { type: 'string' },
-          skillIds: { type: 'array' },
+          skillIds: expect.objectContaining({
+            type: 'array',
+            description: expect.stringContaining('Omit to preserve the engine native default'),
+          }),
           doneCriteria: { type: 'string' },
           candidates: {
             type: 'array',
@@ -162,6 +167,34 @@ describe('submit_plan ergonomics', () => {
         },
       },
     });
+  });
+
+  it('green FI-6: accepts modules without skill fields and leaves them absent', () => {
+    const normalized = normalizeSubmitPlanArgs({
+      title: 'Use native skill defaults',
+      planItems: ['Dispatch without narrowing skills'],
+      risks: [],
+      modules: [{
+        title: 'Native-default worker',
+        outputFiles: ['report.md'],
+        inputs: ['brief'],
+        provider: 'claude-code',
+        model: 'haiku',
+        doneCriteria: 'Use the engine default skills.',
+      }],
+    });
+
+    expect(normalized.modules).toEqual([{
+      title: 'Native-default worker',
+      outputFiles: ['report.md'],
+      inputs: ['brief'],
+      provider: 'claude-code',
+      model: 'haiku',
+      intent: 'implementation',
+      permissionScope: 'workspace-write',
+      disturbanceLevel: 'on-failure',
+      doneCriteria: 'Use the engine default skills.',
+    }]);
   });
 
   it('keeps an explicit complete call unchanged', async () => {

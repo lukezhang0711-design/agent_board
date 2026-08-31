@@ -147,6 +147,25 @@ describe('CodexAppServerProtocol', () => {
     protocol.cleanupSession(session);
   });
 
+  it('green FI-1: omits Codex skill config when no restriction was selected', async () => {
+    const protocol = new CodexAppServerProtocol();
+    const sessionPromise = protocol.createSession({ workspacePath: '/tmp/ws' });
+
+    const initReq = await nextWrittenMatching(child, 'initialize');
+    child.emitLine({
+      id: initReq.id,
+      result: { codexHome: '/fake', platformFamily: 'unix', platformOs: 'macos', userAgent: 'fake/0' },
+    });
+    const startReq = await nextWrittenMatching(child, 'thread/start');
+    const config = (startReq.params as { config?: Record<string, unknown> }).config ?? {};
+    expect(config).not.toHaveProperty('skills.include_only');
+    expect(config).not.toHaveProperty('skills.disabled');
+    child.emitLine({ id: startReq.id, result: { thread: { id: 'thread-fi-default-skills' } } });
+
+    const session = await sessionPromise;
+    protocol.cleanupSession(session);
+  });
+
   it('green FD-5/FD-6: passes Codex skill pre-disable config as actual thread/start config', async () => {
     const protocol = new CodexAppServerProtocol();
     const sessionPromise = protocol.createSession({
