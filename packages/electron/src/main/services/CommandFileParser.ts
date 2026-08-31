@@ -251,32 +251,37 @@ export function parseSkillFile(
  * @returns Parsed frontmatter and body content
  */
 function parseFrontmatter(content: string): { frontmatter: CommandFrontmatter; body: string } {
-  const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
-  const match = content.match(frontmatterRegex);
+  const cleanContent = content.replace(/^\uFEFF/, '').trimStart();
+  const frontmatterRegex = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n([\s\S]*)$/;
+  const match = cleanContent.match(frontmatterRegex);
 
   if (!match) {
     // No frontmatter, return entire content as body
     return {
       frontmatter: {},
-      body: content
+      body: content,
     };
   }
 
   try {
     const frontmatterYaml = match[1];
     const body = match[2];
-    const frontmatter = yaml.load(frontmatterYaml) as CommandFrontmatter || {};
+    const frontmatter = (yaml.load(frontmatterYaml) as CommandFrontmatter) || {};
+
+    if (typeof frontmatter.description === 'string') {
+      frontmatter.description = frontmatter.description.trim();
+    }
 
     return {
       frontmatter,
-      body
+      body,
     };
   } catch (error) {
     console.error('[CommandFileParser] Error parsing YAML frontmatter:', error);
     // Return content as body if frontmatter parsing fails
     return {
       frontmatter: {},
-      body: content
+      body: content,
     };
   }
 }

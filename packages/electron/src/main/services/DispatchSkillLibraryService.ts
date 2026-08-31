@@ -9,6 +9,10 @@ import {
   type DispatchSkillSource,
 } from '@nimbalyst/runtime/ai/server';
 import { parseSkillFile } from './CommandFileParser';
+import {
+  skillTaxonomyCacheManager,
+  type SkillCategory,
+} from './SkillTaxonomyEnricher';
 
 export interface DispatchSkillDescriptor {
   id: string;
@@ -19,6 +23,9 @@ export interface DispatchSkillDescriptor {
   description?: string;
   path?: string;
   content?: string;
+  category?: SkillCategory;
+  summaryZh?: string;
+  enrichmentFailed?: boolean;
 }
 
 type FileSkillSource = Extract<DispatchSkillSource, 'user' | 'project' | 'plugin' | 'builtin'>;
@@ -360,6 +367,19 @@ export class DispatchSkillLibraryService {
 
     for (const skill of this.listGeminiConfigSkills(home, workspacePath, errors)) {
       addUniqueSkill(skills, seen, skill);
+    }
+
+    for (const skill of skills) {
+      const enrichment = skillTaxonomyCacheManager.enrichAndCache(
+        skill.name,
+        skill.description,
+        skill.content,
+      );
+      skill.category = enrichment.category;
+      skill.summaryZh = enrichment.summaryZh;
+      if (enrichment.enrichmentFailed) {
+        skill.enrichmentFailed = true;
+      }
     }
 
     const sortedSkills = skills.sort((a, b) =>

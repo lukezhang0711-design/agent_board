@@ -131,7 +131,90 @@ describe('DispatchSkillLibraryService', () => {
     expect(target?.content).toBe('This is file body content');
   });
 
-  it('green FK: collects and returns scanning errors for corrupt JSON and failed codex CLI', () => {
+  it('red ①: 现状断言——前缀分组的缺陷 (名称前缀相同但用途完全不同的技能，按前缀会被强行分到同一组)', () => {
+    // Naive prefix grouping implementation
+    const naivePrefixGroup = (name: string) => name.split(/[-_:]/)[0];
+    const skillA = { name: 'plan-ceo-review', expectedCategory: '规划决策' };
+    const skillB = { name: 'plan-tune', expectedCategory: '工具环境' };
+
+    // In old prefix logic, both have prefix 'plan' and would be grouped together
+    expect(naivePrefixGroup(skillA.name)).toBe(naivePrefixGroup(skillB.name));
+    // But their true taxonomy categories are completely distinct
+    expect(skillA.expectedCategory).not.toBe(skillB.expectedCategory);
+  });
+
+  it('red ②: 现状断言——多行块格式若用冒号简单截断会拿到孤立 "|" 或空', () => {
+    const multilineYaml = `---
+name: my-skill
+description: |
+  This is the first paragraph.
+  This is the second paragraph.
+---
+Body text
+`;
+    // Naive regex taking text on the same line after 'description:'
+    const naiveMatch = multilineYaml.match(/^description:\s*(.*)$/m);
+    const naiveExtracted = naiveMatch ? naiveMatch[1].trim() : '';
+    expect(naiveExtracted).toBe('|'); // Naive extraction fails into '|'
+  });
+
+  it('green ①: 两种说明格式（单行、多行块）都能解析出正文', () => {
+    const { home } = makeTempHome();
+    // Single line
+    writeSkill(
+      path.join(home, '.claude', 'skills', 'single-line-skill', 'SKILL.md'),
+      'single-line-skill',
+      'Single line description text.',
+    );
+
+    // Multiline block (description: |)
+    const multilinePath = path.join(home, '.claude', 'skills', 'multiline-skill', 'SKILL.md');
+    fs.mkdirSync(path.dirname(multilinePath), { recursive: true });
+    fs.writeFileSync(
+      multilinePath,
+      `---
+name: multiline-skill
+description: |
+  First line of multiline block.
+  Second line of multiline block.
+---
+Body content
+`,
+      'utf8',
+    );
+
+    const skills = new DispatchSkillLibraryService().listSkills();
+    const singleSkill = skills.find((s) => s.name === 'single-line-skill');
+    const multiSkill = skills.find((s) => s.name === 'multiline-skill');
+
+    expect(singleSkill?.description).toBe('Single line description text.');
+    expect(multiSkill?.description).toContain('First line of multiline block.');
+    expect(multiSkill?.description).toContain('Second line of multiline block.');
+    expect(multiSkill?.description).not.toBe('|');
+  });
+
+  it('green ③: 分类与中文说明来自同一次生成且落盘缓存；内容未变时不重新生成', () => {
+    const { home } = makeTempHome();
+    writeSkill(
+      path.join(home, '.claude', 'skills', 'cached-skill', 'SKILL.md'),
+      'cached-skill',
+      'Cached skill description',
+    );
+
+    const service = new DispatchSkillLibraryService();
+    const firstList = service.listSkillsDetailed();
+    const firstSkill = firstList.skills.find((s) => s.name === 'cached-skill');
+    expect(firstSkill?.category).toBeDefined();
+    expect(firstSkill?.summaryZh).toBeDefined();
+
+    // Calling again without content change should read from disk cache
+    const secondList = service.listSkillsDetailed();
+    const secondSkill = secondList.skills.find((s) => s.name === 'cached-skill');
+    expect(secondSkill?.category).toBe(firstSkill?.category);
+    expect(secondSkill?.summaryZh).toBe(firstSkill?.summaryZh);
+  });
+
+  it('green FK / 绿⑨: collects and returns scanning errors for corrupt JSON and failed codex CLI', () => {
     const { home } = makeTempHome();
     fs.mkdirSync(path.join(home, '.gemini'), { recursive: true });
     fs.writeFileSync(

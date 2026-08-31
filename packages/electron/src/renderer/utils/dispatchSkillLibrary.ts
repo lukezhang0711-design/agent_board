@@ -4,6 +4,30 @@ export type DispatchSkillSource = 'user' | 'project' | 'plugin' | 'builtin' | 'c
 
 export type DispatchSkillScope = 'global' | 'project' | 'plugin' | 'config';
 
+export const SKILL_CATEGORIES = [
+  '规划决策',
+  '开发实现',
+  '质量保障',
+  '界面设计',
+  '文档写作',
+  '发布部署',
+  '安全管控',
+  '工具环境',
+] as const;
+
+export type SkillCategory = (typeof SKILL_CATEGORIES)[number];
+
+export const CATEGORY_REPRESENTATIVE_USAGES: Record<SkillCategory, string> = {
+  规划决策: '出方案、拆任务、追问打磨、评审计划',
+  开发实现: '照方案实现、测试驱动、迁移改造、解冲突',
+  质量保障: '排障、代码审查、测试、性能回归',
+  界面设计: '设计稿、视觉审查、生成页面',
+  文档写作: '文档、文章、交接、导出',
+  发布部署: '合并 PR、部署、上线后监控',
+  安全管控: '危险命令拦截、改动范围锁定、安全审计',
+  工具环境: '浏览器、上下文存取、环境配置',
+};
+
 export interface DispatchSkillDescriptor {
   id: string;
   name: string;
@@ -13,6 +37,9 @@ export interface DispatchSkillDescriptor {
   description?: string;
   path?: string;
   content?: string;
+  category?: SkillCategory;
+  summaryZh?: string;
+  enrichmentFailed?: boolean;
 }
 
 export interface MergedSkillCard {
@@ -22,6 +49,9 @@ export interface MergedSkillCard {
   contentMatch?: 'same' | 'different';
   rawDescription?: string;
   summary: string;
+  summaryZh: string;
+  category: SkillCategory;
+  enrichmentFailed?: boolean;
   hasDescription: boolean;
   estimatedTokens: number;
   scopes: DispatchSkillScope[];
@@ -32,9 +62,9 @@ export interface MergedSkillCard {
   paths: string[];
 }
 
-export interface SkillFamilyGroup {
-  id: string;
-  name: string;
+export interface SkillCategoryGroup {
+  category: SkillCategory;
+  representativeUsage: string;
   cards: MergedSkillCard[];
   totalTokens: number;
 }
@@ -92,15 +122,6 @@ export function extractOneSentenceSummary(description?: string): string {
   return firstSentence;
 }
 
-export function extractSkillPrefix(name: string): string {
-  const normalized = name.trim().toLowerCase();
-  const token = normalized.split(/[-_:]/)[0];
-  if (token.endsWith('ing') && token.length > 5) {
-    return token.slice(0, -3);
-  }
-  return token;
-}
-
 export function mergeSkillsByName(
   skills: readonly DispatchSkillDescriptor[],
   settings: DispatchSkillSettings,
@@ -138,6 +159,13 @@ export function mergeSkillsByName(
     const summary = extractOneSentenceSummary(rawDescription);
     const estimatedTokens = estimateSkillTokens(rawDescription);
 
+    const enrichedDesc = descriptors.find((d) => d.summaryZh?.trim());
+    const summaryZh = enrichedDesc?.summaryZh?.trim()
+      ?? (hasDescription ? summary : '这个技能没有自带说明');
+    const categoryCandidate = descriptors.find((d) => d.category && SKILL_CATEGORIES.includes(d.category))?.category;
+    const category: SkillCategory = categoryCandidate ?? '工具环境';
+    const enrichmentFailed = descriptors.some((d) => d.enrichmentFailed);
+
     const descriptorIds = new Set(descriptors.map((d) => d.id));
     const disabled = descriptors.every((d) => settings.disabledSkillIds.includes(d.id));
 
@@ -156,6 +184,9 @@ export function mergeSkillsByName(
       contentMatch,
       rawDescription,
       summary,
+      summaryZh,
+      category,
+      enrichmentFailed,
       hasDescription,
       estimatedTokens,
       scopes,
@@ -170,45 +201,26 @@ export function mergeSkillsByName(
   return result.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function groupSkillsByFamily(cards: MergedSkillCard[]): SkillFamilyGroup[] {
-  const candidateMap = new Map<string, MergedSkillCard[]>();
+export function groupSkillsByCategory(cards: MergedSkillCard[]): SkillCategoryGroup[] {
+  const map = new Map<SkillCategory, MergedSkillCard[]>();
+  for (const cat of SKILL_CATEGORIES) {
+    map.set(cat, []);
+  }
   for (const card of cards) {
-    const prefix = extractSkillPrefix(card.name);
-    const list = candidateMap.get(prefix) ?? [];
-    list.push(card);
-    candidateMap.set(prefix, list);
+    const cat = SKILL_CATEGORIES.includes(card.category) ? card.category : '工具环境';
+    map.get(cat)!.push(card);
   }
 
-  const families: SkillFamilyGroup[] = [];
-  const ungrouped: MergedSkillCard[] = [];
-
-  for (const [prefix, groupCards] of candidateMap.entries()) {
-    if (groupCards.length >= 2) {
-      const totalTokens = groupCards.reduce((sum, c) => sum + c.estimatedTokens, 0);
-      families.push({
-        id: `family-${prefix}`,
-        name: prefix,
-        cards: groupCards.sort((a, b) => a.name.localeCompare(b.name)),
-        totalTokens,
-      });
-    } else {
-      ungrouped.push(...groupCards);
-    }
-  }
-
-  families.sort((a, b) => a.name.localeCompare(b.name));
-
-  if (ungrouped.length > 0) {
-    const totalTokens = ungrouped.reduce((sum, c) => sum + c.estimatedTokens, 0);
-    families.push({
-      id: 'family-other',
-      name: '其他技能',
-      cards: ungrouped.sort((a, b) => a.name.localeCompare(b.name)),
+  return SKILL_CATEGORIES.map((category) => {
+    const groupCards = (map.get(category) ?? []).sort((a, b) => a.name.localeCompare(b.name));
+    const totalTokens = groupCards.reduce((sum, c) => sum + c.estimatedTokens, 0);
+    return {
+      category,
+      representativeUsage: CATEGORY_REPRESENTATIVE_USAGES[category],
+      cards: groupCards,
       totalTokens,
-    });
-  }
-
-  return families;
+    };
+  });
 }
 
 function normalizeString(value: unknown): string | undefined {
