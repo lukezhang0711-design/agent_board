@@ -285,7 +285,7 @@ describe('AIUsageIndicator & AIUsagePopover', () => {
       limitsAvailable: false,
       available: false,
       lastUpdated: Date.now(),
-      error: '未检测到 Antigravity 桌面版',
+      error: 'Antigravity 桌面版未运行。请先打开 Antigravity 并确认已登录，然后重新打开用量浮窗。',
       tokenUsage: {
         totalTokens: 64210,
         lastTokens: 1200,
@@ -306,7 +306,7 @@ describe('AIUsageIndicator & AIUsagePopover', () => {
     expect(fallbackSection).toBeTruthy();
     expect(screen.getByText('64,210')).toBeTruthy();
     expect(screen.getByText('（本次会话累计消耗，非剩余额度）')).toBeTruthy();
-    expect(screen.getByText('原因：未检测到 Antigravity 桌面版')).toBeTruthy();
+    expect(screen.getByText('原因：Antigravity 桌面版未运行。请先打开 Antigravity 并确认已登录，然后重新打开用量浮窗。')).toBeTruthy();
 
     // Visual distinction: NO progress bar inside the fallback section
     expect(fallbackSection.querySelectorAll('.rounded-full').length).toBe(0);

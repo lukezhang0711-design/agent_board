@@ -55,6 +55,10 @@ interface SessionState {
 // to apply its own current default instead of Nimbalyst inventing an alias.
 const DEFAULT_MODEL_KEY = '';
 const PROVIDER_ID = 'antigravity-gemini-agent';
+const ANTIGRAVITY_DESKTOP_NOT_INSTALLED_MESSAGE =
+  '未安装 Antigravity 桌面版。请先安装并登录 Antigravity，然后重新打开用量浮窗。';
+const ANTIGRAVITY_DESKTOP_NOT_RUNNING_MESSAGE =
+  'Antigravity 桌面版未运行。请先打开 Antigravity 并确认已登录，然后重新打开用量浮窗。';
 
 /**
  * Read-only dev tool names. Calls with these names route to the host's
@@ -529,15 +533,18 @@ async function activate(ctx: BackendActivateContext): Promise<{ methods: Backend
     async getUsageSnapshot(): Promise<UsageSnapshotResult> {
       const server = AntigravityServerManager.shared();
       const tokenUsage = server.getAccumulatedTokenUsage();
-      if (server.currentEndpoint() === null) {
+      const endpoint = server.currentEndpoint() ?? await server.discoverRunningHub().catch(() => null);
+      if (endpoint === null) {
         return {
           available: false,
-          error: '未检测到 Antigravity 桌面版',
+          error: AntigravityServerManager.isDesktopInstalled()
+            ? ANTIGRAVITY_DESKTOP_NOT_RUNNING_MESSAGE
+            : ANTIGRAVITY_DESKTOP_NOT_INSTALLED_MESSAGE,
           tokenUsage,
         };
       }
       try {
-        const snapshot = await usageMeter.getSnapshot();
+        const snapshot = await usageMeter.getSnapshot(endpoint);
         return { available: true, snapshot, tokenUsage };
       } catch (err) {
         return {

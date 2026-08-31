@@ -12,6 +12,7 @@ vi.mock('fs', async () => {
 
 import { spawn } from 'child_process';
 import {
+  type AntigravityEndpoint,
   AntigravityAgyModelError,
   AntigravityAgyNotInstalledError,
   AntigravityAgyNotLoggedInError,
@@ -37,6 +38,44 @@ const readFileSyncMock = vi.mocked(fs.readFileSync);
 function freshManager(): AntigravityServerManager {
   (AntigravityServerManager as unknown as { instance: unknown }).instance = null;
   return new AntigravityServerManager(spawnMock as unknown as typeof spawn);
+}
+
+function withPlatform(platform: NodeJS.Platform): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+  return () => {
+    if (descriptor) Object.defineProperty(process, 'platform', descriptor);
+  };
+}
+
+type DiscoveryTestManager = {
+  discoverRunningHub(): Promise<AntigravityEndpoint | null>;
+  currentEndpoint(): AntigravityEndpoint | null;
+  stop(): void;
+  runCommand: ReturnType<typeof vi.fn>;
+  isHealthy: ReturnType<typeof vi.fn>;
+};
+
+function discoveryManager(): DiscoveryTestManager {
+  const manager = freshManager() as unknown as DiscoveryTestManager;
+  manager.runCommand = vi.fn(async (command: string) => {
+    if (command === 'ps') {
+      return [
+        ' 5375 /Applications/Antigravity.app/Contents/Resources/bin/language_server --standalone --subclient_type hub --csrf_token csrf-mac --https_server_port 0',
+        ' 9999 /usr/bin/other_process',
+      ].join('\n');
+    }
+    if (command === 'lsof') {
+      return [
+        'COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME',
+        'language 5375 luke   42u  IPv4      0      0t0  TCP 127.0.0.1:57558 (LISTEN)',
+        'language 5375 luke   43u  IPv4      0      0t0  TCP 127.0.0.1:57557 (LISTEN)',
+      ].join('\n');
+    }
+    return '';
+  });
+  manager.isHealthy = vi.fn(async () => true);
+  return manager;
 }
 
 function mockEnvironment({ desktop = false, agy = true } = {}): void {
@@ -192,6 +231,90 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('desktop hub discovery', () => {
+  it('RED FP: discovers a running macOS hub instead of returning null on non-Windows', async () => {
+    const restorePlatform = withPlatform('darwin');
+    try {
+      const manager = discoveryManager();
+
+      await expect(manager.discoverRunningHub()).resolves.toEqual({
+        httpsPort: 57557,
+        csrf: 'csrf-mac',
+        owned: false,
+      });
+      expect(manager.runCommand).toHaveBeenCalledWith('ps', ['-axo', 'pid=,command=']);
+      expect(manager.runCommand).toHaveBeenCalledWith('lsof', [
+        '-nP',
+        '-iTCP',
+        '-sTCP:LISTEN',
+        '-a',
+        '-p',
+        '5375',
+      ]);
+    } finally {
+      restorePlatform();
+    }
+  });
+
+  it('GREEN FP: rejects a discovered macOS hub when Heartbeat is unhealthy', async () => {
+    const restorePlatform = withPlatform('darwin');
+    try {
+      const manager = discoveryManager();
+      manager.isHealthy.mockResolvedValue(false);
+
+      await expect(manager.discoverRunningHub()).resolves.toBeNull();
+      expect(manager.isHealthy).toHaveBeenCalledWith({
+        httpsPort: 57557,
+        csrf: 'csrf-mac',
+        owned: false,
+      });
+      expect(manager.currentEndpoint()).toBeNull();
+    } finally {
+      restorePlatform();
+    }
+  });
+
+  it('GREEN FP: attaches to a discovered macOS hub as unowned and stop does not kill it', async () => {
+    const restorePlatform = withPlatform('darwin');
+    try {
+      const manager = discoveryManager();
+
+      const endpoint = await manager.discoverRunningHub();
+
+      expect(endpoint).toEqual({ httpsPort: 57557, csrf: 'csrf-mac', owned: false });
+      expect(manager.currentEndpoint()).toEqual(endpoint);
+      expect((manager as unknown as { child: unknown }).child).toBeNull();
+      manager.stop();
+      expect(spawnMock).not.toHaveBeenCalled();
+    } finally {
+      restorePlatform();
+    }
+  });
+
+  it('GREEN FP: keeps Windows PowerShell discovery behavior and selects the lower HTTPS port', async () => {
+    const restorePlatform = withPlatform('win32');
+    try {
+      const manager = freshManager() as unknown as {
+        discoverRunningHub(): Promise<AntigravityEndpoint | null>;
+        runPowerShell: ReturnType<typeof vi.fn>;
+        isHealthy: ReturnType<typeof vi.fn>;
+      };
+      manager.runPowerShell = vi.fn(async () => 'csrf-win|57558,57557');
+      manager.isHealthy = vi.fn(async () => true);
+
+      await expect(manager.discoverRunningHub()).resolves.toEqual({
+        httpsPort: 57557,
+        csrf: 'csrf-win',
+        owned: false,
+      });
+      expect(manager.runPowerShell).toHaveBeenCalledOnce();
+      expect(spawnMock).not.toHaveBeenCalled();
+    } finally {
+      restorePlatform();
+    }
+  });
 });
 
 describe('agy CLI dynamic model catalog', () => {

@@ -52,6 +52,7 @@ describe('gemini-antigravity backend sendMessage', () => {
   >;
 
   beforeEach(() => {
+    (AntigravityServerManager as unknown as { instance: unknown }).instance = null;
     // Intercept the single server touch point inside run(). ensureRunning()
     // (and thus spawnStandalone) is never reached because we replace the method
     // that would call it.
@@ -96,18 +97,119 @@ describe('gemini-antigravity backend sendMessage', () => {
     expect(refreshed).toHaveBeenCalledOnce();
   });
 
-  it('GREEN FJ: reports honest desktop-unavailable fallback with accumulated token usage', async () => {
+  it('GREEN FP: usage snapshot discovers a running hub without spawning and returns real quota data', async () => {
+    const endpoint = { httpsPort: 57557, csrf: 'csrf-mac', owned: false };
+    const discover = vi.spyOn(AntigravityServerManager.prototype, 'discoverRunningHub')
+      .mockResolvedValue(endpoint);
+    const ensureRunning = vi.spyOn(AntigravityServerManager.prototype, 'ensureRunning')
+      .mockRejectedValue(new Error('usage snapshot must not spawn'));
+    vi.spyOn(AntigravityServerManager.prototype, 'getUserStatus').mockResolvedValue({
+      planStatus: {
+        planInfo: {
+          planName: 'Pro',
+          monthlyPromptCredits: 50000,
+          monthlyFlowCredits: 150000,
+        },
+        availablePromptCredits: 500,
+        availableFlowCredits: 100,
+      },
+      cascadeModelConfigData: {
+        clientModelConfigs: [{
+          modelOrAlias: { model: 'MODEL_GEMINI_FLASH_HIGH' },
+          label: 'Gemini 3.7 Flash (High)',
+          quotaInfo: {
+            remainingFraction: 0.8744419,
+            resetTime: '2026-08-31T17:41:58Z',
+          },
+        }, {
+          modelOrAlias: { model: 'MODEL_CLAUDE_SONNET_THINKING' },
+          label: 'Claude Sonnet 4.6 (Thinking)',
+          quotaInfo: {
+            remainingFraction: 1,
+            resetTime: '2026-08-31T19:03:44Z',
+          },
+        }],
+      },
+    });
+
     const { ctx } = makeCtx();
     const { methods } = await activate(ctx as never);
+    const result = await methods.getUsageSnapshot();
 
-    await expect(methods.getUsageSnapshot()).resolves.toEqual({
-      available: false,
-      error: '未检测到 Antigravity 桌面版',
+    expect(discover).toHaveBeenCalledOnce();
+    expect(ensureRunning).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      available: true,
+      snapshot: {
+        account: {
+          planName: 'Pro',
+          monthlyPromptCredits: 50000,
+          monthlyFlowCredits: 150000,
+          availablePromptCredits: 500,
+          availableFlowCredits: 100,
+        },
+        models: {
+          MODEL_GEMINI_FLASH_HIGH: {
+            label: 'Gemini 3.7 Flash (High)',
+            remainingFraction: 0.8744419,
+            resetTime: '2026-08-31T17:41:58Z',
+          },
+          MODEL_CLAUDE_SONNET_THINKING: {
+            label: 'Claude Sonnet 4.6 (Thinking)',
+            remainingFraction: 1,
+            resetTime: '2026-08-31T19:03:44Z',
+          },
+        },
+      },
       tokenUsage: {
         totalTokens: 0,
         lastTokens: null,
       },
     });
+  });
+
+  it('GREEN FP: usage fallback says desktop is not installed and does not spawn', async () => {
+    vi.spyOn(AntigravityServerManager.prototype, 'discoverRunningHub').mockResolvedValue(null);
+    vi.spyOn(AntigravityServerManager, 'isDesktopInstalled').mockReturnValue(false);
+    vi.spyOn(AntigravityServerManager.prototype, 'getAccumulatedTokenUsage')
+      .mockReturnValue({ totalTokens: 64210, lastTokens: 1200 });
+    const ensureRunning = vi.spyOn(AntigravityServerManager.prototype, 'ensureRunning')
+      .mockRejectedValue(new Error('usage snapshot must not spawn'));
+
+    const { ctx } = makeCtx();
+    const { methods } = await activate(ctx as never);
+
+    await expect(methods.getUsageSnapshot()).resolves.toEqual({
+      available: false,
+      error: '未安装 Antigravity 桌面版。请先安装并登录 Antigravity，然后重新打开用量浮窗。',
+      tokenUsage: {
+        totalTokens: 64210,
+        lastTokens: 1200,
+      },
+    });
+    expect(ensureRunning).not.toHaveBeenCalled();
+  });
+
+  it('GREEN FP: usage fallback says desktop is not running and does not spawn', async () => {
+    vi.spyOn(AntigravityServerManager.prototype, 'discoverRunningHub').mockResolvedValue(null);
+    vi.spyOn(AntigravityServerManager, 'isDesktopInstalled').mockReturnValue(true);
+    vi.spyOn(AntigravityServerManager.prototype, 'getAccumulatedTokenUsage')
+      .mockReturnValue({ totalTokens: 42000, lastTokens: 1500 });
+    const ensureRunning = vi.spyOn(AntigravityServerManager.prototype, 'ensureRunning')
+      .mockRejectedValue(new Error('usage snapshot must not spawn'));
+
+    const { ctx } = makeCtx();
+    const { methods } = await activate(ctx as never);
+
+    await expect(methods.getUsageSnapshot()).resolves.toEqual({
+      available: false,
+      error: 'Antigravity 桌面版未运行。请先打开 Antigravity 并确认已登录，然后重新打开用量浮窗。',
+      tokenUsage: {
+        totalTokens: 42000,
+        lastTokens: 1500,
+      },
+    });
+    expect(ensureRunning).not.toHaveBeenCalled();
   });
 
   afterEach(() => {

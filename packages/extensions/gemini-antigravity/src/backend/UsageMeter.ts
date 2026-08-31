@@ -9,7 +9,7 @@
  *   - account-level credits (prompt/flow) + plan tier
  *   - per-model quota: remainingFraction (0..1) + resetTime (ISO8601 UTC)
  */
-import { AntigravityServerManager } from './ServerManager';
+import { AntigravityServerManager, type AntigravityEndpoint } from './ServerManager';
 
 export interface AntigravityAccountUsage {
   name?: string;
@@ -47,8 +47,8 @@ export class AntigravityUsageMeter {
   ) {}
 
   /** Account-level usage (plan tier + remaining credits). */
-  async getUsage(): Promise<AntigravityAccountUsage> {
-    const us = await this.server.getUserStatus();
+  async getUsage(endpoint?: AntigravityEndpoint): Promise<AntigravityAccountUsage> {
+    const us = await this.server.getUserStatus(endpoint);
     const plan = us?.planStatus ?? {};
     const pi = plan?.planInfo ?? {};
     return {
@@ -68,11 +68,11 @@ export class AntigravityUsageMeter {
    * live enum) or an enum. Returns null if the model is not in the user's
    * config.
    */
-  async getQuota(modelKeyOrEnum: string): Promise<AntigravityModelQuota | null> {
+  async getQuota(modelKeyOrEnum: string, endpoint?: AntigravityEndpoint): Promise<AntigravityModelQuota | null> {
     const enumName = modelKeyOrEnum.startsWith('MODEL_')
       ? modelKeyOrEnum
-      : await this.server.resolveModelEnum(modelKeyOrEnum).catch(() => modelKeyOrEnum);
-    const us = await this.server.getUserStatus();
+      : await this.server.resolveModelEnum(modelKeyOrEnum, endpoint).catch(() => modelKeyOrEnum);
+    const us = await this.server.getUserStatus(endpoint);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cfgs: any[] = us?.cascadeModelConfigData?.clientModelConfigs ?? [];
     for (const c of cfgs) {
@@ -90,8 +90,8 @@ export class AntigravityUsageMeter {
   }
 
   /** One call returning account usage + all per-model quotas + a warn flag. */
-  async getSnapshot(): Promise<AntigravityUsageSnapshot> {
-    const us = await this.server.getUserStatus();
+  async getSnapshot(endpoint?: AntigravityEndpoint): Promise<AntigravityUsageSnapshot> {
+    const us = await this.server.getUserStatus(endpoint);
     const plan = us?.planStatus ?? {};
     const pi = plan?.planInfo ?? {};
     const account: AntigravityAccountUsage = {
