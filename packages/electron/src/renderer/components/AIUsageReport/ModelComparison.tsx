@@ -12,6 +12,10 @@ interface ProviderUsageStats {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalTokens: number;
+  totalCacheReadInputTokens: number | null;
+  totalCacheCreationInputTokens: number | null;
+  cacheHitRate: number | null;
+  cacheDataIncomplete: boolean;
 }
 
 export const ModelComparison: React.FC<ModelComparisonProps> = ({ workspaceId }) => {
@@ -43,9 +47,15 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ workspaceId })
 
   const chartData = data.map((item) => ({
     name: `${item.provider}${item.model ? ` (${item.model})` : ''}`,
-    'Total Tokens': item.totalTokens,
+    'Normal Input': item.totalInputTokens,
+    'Cache Read': item.totalCacheReadInputTokens,
+    'Cache Creation': item.totalCacheCreationInputTokens,
+    Output: item.totalOutputTokens,
     Sessions: item.sessionCount,
   }));
+  const cacheDataIncomplete = data.some((item) => item.cacheDataIncomplete
+    || item.totalCacheReadInputTokens == null
+    || item.totalCacheCreationInputTokens == null);
 
   return (
     <div className="model-comparison flex flex-col gap-6">
@@ -66,12 +76,20 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ workspaceId })
               }}
             />
             <Legend />
-            <Bar dataKey="Total Tokens" fill="var(--nim-primary)" />
+            <Bar dataKey="Normal Input" fill="var(--nim-primary)" />
+            <Bar dataKey="Cache Read" fill="#38bdf8" />
+            <Bar dataKey="Cache Creation" fill="#f59e0b" />
+            <Bar dataKey="Output" fill="#82ca9d" />
           </BarChart>
         </ResponsiveContainer>
       ) : (
         <div className="no-data flex items-center justify-center min-h-[400px] text-base text-nim-muted">
           No model usage data available
+        </div>
+      )}
+      {cacheDataIncomplete && (
+        <div className="text-[11px] text-[var(--nim-text-muted)]">
+          Some engines did not report cache usage; gaps are unavailable data, not zero cache use.
         </div>
       )}
     </div>

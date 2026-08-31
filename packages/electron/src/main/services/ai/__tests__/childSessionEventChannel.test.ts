@@ -502,6 +502,18 @@ describe('child session event hidden delivery channel', () => {
           'output',
           JSON.stringify({ type: 'text', content: reply }),
         );
+        yield { type: 'text', content: reply };
+        yield {
+          type: 'complete',
+          content: reply,
+          usage: {
+            input_tokens: 120,
+            output_tokens: 30,
+            total_tokens: 150,
+            cache_read_input_tokens: 80,
+            cache_creation_input_tokens: 10,
+          },
+        };
       },
     };
     handlerTestState.provider = provider;
@@ -510,6 +522,7 @@ describe('child session event hidden delivery channel', () => {
       loadSession: vi.fn().mockResolvedValue({
         id: sessionId,
         provider: 'openai',
+        model: 'gpt-4.1',
         workspacePath: '/workspace',
         title: 'Handler integration',
         messages: [],
@@ -517,6 +530,7 @@ describe('child session event hidden delivery channel', () => {
         providerConfig: {},
       }),
       addMessage: vi.fn().mockResolvedValue(undefined),
+      updateSessionTokenUsage: vi.fn().mockResolvedValue(undefined),
       updateSessionTitle: vi.fn().mockResolvedValue(undefined),
       updateProviderSessionData: vi.fn().mockResolvedValue(undefined),
     };
@@ -569,15 +583,43 @@ describe('child session event hidden delivery channel', () => {
     }
 
     expect(modelInputs).toEqual([notification]);
-    expect(sessionManager.addMessage).not.toHaveBeenCalled();
+    expect(sessionManager.addMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'assistant', content: reply }),
+      sessionId,
+    );
     const { rows } = await db.query<any>(
-      `SELECT direction, message_kind, searchable_text
+      `SELECT direction, message_kind, searchable_text, hidden, metadata
        FROM ai_agent_messages WHERE session_id = $1 ORDER BY id`,
       [sessionId],
     );
-    expect(rows).toEqual([
-      { direction: 'output', message_kind: 'assistant', searchable_text: reply },
-    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      direction: 'output',
+      message_kind: 'assistant',
+      searchable_text: reply,
+    });
+    expect(rows[1]).toMatchObject({
+      direction: 'output',
+      message_kind: 'meta',
+      hidden: 1,
+      searchable_text: null,
+    });
+    const ledger = typeof rows[1].metadata === 'string'
+      ? JSON.parse(rows[1].metadata)
+      : rows[1].metadata;
+    expect(ledger).toMatchObject({
+      eventType: 'usage_ledger',
+      engine: 'openai',
+      model: 'gpt-4.1',
+      inputTokens: 120,
+      outputTokens: 30,
+      cacheReadInputTokens: 80,
+      cacheCreationInputTokens: 10,
+    });
+    expect(ledger.firstResponseMs).toEqual(expect.any(Number));
+    expect(ledger.firstResponseMs).toBeGreaterThanOrEqual(0);
+    expect(ledger.totalDurationMs).toEqual(expect.any(Number));
+    expect(ledger.totalDurationMs).toBeGreaterThanOrEqual(0);
   });
 
   it('keeps a failed channel-health send isolated from the next ordinary handler send', async () => {

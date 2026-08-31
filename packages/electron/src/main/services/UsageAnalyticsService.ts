@@ -11,6 +11,10 @@ export interface TokenUsageStats {
   totalTokens: number;
   sessionCount: number;
   messageCount: number;
+  totalCacheReadInputTokens: number | null;
+  totalCacheCreationInputTokens: number | null;
+  cacheHitRate: number | null;
+  cacheDataIncomplete: boolean;
 }
 
 export interface ProviderUsageStats {
@@ -20,6 +24,13 @@ export interface ProviderUsageStats {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalTokens: number;
+  totalCacheReadInputTokens: number | null;
+  totalCacheCreationInputTokens: number | null;
+  cacheHitRate: number | null;
+  cacheDataIncomplete: boolean;
+  averageFirstResponseMs: number | null;
+  averageTotalDurationMs: number | null;
+  turnCount: number;
 }
 
 export interface ProjectUsageStats {
@@ -35,6 +46,10 @@ export interface TimeSeriesDataPoint {
   outputTokens: number;
   totalTokens: number;
   sessionCount: number;
+  cacheReadInputTokens?: number | null;
+  cacheCreationInputTokens?: number | null;
+  cacheHitRate?: number | null;
+  cacheDataIncomplete?: boolean;
 }
 
 export interface ActivityHeatmapData {
@@ -49,6 +64,30 @@ export interface DocumentEditStats {
   editCount: number;
   lastEdited: number;
   sizeBytes: number;
+}
+
+interface UsageLedgerRow {
+  sessionId: string;
+  workspaceId: string;
+  engine: string;
+  model: string | null;
+  createdAtMs: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadInputTokens: number | null;
+  cacheCreationInputTokens: number | null;
+  firstResponseMs: number | null;
+  totalDurationMs: number | null;
+}
+
+interface UsageLedgerSummary {
+  totalCacheReadInputTokens: number | null;
+  totalCacheCreationInputTokens: number | null;
+  cacheHitRate: number | null;
+  cacheDataIncomplete: boolean;
+  averageFirstResponseMs: number | null;
+  averageTotalDurationMs: number | null;
+  turnCount: number;
 }
 
 export class UsageAnalyticsService {
@@ -80,6 +119,44 @@ export class UsageAnalyticsService {
       WHERE s.metadata->'tokenUsage' IS NOT NULL
     )
   `;
+
+  private async getUsageLedgerRows(workspaceId?: string): Promise<UsageLedgerRow[]> {
+    const workspaceClause = workspaceId ? 'AND s.workspace_id = $1' : '';
+    const result = await this.db.query<{
+      session_id: string;
+      workspace_id: string;
+      provider: string;
+      model: string | null;
+      created_at: unknown;
+      metadata: unknown;
+    }>(
+      `SELECT m.session_id, s.workspace_id, s.provider, s.model, m.created_at, m.metadata
+       FROM ai_agent_messages m
+       JOIN ai_sessions s ON s.id = m.session_id
+       WHERE m.metadata->>'eventType' = 'usage_ledger'
+       ${workspaceClause}`,
+      workspaceId ? [workspaceId] : [],
+    );
+
+    return result.rows.flatMap((row) => {
+      const ledger = readUsageLedger(row.metadata);
+      const createdAtMs = toEpochMs(row.created_at);
+      if (!ledger || !Number.isFinite(createdAtMs)) return [];
+      return [{
+        sessionId: row.session_id,
+        workspaceId: row.workspace_id,
+        engine: ledger.engine || row.provider,
+        model: ledger.model ?? row.model ?? null,
+        createdAtMs,
+        inputTokens: ledger.inputTokens,
+        outputTokens: ledger.outputTokens,
+        cacheReadInputTokens: ledger.cacheReadInputTokens,
+        cacheCreationInputTokens: ledger.cacheCreationInputTokens,
+        firstResponseMs: ledger.firstResponseMs,
+        totalDurationMs: ledger.totalDurationMs,
+      }];
+    });
+  }
 
   /**
    * Get total count of all AI sessions (including those without token data)
@@ -118,6 +195,7 @@ export class UsageAnalyticsService {
     );
 
     const row = result.rows[0] || {};
+    const cacheUsage = summarizeUsageLedger(await this.getUsageLedgerRows(workspaceId));
 
     return {
       totalInputTokens: parseInt(row.total_input_tokens) || 0,
@@ -125,6 +203,10 @@ export class UsageAnalyticsService {
       totalTokens: parseInt(row.total_tokens) || 0,
       sessionCount: parseInt(row.session_count) || 0,
       messageCount: 0, // TODO: Can be calculated from ai_agent_messages if needed
+      totalCacheReadInputTokens: cacheUsage.totalCacheReadInputTokens,
+      totalCacheCreationInputTokens: cacheUsage.totalCacheCreationInputTokens,
+      cacheHitRate: cacheUsage.cacheHitRate,
+      cacheDataIncomplete: cacheUsage.cacheDataIncomplete,
     };
   }
 
@@ -151,14 +233,81 @@ export class UsageAnalyticsService {
       params
     );
 
-    return result.rows.map((row: any) => ({
-      provider: row.provider,
-      model: row.model,
-      sessionCount: parseInt(row.session_count) || 0,
-      totalInputTokens: parseInt(row.total_input_tokens) || 0,
-      totalOutputTokens: parseInt(row.total_output_tokens) || 0,
-      totalTokens: parseInt(row.total_tokens) || 0,
-    }));
+    const groups = new Map<string, {
+      provider: string;
+      model: string | null;
+      sessionCount: number;
+      totalInputTokens: number;
+      totalOutputTokens: number;
+      totalTokens: number;
+      hasSessionTotals: boolean;
+      ledgerSessionIds: Set<string>;
+      ledgerRows: UsageLedgerRow[];
+    }>();
+    const keyFor = (provider: string, model: string | null) => `${provider}\u0000${model ?? ''}`;
+
+    for (const row of result.rows as any[]) {
+      const provider = row.provider as string;
+      const model = row.model as string | null;
+      groups.set(keyFor(provider, model), {
+        provider,
+        model,
+        sessionCount: parseInt(row.session_count) || 0,
+        totalInputTokens: parseInt(row.total_input_tokens) || 0,
+        totalOutputTokens: parseInt(row.total_output_tokens) || 0,
+        totalTokens: parseInt(row.total_tokens) || 0,
+        hasSessionTotals: true,
+        ledgerSessionIds: new Set<string>(),
+        ledgerRows: [],
+      });
+    }
+
+    for (const ledger of await this.getUsageLedgerRows(workspaceId)) {
+      const key = keyFor(ledger.engine, ledger.model);
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          provider: ledger.engine,
+          model: ledger.model,
+          sessionCount: 0,
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
+          totalTokens: 0,
+          hasSessionTotals: false,
+          ledgerSessionIds: new Set<string>(),
+          ledgerRows: [],
+        };
+        groups.set(key, group);
+      }
+      group.ledgerRows.push(ledger);
+      group.ledgerSessionIds.add(ledger.sessionId);
+      // Session metadata remains the total-token source when it exists. This
+      // branch only covers providers that emitted a ledger before session totals.
+      if (!group.hasSessionTotals) {
+        const inputTokens = ledger.inputTokens ?? 0;
+        const outputTokens = ledger.outputTokens ?? 0;
+        group.totalInputTokens += inputTokens;
+        group.totalOutputTokens += outputTokens;
+        group.totalTokens += inputTokens + outputTokens;
+      }
+    }
+
+    return Array.from(groups.values())
+      .map((group) => {
+        const cacheUsage = summarizeUsageLedger(group.ledgerRows);
+        return {
+          provider: group.provider,
+          model: group.model,
+          sessionCount: group.hasSessionTotals
+            ? group.sessionCount
+            : group.ledgerSessionIds.size,
+          totalInputTokens: group.totalInputTokens,
+          totalOutputTokens: group.totalOutputTokens,
+          totalTokens: group.totalTokens,
+          ...cacheUsage,
+        };
+      })
+      .sort((a, b) => b.totalTokens - a.totalTokens);
   }
 
   /**
@@ -198,9 +347,18 @@ export class UsageAnalyticsService {
     granularity: 'hour' | 'day' | 'week' | 'month' = 'day',
     workspaceId?: string
   ): Promise<TimeSeriesDataPoint[]> {
-    if (this.isSQLiteBackend()) {
-      return this.getTimeSeriesDataPortable(startDate, endDate, granularity, workspaceId);
-    }
+    const baseSeries = this.isSQLiteBackend()
+      ? await this.getTimeSeriesDataPortable(startDate, endDate, granularity, workspaceId)
+      : await this.getTimeSeriesDataPGLite(startDate, endDate, granularity, workspaceId);
+    return this.addLedgerCacheToTimeSeries(baseSeries, startDate, endDate, granularity, workspaceId);
+  }
+
+  private async getTimeSeriesDataPGLite(
+    startDate: number,
+    endDate: number,
+    granularity: 'hour' | 'day' | 'week' | 'month',
+    workspaceId?: string,
+  ): Promise<TimeSeriesDataPoint[]> {
 
     const truncFunc = {
       hour: 'hour',
@@ -350,6 +508,60 @@ export class UsageAnalyticsService {
       totalTokens: parseInt(row.total_tokens) || 0,
       sessionCount: parseInt(row.session_count) || 0,
     }));
+  }
+
+  private async addLedgerCacheToTimeSeries(
+    baseSeries: TimeSeriesDataPoint[],
+    startDate: number,
+    endDate: number,
+    granularity: 'hour' | 'day' | 'week' | 'month',
+    workspaceId?: string,
+  ): Promise<TimeSeriesDataPoint[]> {
+    const points = new Map<number, TimeSeriesDataPoint>(baseSeries.map((point) => [point.timestamp, {
+      ...point,
+      cacheReadInputTokens: null,
+      cacheCreationInputTokens: null,
+      cacheHitRate: null,
+      cacheDataIncomplete: true,
+    }]));
+    const ledgersByBucket = new Map<number, UsageLedgerRow[]>();
+
+    for (const ledger of await this.getUsageLedgerRows(workspaceId)) {
+      if (ledger.createdAtMs < startDate || ledger.createdAtMs > endDate) continue;
+      const bucket = bucketStartMs(ledger.createdAtMs, granularity);
+      if (!Number.isFinite(bucket)) continue;
+      const rows = ledgersByBucket.get(bucket) ?? [];
+      rows.push(ledger);
+      ledgersByBucket.set(bucket, rows);
+    }
+
+    for (const [timestamp, rows] of ledgersByBucket) {
+      const cacheUsage = summarizeUsageLedger(rows);
+      const existing = points.get(timestamp);
+      if (existing) {
+        points.set(timestamp, {
+          ...existing,
+          cacheReadInputTokens: cacheUsage.totalCacheReadInputTokens,
+          cacheCreationInputTokens: cacheUsage.totalCacheCreationInputTokens,
+          cacheHitRate: cacheUsage.cacheHitRate,
+          cacheDataIncomplete: cacheUsage.cacheDataIncomplete,
+        });
+      } else {
+        points.set(timestamp, {
+          timestamp,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          sessionCount: new Set(rows.map((row) => row.sessionId)).size,
+          cacheReadInputTokens: cacheUsage.totalCacheReadInputTokens,
+          cacheCreationInputTokens: cacheUsage.totalCacheCreationInputTokens,
+          cacheHitRate: cacheUsage.cacheHitRate,
+          cacheDataIncomplete: cacheUsage.cacheDataIncomplete,
+        });
+      }
+    }
+
+    return Array.from(points.values()).sort((a, b) => a.timestamp - b.timestamp);
   }
 
   /**
@@ -732,6 +944,92 @@ function parseJsonRecord(raw: unknown): Record<string, any> | null {
     }
   }
   return raw && typeof raw === 'object' ? raw as Record<string, any> : null;
+}
+
+function asNullableNumber(value: unknown): number | null {
+  if (value == null) return null;
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function readUsageLedger(rawMetadata: unknown): Omit<UsageLedgerRow, 'sessionId' | 'workspaceId' | 'createdAtMs'> | null {
+  const metadata = parseJsonRecord(rawMetadata);
+  if (metadata?.eventType !== 'usage_ledger') return null;
+  return {
+    engine: typeof metadata.engine === 'string' ? metadata.engine : '',
+    model: typeof metadata.model === 'string' ? metadata.model : null,
+    inputTokens: asNullableNumber(metadata.inputTokens),
+    outputTokens: asNullableNumber(metadata.outputTokens),
+    cacheReadInputTokens: asNullableNumber(metadata.cacheReadInputTokens),
+    cacheCreationInputTokens: asNullableNumber(metadata.cacheCreationInputTokens),
+    firstResponseMs: asNullableNumber(metadata.firstResponseMs),
+    totalDurationMs: asNullableNumber(metadata.totalDurationMs),
+  };
+}
+
+function summarizeUsageLedger(rows: UsageLedgerRow[]): UsageLedgerSummary {
+  let cacheReadTotal = 0;
+  let cacheCreationTotal = 0;
+  let hasCacheRead = false;
+  let hasCacheCreation = false;
+  let cacheRateNumerator = 0;
+  let cacheRateDenominator = 0;
+  let cacheDataIncomplete = rows.length === 0;
+  let firstResponseTotal = 0;
+  let firstResponseCount = 0;
+  let totalDurationTotal = 0;
+  let totalDurationCount = 0;
+
+  for (const row of rows) {
+    if (row.cacheReadInputTokens === null) {
+      cacheDataIncomplete = true;
+    } else {
+      cacheReadTotal += row.cacheReadInputTokens;
+      hasCacheRead = true;
+    }
+    if (row.cacheCreationInputTokens === null) {
+      cacheDataIncomplete = true;
+    } else {
+      cacheCreationTotal += row.cacheCreationInputTokens;
+      hasCacheCreation = true;
+    }
+    if (
+      row.inputTokens !== null
+      && row.cacheReadInputTokens !== null
+      && row.cacheCreationInputTokens !== null
+    ) {
+      cacheRateNumerator += row.cacheReadInputTokens;
+      cacheRateDenominator += row.inputTokens + row.cacheReadInputTokens + row.cacheCreationInputTokens;
+    } else {
+      cacheDataIncomplete = true;
+    }
+    if (row.firstResponseMs !== null) {
+      firstResponseTotal += row.firstResponseMs;
+      firstResponseCount++;
+    }
+    if (row.totalDurationMs !== null) {
+      totalDurationTotal += row.totalDurationMs;
+      totalDurationCount++;
+    }
+  }
+
+  // A partial total/rate looks authoritative in an aggregate chart. When any
+  // turn omitted cache telemetry, keep all aggregate cache values blank so the
+  // UI can state that the value is unavailable rather than quietly report a
+  // subset as the total.
+  const hasCompleteCacheData = !cacheDataIncomplete;
+
+  return {
+    totalCacheReadInputTokens: hasCompleteCacheData && hasCacheRead ? cacheReadTotal : null,
+    totalCacheCreationInputTokens: hasCompleteCacheData && hasCacheCreation ? cacheCreationTotal : null,
+    cacheHitRate: hasCompleteCacheData && cacheRateDenominator > 0
+      ? cacheRateNumerator / cacheRateDenominator
+      : null,
+    cacheDataIncomplete,
+    averageFirstResponseMs: firstResponseCount > 0 ? firstResponseTotal / firstResponseCount : null,
+    averageTotalDurationMs: totalDurationCount > 0 ? totalDurationTotal / totalDurationCount : null,
+    turnCount: rows.length,
+  };
 }
 
 function readTokenUsage(rawMetadata: unknown): {
