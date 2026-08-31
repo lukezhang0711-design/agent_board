@@ -67,9 +67,6 @@ export function NotificationsPanel() {
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Completion Sounds</h4>
-        <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
-          Play a sound when the AI or agent completes a turn and is ready for more input.
-        </p>
 
         <SettingsToggle
           checked={completionSoundEnabled}
@@ -79,13 +76,10 @@ export function NotificationsPanel() {
         />
 
         {completionSoundEnabled && (
-          <div className="setting-item py-3 mt-4">
-            <div className="setting-text flex flex-col gap-0.5">
-              <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Sound Type</span>
-              <span className="setting-description text-xs leading-relaxed text-[var(--nim-text-muted)]">
-                Choose the sound to play when a response completes.
-              </span>
-            </div>
+            <div className="setting-item py-3 mt-4">
+              <div className="setting-text flex flex-col gap-0.5">
+                <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Sound Type</span>
+              </div>
             <div className="mt-3 flex flex-col gap-2">
               {(['chime', 'bell', 'pop'] as CompletionSoundType[]).map((sound) => (
                 <label key={sound} className="setting-radio-label flex items-center gap-2 cursor-pointer text-sm text-[var(--nim-text)]">
@@ -114,9 +108,6 @@ export function NotificationsPanel() {
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">OS Notifications</h4>
-        <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
-          Show system notifications when AI responses complete while the app is in the background.
-        </p>
 
         <SettingsToggle
           checked={osNotificationsEnabled}
@@ -143,10 +134,6 @@ export function NotificationsPanel() {
 
             <div className="setting-item py-3">
               <div className="setting-text flex flex-col gap-2">
-                <span className="setting-description text-xs leading-relaxed text-[var(--nim-text-muted)]">
-                  Electron does not expose a reliable cross-platform notification permission state here.
-                  Use a test notification to trigger the OS prompt or verify delivery.
-                </span>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={handleTestNotification} className="nim-btn-secondary text-sm">
                     Send Test Notification
@@ -166,9 +153,6 @@ export function NotificationsPanel() {
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Session Blocked Notifications</h4>
-        <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
-          Show system notifications when an AI session needs your input.
-        </p>
 
         <SettingsToggle
           checked={settings.sessionBlockedNotificationsEnabled}

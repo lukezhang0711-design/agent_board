@@ -31,10 +31,6 @@ export function ClaudePanel({
     <div className="provider-panel flex flex-col">
       <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
         <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">Claude Chat</h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Chat mode is a quicker, more focused tool that is limited to reading and writing your currently open file.
-          Uses direct API calls with files attached as context for faster responses. Requires an Anthropic API key.
-        </p>
       </div>
 
       <SettingsToggle

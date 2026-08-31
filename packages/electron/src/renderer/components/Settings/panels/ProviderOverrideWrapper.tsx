@@ -28,7 +28,6 @@ interface ProviderOverrideWrapperProps {
 
 export function ProviderOverrideWrapper({
   providerId,
-  providerName,
   workspacePath,
   workspaceName,
   globalEnabled,
@@ -107,31 +106,18 @@ export function ProviderOverrideWrapper({
             : 'bg-[var(--nim-bg-secondary)] border-[var(--nim-border)]'
         }`}
       >
-        <div className="override-info flex-1 min-w-0">
-          <div
-            className={`override-status flex items-center gap-2 text-[13px] ${
-              isOverriding ? 'text-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)]'
-            }`}
-          >
-            {isOverriding ? (
-              <>
-                <MaterialSymbol icon="tune" size={16} className="shrink-0" />
-                <span>
-                  Project override active for{' '}
-                  <strong className="font-medium text-[var(--nim-primary)]">{workspaceName}</strong>
-                </span>
-              </>
-            ) : (
-              <>
-                <MaterialSymbol icon="info" size={16} className="shrink-0" />
-                <span>
-                  Using global {providerName} settings
-                </span>
-              </>
-            )}
+        {isOverriding && (
+          <div className="override-info flex-1 min-w-0">
+            <div className="override-status flex items-center gap-2 text-[13px] text-[var(--nim-primary)]">
+              <MaterialSymbol icon="tune" size={16} className="shrink-0" />
+              <span>
+                Project override active for{' '}
+                <strong className="font-medium text-[var(--nim-primary)]">{workspaceName}</strong>
+              </span>
+            </div>
           </div>
-        </div>
-        <label className="override-toggle flex items-center gap-2 cursor-pointer shrink-0">
+        )}
+        <label className={`override-toggle flex items-center gap-2 cursor-pointer shrink-0 ${!isOverriding ? 'ml-auto' : ''}`}>
           <input
             type="checkbox"
             checked={isOverriding}
@@ -160,12 +146,6 @@ export function ProviderOverrideWrapper({
         {children}
       </div>
 
-      {!isOverriding && (
-        <div className="override-hint px-4 py-3 text-xs text-center text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)] border-t border-[var(--nim-border)]">
-          Enable override to customize {providerName} settings for this project only.
-          Changes will not affect your global settings.
-        </div>
-      )}
     </div>
   );
 }

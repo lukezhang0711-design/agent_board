@@ -32,9 +32,6 @@ export function BetaFeaturesPanel() {
         <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
           Beta Features
         </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Try out new features before they are generally available. Beta features may not be fully complete or polished, and may be removed in the future.
-        </p>
       </div>
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
@@ -55,7 +52,6 @@ export function BetaFeaturesPanel() {
                 });
               }}
               name="Enable All Beta Features"
-              description="Automatically enable all current and future beta features."
             />
           </div>
 

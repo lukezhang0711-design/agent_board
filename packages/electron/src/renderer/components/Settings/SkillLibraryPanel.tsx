@@ -266,7 +266,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           )}
         </div>
         <p className="text-sm text-[var(--nim-text-muted)] max-w-[72ch]">
-          只列本机已存在的技能。库级禁用后，该技能会从所有包移除，也不会出现在派发可选清单里。
+          库级禁用后，该技能会从所有包移除，也不会出现在派发可选清单里。
         </p>
       </div>
 

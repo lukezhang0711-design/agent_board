@@ -394,9 +394,8 @@ export function DatabasePanel(): React.ReactElement {
           Test the SQLite migration (dry run)
         </h4>
         <p className="provider-panel-hint text-sm text-[var(--nim-text-muted)] mb-3">
-          Copies your data into a throwaway SQLite database alongside the live one,
-          reports row counts and integrity, then deletes the temporary copy.
-          Your real PGLite database is never touched. Safe to run any time.
+          Creates a SQLite copy alongside your live data, checks it, and keeps a successful copy so you can switch later.
+          Your real PGLite database is never touched.
         </p>
 
         <button

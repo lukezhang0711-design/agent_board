@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { usePostHog } from 'posthog-js/react';
-import { MaterialSymbol } from '@nimbalyst/runtime';
 import {
   advancedSettingsAtom,
   setAdvancedSettingsAtom,
@@ -272,20 +271,10 @@ export function AgentFeaturesPanel() {
           <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
         </div>
 
-        <div className="flex items-start gap-2 p-3 mb-3 rounded border border-[var(--nim-warning)]/30 bg-[var(--nim-warning)]/10">
-          <MaterialSymbol icon="science" size={16} className="text-[var(--nim-warning)] shrink-0 mt-0.5" />
-          <p className="m-0 text-[13px] text-[var(--nim-text)] leading-snug">
-            These features may change, regress, or be removed. Some require a restart to take full effect.
-          </p>
-        </div>
-
         <div className="mb-4 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] p-3">
           <h5 className="text-sm font-semibold mb-1.5 text-[var(--nim-text)]">
             Agent skills and commands compatibility
           </h5>
-          <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-2">
-            Control which command and skill sources feed the shared picker and which generated compatibility exports are written for Claude Code and Codex.
-          </p>
 
           <div className="border-b border-[var(--nim-border)] mb-2">
             <SettingsToggle
@@ -293,28 +282,24 @@ export function AgentFeaturesPanel() {
               onChange={(checked) => handleWorkflowSourceToggle('workspaceClaudeCompatibilityEnabled', checked)}
               disabled={workflowSettingsLoading}
               name="Workspace Claude compatibility"
-              description="Import project and user .claude commands and skills into the shared workflow registry."
             />
             <SettingsToggle
               checked={workflowSourceSettings.includeProjectClaudeSources}
               onChange={(checked) => handleWorkflowSourceToggle('includeProjectClaudeSources', checked)}
               disabled={workflowSettingsLoading || !workflowSourceSettings.workspaceClaudeCompatibilityEnabled}
               name="Project .claude sources"
-              description="Include .claude/commands and .claude/skills from the current workspace."
             />
             <SettingsToggle
               checked={workflowSourceSettings.includeUserClaudeSources}
               onChange={(checked) => handleWorkflowSourceToggle('includeUserClaudeSources', checked)}
               disabled={workflowSettingsLoading || !workflowSourceSettings.workspaceClaudeCompatibilityEnabled}
               name="User .claude sources"
-              description="Include ~/.claude commands and skills when you want user-level compatibility in the picker and exports."
             />
             <SettingsToggle
               checked={workflowSourceSettings.extensionWorkflowsEnabled}
               onChange={(checked) => handleWorkflowSourceToggle('extensionWorkflowsEnabled', checked)}
               disabled={workflowSettingsLoading}
               name="Extension workflows"
-              description="Load provider-neutral agentWorkflows contributions and legacy Claude plugin workflows from enabled extensions."
             />
           </div>
 
@@ -324,14 +309,12 @@ export function AgentFeaturesPanel() {
               onChange={(checked) => handleWorkflowExportToggle('codexEnabled', checked)}
               disabled={workflowSettingsLoading}
               name="Codex generated skills"
-              description="Export registry workflows into .agents/skills/.nimbalyst-generated before Codex turns."
             />
             <SettingsToggle
               checked={workflowExportSettings.claudeGeneratedExtensionWorkflowsEnabled}
               onChange={(checked) => handleWorkflowExportToggle('claudeGeneratedExtensionWorkflowsEnabled', checked)}
               disabled={workflowSettingsLoading}
               name="Claude generated extension workflows"
-              description="Generate Claude plugin shims for extension agentWorkflows under .claude/plugins/.nimbalyst-generated."
             />
           </div>
         </div>
@@ -394,7 +377,6 @@ export function AgentFeaturesPanel() {
           checked={chatShowToolCalls}
           onChange={(checked) => updateAIDebugSettings({ chatShowToolCalls: checked })}
           name="Show Tool Calls in Chat"
-          description="Display tool call rows in the AI chat view. Turn off to hide tool activity and see only the conversational messages."
         />
       </div>
 

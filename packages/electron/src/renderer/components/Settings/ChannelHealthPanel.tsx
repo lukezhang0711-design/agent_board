@@ -71,16 +71,16 @@ function formatCheckedAt(timestamp: number | undefined): string {
   return `上次体检：${new Date(timestamp).toLocaleString()}`;
 }
 
-function formatCatalogStatus(status: ModelCatalogStatusView | undefined): string | null {
+function formatCatalogStatus(status: ModelCatalogStatusView | undefined): { text: string; title?: string } | null {
   if (!status) return null;
   const cachedAt = typeof status.lastSuccessAt === 'number'
     ? `上次成功获取于 ${new Date(status.lastSuccessAt).toLocaleString()}`
     : null;
   if (status.lastError?.message) {
-    return `目录获取失败：${status.lastError.message}${cachedAt ? `。${cachedAt}` : ''}`;
+    return { text: `目录获取失败：${status.lastError.message}`, title: cachedAt ?? undefined };
   }
-  if (!status.verified) return '模型目录未验证，等待从引擎读取。';
-  return cachedAt;
+  if (!status.verified) return { text: '模型目录未验证，等待从引擎读取。', title: cachedAt ?? undefined };
+  return cachedAt ? { text: '目录已验证', title: cachedAt } : null;
 }
 
 export function ChannelHealthRow({
@@ -127,15 +127,15 @@ export function ChannelHealthRow({
             <span
               className={`channel-health-status inline-flex items-center gap-1 text-xs font-medium ${status.className}`}
               data-testid={`channel-health-status-${result.id}`}
+              title={result.state === 'disabled' ? undefined : formatCheckedAt(result.checkedAt)}
             >
               <MaterialSymbol icon={status.icon} size={16} />
               {status.text}
             </span>
           </div>
-          <p className="mt-1 mb-0 text-xs text-[var(--nim-text-muted)]">
-            {result.state === 'disabled' ? '未启用，不发送请求' : formatCheckedAt(result.checkedAt)}
-            {typeof result.firstResponseMs === 'number' && ` · 首响 ${formatMs(result.firstResponseMs)}`}
-          </p>
+          {result.state === 'disabled' && (
+            <p className="mt-1 mb-0 text-xs text-[var(--nim-text-muted)]">未启用，不发送请求</p>
+          )}
           {(result.state === 'failed' || result.state === 'unknown') && failureGuidance && (
             <p className={`mt-2 mb-0 text-xs ${result.state === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`} data-testid={`channel-health-guidance-${result.id}`}>
               {failureGuidance}
@@ -270,9 +270,6 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
         <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="provider-panel-title m-0 text-xl font-semibold text-[var(--nim-text)]">通道体检</h3>
-            <p className="provider-panel-description mt-2 mb-0 text-sm leading-relaxed text-[var(--nim-text-muted)]">
-              默认使用各引擎原生登录/控制面探测，不发送模型提示、不消耗推理额度。
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -292,7 +289,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
               data-testid="channel-health-run-deep"
               title="会向每个已启用通道发送一句固定提示"
             >
-              深度体检（发送一句话）
+              深度体检
             </button>
           </div>
         </div>
@@ -302,13 +299,8 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
         checked={autoCheckOnStartup}
         onChange={(enabled) => { void setAutoCheckOnStartup(enabled); }}
         name="启动时后台体检"
-        description="默认开启；同一通道 10 分钟内不会重复自动体检。"
         testId="channel-health-startup-toggle"
       />
-
-      <p className="my-3 text-xs text-[var(--nim-text-muted)]">
-        默认体检只检查登录或控制面状态；仅“深度体检”会发送固定一句话。
-      </p>
 
       {(['claude-code', 'openai-codex'] as const).map((provider) => {
         const message = formatCatalogStatus(catalogs[provider]);
@@ -317,8 +309,9 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
             key={provider}
             data-testid={`model-catalog-health-${provider}`}
             className={`mb-2 text-xs ${catalogs[provider]?.lastError ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}
+            title={message.title}
           >
-            {provider === 'claude-code' ? 'Claude 模型目录：' : 'Codex 模型目录：'}{message}
+            {provider === 'claude-code' ? 'Claude 模型目录：' : 'Codex 模型目录：'}{message.text}
           </p>
         ) : null;
       })}

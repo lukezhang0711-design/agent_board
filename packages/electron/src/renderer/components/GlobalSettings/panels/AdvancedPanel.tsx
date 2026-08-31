@@ -362,10 +362,6 @@ export function AdvancedPanel() {
         <div className="setting-item py-3">
           <div className="setting-text flex flex-col gap-0.5">
             <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Update Channel</span>
-            <span className="setting-description text-xs leading-relaxed text-[var(--nim-text-muted)]">
-              <strong>Stable:</strong> Production-ready releases (recommended for most users).<br/>
-              <strong>Alpha:</strong> Frequent, rough developer releases. Expect bugs and breaking changes between updates.
-            </span>
           </div>
           <select
             value={releaseChannel}
@@ -500,7 +496,7 @@ export function AdvancedPanel() {
           value={maxHeapSizeMB}
           onChange={(val) => updateSettings({ maxHeapSizeMB: parseInt(val, 10) })}
           name="Max Heap Size"
-          description="V8 memory limit. Increase if you get out-of-memory crashes. Requires restart."
+          description="Memory limit. Increase if you get out-of-memory crashes. Requires restart."
           options={[
             { value: 2048, label: '2 GB' },
             { value: 4096, label: '4 GB (Default)' },
@@ -524,9 +520,6 @@ export function AdvancedPanel() {
             <div className="setting-item py-2">
               <div className="setting-text flex flex-col gap-0 mb-2">
                 <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Detected Terminal Shells</span>
-                <span className="setting-description text-xs leading-snug text-[var(--nim-text-muted)]">
-                  Current Windows shell discovery results used for terminal selection and restore.
-                </span>
               </div>
 
               <div className="select-text p-2 rounded-md text-xs bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono">

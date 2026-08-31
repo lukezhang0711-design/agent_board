@@ -364,10 +364,6 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
         <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--nim-text-muted)]">
           <MaterialSymbol icon="extension" size={48} />
           <h3 className="mt-4 mb-2 text-lg font-medium text-[var(--nim-text)]">No Extensions Installed</h3>
-          <p className="text-sm">
-            Extensions are installed in the extensions folder. Check the documentation for
-            instructions on how to install extensions.
-          </p>
         </div>
       ) : (
         /* Main content: List + Details split view */
@@ -580,23 +576,6 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                       </div>
                     </div>
                   )}
-
-                  {/* Extension Info */}
-                  <div className="mb-5">
-                    <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">Extension Info</div>
-                    <div className="space-y-1.5">
-                      <div className="flex gap-2">
-                        <span className="text-xs text-[var(--nim-text-faint)] w-10">ID</span>
-                        <span className="text-xs text-[var(--nim-text-muted)] font-mono">{selectedExtension.id}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-xs text-[var(--nim-text-faint)] w-10">Path</span>
-                        <span className="text-xs text-[var(--nim-text-muted)] font-mono truncate" title={selectedExtension.path}>
-                          {selectedExtension.path.replace(/^.*?\/extensions\//, '~/extensions/')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Contributions */}
                   {selectedExtension.manifest.contributions && (

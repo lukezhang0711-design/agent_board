@@ -94,9 +94,6 @@ function SharingCallout() {
                 <MaterialSymbol icon={expanded ? 'expand_less' : 'help'} size={14} className="text-[var(--nim-text-muted)]" />
               </button>
             </div>
-            <p className="m-0 text-[12px] text-[var(--nim-text-muted)] leading-relaxed">
-              Right-click any session or document to create an encrypted share link for collaborators.
-            </p>
           </div>
         </div>
         {expanded && (
@@ -1031,9 +1028,6 @@ export function SyncPanel() {
               End-to-End Encryption
             </span>
           </div>
-          <p className="m-0 mb-2 text-[12px] text-nim-muted leading-relaxed">
-            The QR code securely transfers your encryption key directly between devices.
-          </p>
           <ul className="m-0 pl-5 text-[12px] text-nim leading-7">
             <li>Your encryption keys never touch our servers</li>
             <li>Only your devices can decrypt your data</li>

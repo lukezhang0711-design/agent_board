@@ -35,6 +35,7 @@ export function OpenAICodexPanel({
 }: OpenAICodexPanelProps) {
   const usageIndicatorEnabled = useSetting('ai.showCodexUsageIndicator');
   const setUsageIndicatorEnabled = useSetSetting('ai.showCodexUsageIndicator');
+  const legacyAcpConfig = useSetting('ai.provider.openai-codex-acp');
 
   const [authStatus, setAuthStatus] = useState<CodexAuthStatus | null>(null);
   const [authBusy, setAuthBusy] = useState<'checking' | 'chatgpt' | 'apikey' | 'logout' | null>(null);
@@ -150,20 +151,16 @@ export function OpenAICodexPanel({
         onChange={setUsageIndicatorEnabled}
       />
 
-      {authStatus?.runtime && (
-        <p className="text-xs text-[var(--nim-text-muted)] mt-2">
-          Current runtime (当前使用): {authStatus.runtime.source === 'system' ? 'System' : 'Built-in'} {authStatus.runtime.version}
-        </p>
+      {legacyAcpConfig.enabled && (
+        <div data-testid="codex-acp-deprecation-notice" className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
+          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">
+            ACP Transport <span className="text-xs font-normal text-[var(--nim-text-muted)]">(deprecated)</span>
+          </h4>
+          <p className="text-[13px] text-[var(--nim-text-muted)] leading-relaxed">
+            OpenAI Codex (ACP) is deprecated; existing sessions remain viewable, and we recommend using OpenAI Codex.
+          </p>
+        </div>
       )}
-
-      <div data-testid="codex-acp-deprecation-notice" className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">
-          ACP Transport <span className="text-xs font-normal text-[var(--nim-text-muted)]">(deprecated)</span>
-        </h4>
-        <p className="text-[13px] text-[var(--nim-text-muted)] leading-relaxed">
-          OpenAI Codex (ACP) is deprecated; existing sessions remain viewable, and we recommend using OpenAI Codex.
-        </p>
-      </div>
 
       {config.enabled && (
         <div data-testid="codex-auth-section" className="codex-auth-section provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">

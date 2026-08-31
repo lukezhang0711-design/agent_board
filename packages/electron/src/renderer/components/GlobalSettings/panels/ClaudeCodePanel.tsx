@@ -315,10 +315,6 @@ export function ClaudeCodePanel({
     <div className="provider-panel flex flex-col">
       <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
         <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">Claude Agent</h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Agent mode uses the Claude Code SDK with a few extensions for added functionality in Nimbalyst.
-          Has full MCP support with file system access, multi-file operations, and session persistence.
-        </p>
       </div>
 
       <SettingsToggle
@@ -375,22 +371,12 @@ export function ClaudeCodePanel({
             Browse
           </button>
         </div>
-        <p className="text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
-          {scope === 'project'
-            ? hasProjectPathOverride
-              ? 'Project-specific path active. Clear the field to remove the override and inherit the global value.'
-              : globalCustomClaudeCodePath
-                ? `Inheriting global path: ${globalCustomClaudeCodePath}. Type a value to override for this project only.`
-                : 'No global path set. Type a value to use a custom executable for this project only.'
-            : 'Leave empty to use the built-in SDK. Changes take effect on the next agent session.'}
-        </p>
       </div>
 
       {/* Plan Tracking Toggle */}
       <SettingsToggle
         variant="enable"
         name="Plan Tracking"
-        description="Save plans to nimbalyst-local/plans/ with tracking frontmatter. When disabled, plans use Claude Code's default behavior."
         checked={planTrackingEnabled}
         onChange={handleSetPlanTrackingEnabled}
       />
@@ -444,10 +430,6 @@ export function ClaudeCodePanel({
             <>
               <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Claude Agent SDK</h4>
               <div className="installation-status p-4 rounded-lg bg-[rgba(16,185,129,0.05)] border border-[rgba(16,185,129,0.2)]">
-                <div className="installation-status-row flex items-center gap-3 py-1">
-                  <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">Current runtime (当前使用):</span>
-                  <span className="installation-status-value text-sm text-[var(--nim-text)]">Built-in {bundledVersion ?? 'unknown'}</span>
-                </div>
                 <div className="installation-status-row flex items-center gap-3 py-1">
                   <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">SDK package:</span>
                   <span className="installation-status-value text-sm text-[var(--nim-text)]">{BUNDLED_SDK_VERSION}</span>
@@ -530,10 +512,6 @@ export function ClaudeCodePanel({
                         </div>
                       </div>
 
-                      {/* Switch Account Info */}
-                      <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-4">
-                        Need to use a different Claude account? Logout above and login again.
-                      </p>
                     </>
                   ) : loginStatus.status === 'logged-out' ? (
                     <>
@@ -643,10 +621,6 @@ export function ClaudeCodePanel({
             <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-2">
               Tool permissions are now managed per-project. When Claude Agent attempts to use a tool,
               you'll be prompted to allow or deny the action.
-            </p>
-            <p className="text-xs leading-relaxed text-[var(--nim-text-muted)]">
-              To view or modify allowed tools for a project, go to{' '}
-              <strong className="font-medium text-[var(--nim-text)]">Project Settings &gt; Permissions</strong>.
             </p>
           </div>
 

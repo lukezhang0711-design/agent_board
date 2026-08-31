@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe('ChannelHealthPanel dynamic catalog status', () => {
-  it('GREEN: surfaces the original fetch failure and last-success timestamp without changing health rows', async () => {
+  it('keeps the original fetch failure visible and moves the last-success timestamp to hover text', async () => {
     (window as any).electronAPI = {
       invoke: vi.fn(async (channel: string) => {
         if (channel === 'channel-health:get') return { running: false, results: [] };
@@ -51,8 +51,9 @@ describe('ChannelHealthPanel dynamic catalog status', () => {
     render(<ChannelHealthPanel workspacePath="/workspace" />);
 
     await waitFor(() => expect(screen.getByTestId('model-catalog-health-openai-codex')).toBeTruthy());
-    const status = screen.getByTestId('model-catalog-health-openai-codex').textContent ?? '';
-    expect(status).toContain('目录获取失败：codex app-server model/list timed out after 20ms');
-    expect(status).toContain('上次成功获取于');
+    const status = screen.getByTestId('model-catalog-health-openai-codex');
+    expect(status.textContent).toContain('目录获取失败：codex app-server model/list timed out after 20ms');
+    expect(status.textContent).not.toContain('上次成功获取于');
+    expect(status.getAttribute('title')).toContain('上次成功获取于');
   });
 });

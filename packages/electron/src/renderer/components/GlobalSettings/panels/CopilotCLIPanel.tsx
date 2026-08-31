@@ -23,7 +23,6 @@ export function CopilotCLIPanel({
   onToggle,
 }: CopilotCLIPanelProps) {
   const [cliStatus, setCLIStatus] = useState<CLIStatus>('checking');
-  const [cliVersion, setCLIVersion] = useState<string | null>(null);
   const [installError, setInstallError] = useState<string | null>(null);
 
   const checkCLI = useCallback(async () => {
@@ -31,7 +30,6 @@ export function CopilotCLIPanel({
     try {
       const result = await window.electronAPI.invoke('cli:checkInstallation', 'copilot-cli');
       if (result?.installed) {
-        setCLIVersion(result.version || null);
         setCLIStatus('installed');
       } else {
         setCLIStatus('not-installed');
@@ -64,10 +62,6 @@ export function CopilotCLIPanel({
           GitHub Copilot
           <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
         </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          GitHub Copilot coding agent via the ACP (Agent Communication Protocol) server mode.
-          Uses your existing Copilot CLI login for authentication.
-        </p>
       </div>
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
@@ -75,15 +69,6 @@ export function CopilotCLIPanel({
 
         {cliStatus === 'checking' && (
           <p className="text-[13px] text-[var(--nim-text-muted)]">Checking for Copilot CLI...</p>
-        )}
-
-        {cliStatus === 'installed' && (
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[var(--nim-success)] shrink-0" />
-            <span className="text-[13px] text-[var(--nim-text)]">
-              Current runtime (当前使用): System{cliVersion ? ` ${cliVersion}` : ''}
-            </span>
-          </div>
         )}
 
         {(cliStatus === 'not-installed' || cliStatus === 'install-error') && (
@@ -138,22 +123,6 @@ export function CopilotCLIPanel({
         onChange={onToggle}
       />
 
-      {config.enabled && (
-        <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Authentication</h4>
-          <div className="cli-config-section">
-            <p className="text-[13px] text-[var(--nim-text-muted)] mb-3">
-              GitHub Copilot uses your existing login for authentication. Run{' '}
-              <code className="text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 rounded">copilot</code>{' '}
-              and use the <code className="text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 rounded">/login</code>{' '}
-              command to authenticate.
-            </p>
-            <p className="text-[13px] text-[var(--nim-text-muted)]">
-              Model selection is managed by Copilot. No additional API key is required.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

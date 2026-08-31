@@ -175,8 +175,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
           <MaterialSymbol icon="corporate_fare" size={18} className="text-[var(--nim-text-muted)] mt-0.5" />
           <div className="text-[13px] text-[var(--nim-text-muted)] leading-relaxed">
             This workspace isn’t linked to an organization yet. Create or join a team
-            from the <span className="font-semibold text-[var(--nim-text)]">Team</span> panel;
-            its members, roles, and project access will appear here.
+            from the <span className="font-semibold text-[var(--nim-text)]">Team</span> panel.
           </div>
         </div>
       </div>
@@ -213,10 +212,6 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
       {/* Members + roles + project access */}
       <div className="py-3">
         <h4 className="text-[15px] font-semibold mb-1 text-[var(--nim-text)]">Members &amp; access</h4>
-        <p className="text-[12px] text-[var(--nim-text-muted)] mb-3 leading-relaxed">
-          Org roles grant org-wide capability; owners and admins implicitly administer every
-          project. Members and guests get exactly their per-project grant.
-        </p>
 
         <div className="flex flex-col gap-1.5">
           {members.map((m) => {
@@ -309,13 +304,6 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
         )}
       </div>
 
-      {/* Billing / SSO / domain note */}
-      <div className="py-3 border-t border-[var(--nim-border)]">
-        <div className="flex items-start gap-2 text-[12px] text-[var(--nim-text-faint)] leading-relaxed">
-          <MaterialSymbol icon="info" size={14} className="mt-0.5" />
-          <span>Billing, SSO, and domain settings are managed at the organization level and will move here.</span>
-        </div>
-      </div>
     </div>
   );
 }

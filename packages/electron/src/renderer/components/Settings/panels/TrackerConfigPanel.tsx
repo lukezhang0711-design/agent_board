@@ -466,7 +466,7 @@ function AdminView({
         <div className="flex items-center gap-2 p-3 bg-[rgba(167,139,250,0.08)] border border-[rgba(167,139,250,0.15)] rounded-lg">
           <MaterialSymbol icon="arrow_upward" size={16} className="text-[#a78bfa] shrink-0" />
           <div className="flex-1 text-[12px] text-[var(--nim-text-muted)] leading-snug">
-            <strong className="text-[#a78bfa]">Promote inline items</strong> to tracked items to share them with the team. Right-click any inline tracker and select "Promote to Tracked Item."
+            <strong className="text-[#a78bfa]">Promote inline items</strong> to tracked items to share them with the team.
           </div>
         </div>
       </div>

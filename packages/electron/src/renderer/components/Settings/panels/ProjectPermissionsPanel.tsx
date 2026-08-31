@@ -275,7 +275,6 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
         <h2 className="text-xl font-semibold text-[var(--nim-text)] mb-2">Agent Permissions</h2>
         <p className="text-sm text-[var(--nim-text-muted)] leading-relaxed">
           Manage which commands the AI agent can run in this project.
-          Approved patterns are saved to <code className="text-xs bg-[var(--nim-bg-secondary)] px-1 py-0.5 rounded">.claude/settings.local.json</code> and shared with Claude Code CLI.
         </p>
       </div>
 
@@ -313,16 +312,6 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                 </>
               )}
             </div>
-            <p className="permissions-trust-description text-xs text-[var(--nim-text-muted)]">
-              {permissions?.permissionMode !== null
-                ? 'The AI agent can run commands in this workspace.'
-                : 'Trust this workspace to allow the AI agent to run commands.'}
-            </p>
-            {permissions?.trustedAt && (
-              <p className="permissions-trust-date text-xs text-[var(--nim-text-faint)] mt-1">
-                Trusted on {new Date(permissions.trustedAt).toLocaleDateString()}
-              </p>
-            )}
           </div>
           <div className="permissions-trust-action">
             {permissions?.permissionMode !== null ? (
@@ -369,7 +358,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                 <div className="permissions-mode-option-text flex flex-col gap-0.5">
                   <span className="permissions-mode-option-title text-sm font-medium text-[var(--nim-text)]">Ask</span>
                   <span className="permissions-mode-option-description text-xs text-[var(--nim-text-muted)]">
-                    Agent asks before running commands. Approvals saved to .claude/settings.local.json.
+                    Agent asks before running commands.
                   </span>
                 </div>
               </div>
@@ -429,10 +418,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                   onChange={(e) => handleAllowAllUsesClassifierChange(e.target.checked)}
                   className="mt-0.5"
                 />
-                <span className="text-xs text-[var(--nim-text-muted)]">
-                  Run an AI safety classifier on risky operations (Claude Code). When on, deploys and
-                  other destructive commands prompt for confirmation instead of running silently.
-                </span>
+                <span className="text-xs text-[var(--nim-text-muted)]">风险操作仍需确认</span>
               </label>
             )}
           </div>

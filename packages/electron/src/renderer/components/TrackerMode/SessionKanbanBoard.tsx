@@ -2138,9 +2138,6 @@ export const SessionKanbanBoard: React.FC<SessionKanbanBoardProps> = ({ onSessio
           <div className="text-center max-w-[300px]">
             <MaterialSymbol icon="view_kanban" size={48} className="opacity-30" />
             <p className="mt-2 text-sm">No sessions on the board</p>
-            <p className="mt-1 text-xs text-nim-faint">
-              Sessions appear here when an AI agent sets a phase, or you can drag sessions from the history sidebar.
-            </p>
           </div>
         </div>
       ) : (
