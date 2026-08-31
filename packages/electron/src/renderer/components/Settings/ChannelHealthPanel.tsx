@@ -31,6 +31,20 @@ export interface ChannelHealthResultView {
   exitCode?: number;
   summary?: string;
   guidance?: string;
+  rawOutput?: string;
+}
+
+export function getReLoginCommand(channelId: string): string {
+  if (channelId === 'claude-code' || channelId === 'claude-code-cli') {
+    return 'claude /login';
+  }
+  if (channelId === 'openai-codex' || channelId === 'openai-codex-acp') {
+    return 'codex login';
+  }
+  if (channelId === 'antigravity-gemini-agent') {
+    return 'antigravity auth login';
+  }
+  return 'claude /login';
 }
 
 interface ChannelHealthSnapshotView {
@@ -78,6 +92,7 @@ export function ChannelHealthRow({
   running: boolean;
   onRerun: (channelId: string) => void;
 }) {
+  const [copied, setCopied] = useState(false);
   const status = result.state === 'disabled'
     ? { icon: 'pause_circle', className: 'text-[var(--nim-text-faint)]', text: '未启用' }
     : result.state === 'healthy'
@@ -125,6 +140,41 @@ export function ChannelHealthRow({
             <p className={`mt-2 mb-0 text-xs ${result.state === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`} data-testid={`channel-health-guidance-${result.id}`}>
               {failureGuidance}
             </p>
+          )}
+          {result.failureKind === 'not_logged_in' && (
+            <div
+              className="mt-2.5 flex flex-col gap-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] p-2.5 text-xs"
+              data-testid={`channel-health-relogin-exit-${result.id}`}
+            >
+              {result.rawOutput && (
+                <div className="font-mono text-[11px] text-[var(--nim-text-muted)] break-all" data-testid={`channel-health-raw-output-${result.id}`}>
+                  <span className="font-sans text-[var(--nim-text-faint)]">引擎原话：</span>{result.rawOutput}
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-[var(--nim-text)]">
+                  <span className="text-[var(--nim-text-muted)]">重登命令：</span>
+                  <code
+                    className="rounded bg-[var(--nim-bg-secondary)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--nim-text)] border border-[var(--nim-border)]"
+                    data-testid={`channel-health-relogin-command-${result.id}`}
+                  >
+                    {getReLoginCommand(result.id)}
+                  </code>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-2 py-1 text-[11px] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors cursor-pointer"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(getReLoginCommand(result.id));
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  data-testid={`channel-health-copy-relogin-${result.id}`}
+                >
+                  {copied ? '已复制' : '复制命令'}
+                </button>
+              </div>
+            </div>
           )}
         </div>
         <button

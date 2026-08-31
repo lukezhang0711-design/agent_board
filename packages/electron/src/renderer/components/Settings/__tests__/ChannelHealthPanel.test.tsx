@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import React from 'react';
+import React, { act } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('@nimbalyst/runtime', () => ({
   MaterialSymbol: ({ icon }: { icon: string }) => <span aria-label={icon} />,
@@ -149,5 +149,67 @@ describe('ChannelHealthPanel rows', () => {
     expect(screen.getByTestId('channel-health-status-gemini-fixture').textContent).toContain('未启用');
     expect((screen.getByTestId('channel-health-rerun-gemini-fixture') as HTMLButtonElement).disabled).toBe(true);
     expect(onRerun).not.toHaveBeenCalled();
+  });
+
+  it('GREEN 3: renders actionable re-login exit with verbatim raw output and copyable command when not logged in', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    renderRow({
+      id: 'claude-code',
+      displayName: 'Claude（嵌入式）',
+      transport: 'streaming',
+      state: 'failed',
+      failureKind: 'not_logged_in',
+      summary: '未登录',
+      guidance: '请运行 claude /login 后重试',
+      rawOutput: '{"loggedIn":false,"authMethod":"none","apiProvider":"firstParty"}',
+    });
+
+    // 1. Red light status
+    expect(screen.getByTestId('channel-health-status-claude-code').textContent).toContain('失败 · 未登录');
+
+    // 2. Verbatim engine raw output
+    const rawOutputEl = screen.getByTestId('channel-health-raw-output-claude-code');
+    expect(rawOutputEl.textContent).toContain('{"loggedIn":false,"authMethod":"none","apiProvider":"firstParty"}');
+
+    // 3. Actionable re-login command and copy button
+    const commandEl = screen.getByTestId('channel-health-relogin-command-claude-code');
+    expect(commandEl.textContent).toBe('claude /login');
+
+    const copyBtn = screen.getByTestId('channel-health-copy-relogin-claude-code');
+    expect(copyBtn.textContent).toBe('复制命令');
+
+    // Click copy button
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+    expect(writeTextMock).toHaveBeenCalledWith('claude /login');
+  });
+
+  it('GREEN 3: renders appropriate re-login commands for Codex and Antigravity', () => {
+    renderRow({
+      id: 'openai-codex',
+      displayName: 'Codex',
+      transport: 'streaming',
+      state: 'failed',
+      failureKind: 'not_logged_in',
+      summary: '未登录',
+    });
+    expect(screen.getByTestId('channel-health-relogin-command-openai-codex').textContent).toBe('codex login');
+
+    renderRow({
+      id: 'antigravity-gemini-agent',
+      displayName: 'Gemini (Antigravity)',
+      transport: 'streaming',
+      state: 'failed',
+      failureKind: 'not_logged_in',
+      summary: '未登录',
+    });
+    expect(screen.getByTestId('channel-health-relogin-command-antigravity-gemini-agent').textContent).toBe('antigravity auth login');
   });
 });
