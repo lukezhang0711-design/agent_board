@@ -92,7 +92,7 @@ describe('GeminiUsageService dual-branch data mapping', () => {
   it('GREEN ④: Branch B - maps unavailable snapshot into token fallback with honest reason and no fake progress', async () => {
     mockRequest.mockResolvedValue({
       available: false,
-      error: '未检测到 Antigravity 桌面版',
+      error: 'Antigravity 桌面版未运行。请先打开 Antigravity 并确认已登录，然后重新打开用量浮窗。',
       tokenUsage: { totalTokens: 42000, lastTokens: 1500 },
     });
 
@@ -100,7 +100,7 @@ describe('GeminiUsageService dual-branch data mapping', () => {
 
     expect(result.available).toBe(false);
     expect(result.limitsAvailable).toBe(false);
-    expect(result.error).toBe('未检测到 Antigravity 桌面版');
+    expect(result.error).toBe('Antigravity 桌面版未运行。请先打开 Antigravity 并确认已登录，然后重新打开用量浮窗。');
     expect(result.tokenUsage).toEqual({ totalTokens: 42000, lastTokens: 1500 });
     expect(result.groups).toBeUndefined();
     expect(result.fiveHour.utilization).toBe(0);

@@ -276,7 +276,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                   （本次会话累计消耗，非剩余额度）
                 </div>
                 <div className="mt-1 text-[11px] text-nim-muted">
-                  原因：{geminiUsage?.error || '未检测到 Antigravity 桌面版'}
+                  原因：{geminiUsage?.error || 'Antigravity 桌面版未运行。请先打开 Antigravity 并确认已登录，然后重新打开用量浮窗。'}
                 </div>
               </div>
             )}

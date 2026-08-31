@@ -56,7 +56,7 @@ describe('FO product-copy cleanup contracts', () => {
     expect(source('UsageIndicator/AIUsagePopover.tsx'))
       .toContain('（本次会话累计消耗，非剩余额度）');
     expect(source('UsageIndicator/AIUsagePopover.tsx'))
-      .toContain('未检测到 Antigravity 桌面版');
+      .toContain('Antigravity 桌面版未运行');
     expect(source('AIUsageReport/OverviewDashboard.tsx'))
       .toContain("return value == null ? '—' : value.toLocaleString();");
     expect(source('AIUsageReport/OverviewDashboard.tsx'))

@@ -739,6 +739,15 @@ export class AntigravityServerManager {
     });
   }
 
+  /** True when the desktop language_server binary is present. */
+  static isDesktopInstalled(): boolean {
+    try {
+      return fs.existsSync(this.desktopBinaryPath());
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Read the three local Gemini OAuth signals without writing or logging their
    * values. A refresh token is sufficient even if the access token has expired:
@@ -1404,8 +1413,30 @@ export class AntigravityServerManager {
 
   // ---- mode A: discover a running hub ------------------------------------
 
-  private async discoverRunningHub(): Promise<AntigravityEndpoint | null> {
-    if (process.platform !== 'win32') return null;
+  async discoverRunningHub(): Promise<AntigravityEndpoint | null> {
+    if (process.platform !== 'win32') {
+      const processes = await this.runCommand('ps', ['-axo', 'pid=,command=']).catch(() => '');
+      const hub = processes.split(/\r?\n/).find((line) =>
+        /\blanguage_server(?:\.exe)?\b/.test(line)
+        && /(?:^|\s)--subclient_type(?:=|\s+)hub(?:\s|$)/.test(line));
+      const match = hub?.match(/^\s*(\d+)\s+(.+)$/);
+      const pid = match?.[1];
+      const csrf = match?.[2]?.match(/(?:^|\s)--csrf_token(?:=|\s+)(\S+)/)?.[1] ?? '';
+      if (!pid || !csrf) return null;
+      const listeners = await this.runCommand(
+        'lsof',
+        ['-nP', '-iTCP', '-sTCP:LISTEN', '-a', '-p', pid],
+      ).catch(() => '');
+      const portList = [...listeners.matchAll(/\bTCP\s+\S+:(\d+)\s+\(LISTEN\)/g)]
+        .map((m) => parseInt(m[1], 10))
+        .filter((port) => Number.isInteger(port) && port > 0);
+      if (portList.length === 0) return null;
+      // Lower port = HTTPS, higher = HTTP.
+      const ep: AntigravityEndpoint = { httpsPort: Math.min(...portList), csrf, owned: false };
+      if (!(await this.isHealthy(ep))) return null;
+      this.endpoint = ep;
+      return ep;
+    }
     const ps =
       `$p = Get-CimInstance Win32_Process -Filter 'Name="language_server.exe"' | ` +
       `Where-Object { $_.CommandLine -match '--subclient_type hub' } | Select-Object -First 1; ` +
@@ -1423,7 +1454,9 @@ export class AntigravityServerManager {
     // Lower port = HTTPS, higher = HTTP.
     const httpsPort = Math.min(...portList);
     const ep: AntigravityEndpoint = { httpsPort, csrf, owned: false };
-    return (await this.isHealthy(ep)) ? ep : null;
+    if (!(await this.isHealthy(ep))) return null;
+    this.endpoint = ep;
+    return ep;
   }
 
   // ---- mode B: spawn our own --------------------------------------------
@@ -1579,6 +1612,17 @@ export class AntigravityServerManager {
       execFile(
         'powershell',
         ['-NoProfile', '-Command', script],
+        { timeout: 30_000, windowsHide: true },
+        (err, stdout) => (err ? reject(err) : resolve(stdout)),
+      );
+    });
+  }
+
+  private runCommand(command: string, args: string[]): Promise<string> {
+    return new Promise((resolve, reject) => {
+      execFile(
+        command,
+        args,
         { timeout: 30_000, windowsHide: true },
         (err, stdout) => (err ? reject(err) : resolve(stdout)),
       );

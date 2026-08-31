@@ -235,8 +235,8 @@ declare global {
   /**
    * Result of getUsageSnapshot(). Mirrors the Codex usage chip's
    * available/unavailable branch. When `available` is false the host renders a
-   * muted "--" chip with the `error` string in the tooltip; the language
-   * server is never spawned to satisfy a usage poll.
+   * muted "--" chip with the `error` string in the tooltip. A usage poll may
+   * discover and attach to an already-running hub, but must never spawn one.
    *
    * `snapshot` is the AntigravityUsageSnapshot shape (account credits +
    * per-model quota) returned by UsageMeter.getSnapshot(). It's typed as
@@ -291,7 +291,8 @@ declare global {
     /**
      * Read-only usage/quota probe. Returns the live Antigravity usage snapshot
      * (account credits + per-model quota) when the language server is already
-     * running, or an unavailable result otherwise. MUST NOT spawn the server.
+     * running or discoverable, or an unavailable result otherwise. MUST NOT
+     * spawn the server.
      */
     getUsageSnapshot(): Promise<UsageSnapshotResult>;
   }
