@@ -82,11 +82,6 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
         <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-1.5 text-[var(--nim-text)]">
           GitHub Account
         </h3>
-        <p className="provider-panel-description text-[13px] leading-relaxed text-[var(--nim-text-muted)]">
-          {isProject
-            ? 'Choose which GitHub CLI account PR review uses for this project. Useful when a project belongs to a different account than your default (e.g. work vs personal).'
-            : 'Choose the default GitHub CLI account PR review uses. Each project can override this from its Project settings.'}
-        </p>
       </div>
 
       {loading ? (
@@ -137,14 +132,6 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
             ))}
           </select>
 
-          {isProject && (
-            <p className="text-[11px] text-[var(--nim-text-faint)] mt-2">
-              Effective account:{' '}
-              <strong className="text-[var(--nim-text-muted)]">
-                {override ?? defaultAccount ?? 'active gh account'}
-              </strong>
-            </p>
-          )}
         </div>
       )}
     </div>

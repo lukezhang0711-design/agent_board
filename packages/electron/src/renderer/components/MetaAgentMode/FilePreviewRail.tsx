@@ -476,7 +476,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
               </div>
             ) : shelfItems.length === 0 ? (
               <div className="rounded-lg border border-dashed border-nim px-3 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-shelf-empty">
-                这个 Head 还没有工人交付的文件。工人改过或写出的文件会自动排到这里。
+                这个 Head 还没有工人交付的文件。
               </div>
             ) : (
               <>

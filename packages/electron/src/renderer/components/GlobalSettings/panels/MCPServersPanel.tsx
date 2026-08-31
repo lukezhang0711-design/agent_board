@@ -1905,15 +1905,11 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
               )}
               </div>
             )}
-            <div className="mcp-oauth-hint text-xs text-[var(--nim-text-faint)] leading-snug" role="note">
-              {isNativeOAuthConfig
-                ? 'This server uses native MCP OAuth. Start a Claude or Codex session and let the client open the browser authorization flow.'
-                : oauthStatus === 'authorized'
-                ? 'You are authorized to use this server.'
-                : oauthStatus === 'not-required'
-                ? 'This endpoint did not advertise OAuth. Use headers or environment variables if the server requires another auth method.'
-                : 'Click Authorize to open a browser window and log in.'}
-            </div>
+            {isNativeOAuthConfig && (
+              <div className="mcp-oauth-hint text-xs text-[var(--nim-text-faint)] leading-snug" role="note">
+                This server uses native MCP OAuth. Start a Claude or Codex session and let the client open the browser authorization flow.
+              </div>
+            )}
             {!isNativeOAuthConfig && testStatus === 'error' && testMessage && (
               <div className="mcp-oauth-error mt-3 p-3 bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-error)_30%,transparent)] rounded-md text-[var(--nim-error)] text-[0.8125rem] leading-snug" role="alert" aria-live="assertive">
                 {testMessage}
@@ -1949,10 +1945,6 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
               <span className="mcp-required-icon flex items-center justify-center w-5 h-5 bg-[var(--nim-warning)] text-white rounded-full text-xs font-bold shrink-0">!</span>
               <h4 className="mcp-required-section-title text-[0.9375rem] font-semibold text-[var(--nim-text)] m-0">Required: Enter Your Credentials</h4>
             </div>
-            <p className="mcp-required-section-hint text-[0.8125rem] text-[var(--nim-text-muted)] m-0 mb-4">
-              These values are required for the server to connect.
-            </p>
-
             {requiredEnvVars.map(({ key, index }) => {
               const help = ENV_VAR_HELP[key];
               return (
@@ -2023,16 +2015,6 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   )}
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {selectedTemplate && isNativeOAuthConfig && (
-          <div className="mcp-form-group mb-6">
-            <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">Next Step</label>
-            <div className="p-4 rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-sm text-[var(--nim-text)] leading-snug">
-              This settings panel only saves the server configuration.
-              Open a Claude or Codex session and use this server there to trigger browser authorization.
             </div>
           </div>
         )}
@@ -2114,13 +2096,6 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
             <option value="http">HTTP (Remote server - Streamable HTTP)</option>
             <option value="sse">SSE (Remote server - Legacy)</option>
           </select>
-          <div className="mcp-form-hint mt-1 text-xs text-[var(--nim-text-faint)]">
-            {formType === 'stdio'
-              ? 'Runs a local executable that communicates via stdin/stdout'
-              : formType === 'http'
-              ? 'Connects to a remote server using Streamable HTTP (recommended for remote servers)'
-              : 'Connects to a remote server via Server-Sent Events (legacy)'}
-          </div>
         </div>
 
         {formType === 'stdio' ? (
@@ -2220,11 +2195,6 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
               )}
               {!isNativeOAuthConfig && testStatus === 'error' && <span className="mcp-test-failed-label text-[#e74c3c] font-medium text-sm ml-2">Failed</span>}
             </div>
-            {isNativeOAuthConfig && (
-              <div className="mt-2 text-xs text-[var(--nim-text-faint)] leading-snug">
-                Connection testing is disabled for native MCP OAuth servers. Save the config, then open a Claude or Codex session and use the server there to authorize it.
-              </div>
-            )}
             {!isNativeOAuthConfig && testMessage && (
               <div
                 className={`mcp-test-message mt-2 p-2 rounded text-sm flex items-center gap-2 ${testStatus === 'testing' ? 'bg-[rgba(52,152,219,0.1)] text-[var(--nim-text-muted)] border border-[rgba(52,152,219,0.3)]' : ''} ${testStatus === 'success' ? 'bg-[rgba(39,174,96,0.1)] text-[#27ae60] border border-[rgba(39,174,96,0.3)]' : ''} ${testStatus === 'error' ? 'bg-[rgba(231,76,60,0.1)] text-[#e74c3c] border border-[rgba(231,76,60,0.3)]' : ''}`}

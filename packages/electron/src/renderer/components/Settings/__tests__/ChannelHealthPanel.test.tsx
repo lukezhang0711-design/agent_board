@@ -51,6 +51,8 @@ describe('ChannelHealthPanel rows', () => {
       completionMs: 300,
     });
     expect(screen.getByTestId('channel-health-status-claude-code').textContent).toContain('通畅 · 300 毫秒');
+    expect(screen.getByTestId('channel-health-status-claude-code').getAttribute('title')).toContain('上次体检');
+    expect(screen.getByTestId('channel-health-row-claude-code').textContent).not.toContain('首响');
 
     renderRow({
       id: 'openai-codex',

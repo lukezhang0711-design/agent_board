@@ -512,7 +512,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                         {isProjectScope ? 'Project' : 'User'}
                       </span>
                       {!plugin.enabled && (
-                        <span className="plugin-installed-disabled inline-flex items-center px-1.5 py-0.5 rounded text-[0.6875rem] font-semibold uppercase tracking-tight bg-[rgba(231,76,60,0.12)] text-[#e74c3c]" title="Not present in enabledPlugins for this scope">
+                        <span className="plugin-installed-disabled inline-flex items-center px-1.5 py-0.5 rounded text-[0.6875rem] font-semibold uppercase tracking-tight bg-[rgba(231,76,60,0.12)] text-[#e74c3c]" title="Disabled for this scope">
                           Disabled
                         </span>
                       )}

@@ -60,7 +60,7 @@ export const WorkOrderRetryButton: React.FC<WorkOrderRetryButtonProps> = ({
   const disabled = retrying || !availability.canRetry;
   const title = retrying
     ? '正在打开重试确认'
-    : availability.reason || '打开老板重试确认';
+    : availability.reason || '打开重试确认';
   const handleClick = () => {
     if (!disabled) onRetry();
   };

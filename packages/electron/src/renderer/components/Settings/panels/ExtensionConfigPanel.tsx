@@ -234,7 +234,6 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
         <div className="config-field config-field-unsupported py-2 flex flex-col gap-1">
           <span className="config-field-label text-sm font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
           <span className="config-field-value text-sm text-[var(--nim-text-muted)] font-mono">{JSON.stringify(value)}</span>
-          <span className="config-field-hint text-xs text-[var(--nim-text-faint)]">Type "{type}" not supported in UI</span>
         </div>
       );
   }

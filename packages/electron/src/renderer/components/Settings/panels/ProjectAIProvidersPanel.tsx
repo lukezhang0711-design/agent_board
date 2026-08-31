@@ -34,14 +34,11 @@ interface ModelCatalogStatus {
 
 function formatCatalogWarning(provider: string, status: ModelCatalogStatus | undefined): string | null {
   if (!status) return null;
-  const cachedAt = typeof status.lastSuccessAt === 'number'
-    ? `上次成功获取于 ${new Date(status.lastSuccessAt).toLocaleString()}`
-    : null;
   if (status.lastError?.message) {
-    return `${provider} 模型目录获取失败：${status.lastError.message}${cachedAt ? `。${cachedAt}` : ''}`;
+    return `${provider} 模型目录获取失败：${status.lastError.message}`;
   }
   if (!status.verified || status.modelSource !== 'runtime') {
-    return `${provider} 模型目录未在本次运行中验证，型号不可选择。${cachedAt ? ` ${cachedAt}` : ''}`;
+    return `${provider} 模型目录未在本次运行中验证，型号不可选择。`;
   }
   return null;
 }
@@ -279,12 +276,11 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
         <h2 className="m-0 mb-2 text-lg font-semibold text-[var(--nim-text)]">AI Providers</h2>
         <p className="panel-description m-0 text-[13px] text-[var(--nim-text-muted)] leading-normal">
           Override AI provider settings for <strong className="text-[var(--nim-text)] font-medium">{workspaceName}</strong>.
-          Enable overrides to use different API keys or models for this project.
         </p>
       </div>
 
-      {(['claude-code', 'openai-codex'] as const)
-        .map((provider) => formatCatalogWarning(provider, catalogStatuses[provider]))
+      {PROVIDERS
+        .map(({ id }) => formatCatalogWarning(id, catalogStatuses[id]))
         .filter((message): message is string => !!message)
         .map((message) => (
           <div
@@ -446,12 +442,6 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                       </>
                     )}
 
-                    {!overriding && (
-                      <div className="no-override-message py-4 text-center">
-                        <p className="m-0 text-[13px] text-[var(--nim-text-muted)]">This project uses global settings for {provider.name}.</p>
-                        <p className="hint mt-1 text-xs text-[var(--nim-text-faint)]">Enable override to customize API key or models for this project.</p>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -489,9 +479,6 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
             <option value="disable">Disable for this project</option>
           </select>
         </div>
-        <p className="text-xs text-[var(--nim-text-faint)] m-0">
-          Override the global tracker automation setting for this workspace.
-        </p>
       </div>
 
       <div className="panel-footer flex justify-end pt-4 border-t border-[var(--nim-border)]">

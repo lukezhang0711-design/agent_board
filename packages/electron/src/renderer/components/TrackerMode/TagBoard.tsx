@@ -77,7 +77,6 @@ export const TagBoard: React.FC<TagBoardProps> = ({
         <div className="text-center">
           <MaterialSymbol icon="sell" size={48} className="opacity-30" />
           <p className="mt-2 text-sm">No tags on these items yet</p>
-          <p className="mt-1 text-xs text-nim-faint">Add tags to group them on the tag board.</p>
         </div>
       </div>
     );

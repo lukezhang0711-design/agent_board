@@ -100,13 +100,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
   );
 
   if (!api) {
-    return (
-      <div className="privileged-extensions-panel max-w-4xl">
-        <div className="rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] p-4 text-sm text-[var(--nim-text-muted)]">
-          Privileged capabilities API not loaded yet. Restart Nimbalyst to view privileged extensions.
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -116,7 +110,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
           Privileged Capabilities
         </h2>
         <p className="m-0 mt-1 text-xs text-[var(--nim-text-muted)] leading-relaxed">
-          Extensions that have been granted permission to run code outside the renderer
+          Extensions that have been granted permission to run code outside the app
           (e.g., spawning processes, opening network connections). Revoke anything you
           do not recognize.
         </p>

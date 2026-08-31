@@ -31,10 +31,6 @@ export function LMStudioPanel({
     <div className="provider-panel flex flex-col">
       <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
         <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">LM Studio</h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Connect to local LLMs running in LM Studio on your machine.
-          Start LM Studio and load a model before enabling.
-        </p>
       </div>
 
       <SettingsToggle

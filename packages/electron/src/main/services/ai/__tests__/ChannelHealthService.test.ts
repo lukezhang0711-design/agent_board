@@ -216,6 +216,22 @@ describe('ChannelHealthService', () => {
     expect(snapshot.results[0].guidance).toContain('重试');
   });
 
+  it('RED FO: names the affected engine when its auth precheck times out or is unknown', () => {
+    const expectations = [
+      ['antigravity-gemini-agent', 'Antigravity CLI'],
+      ['claude-code-cli', 'Claude CLI'],
+      ['openai-codex', 'Codex CLI'],
+    ] as const;
+
+    for (const failureKind of ['auth_check_timeout', 'auth_check_unknown'] as const) {
+      for (const [channelId, expectedEngine] of expectations) {
+        expect(channelHealthFailureCopy(channelId, failureKind)).toMatchObject({
+          guidance: expect.stringContaining(expectedEngine),
+        });
+      }
+    }
+  });
+
   it('RED EO: a probe timeout is unknown rather than an inferred logged-out failure', async () => {
     const service = new ChannelHealthService({
       listEnabledChannels: () => [channels[2]],

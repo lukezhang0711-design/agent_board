@@ -170,9 +170,19 @@ export function channelHealthFailureCopy(
     case 'missing_api_key':
       return { summary: '未配置密钥', guidance: '在设置中填入 API Key，或不使用此通道可忽略' };
     case 'auth_check_timeout':
-      return { summary: '检测超时', guidance: '请稍后重试；若持续出现，请检查 Claude CLI 状态' };
-    case 'auth_check_unknown':
-      return { summary: '检测状态未知', guidance: '请稍后重试；若持续出现，请检查 Claude CLI 状态' };
+    case 'auth_check_unknown': {
+      const summary = failureKind === 'auth_check_timeout' ? '检测超时' : '检测状态未知';
+      if (channelId === 'antigravity-gemini-agent') {
+        return { summary, guidance: '请稍后重试；若持续出现，请检查 Antigravity CLI 状态' };
+      }
+      if (channelId === 'claude-code-cli') {
+        return { summary, guidance: '请稍后重试；若持续出现，请检查 Claude CLI 状态' };
+      }
+      if (channelId === 'openai-codex' || channelId === 'openai-codex-acp') {
+        return { summary, guidance: '请稍后重试；若持续出现，请检查 Codex CLI 状态' };
+      }
+      return { summary, guidance: '请稍后重试；若持续出现，请检查该引擎状态' };
+    }
     case 'engine_error':
       return {
         summary: '引擎错误',
