@@ -168,4 +168,27 @@ describe('NavigationGutter Slimming (施工单 FJ)', () => {
     expect(screen.getByTestId('trust-indicator-rendered')).toBeTruthy();
     expect(screen.getByText('bypass-all')).toBeTruthy();
   });
+
+  it('GREEN ①: Skill library entry button is rendered with school icon and navigates to skill-library settings on click', () => {
+    const onNavigateSettings = vi.fn();
+    render(
+      <Provider store={store}>
+        <NavigationGutter
+          contentMode="files"
+          onContentModeChange={vi.fn()}
+          onOpenSettings={vi.fn()}
+          onNavigateSettings={onNavigateSettings}
+          workspacePath="/test/workspace"
+        />
+      </Provider>,
+    );
+
+    const button = screen.getByTestId('gutter-skill-library-button');
+    expect(button).toBeTruthy();
+    expect(button.getAttribute('aria-label')).toBe('技能库');
+    expect(screen.getByTestId('material-symbol-school')).toBeTruthy();
+
+    button.click();
+    expect(onNavigateSettings).toHaveBeenCalledWith('user', 'skill-library');
+  });
 });

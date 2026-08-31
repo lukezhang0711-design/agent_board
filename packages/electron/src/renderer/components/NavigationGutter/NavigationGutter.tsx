@@ -652,6 +652,21 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
           </div>
         )}
 
+        {/* Skill Library - Direct entry to Skill Library */}
+        <HelpTooltip testId="gutter-skill-library-button" placement="right">
+          <button
+            className="nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
+            onClick={() => handleNavigateSettings('user', 'skill-library')}
+            aria-label="技能库"
+            data-testid="gutter-skill-library-button"
+          >
+            <MaterialSymbol
+              icon="school"
+              size={20}
+            />
+          </button>
+        </HelpTooltip>
+
         {/* Theme Toggle - Above Settings */}
         {!isHidden('theme-toggle') && (
           <div className="nav-section nav-theme flex flex-col items-center gap-1 w-full px-1.5 py-1" onContextMenu={(e) => openContextMenu(e, 'theme-toggle')}>

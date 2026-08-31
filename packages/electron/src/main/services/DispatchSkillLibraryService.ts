@@ -4,12 +4,22 @@ import path from 'path';
 import * as childProcess from 'child_process';
 import {
   createDispatchSkillId,
-  type DispatchSkillDescriptor,
   type DispatchSkillEngine,
   type DispatchSkillScope,
   type DispatchSkillSource,
 } from '@nimbalyst/runtime/ai/server';
 import { parseSkillFile } from './CommandFileParser';
+
+export interface DispatchSkillDescriptor {
+  id: string;
+  name: string;
+  engine: DispatchSkillEngine;
+  source: DispatchSkillSource;
+  scope: DispatchSkillScope;
+  description?: string;
+  path?: string;
+  content?: string;
+}
 
 type FileSkillSource = Extract<DispatchSkillSource, 'user' | 'project' | 'plugin' | 'builtin'>;
 
@@ -83,6 +93,7 @@ function parseFileSkill(root: SkillRoot, filePath: string): DispatchSkillDescrip
     scope: root.scope,
     description: parsed.description,
     path: filePath,
+    content: parsed.content,
   };
 }
 
@@ -120,10 +131,14 @@ function collectGeminiConfigSkillNames(value: unknown, output: Set<string>, pare
   }
 }
 
-function readJsonFile(filePath: string): unknown {
+function readJsonFile(filePath: string, errors?: string[]): unknown {
+  if (!fs.existsSync(filePath)) {
+    return undefined;
+  }
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
+  } catch (err: any) {
+    errors?.push(`配置 JSON 解析失败 (${filePath}): ${err?.message || String(err)}`);
     return undefined;
   }
 }
@@ -226,7 +241,7 @@ function parseCodexCliText(stdout: string): DispatchSkillDescriptor[] {
     });
 }
 
-function listCodexCliSkills(): DispatchSkillDescriptor[] {
+function listCodexCliSkills(errors?: string[]): DispatchSkillDescriptor[] {
   const tryList = (args: string[]) => {
     try {
       return childProcess.spawnSync('codex', args, {
@@ -234,30 +249,45 @@ function listCodexCliSkills(): DispatchSkillDescriptor[] {
         timeout: 5_000,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
-    } catch {
+    } catch (err: any) {
+      if (err?.code !== 'ENOENT') {
+        errors?.push(`codex ${args.join(' ')} 跑不通: ${err?.message || String(err)}`);
+      }
       return null;
     }
   };
 
   const jsonResult = tryList(['skills', 'list', '--json']);
-  if (jsonResult?.status === 0 && typeof jsonResult.stdout === 'string' && jsonResult.stdout.trim()) {
-    try {
-      return parseCodexCliJson(JSON.parse(jsonResult.stdout));
-    } catch {
-      return parseCodexCliText(jsonResult.stdout);
+  if (jsonResult) {
+    if (jsonResult.status === 0 && typeof jsonResult.stdout === 'string' && jsonResult.stdout.trim()) {
+      try {
+        return parseCodexCliJson(JSON.parse(jsonResult.stdout));
+      } catch (err: any) {
+        errors?.push(`codex skills list --json 解析失败: ${err?.message || String(err)}`);
+        return parseCodexCliText(jsonResult.stdout);
+      }
+    } else if (jsonResult.status !== 0 && jsonResult.status !== null) {
+      const errDetail = jsonResult.stderr?.trim() || `退出码 ${jsonResult.status}`;
+      errors?.push(`codex skills list 跑不通: ${errDetail}`);
     }
   }
 
   const textResult = tryList(['skills', 'list']);
-  if (textResult?.status === 0 && typeof textResult.stdout === 'string' && textResult.stdout.trim()) {
-    return parseCodexCliText(textResult.stdout);
+  if (textResult) {
+    if (textResult.status === 0 && typeof textResult.stdout === 'string' && textResult.stdout.trim()) {
+      return parseCodexCliText(textResult.stdout);
+    } else if (textResult.status !== 0 && textResult.status !== null) {
+      const errDetail = textResult.stderr?.trim() || `退出码 ${textResult.status}`;
+      errors?.push(`codex skills list 跑不通: ${errDetail}`);
+    }
   }
 
   return [];
 }
 
 export class DispatchSkillLibraryService {
-  listSkills(workspacePath?: string): DispatchSkillDescriptor[] {
+  listSkillsDetailed(workspacePath?: string): { skills: DispatchSkillDescriptor[]; errors: string[] } {
+    const errors: string[] = [];
     const home = os.homedir();
     const roots: SkillRoot[] = [
       {
@@ -324,22 +354,28 @@ export class DispatchSkillLibraryService {
       }
     }
 
-    for (const skill of listCodexCliSkills()) {
+    for (const skill of listCodexCliSkills(errors)) {
       addUniqueSkill(skills, seen, skill);
     }
 
-    for (const skill of this.listGeminiConfigSkills(home, workspacePath)) {
+    for (const skill of this.listGeminiConfigSkills(home, workspacePath, errors)) {
       addUniqueSkill(skills, seen, skill);
     }
 
-    return skills.sort((a, b) =>
+    const sortedSkills = skills.sort((a, b) =>
       a.engine.localeCompare(b.engine)
       || a.scope.localeCompare(b.scope)
       || a.name.localeCompare(b.name),
     );
+
+    return { skills: sortedSkills, errors };
   }
 
-  private listGeminiConfigSkills(home: string, workspacePath?: string): DispatchSkillDescriptor[] {
+  listSkills(workspacePath?: string): DispatchSkillDescriptor[] {
+    return this.listSkillsDetailed(workspacePath).skills;
+  }
+
+  private listGeminiConfigSkills(home: string, workspacePath?: string, errors?: string[]): DispatchSkillDescriptor[] {
     const configFiles = [
       path.join(home, '.gemini', 'settings.json'),
       path.join(home, '.gemini', 'config', 'config.json'),
@@ -348,7 +384,7 @@ export class DispatchSkillLibraryService {
     ];
     const names = new Set<string>();
     for (const filePath of configFiles) {
-      collectGeminiConfigSkillNames(readJsonFile(filePath), names);
+      collectGeminiConfigSkillNames(readJsonFile(filePath, errors), names);
     }
 
     return Array.from(names).map((name) => ({

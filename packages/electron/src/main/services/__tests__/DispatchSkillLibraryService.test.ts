@@ -117,4 +117,37 @@ describe('DispatchSkillLibraryService', () => {
       }),
     ]));
   });
+
+  it('green FK: attaches content to parsed file skills for comparison', () => {
+    const { home } = makeTempHome();
+    writeSkill(
+      path.join(home, '.claude', 'skills', 'compare-fixture', 'SKILL.md'),
+      'compare-fixture',
+      'This is file body content',
+    );
+
+    const skills = new DispatchSkillLibraryService().listSkills();
+    const target = skills.find((s) => s.name === 'compare-fixture');
+    expect(target?.content).toBe('This is file body content');
+  });
+
+  it('green FK: collects and returns scanning errors for corrupt JSON and failed codex CLI', () => {
+    const { home } = makeTempHome();
+    fs.mkdirSync(path.join(home, '.gemini'), { recursive: true });
+    fs.writeFileSync(
+      path.join(home, '.gemini', 'settings.json'),
+      '{ invalid json here',
+      'utf8',
+    );
+    spawnSyncMock.mockReturnValue({
+      status: 1,
+      stdout: '',
+      stderr: 'codex CLI not authorized',
+    } as any);
+
+    const result = new DispatchSkillLibraryService().listSkillsDetailed();
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors.some((err) => err.includes('配置 JSON 解析失败'))).toBe(true);
+    expect(result.errors.some((err) => err.includes('codex skills list 跑不通'))).toBe(true);
+  });
 });
