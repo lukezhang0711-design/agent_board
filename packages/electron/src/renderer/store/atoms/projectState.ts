@@ -83,6 +83,7 @@ export type HideableGutterButton =
   | 'sync-status'
   | 'theme-toggle'
   | 'feedback'
+  | 'ai-usage'
   | 'claude-usage'
   | 'codex-usage'
   | 'gemini-usage'
@@ -108,7 +109,7 @@ export interface ProjectState {
 /**
  * Default project state values.
  */
-const defaultProjectState: ProjectState = {
+export const defaultProjectState: ProjectState = {
   version: 1,
   contexts: {
     main: {

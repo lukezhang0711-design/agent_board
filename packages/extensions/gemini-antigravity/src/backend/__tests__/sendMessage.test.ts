@@ -96,13 +96,17 @@ describe('gemini-antigravity backend sendMessage', () => {
     expect(refreshed).toHaveBeenCalledOnce();
   });
 
-  it('GREEN FF-138: reports no official Antigravity usage source instead of fabricating quota', async () => {
+  it('GREEN FJ: reports honest desktop-unavailable fallback with accumulated token usage', async () => {
     const { ctx } = makeCtx();
     const { methods } = await activate(ctx as never);
 
     await expect(methods.getUsageSnapshot()).resolves.toEqual({
       available: false,
-      error: 'Antigravity 未提供用量查询',
+      error: '未检测到 Antigravity 桌面版',
+      tokenUsage: {
+        totalTokens: 0,
+        lastTokens: null,
+      },
     });
   });
 

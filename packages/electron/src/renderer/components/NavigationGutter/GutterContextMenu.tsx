@@ -16,6 +16,7 @@ const BUTTON_META: Record<HideableGutterButton, { label: string; icon: string }>
   'sync-status':    { label: 'Sync Status',    icon: 'sync' },
   'theme-toggle':   { label: 'Theme Toggle',   icon: 'dark_mode' },
   'feedback':       { label: 'Feedback',       icon: 'feedback' },
+  'ai-usage':       { label: 'AI Usage',       icon: 'speed' },
   'claude-usage':   { label: 'Claude Usage',   icon: 'speed' },
   'codex-usage':    { label: 'Codex Usage',    icon: 'speed' },
   'gemini-usage':   { label: 'Gemini Usage',   icon: 'gemini' },
