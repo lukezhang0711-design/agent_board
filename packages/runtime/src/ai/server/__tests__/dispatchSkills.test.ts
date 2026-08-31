@@ -27,6 +27,33 @@ const settings = {
 };
 
 describe('dispatch skill resolution', () => {
+  it('green FI-1: leaves every engine at its native default when skills are omitted', () => {
+    expect(resolveDispatchSkills('claude-code', undefined, skills, settings)).toBeUndefined();
+    expect(resolveDispatchSkills('openai-codex', undefined, skills, settings)).toBeUndefined();
+    expect(resolveDispatchSkills('antigravity-gemini-agent', undefined, skills, settings)).toBeUndefined();
+  });
+
+  it('green FI-2: retains an explicit no-skill grant for every engine', () => {
+    const claude = resolveDispatchSkills('claude-code', { skillIds: [] }, skills, settings);
+    const codex = resolveDispatchSkills('openai-codex', { skillIds: [] }, skills, settings);
+    const gemini = resolveDispatchSkills(
+      'antigravity-gemini-agent',
+      { skillIds: [] },
+      skills,
+      settings,
+    );
+
+    expect(claude?.native.claudeSdk).toEqual({ skills: [] });
+    expect(codex?.native.codex?.config).toEqual({
+      'skills.include_only': [],
+      'skills.disabled': ['implement', 'review'],
+    });
+    expect(gemini?.native.gemini).toEqual({
+      include_only: [],
+      preToolUse: { include_only: [] },
+    });
+  });
+
   it('green FD-1/FD-2: removes disabled and missing skills from bundles before grant', () => {
     expect(sanitizeDispatchSkillSettingsForLibrary(settings, skills)).toEqual({
       disabledSkillIds: ['gemini:builtin:disabled'],

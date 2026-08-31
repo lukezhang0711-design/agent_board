@@ -617,6 +617,24 @@ describe('MetaAgentService work-order persistence', () => {
     expect(String(kickoff)).toContain('提及产出文件时必须写完整文件名');
   });
 
+  it('green FI-1: an unconfigured Claude dispatch preserves the native skill default', async () => {
+    const child = JSON.parse(await (service as any).createChildSession(
+      'head-session',
+      workspacePath,
+      {
+        title: 'Unrestricted Claude child',
+        prompt: 'Use the engine default skills.',
+        provider: 'claude-code',
+        model: 'claude-code:haiku',
+        intent: 'investigation',
+      },
+    ));
+
+    const session = await AISessionsRepository.get(child.sessionId);
+    expect(session).toBeDefined();
+    expect(session?.metadata ?? {}).not.toHaveProperty('dispatchSkills');
+  });
+
   it('green FB-111: a Haiku-style text plan receives a formal submit_plan chase', async () => {
     testState.headTurnUserPrompts = ['先出方案卡，未经批准不许派发。'];
     testState.headTurnFinalText = `## 实施方案

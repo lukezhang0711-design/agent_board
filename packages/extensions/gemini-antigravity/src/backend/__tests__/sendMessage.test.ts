@@ -162,6 +162,28 @@ describe('gemini-antigravity backend sendMessage', () => {
     );
   });
 
+  it('green FI-1: omits Gemini include_only when no skill restriction was selected', async () => {
+    getModelResponse.mockResolvedValue('native default skills');
+
+    const { ctx } = makeCtx();
+    const { methods } = await activate(ctx as never);
+    await methods.createSession({
+      sessionId: 'fi-default-skills',
+      model: 'gemini-3-flash-agent',
+      tools: [],
+      systemPrompt: 'sys',
+    });
+
+    for await (const _event of methods.sendMessage({
+      sessionId: 'fi-default-skills',
+      message: 'use native defaults',
+    })) {
+      // Drain the real loop so its server call exposes the exact argument shape.
+    }
+
+    expect(getModelResponse.mock.calls[0]).toHaveLength(5);
+  });
+
   it('yields a tool_call (with result) ProtocolEvent before text+complete when the model requests a tool', async () => {
     // 1st model round: request the tool. 2nd round: plain text -> complete.
     getModelResponse

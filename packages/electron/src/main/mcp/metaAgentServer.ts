@@ -160,8 +160,6 @@ const SUBMIT_PLAN_EXAMPLE = {
       intent: "implementation",
       permissionScope: "workspace-write",
       disturbanceLevel: "on-failure",
-      skillBundleName: "施工包",
-      skillIds: [],
       doneCriteria: "The card renders the fields and the approval test passes.",
       candidates: [
         {
@@ -176,8 +174,6 @@ const SUBMIT_PLAN_EXAMPLE = {
           intent: "implementation",
           permissionScope: "workspace-write",
           disturbanceLevel: "on-failure",
-          skillBundleName: "施工包",
-          skillIds: [],
         },
       ],
     },
@@ -205,7 +201,7 @@ const SUBMIT_PLAN_DESCRIPTION = [
   "planItems is a non-empty array of non-empty strings and is required.",
   "workOrderCount is an optional non-negative integer; omit it to use planItems.length.",
   "risks is a required array of strings and may be empty; [] means no risks were declared.",
-  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, a model taken from a list_models id (or that id's portion after the colon), optional model-declared effortLevel, intent, permissionScope, disturbanceLevel, optional skillBundleName/skillIds, and doneCriteria. resolvedModel is display-only and must never be used as a model value. Omitted knobs default by intent: investigation = read-only + never; implementation = workspace-write + on-failure. Omitted skills mean no skills are granted.",
+  "modules is optional for backward compatibility. Each module records title, outputFiles, inputs, provider, a model taken from a list_models id (or that id's portion after the colon), optional model-declared effortLevel, intent, permissionScope, disturbanceLevel, optional skillBundleName/skillIds, and doneCriteria. resolvedModel is display-only and must never be used as a model value. Omitted knobs default by intent: investigation = read-only + never; implementation = workspace-write + on-failure. Omit skillBundleName and skillIds unless skills must be narrowed; omission preserves the engine's native default. skillIds: [] explicitly grants no skills.",
   "When there are multiple approaches, put them in modules[].candidates[] with name, approach, pros, cons, risks, provider, model, optional effortLevel, and optional intent/permissionScope/disturbanceLevel/skillBundleName/skillIds; do not write serial comparison paragraphs.",
 ].join("\n");
 
@@ -779,7 +775,7 @@ const META_AGENT_TOOL_DEFS: Array<{
               permissionScope: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"], description: "Optional suggested permission scope. Omitted values use the worker-role default." },
               disturbanceLevel: { type: "string", enum: ["never", "on-failure", "on-request"], description: "Optional suggested owner-interruption level. Omitted values use the worker-role default." },
               skillBundleName: { type: "string", minLength: 1, description: "Optional skill bundle suggestion from the user's Skill Library. It is a shortcut only; the approval card expands it into explicit skill tags." },
-              skillIds: { type: "array", items: { type: "string", minLength: 1 }, description: "Optional explicit skill id suggestions. Empty or omitted means grant no skills." },
+              skillIds: { type: "array", items: { type: "string", minLength: 1 }, description: "Optional explicit skill id suggestions. Omit to preserve the engine native default; [] explicitly grants no skills." },
               doneCriteria: { type: "string", minLength: 1, description: "Concrete completion standard." },
               candidates: {
                 type: "array",
@@ -799,7 +795,7 @@ const META_AGENT_TOOL_DEFS: Array<{
                     permissionScope: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"], description: "Optional suggested permission scope; defaults by role." },
                     disturbanceLevel: { type: "string", enum: ["never", "on-failure", "on-request"], description: "Optional suggested owner-interruption level; defaults by role." },
                     skillBundleName: { type: "string", minLength: 1, description: "Optional skill bundle suggestion. The approval card expands it to explicit skill tags." },
-                    skillIds: { type: "array", items: { type: "string", minLength: 1 }, description: "Optional explicit skill id suggestions. Empty or omitted means grant no skills." },
+                    skillIds: { type: "array", items: { type: "string", minLength: 1 }, description: "Optional explicit skill id suggestions. Omit to preserve the engine native default; [] explicitly grants no skills." },
                   },
                   required: ["name", "approach", "pros", "cons", "risks", "provider", "model"],
                 },

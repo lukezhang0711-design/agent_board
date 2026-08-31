@@ -96,6 +96,20 @@ describe('buildSdkOptions dispatch permissions', () => {
     });
   });
 
+  it('green FI-1: omits the Claude SDK skills option when no restriction was selected', async () => {
+    const dispatchPermission = resolveDispatchPermission('claude-code', {
+      permissionScope: 'read-only',
+      disturbanceLevel: 'never',
+    });
+
+    const { options } = await buildSdkOptions(
+      makeDeps({ config: { dispatchPermission } }),
+      makeParams(),
+    );
+
+    expect(options).not.toHaveProperty('skills');
+  });
+
   it('green FD-7: emits an empty Claude Agent SDK skill allowlist when no skills are granted', async () => {
     const dispatchPermission = resolveDispatchPermission('claude-code', {
       permissionScope: 'read-only',
