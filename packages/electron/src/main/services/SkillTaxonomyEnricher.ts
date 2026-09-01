@@ -2,21 +2,16 @@ import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {
+  DEFAULT_SKILL_CATEGORIES,
+  type SkillCategory,
+} from '../../shared/skillTaxonomy';
 
-export const SKILL_CATEGORIES = [
-  '规划决策',
-  '开发实现',
-  '质量保障',
-  '界面设计',
-  '文档写作',
-  '发布部署',
-  '安全管控',
-  '工具环境',
-] as const;
+/** Factory defaults only. Owner-approved taxonomy data is the runtime source of truth. */
+export const SKILL_CATEGORIES = DEFAULT_SKILL_CATEGORIES;
+export type { SkillCategory } from '../../shared/skillTaxonomy';
 
-export type SkillCategory = (typeof SKILL_CATEGORIES)[number];
-
-export const CATEGORY_REPRESENTATIVE_USAGES: Record<SkillCategory, string> = {
+export const CATEGORY_REPRESENTATIVE_USAGES: Record<(typeof SKILL_CATEGORIES)[number], string> = {
   规划决策: '出方案、拆任务、追问打磨、评审计划',
   开发实现: '照方案实现、测试驱动、迁移改造、解冲突',
   质量保障: '排障、代码审查、测试、性能回归',

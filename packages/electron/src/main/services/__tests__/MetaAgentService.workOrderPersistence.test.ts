@@ -16,6 +16,8 @@ const testState = vi.hoisted(() => ({
   ipcHandlers: new Map<string, (...args: any[]) => any>(),
   /** Every `webContents.send` the service makes, so tests can assert IPC signals. */
   sentIpc: [] as { channel: string; args: unknown[] }[],
+  appSettings: {} as Record<string, unknown>,
+  taxonomySkills: [] as any[],
 }));
 
 vi.mock('@nimbalyst/runtime/ai/server', () => ({
@@ -66,7 +68,8 @@ vi.mock('../../utils/ipcRegistry', () => ({
 }));
 vi.mock('../../utils/store', () => ({
   getDefaultAIModel: () => null,
-  getAppSetting: () => undefined,
+  getAppSetting: (key: string) => testState.appSettings[key],
+  setAppSetting: (key: string, value: unknown) => { testState.appSettings[key] = value; },
   getWorkspaceState: () => ({ issueKeyPrefix: 'NIM' }),
   store: { get: (key: string) => key === 'metaAgentMaxParallel'
     ? testState.maxParallel
@@ -102,6 +105,12 @@ vi.mock('../metaAgentMessageText', () => ({
 }));
 vi.mock('../ai/claudeCliLauncherSingleton', () => ({
   ClaudeCliLauncherConfig: { setMetaAgentServerPort: vi.fn() },
+}));
+vi.mock('../DispatchSkillLibraryService', () => ({
+  dispatchSkillLibraryService: {
+    listSkillsDetailed: () => ({ skills: testState.taxonomySkills, errors: [] }),
+    listSkills: () => testState.taxonomySkills,
+  },
 }));
 
 // The work-order path reuses createBidirectionalLink from trackerToolHandlers.
@@ -516,6 +525,25 @@ describe('MetaAgentService work-order persistence', () => {
     testState.nativeHeadPlanApprovalHandler = null;
     testState.maxParallel = 4;
     testState.sentIpc = [];
+    testState.appSettings = {};
+    testState.taxonomySkills = [
+      {
+        id: 'codex:user:implement',
+        name: 'implement',
+        engine: 'codex',
+        source: 'user',
+        scope: 'global',
+        description: 'Use this skill to implement a requested feature.',
+      },
+      {
+        id: 'codex:user:review',
+        name: 'review',
+        engine: 'codex',
+        source: 'user',
+        scope: 'global',
+        description: 'Use this skill to review a code change.',
+      },
+    ];
     replacementServices = [];
     AISessionsRepository.setStore(createPGLiteSessionStore(db));
     AgentMessagesRepository.setStore(createPGLiteAgentMessagesStore(db));
@@ -5213,6 +5241,117 @@ describe('MetaAgentService work-order persistence', () => {
       );
       const data = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
       expect(data.status).toBe('interrupted');
+    });
+  });
+
+  it('keeps taxonomy discovery and pending cards read-only, then applies only the owner-approved proposal', async () => {
+    const proposal = {
+      categories: ['构建', '验收'],
+      skills: [
+        { name: 'implement', category: '构建', summaryZh: '按需求完成实现' },
+        { name: 'review', category: '验收', summaryZh: '检查代码改动' },
+      ],
+    };
+
+    const discovery = JSON.parse(await service.proposeSkillTaxonomy(
+      'head-session',
+      workspacePath,
+      {},
+    ));
+    expect(discovery.status).toBe('read-only');
+    expect(discovery.skills).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'implement', source: 'user', engine: 'codex' }),
+      expect.objectContaining({ name: 'review', source: 'user', engine: 'codex' }),
+    ]));
+    expect(testState.appSettings.dispatchSkillLibrary).toBeUndefined();
+
+    const first = JSON.parse(await service.proposeSkillTaxonomy(
+      'head-session',
+      workspacePath,
+      proposal,
+    ));
+    const duplicate = JSON.parse(await service.proposeSkillTaxonomy(
+      'head-session',
+      workspacePath,
+      proposal,
+    ));
+    expect(first.status).toBe('awaiting-owner-approval');
+    expect(duplicate).toEqual(expect.objectContaining({
+      status: 'already-pending',
+      requestId: first.requestId,
+    }));
+    expect(testState.appSettings.dispatchSkillLibrary).toBeUndefined();
+    const pendingCards = await db.query<{ content: unknown }>(
+      `SELECT content FROM ai_agent_messages
+       WHERE session_id = $1 AND content LIKE '%"name":"SkillTaxonomyProposal"%'`,
+      ['head-session'],
+    );
+    expect(pendingCards.rows).toHaveLength(1);
+
+    testState.headTurnFinalText = '我批准这份技能分类方案。';
+    await (service as any).handleHeadTurnCompleted('head-session', workspacePath);
+    expect(testState.appSettings.dispatchSkillLibrary).toBeUndefined();
+
+    await expect(service.rejectSkillTaxonomyProposal(workspacePath, {
+      sessionId: 'head-session',
+      requestId: first.requestId,
+    })).resolves.toEqual({ approved: false });
+    expect(testState.appSettings.dispatchSkillLibrary).toBeUndefined();
+
+    const approvedProposal = JSON.parse(await service.proposeSkillTaxonomy(
+      'head-session',
+      workspacePath,
+      proposal,
+    ));
+    const approved = await service.approveSkillTaxonomyProposal(workspacePath, {
+      sessionId: 'head-session',
+      requestId: approvedProposal.requestId,
+      ...proposal,
+    });
+    expect(approved.approved).toBe(true);
+    expect(testState.appSettings.dispatchSkillLibrary).toEqual({
+      taxonomy: {
+        categories: ['构建', '验收'],
+        skills: {
+          implement: { category: '构建', summaryZh: '按需求完成实现' },
+          review: { category: '验收', summaryZh: '检查代码改动' },
+        },
+      },
+    });
+    expect(testState.sentIpc).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        channel: 'dispatch-skill-library:changed',
+        args: [expect.objectContaining({ settings: approved.settings })],
+      }),
+    ]));
+
+    testState.taxonomySkills.push({
+      id: 'codex:user:new-skill',
+      name: 'new-skill',
+      engine: 'codex',
+      source: 'user',
+      scope: 'global',
+      description: 'Use this skill when a new task needs a focused check.',
+    });
+    const incremental = {
+      incremental: true,
+      categories: ['构建', '验收', '新增'],
+      skills: [{ name: 'new-skill', category: '新增', summaryZh: '处理新加入的专项检查' }],
+    };
+    const incrementalProposal = JSON.parse(await service.proposeSkillTaxonomy(
+      'head-session',
+      workspacePath,
+      incremental,
+    ));
+    await service.approveSkillTaxonomyProposal(workspacePath, {
+      sessionId: 'head-session',
+      requestId: incrementalProposal.requestId,
+      ...incremental,
+    });
+    expect((testState.appSettings.dispatchSkillLibrary as any).taxonomy.skills).toEqual({
+      implement: { category: '构建', summaryZh: '按需求完成实现' },
+      review: { category: '验收', summaryZh: '检查代码改动' },
+      'new-skill': { category: '新增', summaryZh: '处理新加入的专项检查' },
     });
   });
 });

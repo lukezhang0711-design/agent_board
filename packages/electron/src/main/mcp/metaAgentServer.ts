@@ -109,6 +109,18 @@ type RequestRedispatchArgs = {
   skillIds: string[];
 };
 
+export type SkillTaxonomyProposalSkill = {
+  name: string;
+  category: string;
+  summaryZh?: string;
+};
+
+export type SkillTaxonomyProposalArgs = {
+  categories?: string[];
+  skills?: SkillTaxonomyProposalSkill[];
+  incremental?: boolean;
+};
+
 type SpawnSessionArgs = {
   title?: string;
   prompt: string;
@@ -211,6 +223,10 @@ function submitPlanValidationError(message: string, example: string): Error {
 
 function requestRedispatchValidationError(message: string): Error {
   return new Error(`${message}. Correct example: ${JSON.stringify(REQUEST_REDISPATCH_EXAMPLE)}`);
+}
+
+function skillTaxonomyProposalValidationError(message: string): Error {
+  return new Error(`${message}. First call this tool without arguments to read the real local skills, then submit categories and skills.`);
 }
 
 /**
@@ -560,6 +576,51 @@ function normalizeRequestRedispatchArgs(value: Record<string, unknown> | undefin
   };
 }
 
+export function normalizeSkillTaxonomyProposalArgs(
+  value: Record<string, unknown> | undefined,
+): SkillTaxonomyProposalArgs {
+  const args = value ?? {};
+  const incremental = args.incremental === true;
+  const isProposal = args.categories !== undefined || args.skills !== undefined;
+  if (!isProposal) return { incremental };
+  if (!Array.isArray(args.categories) || !Array.isArray(args.skills)) {
+    throw skillTaxonomyProposalValidationError('categories and skills must be arrays when submitting a proposal');
+  }
+  const categories = [...new Set(args.categories.map((candidate, index) => {
+    if (typeof candidate !== 'string' || !candidate.trim()) {
+      throw skillTaxonomyProposalValidationError(`categories[${index}] must be a non-empty string`);
+    }
+    return candidate.trim();
+  }))];
+  if (categories.length === 0) {
+    throw skillTaxonomyProposalValidationError('categories must contain at least one category');
+  }
+  const categorySet = new Set(categories);
+  const names = new Set<string>();
+  const skills = args.skills.map((candidate, index): SkillTaxonomyProposalSkill => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      throw skillTaxonomyProposalValidationError(`skills[${index}] must be an object`);
+    }
+    const entry = candidate as Record<string, unknown>;
+    const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+    const category = typeof entry.category === 'string' ? entry.category.trim() : '';
+    if (!name || !category || !categorySet.has(category)) {
+      throw skillTaxonomyProposalValidationError(`skills[${index}] must name a proposed category`);
+    }
+    const nameKey = name.toLowerCase();
+    if (names.has(nameKey)) {
+      throw skillTaxonomyProposalValidationError(`skills[${index}] repeats ${name}`);
+    }
+    names.add(nameKey);
+    const summaryZh = typeof entry.summaryZh === 'string' ? entry.summaryZh.trim() : '';
+    if (summaryZh && (summaryZh.length > 30 || !/[\u3400-\u9fff]/.test(summaryZh))) {
+      throw skillTaxonomyProposalValidationError(`skills[${index}].summaryZh must be Chinese and at most 30 characters`);
+    }
+    return { name, category, ...(summaryZh ? { summaryZh } : {}) };
+  });
+  return { categories, skills, incremental };
+}
+
 /**
  * The original MCP call that is waiting for a plan approval result.
  *
@@ -619,6 +680,11 @@ interface MetaAgentToolFns {
     metaSessionId: string,
     workspaceId: string,
     args: RequestRedispatchArgs
+  ) => Promise<string>;
+  proposeSkillTaxonomy?: (
+    metaSessionId: string,
+    workspaceId: string,
+    args: SkillTaxonomyProposalArgs,
   ) => Promise<string>;
   createSession: (
     metaSessionId: string,
@@ -876,6 +942,39 @@ const META_AGENT_TOOL_DEFS: Array<{
         "disturbanceLevel",
         "skillIds",
       ],
+    },
+  },
+  {
+    name: "propose_skill_taxonomy",
+    description:
+      "Prepare an owner-editable SkillTaxonomyProposal card. First call this tool with no arguments: it reads every real local skill's name, original SKILL.md description, source, and engine without changing settings. Then call it again with categories and one category plus short Chinese owner-facing summary for every returned skill. This tool NEVER writes the Skill Library; only the owner approval button can apply the card. Set incremental=true only when proposing the unclassified skills returned by the read call.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        categories: {
+          type: "array",
+          minItems: 1,
+          items: { type: "string", minLength: 1 },
+          description: "Proposed category names. Required only when submitting the card.",
+        },
+        skills: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", minLength: 1, description: "Exact skill name returned by the read call." },
+              category: { type: "string", minLength: 1, description: "One proposed category name." },
+              summaryZh: { type: "string", maxLength: 30, description: "Owner-facing Chinese one-sentence description, at most 30 characters. Omit only when the skill has no usable Chinese description." },
+            },
+            required: ["name", "category"],
+          },
+          description: "All skills for a full proposal, or only the returned unclassified skills when incremental is true.",
+        },
+        incremental: {
+          type: "boolean",
+          description: "When true, submit only currently unclassified skills and leave existing assignments unchanged.",
+        },
+      },
     },
   },
   {
@@ -1204,6 +1303,7 @@ const EXTENSION_META_AGENT_ALLOWED_TOOLS = new Set<string>([
   "list_worktrees",
   "submit_plan",
   "request_redispatch",
+  "propose_skill_taxonomy",
   "create_session",
   "get_session_status",
   "get_session_result",
@@ -1292,6 +1392,13 @@ export async function dispatchMetaAgentTool(
         aiSessionId,
         effectiveWorkspaceId,
         normalizeRequestRedispatchArgs(args),
+      );
+    case "propose_skill_taxonomy":
+      if (!toolFns.proposeSkillTaxonomy) throw new Error('Skill taxonomy proposal tool is not initialized');
+      return toolFns.proposeSkillTaxonomy(
+        aiSessionId,
+        effectiveWorkspaceId,
+        normalizeSkillTaxonomyProposalArgs(args),
       );
     case "create_session":
       return toolFns.createSession(aiSessionId, effectiveWorkspaceId, (args ?? {}) as CreateSessionArgs);

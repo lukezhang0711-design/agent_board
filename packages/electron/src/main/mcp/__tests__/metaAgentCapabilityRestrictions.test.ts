@@ -32,6 +32,7 @@ describe('extension Meta Agent current capability restrictions', () => {
       'list_worktrees',
       'submit_plan',
       'request_redispatch',
+      'propose_skill_taxonomy',
       'create_session',
       'get_session_status',
       'get_session_result',
@@ -48,6 +49,12 @@ describe('extension Meta Agent current capability restrictions', () => {
     );
   });
 
+  it('红②: 现状断言——Head 没有技能分类提案工具', () => {
+    const metaToolNames = getMetaAgentOpenAITools().map((tool) => tool.function.name);
+
+    expect(metaToolNames).toContain('propose_skill_taxonomy');
+  });
+
   it('withholds generic input cards from a Codex Head while keeping submit_plan available', () => {
     // This is the tool surface used by the Codex Head's shared MCP server. A
     // generic approval card must not be offered as an alternative to the
@@ -61,6 +68,7 @@ describe('extension Meta Agent current capability restrictions', () => {
     expect(sharedToolNames).not.toContain('AskUserQuestion');
     expect(metaToolNames).toContain('submit_plan');
     expect(metaToolNames).toContain('request_redispatch');
+    expect(metaToolNames).toContain('propose_skill_taxonomy');
     expect(shouldExcludePromptToolsForCodexHead({
       provider: 'openai-codex',
       agentRole: 'meta-agent',

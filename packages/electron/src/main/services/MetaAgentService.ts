@@ -34,7 +34,7 @@ import { ModelIdentifier } from '@nimbalyst/runtime/ai/server/types';
 import type { EffortLevel } from '@nimbalyst/runtime/ai/server/effortLevels';
 import { AISessionsRepository, AgentMessagesRepository, SessionFilesRepository } from '@nimbalyst/runtime';
 import { getSessionStateManager } from '@nimbalyst/runtime/ai/server/SessionStateManager';
-import { getAppSetting, getDefaultAIModel, store } from '../utils/store';
+import { getAppSetting, getDefaultAIModel, setAppSetting, store } from '../utils/store';
 import { toMillis } from '../utils/timestampUtils';
 import { createWorktreeStore } from './WorktreeStore';
 import { GitWorktreeService } from './GitWorktreeService';
@@ -54,7 +54,11 @@ import {
   setMetaAgentToolFns,
   shutdownMetaAgentServer,
 } from '../mcp/metaAgentServer';
-import type { PlanModule } from '../mcp/metaAgentServer';
+import type {
+  PlanModule,
+  SkillTaxonomyProposalArgs,
+  SkillTaxonomyProposalSkill,
+} from '../mcp/metaAgentServer';
 import {
   persistInteractivePromptToolResult,
   persistInteractivePromptToolUse,
@@ -89,6 +93,14 @@ import {
   type DispatchQueueRequestSnapshot,
 } from './PGLiteDispatchQueueStore';
 import { dispatchSkillLibraryService } from './DispatchSkillLibraryService';
+import { generateSkillEnrichment } from './SkillTaxonomyEnricher';
+import {
+  createDefaultSkillTaxonomy,
+  getEffectiveSkillTaxonomy,
+  normalizeSkillTaxonomyKey,
+  readSkillTaxonomy,
+  type SkillTaxonomy,
+} from '../../shared/skillTaxonomy';
 
 type SessionStatusValue = 'idle' | 'running' | 'waiting_for_input' | 'error' | 'interrupted';
 type PromptType = 'permission_request' | 'ask_user_question_request' | 'exit_plan_mode_request';
@@ -524,6 +536,31 @@ interface RedispatchConfirmationResult {
   headSessionId: string;
   deduped: boolean;
   input: RedispatchConfirmationInput;
+}
+
+interface SkillTaxonomyProposalInput {
+  taxonomyProposalRequestId: string;
+  taxonomyProposalKey: string;
+  incremental: boolean;
+  categories: string[];
+  skills: SkillTaxonomyProposalSkill[];
+  createdAt: string;
+}
+
+interface SkillTaxonomyProposalApprovalArgs {
+  sessionId: string;
+  requestId: string;
+  categories: string[];
+  skills: SkillTaxonomyProposalSkill[];
+}
+
+interface SkillTaxonomyDiscoverySkill {
+  key: string;
+  name: string;
+  description?: string;
+  source: string;
+  engine: string;
+  seedSummaryZh?: string;
 }
 
 interface RetryWorkOrderContext {
@@ -1918,6 +1955,8 @@ export class MetaAgentService {
           }),
         requestRedispatch: (metaSessionId, workspaceId, args) =>
           this.requestRedispatch(metaSessionId, workspaceId, args),
+        proposeSkillTaxonomy: (metaSessionId, workspaceId, args) =>
+          this.proposeSkillTaxonomy(metaSessionId, workspaceId, args),
         createSession: (metaSessionId, workspaceId, args) =>
           this.createChildSession(metaSessionId, workspaceId, args),
         spawnSession: (callerSessionId, workspaceId, args) =>
@@ -2157,6 +2196,171 @@ export class MetaAgentService {
       message:
         'Redispatch confirmation card is waiting for the owner. Do not call create_session for this failed work-order.',
     }, null, 2);
+  }
+
+  /**
+   * The first call is read-only discovery. A second call persists only an
+   * owner-editable prompt card; settings remain untouched until its button is
+   * approved through the narrow IPC handler below.
+   */
+  public async proposeSkillTaxonomy(
+    metaSessionId: string,
+    workspaceId: string,
+    args: SkillTaxonomyProposalArgs,
+  ): Promise<string> {
+    await this.requireHeadSkillTaxonomySession(metaSessionId, workspaceId);
+    const discovered = this.readSkillTaxonomyDiscovery(workspaceId);
+    const storedValue = getAppSetting<unknown>(DISPATCH_SKILL_SETTINGS_KEY);
+    const storedTaxonomy = readSkillTaxonomy(this.readDispatchSkillSettingsRecord(storedValue).taxonomy);
+
+    if (!args.categories || !args.skills) {
+      const activeTaxonomy = getEffectiveSkillTaxonomy(storedTaxonomy);
+      const unclassifiedSkills = [...new Map(
+        discovered.skills
+          .filter((skill) => !storedTaxonomy?.skills[skill.key])
+          .map((skill) => [skill.key, skill.name]),
+      ).values()];
+      return JSON.stringify({
+        status: 'read-only',
+        categories: activeTaxonomy.categories,
+        hasStoredTaxonomy: Boolean(storedTaxonomy),
+        incrementalRecommended: Boolean(storedTaxonomy) && unclassifiedSkills.length > 0,
+        unclassifiedSkills,
+        skills: discovered.skills.map((skill) => ({
+          name: skill.name,
+          description: skill.description,
+          source: skill.source,
+          engine: skill.engine,
+          ...(storedTaxonomy?.skills[skill.key]?.category
+            ? { category: storedTaxonomy.skills[skill.key].category }
+            : {}),
+          ...(storedTaxonomy?.skills[skill.key]?.summaryZh
+            ? { summaryZh: storedTaxonomy.skills[skill.key].summaryZh }
+            : {}),
+          ...(skill.seedSummaryZh ? { seedSummaryZh: skill.seedSummaryZh } : {}),
+        })),
+        errors: discovered.errors,
+      }, null, 2);
+    }
+
+    const knownByKey = new Map(discovered.skills.map((skill) => [skill.key, skill]));
+    const submittedKeys = new Set<string>();
+    for (const skill of args.skills) {
+      const key = normalizeSkillTaxonomyKey(skill.name);
+      if (!knownByKey.has(key)) {
+        throw new Error(`Skill ${skill.name} is not in the current Skill Library`);
+      }
+      if (submittedKeys.has(key)) {
+        throw new Error(`Skill ${skill.name} appears more than once in this taxonomy proposal`);
+      }
+      submittedKeys.add(key);
+      if (args.incremental && storedTaxonomy?.skills[key]) {
+        throw new Error(`Skill ${skill.name} is already classified; incremental proposals may only cover unclassified skills`);
+      }
+    }
+    if (!args.incremental && submittedKeys.size !== knownByKey.size) {
+      throw new Error('A full taxonomy proposal must cover every current Skill Library skill');
+    }
+
+    const taxonomyProposalKey = this.buildSkillTaxonomyProposalKey(args);
+    const active = await this.findActiveSkillTaxonomyProposal(
+      metaSessionId,
+      taxonomyProposalKey,
+    );
+    if (active) {
+      return JSON.stringify({
+        status: 'already-pending',
+        requestId: active.taxonomyProposalRequestId,
+        message: 'Skill taxonomy proposal card is already waiting for the owner.',
+      }, null, 2);
+    }
+
+    const requestId = randomUUID();
+    const input: SkillTaxonomyProposalInput = {
+      taxonomyProposalRequestId: requestId,
+      taxonomyProposalKey,
+      incremental: args.incremental === true,
+      categories: args.categories,
+      skills: args.skills,
+      createdAt: new Date().toISOString(),
+    };
+    await persistInteractivePromptToolUse({
+      sessionId: metaSessionId,
+      toolUseId: requestId,
+      toolName: 'SkillTaxonomyProposal',
+      input,
+    });
+    broadcastMessageLogged(metaSessionId, workspaceId);
+    return JSON.stringify({
+      status: 'awaiting-owner-approval',
+      requestId,
+      incremental: input.incremental,
+      message: 'Skill taxonomy proposal card is waiting for the owner.',
+    }, null, 2);
+  }
+
+  public async approveSkillTaxonomyProposal(
+    workspaceId: string,
+    args: SkillTaxonomyProposalApprovalArgs,
+  ): Promise<{ approved: true; settings: Record<string, unknown>; alreadyResolved?: boolean }> {
+    const requestId = readNonEmptyString(args.requestId);
+    const sessionId = readNonEmptyString(args.sessionId);
+    if (!requestId || !sessionId) throw new Error('sessionId and requestId are required');
+    await this.requireHeadSkillTaxonomySession(sessionId, workspaceId);
+    const prompt = await this.readSkillTaxonomyProposalByRequestId(sessionId, requestId);
+    if (!prompt) throw new Error('Skill taxonomy proposal is no longer active');
+    if (await this.hasSkillTaxonomyProposalToolResult(sessionId, requestId)) {
+      return { approved: true, settings: this.readDispatchSkillSettingsRecord(getAppSetting<unknown>(DISPATCH_SKILL_SETTINGS_KEY)), alreadyResolved: true };
+    }
+
+    const approvedTaxonomy = this.buildApprovedSkillTaxonomy(prompt, args);
+    const currentSettings = this.readDispatchSkillSettingsRecord(
+      getAppSetting<unknown>(DISPATCH_SKILL_SETTINGS_KEY),
+    );
+    const nextSettings: Record<string, unknown> = {
+      ...currentSettings,
+      taxonomy: approvedTaxonomy,
+    };
+    setAppSetting(DISPATCH_SKILL_SETTINGS_KEY, nextSettings);
+
+    await persistInteractivePromptToolResult({
+      sessionId,
+      toolUseId: requestId,
+      result: {
+        approved: true,
+        approvedAt: new Date().toISOString(),
+        taxonomy: approvedTaxonomy,
+      },
+    });
+    this.broadcastSkillTaxonomyChanged(nextSettings);
+    broadcastMessageLogged(sessionId, workspaceId);
+    return { approved: true, settings: nextSettings };
+  }
+
+  public async rejectSkillTaxonomyProposal(
+    workspaceId: string,
+    args: { sessionId?: string; requestId?: string; reason?: string },
+  ): Promise<{ approved: false; alreadyResolved?: boolean }> {
+    const requestId = readNonEmptyString(args.requestId);
+    const sessionId = readNonEmptyString(args.sessionId);
+    if (!requestId || !sessionId) throw new Error('sessionId and requestId are required');
+    await this.requireHeadSkillTaxonomySession(sessionId, workspaceId);
+    const prompt = await this.readSkillTaxonomyProposalByRequestId(sessionId, requestId);
+    if (!prompt) throw new Error('Skill taxonomy proposal is no longer active');
+    if (await this.hasSkillTaxonomyProposalToolResult(sessionId, requestId)) {
+      return { approved: false, alreadyResolved: true };
+    }
+    await persistInteractivePromptToolResult({
+      sessionId,
+      toolUseId: requestId,
+      result: {
+        approved: false,
+        rejectedAt: new Date().toISOString(),
+        reason: readNonEmptyString(args.reason) ?? 'Owner rejected skill taxonomy proposal.',
+      },
+    });
+    broadcastMessageLogged(sessionId, workspaceId);
+    return { approved: false };
   }
 
   public async openRedispatchConfirmationForWorkOrder(
@@ -2771,6 +2975,246 @@ export class MetaAgentService {
     });
   }
 
+  private readDispatchSkillSettingsRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? { ...(value as Record<string, unknown>) }
+      : {};
+  }
+
+  private async requireHeadSkillTaxonomySession(
+    sessionId: string,
+    workspaceId: string,
+  ): Promise<void> {
+    const session = await AISessionsRepository.get(sessionId);
+    if (
+      !session
+      || session.workspacePath !== workspaceId
+      || session.agentRole !== 'meta-agent'
+    ) {
+      throw new Error(`Head session ${sessionId} not found in this workspace`);
+    }
+  }
+
+  private readSkillTaxonomyDiscovery(
+    workspaceId: string,
+  ): { skills: SkillTaxonomyDiscoverySkill[]; errors: string[] } {
+    // The proposal read must not mutate cache files or the owner's SKILL.md files.
+    const listed = dispatchSkillLibraryService.listSkillsDetailed(workspaceId, { enrich: false });
+    return {
+      errors: listed.errors,
+      skills: listed.skills.map((skill) => {
+        const enrichment = generateSkillEnrichment(skill.name, skill.description, skill.content);
+        return {
+          key: normalizeSkillTaxonomyKey(skill.name),
+          name: skill.name,
+          ...(skill.description?.trim() ? { description: skill.description.trim() } : {}),
+          source: skill.source,
+          engine: skill.engine,
+          ...(!enrichment.enrichmentFailed && skill.description?.trim()
+            ? { seedSummaryZh: enrichment.summaryZh }
+            : {}),
+        };
+      }),
+    };
+  }
+
+  private buildSkillTaxonomyProposalKey(args: SkillTaxonomyProposalArgs): string {
+    return JSON.stringify({
+      incremental: args.incremental === true,
+      categories: args.categories,
+      skills: [...(args.skills ?? [])]
+        .map((skill) => ({
+          name: normalizeSkillTaxonomyKey(skill.name),
+          category: skill.category,
+          summaryZh: skill.summaryZh ?? '',
+        }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+    });
+  }
+
+  private async findActiveSkillTaxonomyProposal(
+    headSessionId: string,
+    taxonomyProposalKey: string,
+  ): Promise<SkillTaxonomyProposalInput | null> {
+    const { rows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND direction = 'output'
+         AND (hidden = FALSE OR hidden IS NULL)
+         AND content LIKE '%"type":"nimbalyst_tool_use"%'
+         AND content LIKE '%"name":"SkillTaxonomyProposal"%'
+       ORDER BY created_at DESC, id DESC
+       LIMIT 50`,
+      [headSessionId],
+    );
+    for (const row of rows) {
+      const input = this.parseSkillTaxonomyProposalContent(row.content);
+      if (!input || input.taxonomyProposalKey !== taxonomyProposalKey) continue;
+      if (!(await this.hasSkillTaxonomyProposalToolResult(
+        headSessionId,
+        input.taxonomyProposalRequestId,
+      ))) {
+        return input;
+      }
+    }
+    return null;
+  }
+
+  private async readSkillTaxonomyProposalByRequestId(
+    headSessionId: string,
+    requestId: string,
+  ): Promise<SkillTaxonomyProposalInput | null> {
+    const { rows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND direction = 'output'
+         AND (hidden = FALSE OR hidden IS NULL)
+         AND content LIKE '%"type":"nimbalyst_tool_use"%'
+         AND content LIKE '%"name":"SkillTaxonomyProposal"%'
+         AND content LIKE $2
+       ORDER BY created_at DESC, id DESC
+       LIMIT 20`,
+      [headSessionId, `%"id":"${this.escapeLikePattern(requestId)}"%`],
+    );
+    for (const row of rows) {
+      const input = this.parseSkillTaxonomyProposalContent(row.content);
+      if (input?.taxonomyProposalRequestId === requestId) return input;
+    }
+    return null;
+  }
+
+  private parseSkillTaxonomyProposalContent(value: unknown): SkillTaxonomyProposalInput | null {
+    try {
+      const content = typeof value === 'string' ? JSON.parse(value) : value;
+      if (
+        !content
+        || typeof content !== 'object'
+        || Array.isArray(content)
+        || (content as Record<string, unknown>).type !== 'nimbalyst_tool_use'
+        || (content as Record<string, unknown>).name !== 'SkillTaxonomyProposal'
+      ) {
+        return null;
+      }
+      const input = (content as Record<string, unknown>).input;
+      if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+      const record = input as Record<string, unknown>;
+      const taxonomyProposalRequestId = readNonEmptyString(record.taxonomyProposalRequestId);
+      const taxonomyProposalKey = readNonEmptyString(record.taxonomyProposalKey);
+      const categories = Array.isArray(record.categories)
+        ? [...new Set(record.categories.flatMap((candidate) => {
+            if (typeof candidate !== 'string' || !candidate.trim()) return [];
+            return [candidate.trim()];
+          }))]
+        : [];
+      const categorySet = new Set(categories);
+      const skills = Array.isArray(record.skills)
+        ? record.skills.flatMap((candidate): SkillTaxonomyProposalSkill[] => {
+            if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return [];
+            const entry = candidate as Record<string, unknown>;
+            const name = readNonEmptyString(entry.name);
+            const category = readNonEmptyString(entry.category);
+            if (!name || !category || !categorySet.has(category)) return [];
+            const summaryZh = readNonEmptyString(entry.summaryZh);
+            return [{ name, category, ...(summaryZh ? { summaryZh } : {}) }];
+          })
+        : [];
+      if (!taxonomyProposalRequestId || !taxonomyProposalKey || categories.length === 0) return null;
+      if (!Array.isArray(record.skills) || skills.length !== record.skills.length) return null;
+      return {
+        taxonomyProposalRequestId,
+        taxonomyProposalKey,
+        incremental: record.incremental === true,
+        categories,
+        skills,
+        createdAt: readNonEmptyString(record.createdAt) ?? new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async hasSkillTaxonomyProposalToolResult(
+    headSessionId: string,
+    requestId: string,
+  ): Promise<boolean> {
+    const { rows } = await databaseWorker.query<{ content: unknown }>(
+      `SELECT content
+       FROM ai_agent_messages
+       WHERE session_id = $1
+         AND direction = 'output'
+         AND content LIKE '%"type":"nimbalyst_tool_result"%'
+         AND content LIKE $2
+       ORDER BY created_at DESC, id DESC
+       LIMIT 50`,
+      [headSessionId, `%"tool_use_id":"${this.escapeLikePattern(requestId)}"%`],
+    );
+    return rows.some((row) => {
+      try {
+        const content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+        return content?.type === 'nimbalyst_tool_result'
+          && content.tool_use_id === requestId;
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  private buildApprovedSkillTaxonomy(
+    prompt: SkillTaxonomyProposalInput,
+    args: SkillTaxonomyProposalApprovalArgs,
+  ): SkillTaxonomy {
+    const rawCategories = Array.isArray(args.categories) ? args.categories : [];
+    const rawSkills = Array.isArray(args.skills) ? args.skills : [];
+    const categories = [...new Set(rawCategories.flatMap((candidate) => {
+      if (typeof candidate !== 'string' || !candidate.trim()) return [];
+      return [candidate.trim()];
+    }))];
+    if (categories.length === 0) throw new Error('At least one category is required');
+    const categorySet = new Set(categories);
+    const originalByKey = new Map(
+      prompt.skills.map((skill) => [normalizeSkillTaxonomyKey(skill.name), skill]),
+    );
+    const approvedSkills: Record<string, SkillTaxonomy['skills'][string]> = {};
+    for (const candidate of rawSkills) {
+      const key = normalizeSkillTaxonomyKey(candidate?.name ?? '');
+      const category = typeof candidate?.category === 'string' ? candidate.category.trim() : '';
+      const original = originalByKey.get(key);
+      if (!key || !original || !category || !categorySet.has(category) || approvedSkills[key]) {
+        throw new Error('Skill taxonomy card contains an invalid skill assignment');
+      }
+      approvedSkills[key] = {
+        category,
+        ...(original.summaryZh ? { summaryZh: original.summaryZh } : {}),
+      };
+    }
+    if (Object.keys(approvedSkills).length !== originalByKey.size) {
+      throw new Error('Every skill on the taxonomy card must stay assigned before approval');
+    }
+
+    if (!prompt.incremental) {
+      return { categories, skills: approvedSkills };
+    }
+
+    const existing = readSkillTaxonomy(
+      this.readDispatchSkillSettingsRecord(getAppSetting<unknown>(DISPATCH_SKILL_SETTINGS_KEY)).taxonomy,
+    ) ?? createDefaultSkillTaxonomy();
+    const skills = { ...existing.skills, ...approvedSkills };
+    if (Object.values(skills).some((skill) => !categorySet.has(skill.category))) {
+      throw new Error('Incremental approval must keep every existing category that still has assigned skills');
+    }
+    return { categories, skills };
+  }
+
+  private broadcastSkillTaxonomyChanged(settings: Record<string, unknown>): void {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('dispatch-skill-library:changed', { settings });
+      }
+    }
+  }
+
   public async canRetryWorkOrder(
     workspaceId: string,
     trackerItemId: string,
@@ -2839,6 +3283,32 @@ export class MetaAgentService {
       try {
         const { workspaceId, ...args } = payload;
         const result = await this.rejectRedispatchRequest(workspaceId, args);
+        return { success: true, ...result };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    safeHandle('meta-agent:approve-skill-taxonomy-proposal', async (
+      _event,
+      payload: SkillTaxonomyProposalApprovalArgs & { workspaceId: string },
+    ) => {
+      try {
+        const { workspaceId, ...args } = payload;
+        const result = await this.approveSkillTaxonomyProposal(workspaceId, args);
+        return { success: true, ...result };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    safeHandle('meta-agent:reject-skill-taxonomy-proposal', async (
+      _event,
+      payload: { workspaceId: string; sessionId?: string; requestId?: string; reason?: string },
+    ) => {
+      try {
+        const { workspaceId, ...args } = payload;
+        const result = await this.rejectSkillTaxonomyProposal(workspaceId, args);
         return { success: true, ...result };
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : String(error) };

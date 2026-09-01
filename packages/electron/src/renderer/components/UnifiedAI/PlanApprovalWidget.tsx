@@ -49,6 +49,7 @@ import {
   refreshPlanApprovalStateAtom,
 } from '../../store/atoms/sessions';
 import { isImeCompositionActive } from '../../utils/imeEventTrace';
+import { SkillTaxonomyProposalWidget } from './SkillTaxonomyProposalWidget';
 import './PlanApprovalWidget.css';
 
 interface SubmittedPlanArgs {
@@ -3636,6 +3637,7 @@ export function registerPlanApprovalWidget(): void {
     ExitPlanMode: PlanApprovalWidget,
     RedispatchWorkOrder: RedispatchWorkOrderWidget,
     WorkspaceTrustChange: WorkspaceTrustChangeWidget,
+    SkillTaxonomyProposal: SkillTaxonomyProposalWidget,
   });
 }
 
