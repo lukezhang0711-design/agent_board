@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   CODEX_SKILL_CONTROL_NOTICE,
+  readDispatchSkillSettings,
   resolveDispatchSkills,
   sanitizeDispatchSkillSettingsForLibrary,
   type DispatchSkillDescriptor,
 } from '../dispatchSkills';
+import * as dispatchSkillsModule from '../dispatchSkills';
 
 const skills: DispatchSkillDescriptor[] = [
   { id: 'claude:user:implement', name: 'implement', engine: 'claude', source: 'user', scope: 'global' },
@@ -27,6 +29,14 @@ const settings = {
 };
 
 describe('dispatch skill resolution', () => {
+  it('绿①: 清空后读取，bundles 为空数组；反向断言 DEFAULT_DISPATCH_SKILL_BUNDLES 不存在', () => {
+    expect((dispatchSkillsModule as any).DEFAULT_DISPATCH_SKILL_BUNDLES).toBeUndefined();
+    expect(readDispatchSkillSettings(undefined)).toEqual({ disabledSkillIds: [], bundles: [] });
+    expect(readDispatchSkillSettings({})).toEqual({ disabledSkillIds: [], bundles: [] });
+    expect(readDispatchSkillSettings({ bundles: [] })).toEqual({ disabledSkillIds: [], bundles: [] });
+    expect(readDispatchSkillSettings({ bundles: null })).toEqual({ disabledSkillIds: [], bundles: [] });
+  });
+
   it('green FI-1: leaves every engine at its native default when skills are omitted', () => {
     expect(resolveDispatchSkills('claude-code', undefined, skills, settings)).toBeUndefined();
     expect(resolveDispatchSkills('openai-codex', undefined, skills, settings)).toBeUndefined();

@@ -90,12 +90,6 @@ export const DISPATCH_SKILL_SETTINGS_KEY = 'dispatchSkillLibrary';
 export const CODEX_SKILL_CONTROL_NOTICE =
   'Codex：技能管控只能会话级禁用、无逐次审批。';
 
-export const DEFAULT_DISPATCH_SKILL_BUNDLES: readonly DispatchSkillBundle[] = [
-  { id: 'construction', name: '施工包', skillIds: [] },
-  { id: 'research', name: '调研包', skillIds: [] },
-  { id: 'docs', name: '文档包', skillIds: [] },
-];
-
 export function estimateSkillTokens(text?: string): number {
   if (!text || !text.trim()) return 0;
   return Math.ceil(text.trim().length / 3.5);
@@ -242,13 +236,11 @@ export function readDispatchSkillSettings(value: unknown): DispatchSkillSettings
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
       disabledSkillIds: [],
-      bundles: DEFAULT_DISPATCH_SKILL_BUNDLES.map((bundle) => ({ ...bundle })),
+      bundles: [],
     };
   }
   const record = value as Record<string, unknown>;
-  const bundlesInput = Array.isArray(record.bundles)
-    ? record.bundles
-    : DEFAULT_DISPATCH_SKILL_BUNDLES;
+  const bundlesInput = Array.isArray(record.bundles) ? record.bundles : [];
   const bundles = bundlesInput.flatMap((candidate) => {
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
       return [];
