@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   DISPATCH_SKILL_SETTINGS_KEY,
   SKILL_CATEGORIES,
@@ -98,6 +98,72 @@ describe('SkillLibraryPanel', () => {
       '工具环境',
     ];
     expect(SKILL_CATEGORIES).toEqual(expected);
+  });
+
+  it('绿①: 设置存在自定义分类时按数据渲染，不再读取八类常量', async () => {
+    invoke.mockImplementation(async (channel: string, key?: string) => {
+      if (channel === 'dispatch-skills:list') return { skills: fixtureSkills };
+      if (channel === 'app-settings:get' && key === DISPATCH_SKILL_SETTINGS_KEY) {
+        return {
+          disabledSkillIds: [],
+          bundles: [],
+          taxonomy: {
+            categories: ['老板自定义'],
+            skills: {
+              implement: { category: '老板自定义', summaryZh: '按需求完成实现' },
+              review: { category: '老板自定义', summaryZh: '检查代码改动' },
+            },
+          },
+        };
+      }
+      return true;
+    });
+
+    render(<SkillLibraryPanel workspacePath="/workspace" />);
+    expect(await screen.findByText('老板自定义')).toBeTruthy();
+    expect(screen.queryByText('开发实现')).toBeNull();
+  });
+
+  it('绿①: 没有分类设置时，仍按八个出厂默认分类渲染', async () => {
+    render(<SkillLibraryPanel workspacePath="/workspace" />);
+
+    expect(await screen.findByText('开发实现')).toBeTruthy();
+    expect(screen.getByText('工具环境')).toBeTruthy();
+  });
+
+  it('绿②: 收到批准后的设置广播后立即按新分类重排，不重新读取页面', async () => {
+    const listeners = new Map<string, (...args: any[]) => void>();
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        invoke,
+        on: (channel: string, listener: (...args: any[]) => void) => {
+          listeners.set(channel, listener);
+          return () => listeners.delete(channel);
+        },
+      },
+    });
+    render(<SkillLibraryPanel workspacePath="/workspace" />);
+    expect(await screen.findByText('开发实现')).toBeTruthy();
+
+    act(() => {
+      listeners.get('dispatch-skill-library:changed')?.({
+        settings: {
+          disabledSkillIds: [],
+          bundles: [],
+          taxonomy: {
+            categories: ['批准后的分类'],
+            skills: {
+              implement: { category: '批准后的分类', summaryZh: '实现需求' },
+              review: { category: '批准后的分类', summaryZh: '检查改动' },
+            },
+          },
+        },
+      });
+    });
+
+    expect(await screen.findByText('批准后的分类')).toBeTruthy();
+    expect(screen.queryByText('开发实现')).toBeNull();
   });
 
   it('绿②: 包为空时显示引导与新建入口，且不渲染任何包标签', async () => {
@@ -414,5 +480,3 @@ describe('SkillLibraryPanel', () => {
     expect(noDescCard.textContent).toContain('这个技能没有自带说明');
   });
 });
-
-

@@ -11,9 +11,9 @@ import {
   type DispatchSkillDescriptor,
   type DispatchSkillSettings,
   type MergedSkillCard,
-  type SkillCategory,
 } from '../../utils/dispatchSkillLibrary';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { getEffectiveSkillTaxonomy } from '../../../shared/skillTaxonomy';
 
 interface SkillLibraryPanelProps {
   workspacePath?: string;
@@ -47,7 +47,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCategory, setExpandedCategory] = useState<SkillCategory | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [expandedCardNames, setExpandedCardNames] = useState<Set<string>>(new Set());
   const [scanErrors, setScanErrors] = useState<string[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
@@ -107,7 +107,23 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     };
   }, [workspacePath]);
 
+  useEffect(() => {
+    const unsubscribe = window.electronAPI?.on?.('dispatch-skill-library:changed', (payload) => {
+      const nextSettings = sanitizeDispatchSkillSettingsForLibrary(
+        readDispatchSkillSettings(payload?.settings ?? payload),
+        skills,
+      );
+      setSettings(nextSettings);
+      setSaveState('saved');
+    });
+    return () => unsubscribe?.();
+  }, [skills]);
+
   const mergedCards = useMemo(() => mergeSkillsByName(skills, settings), [skills, settings]);
+  const activeTaxonomy = useMemo(
+    () => getEffectiveSkillTaxonomy(settings.taxonomy),
+    [settings.taxonomy],
+  );
 
   const totalSkills = mergedCards.length;
   const totalTokens = useMemo(
@@ -126,10 +142,15 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     );
   }, [mergedCards, searchQuery]);
 
-  const categoryGroups = useMemo(() => groupSkillsByCategory(mergedCards), [mergedCards]);
+  const categoryGroups = useMemo(
+    () => groupSkillsByCategory(mergedCards, activeTaxonomy.categories),
+    [activeTaxonomy.categories, mergedCards],
+  );
   const searchGroups = useMemo(
-    () => (searchQuery.trim() ? groupSkillsByCategory(filteredCards).filter((g) => g.cards.length > 0) : []),
-    [filteredCards, searchQuery],
+    () => (searchQuery.trim()
+      ? groupSkillsByCategory(filteredCards, activeTaxonomy.categories).filter((g) => g.cards.length > 0)
+      : []),
+    [activeTaxonomy.categories, filteredCards, searchQuery],
   );
 
   const hasCodexSkills = useMemo(
@@ -245,6 +266,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         }
       }
       return {
+        ...current,
         disabledSkillIds: Array.from(disabledSet),
         bundles: current.bundles.map((bundle) => ({
           ...bundle,
@@ -672,9 +694,6 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                           已选 {selectedCountInGroup}
                         </span>
                       )}
-                      <span className="text-xs text-[var(--nim-text-muted)]">
-                        {group.representativeUsage}
-                      </span>
                     </div>
                     <span className="text-xs text-[var(--nim-text-muted)] font-mono">
                       约 {formatTokenCount(group.totalTokens)} token
@@ -723,9 +742,6 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                         已选 {selectedCountInGroup}
                       </span>
                     )}
-                    <span className="text-xs text-[var(--nim-text-muted)]">
-                      {group.representativeUsage}
-                    </span>
                   </div>
                   <span className="text-xs text-[var(--nim-text-muted)] font-mono">
                     约 {formatTokenCount(group.totalTokens)} token

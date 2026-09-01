@@ -16,6 +16,7 @@ describe('interrupt_session meta-agent tool registration', () => {
   const interruptSession = vi.fn();
   const submitPlan = vi.fn();
   const requestRedispatch = vi.fn();
+  const proposeSkillTaxonomy = vi.fn();
   const createSession = vi.fn();
   const spawnSession = vi.fn();
 
@@ -24,12 +25,14 @@ describe('interrupt_session meta-agent tool registration', () => {
     interruptSession.mockResolvedValue('{"success":true}');
     submitPlan.mockResolvedValue('{"approved":true}');
     requestRedispatch.mockResolvedValue('{"status":"awaiting-owner-approval"}');
+    proposeSkillTaxonomy.mockResolvedValue('{"status":"read-only"}');
     createSession.mockResolvedValue('{"sessionId":"child-session"}');
     spawnSession.mockResolvedValue('{"sessionId":"spawned-session"}');
     setMetaAgentToolFns({
       listWorktrees: vi.fn(),
       submitPlan,
       requestRedispatch,
+      proposeSkillTaxonomy,
       createSession,
       spawnSession,
       getSessionStatus: vi.fn(),
@@ -45,6 +48,7 @@ describe('interrupt_session meta-agent tool registration', () => {
     const tools = getMetaAgentOpenAITools();
     const submitPlanTool = tools.find((candidate) => candidate.function.name === 'submit_plan');
     const requestRedispatchTool = tools.find((candidate) => candidate.function.name === 'request_redispatch');
+    const skillTaxonomyTool = tools.find((candidate) => candidate.function.name === 'propose_skill_taxonomy');
     const createSessionTool = tools.find((candidate) => candidate.function.name === 'create_session');
     const maxParallelOverrideDescription =
       'Optional positive integer for this dispatch only. It can only lower the global Head Agent concurrency limit; values above the global setting are capped to that setting.';
@@ -63,6 +67,7 @@ describe('interrupt_session meta-agent tool registration', () => {
     expect(createSessionTool?.function.description).toContain('investigation');
     expect(createSessionTool?.function.description).toContain('approved plan');
     expect(requestRedispatchTool?.function.description).toContain('NEVER dispatches by itself');
+    expect(skillTaxonomyTool?.function.description).toContain('NEVER writes the Skill Library');
     expect(requestRedispatchTool?.function.parameters).toMatchObject({
       properties: {
         trackerItemId: { type: 'string' },
@@ -123,6 +128,9 @@ describe('interrupt_session meta-agent tool registration', () => {
     expect((BaseAgentProvider as any).META_AGENT_ALLOWED_TOOLS).toContain(
       'mcp__nimbalyst-meta-agent__request_redispatch',
     );
+    expect((BaseAgentProvider as any).META_AGENT_ALLOWED_TOOLS).toContain(
+      'mcp__nimbalyst-meta-agent__propose_skill_taxonomy',
+    );
 
     const planArgs = {
       title: 'Approved dispatch gate',
@@ -177,6 +185,18 @@ describe('interrupt_session meta-agent tool registration', () => {
       redispatchArgs,
     );
 
+    await expect(dispatchMetaAgentTool(
+      'mcp__nimbalyst-meta-agent__propose_skill_taxonomy',
+      'head-session',
+      '/workspace',
+      undefined,
+    )).resolves.toBe('{"status":"read-only"}');
+    expect(proposeSkillTaxonomy).toHaveBeenCalledWith(
+      'head-session',
+      '/workspace',
+      { incremental: false },
+    );
+
     const createArgs = {
       prompt: 'Implement one approved module',
       intent: 'implementation',
@@ -217,6 +237,7 @@ describe('interrupt_session meta-agent tool registration', () => {
     });
     expect(prompt).toContain('mcp__nimbalyst-meta-agent__submit_plan');
     expect(prompt).toContain('mcp__nimbalyst-meta-agent__request_redispatch');
+    expect(prompt).toContain('mcp__nimbalyst-meta-agent__propose_skill_taxonomy');
     expect(prompt).toContain('Failed work-order redispatch requires');
     expect(prompt).toContain(
       'Investigation sessions may be dispatched freely; implementation sessions require an approved plan',

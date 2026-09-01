@@ -56,6 +56,7 @@ const META_AGENT_ALLOWED_TOOLS = [
   'mcp__nimbalyst-meta-agent__list_worktrees',
   'mcp__nimbalyst-meta-agent__submit_plan',
   'mcp__nimbalyst-meta-agent__request_redispatch',
+  'mcp__nimbalyst-meta-agent__propose_skill_taxonomy',
   'mcp__nimbalyst-meta-agent__create_session',
   'mcp__nimbalyst-meta-agent__get_session_status',
   'mcp__nimbalyst-meta-agent__get_session_result',

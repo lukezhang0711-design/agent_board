@@ -1,32 +1,21 @@
+import {
+  DEFAULT_SKILL_CATEGORIES,
+  getEffectiveSkillTaxonomy,
+  normalizeSkillTaxonomyKey,
+  readSkillTaxonomy,
+  type SkillCategory,
+  type SkillTaxonomy,
+} from '../../shared/skillTaxonomy';
+
 export type DispatchSkillEngine = 'claude' | 'codex' | 'gemini';
 
 export type DispatchSkillSource = 'user' | 'project' | 'plugin' | 'builtin' | 'config';
 
 export type DispatchSkillScope = 'global' | 'project' | 'plugin' | 'config';
 
-export const SKILL_CATEGORIES = [
-  '规划决策',
-  '开发实现',
-  '质量保障',
-  '界面设计',
-  '文档写作',
-  '发布部署',
-  '安全管控',
-  '工具环境',
-] as const;
-
-export type SkillCategory = (typeof SKILL_CATEGORIES)[number];
-
-export const CATEGORY_REPRESENTATIVE_USAGES: Record<SkillCategory, string> = {
-  规划决策: '出方案、拆任务、追问打磨、评审计划',
-  开发实现: '照方案实现、测试驱动、迁移改造、解冲突',
-  质量保障: '排障、代码审查、测试、性能回归',
-  界面设计: '设计稿、视觉审查、生成页面',
-  文档写作: '文档、文章、交接、导出',
-  发布部署: '合并 PR、部署、上线后监控',
-  安全管控: '危险命令拦截、改动范围锁定、安全审计',
-  工具环境: '浏览器、上下文存取、环境配置',
-};
+/** Factory defaults only; owner-approved settings provide the active taxonomy. */
+export const SKILL_CATEGORIES = DEFAULT_SKILL_CATEGORIES;
+export type { SkillCategory, SkillTaxonomy } from '../../shared/skillTaxonomy';
 
 export interface DispatchSkillDescriptor {
   id: string;
@@ -64,7 +53,6 @@ export interface MergedSkillCard {
 
 export interface SkillCategoryGroup {
   category: SkillCategory;
-  representativeUsage: string;
   cards: MergedSkillCard[];
   totalTokens: number;
 }
@@ -78,6 +66,7 @@ export interface DispatchSkillBundle {
 export interface DispatchSkillSettings {
   disabledSkillIds: string[];
   bundles: DispatchSkillBundle[];
+  taxonomy?: SkillTaxonomy;
 }
 
 export interface DispatchSkillSelection {
@@ -120,6 +109,8 @@ export function mergeSkillsByName(
   skills: readonly DispatchSkillDescriptor[],
   settings: DispatchSkillSettings,
 ): MergedSkillCard[] {
+  const taxonomy = getEffectiveSkillTaxonomy(settings.taxonomy);
+  const categories = taxonomy.categories;
   const map = new Map<string, DispatchSkillDescriptor[]>();
   for (const skill of skills) {
     const key = skill.name.trim();
@@ -153,12 +144,19 @@ export function mergeSkillsByName(
     const summary = extractOneSentenceSummary(rawDescription);
     const estimatedTokens = estimateSkillTokens(rawDescription);
 
+    const enrichment = taxonomy.skills[normalizeSkillTaxonomyKey(name)];
     const enrichedDesc = descriptors.find((d) => d.summaryZh?.trim());
-    const summaryZh = enrichedDesc?.summaryZh?.trim()
+    const summaryZh = enrichment?.summaryZh
+      ?? enrichedDesc?.summaryZh?.trim()
       ?? (hasDescription ? summary : '这个技能没有自带说明');
-    const categoryCandidate = descriptors.find((d) => d.category && SKILL_CATEGORIES.includes(d.category))?.category;
-    const category: SkillCategory = categoryCandidate ?? '工具环境';
-    const enrichmentFailed = descriptors.some((d) => d.enrichmentFailed);
+    const categoryCandidate = enrichment?.category
+      ?? descriptors.find((d) => d.category && categories.includes(d.category))?.category;
+    const category: SkillCategory = categoryCandidate && categories.includes(categoryCandidate)
+      ? categoryCandidate
+      : categories[0];
+    const enrichmentFailed = enrichment?.summaryZh
+      ? false
+      : descriptors.some((d) => d.enrichmentFailed);
 
     const descriptorIds = new Set(descriptors.map((d) => d.id));
     const disabled = descriptors.every((d) => settings.disabledSkillIds.includes(d.id));
@@ -195,22 +193,24 @@ export function mergeSkillsByName(
   return result.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function groupSkillsByCategory(cards: MergedSkillCard[]): SkillCategoryGroup[] {
+export function groupSkillsByCategory(
+  cards: MergedSkillCard[],
+  categories: readonly SkillCategory[] = DEFAULT_SKILL_CATEGORIES,
+): SkillCategoryGroup[] {
   const map = new Map<SkillCategory, MergedSkillCard[]>();
-  for (const cat of SKILL_CATEGORIES) {
+  for (const cat of categories) {
     map.set(cat, []);
   }
   for (const card of cards) {
-    const cat = SKILL_CATEGORIES.includes(card.category) ? card.category : '工具环境';
+    const cat = categories.includes(card.category) ? card.category : categories[0];
     map.get(cat)!.push(card);
   }
 
-  return SKILL_CATEGORIES.map((category) => {
+  return categories.map((category) => {
     const groupCards = (map.get(category) ?? []).sort((a, b) => a.name.localeCompare(b.name));
     const totalTokens = groupCards.reduce((sum, c) => sum + c.estimatedTokens, 0);
     return {
       category,
-      representativeUsage: CATEGORY_REPRESENTATIVE_USAGES[category],
       cards: groupCards,
       totalTokens,
     };
@@ -254,9 +254,11 @@ export function readDispatchSkillSettings(value: unknown): DispatchSkillSettings
       skillIds: normalizeStringList(bundle.skillIds),
     }];
   });
+  const taxonomy = readSkillTaxonomy(record.taxonomy);
   return {
     disabledSkillIds: normalizeStringList(record.disabledSkillIds),
     bundles,
+    ...(taxonomy ? { taxonomy } : {}),
   };
 }
 
@@ -273,6 +275,7 @@ export function sanitizeDispatchSkillSettingsForLibrary(
       ...bundle,
       skillIds: bundle.skillIds.filter((id) => knownIds.has(id) && !disabled.has(id)),
     })),
+    ...(settings.taxonomy ? { taxonomy: settings.taxonomy } : {}),
   };
 }
 

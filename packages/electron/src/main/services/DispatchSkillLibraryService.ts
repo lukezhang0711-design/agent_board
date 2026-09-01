@@ -293,7 +293,10 @@ function listCodexCliSkills(errors?: string[]): DispatchSkillDescriptor[] {
 }
 
 export class DispatchSkillLibraryService {
-  listSkillsDetailed(workspacePath?: string): { skills: DispatchSkillDescriptor[]; errors: string[] } {
+  listSkillsDetailed(
+    workspacePath?: string,
+    options: { enrich?: boolean } = {},
+  ): { skills: DispatchSkillDescriptor[]; errors: string[] } {
     const errors: string[] = [];
     const home = os.homedir();
     const roots: SkillRoot[] = [
@@ -369,16 +372,18 @@ export class DispatchSkillLibraryService {
       addUniqueSkill(skills, seen, skill);
     }
 
-    for (const skill of skills) {
-      const enrichment = skillTaxonomyCacheManager.enrichAndCache(
-        skill.name,
-        skill.description,
-        skill.content,
-      );
-      skill.category = enrichment.category;
-      skill.summaryZh = enrichment.summaryZh;
-      if (enrichment.enrichmentFailed) {
-        skill.enrichmentFailed = true;
+    if (options.enrich !== false) {
+      for (const skill of skills) {
+        const enrichment = skillTaxonomyCacheManager.enrichAndCache(
+          skill.name,
+          skill.description,
+          skill.content,
+        );
+        skill.category = enrichment.category;
+        skill.summaryZh = enrichment.summaryZh;
+        if (enrichment.enrichmentFailed) {
+          skill.enrichmentFailed = true;
+        }
       }
     }
 

@@ -308,6 +308,7 @@ const INTERACTIVE_PROMPT_TOOLS = new Set([
   'ExitPlanMode',
   'GitCommitProposal',
   'RedispatchWorkOrder',
+  'SkillTaxonomyProposal',
   // Wire-name for the generic structured-input prompt. NOT `RequestUserInput` --
   // that snake_cases to Codex's built-in `request_user_input`, which is gated to
   // Plan mode and gets refused in Default mode. `RequestUserInput` is kept here
