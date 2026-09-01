@@ -19,7 +19,9 @@
 import { existsSync, readdirSync } from 'fs';
 import { mkdir } from 'fs/promises';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { BrowserWindow } from 'electron';
+import { AISessionsRepository, AgentMessagesRepository } from '@nimbalyst/runtime';
 
 import {
   addToRecentItems,
@@ -47,8 +49,14 @@ import {
 } from '../utils/store';
 import * as StytchAuth from './StytchAuthService';
 import { logger } from '../utils/logger';
+import { safeHandle } from '../utils/ipcRegistry';
 import { FeatureUsageService, FEATURES } from './FeatureUsageService';
 import { SessionNamingService } from './SessionNamingService';
+import {
+  persistInteractivePromptToolResult,
+  persistInteractivePromptToolUse,
+} from '../mcp/tools/interactivePromptTranscript';
+import { broadcastMessageLogged } from './ai/claudeCliUserPromptLog';
 import { updateNativeTheme, updateWindowTitleBars } from '../theme/ThemeManager';
 import { createWindow, findWindowByWorkspace } from '../window/WindowManager';
 import { getWorkspaceWindowState } from '../utils/store';
@@ -103,6 +111,76 @@ export const ALLOWED_WORKSPACE_KEYS = [
   'agentPermissions',
 ] as const satisfies readonly string[];
 
+export type SettingsToolRiskTier = 'direct' | 'audited' | 'owner-confirmation';
+
+/**
+ * The single risk classification for the Settings MCP surface. Only a trust
+ * elevation reaches the owner-confirmation branch; tightening stays direct.
+ */
+export const SETTINGS_TOOL_RISK_TIERS = {
+  settings_get_overview: 'direct',
+  workspace_create: 'direct',
+  workspace_open: 'direct',
+  sync_set_for_project: 'audited',
+  appearance_set_theme: 'direct',
+  appearance_set_completion_sound: 'direct',
+  appearance_set_spellcheck: 'direct',
+  analytics_set_enabled: 'audited',
+  ai_set_default_model: 'audited',
+  ai_set_preferred_language: 'audited',
+  features_toggle: 'audited',
+  extension_set_enabled: 'audited',
+  workspace_set_trust: 'owner-confirmation',
+  tracker_set_sync_policy: 'audited',
+  tracker_set_issue_key_prefix: 'audited',
+} as const satisfies Record<string, SettingsToolRiskTier>;
+
+export const WORKSPACE_TRUST_APPROVAL_TIMEOUT_MS = 10 * 60_000;
+
+type WorkspaceTrustMode = Exclude<AgentPermissionMode, null>;
+
+interface WorkspaceTrustChangeConfirmation {
+  requestId: string;
+  ownerSessionId: string;
+  requestingSessionId: string;
+  workspacePath: string;
+  before: AgentPermissionMode;
+  target: WorkspaceTrustMode;
+  expiresAt: number;
+}
+
+function workspaceTrustRank(mode: AgentPermissionMode): number {
+  switch (mode) {
+    case 'bypass-all':
+      return 3;
+    case 'allow-all':
+      return 2;
+    case 'ask':
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function workspaceTrustMeaning(mode: WorkspaceTrustMode): string {
+  switch (mode) {
+    case 'bypass-all':
+      return '代理做任何事都不再问你。';
+    case 'allow-all':
+      return '代理可直接修改工作区文件，其他高风险操作仍会按规则询问。';
+    default:
+      return '代理可在这个工作区运行，并在需要时向你请求授权。';
+  }
+}
+
+function isWorkspaceTrustMode(value: unknown): value is WorkspaceTrustMode {
+  return value === 'ask' || value === 'allow-all' || value === 'bypass-all';
+}
+
+function readNonEmptyString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 // ─── Rate limit ─────────────────────────────────────────────────────
 
 interface RateLimitBucket {
@@ -134,7 +212,8 @@ export interface SettingsToolResult<TBefore = unknown, TAfter = unknown> {
   ok: boolean;
   before?: TBefore;
   after?: TAfter;
-  requiresUserAction?: 'stytch-signin' | 'confirm-overwrite' | 'developer-mode';
+  requiresUserAction?: 'stytch-signin' | 'confirm-overwrite' | 'developer-mode' | 'owner-approval';
+  requestId?: string;
   message?: string;
 }
 
@@ -143,6 +222,10 @@ export interface SettingsToolResult<TBefore = unknown, TAfter = unknown> {
 export class SettingsControlService {
   private static instance: SettingsControlService | null = null;
 
+  private constructor() {
+    this.registerIpcHandlers();
+  }
+
   static getInstance(): SettingsControlService {
     if (!SettingsControlService.instance) {
       SettingsControlService.instance = new SettingsControlService();
@@ -150,8 +233,42 @@ export class SettingsControlService {
     return SettingsControlService.instance;
   }
 
-  private audit(tool: string, sessionId: string, payload: Record<string, unknown>): void {
-    logger.store.info(`[SettingsControl] ${tool}`, { sessionId, ...payload });
+  private audit(tool: keyof typeof SETTINGS_TOOL_RISK_TIERS, sessionId: string, payload: Record<string, unknown>): void {
+    const { workspacePath, before, after, ...details } = payload;
+    logger.main.info(`[SettingsControl] ${tool}`, {
+      tool,
+      sessionId,
+      workspacePath: typeof workspacePath === 'string' ? workspacePath : null,
+      before: before ?? null,
+      after: after ?? null,
+      timestamp: new Date().toISOString(),
+      ...details,
+    });
+  }
+
+  private registerIpcHandlers(): void {
+    safeHandle('settings:approve-workspace-trust-change', async (_event, payload) => {
+      try {
+        const result = await this.approveWorkspaceTrustChange(
+          typeof payload?.sessionId === 'string' ? payload.sessionId : '',
+          typeof payload?.requestId === 'string' ? payload.requestId : '',
+        );
+        return { success: true, ...result };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+    safeHandle('settings:reject-workspace-trust-change', async (_event, payload) => {
+      try {
+        const result = await this.rejectWorkspaceTrustChange(
+          typeof payload?.sessionId === 'string' ? payload.sessionId : '',
+          typeof payload?.requestId === 'string' ? payload.requestId : '',
+        );
+        return { success: true, ...result };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
   }
 
   // ── Inspection ────────────────────────────────────────────────────
@@ -236,7 +353,11 @@ export class SettingsControlService {
       opened = true;
     }
 
-    this.audit('workspace_create', sessionId, { targetPath, opened });
+    this.audit('workspace_create', sessionId, {
+      workspacePath: targetPath,
+      before: null,
+      after: { path: targetPath, opened },
+    });
     return { ok: true, after: { path: targetPath, opened } };
   }
 
@@ -253,7 +374,11 @@ export class SettingsControlService {
     }
     addToRecentItems('workspaces', args.workspacePath, path.basename(args.workspacePath));
     this.openWorkspaceInternal(args.workspacePath);
-    this.audit('workspace_open', sessionId, { path: args.workspacePath });
+    this.audit('workspace_open', sessionId, {
+      workspacePath: args.workspacePath,
+      before: null,
+      after: { path: args.workspacePath },
+    });
     return { ok: true, after: { path: args.workspacePath } };
   }
 
@@ -345,6 +470,8 @@ export class SettingsControlService {
       workspacePath,
       enableSessionSync,
       enableDocumentSync,
+      before,
+      after: next,
     });
     return { ok: true, before, after: next };
   }
@@ -598,9 +725,67 @@ export class SettingsControlService {
         message: `mode must be one of: ask, allow-all, bypass-all. Got "${mode}".`,
       };
     }
-    const before = getWorkspaceState(workspacePath).agentPermissions?.permissionMode;
+    const before = getWorkspaceState(workspacePath).agentPermissions?.permissionMode ?? null;
+    const target = (trusted ? mode : null) as AgentPermissionMode;
+    if (
+      SETTINGS_TOOL_RISK_TIERS.workspace_set_trust === 'owner-confirmation'
+      && workspaceTrustRank(target) > workspaceTrustRank(before)
+    ) {
+      const requestId = randomUUID();
+      const ownerSessionId = await this.resolveOwnerSessionId(sessionId);
+      if (!ownerSessionId) {
+        this.audit('workspace_set_trust', sessionId, {
+          workspacePath,
+          before,
+          after: before,
+          requestedAfter: mode,
+          event: 'owner-approval-unavailable',
+        });
+        return {
+          ok: false,
+          before,
+          after: before,
+          message: 'Unable to find the owner conversation for a permission-increase confirmation card.',
+        };
+      }
+      const expiresAt = Date.now() + WORKSPACE_TRUST_APPROVAL_TIMEOUT_MS;
+      await persistInteractivePromptToolUse({
+        sessionId: ownerSessionId,
+        toolUseId: requestId,
+        toolName: 'WorkspaceTrustChange',
+        input: {
+          requestId,
+          workspacePath,
+          requestingSessionId: sessionId,
+          ownerSessionId,
+          before,
+          target: mode,
+          meaning: workspaceTrustMeaning(mode),
+          expiresAt: new Date(expiresAt).toISOString(),
+        },
+      });
+      broadcastMessageLogged(ownerSessionId, workspacePath);
+      this.scheduleWorkspaceTrustExpiry(ownerSessionId, requestId, expiresAt);
+      this.audit('workspace_set_trust', sessionId, {
+        workspacePath,
+        before,
+        after: before,
+        requestedAfter: mode,
+        requestId,
+        ownerSessionId,
+        event: 'owner-approval-requested',
+      });
+      return {
+        ok: true,
+        before,
+        after: before,
+        requiresUserAction: 'owner-approval',
+        requestId,
+        message: 'Permission increase is waiting for the owner to approve the confirmation card.',
+      };
+    }
     setWorkspaceTrusted(workspacePath, trusted, mode);
-    const after = (trusted ? mode : null) as AgentPermissionMode;
+    const after = target;
     this.audit('workspace_set_trust', sessionId, {
       workspacePath,
       trusted,
@@ -609,6 +794,209 @@ export class SettingsControlService {
       after,
     });
     return { ok: true, before, after };
+  }
+
+  async approveWorkspaceTrustChange(
+    ownerSessionId: string,
+    requestId: string,
+  ): Promise<{ approved: boolean; timedOut?: boolean }> {
+    const confirmation = await this.requireWorkspaceTrustChange(ownerSessionId, requestId);
+    if (Date.now() >= confirmation.expiresAt) {
+      await this.expireWorkspaceTrustChange(confirmation);
+      return { approved: false, timedOut: true };
+    }
+    const before = getWorkspaceState(confirmation.workspacePath).agentPermissions?.permissionMode ?? null;
+    setWorkspaceTrusted(confirmation.workspacePath, true, confirmation.target);
+    const approvedAt = new Date().toISOString();
+    this.audit('workspace_set_trust', confirmation.requestingSessionId, {
+      workspacePath: confirmation.workspacePath,
+      before,
+      after: confirmation.target,
+      requestId,
+      event: 'owner-approved',
+      approvedAt,
+      ownerSessionId,
+      requestedBySessionId: confirmation.requestingSessionId,
+      approvedBySessionId: ownerSessionId,
+    });
+    logger.main.warn('[SettingsControl][WORKSPACE_TRUST_APPROVED]', {
+      tool: 'workspace_set_trust',
+      requestedBy: confirmation.requestingSessionId,
+      approvedBy: ownerSessionId,
+      approvalChannel: 'owner-button',
+      workspacePath: confirmation.workspacePath,
+      before,
+      after: confirmation.target,
+      timestamp: approvedAt,
+    });
+    await persistInteractivePromptToolResult({
+      sessionId: ownerSessionId,
+      toolUseId: requestId,
+      result: { approved: true, approvedAt },
+    });
+    broadcastMessageLogged(ownerSessionId, confirmation.workspacePath);
+    return { approved: true };
+  }
+
+  async rejectWorkspaceTrustChange(
+    ownerSessionId: string,
+    requestId: string,
+  ): Promise<{ approved: false }> {
+    const confirmation = await this.requireWorkspaceTrustChange(ownerSessionId, requestId);
+    const rejectedAt = new Date().toISOString();
+    this.audit('workspace_set_trust', confirmation.requestingSessionId, {
+      workspacePath: confirmation.workspacePath,
+      before: confirmation.before,
+      after: confirmation.before,
+      requestedAfter: confirmation.target,
+      requestId,
+      event: 'owner-rejected',
+      rejectedAt,
+      ownerSessionId,
+      requestedBySessionId: confirmation.requestingSessionId,
+      rejectedBySessionId: ownerSessionId,
+    });
+    await persistInteractivePromptToolResult({
+      sessionId: ownerSessionId,
+      toolUseId: requestId,
+      result: { approved: false, rejectedAt },
+    });
+    broadcastMessageLogged(ownerSessionId, confirmation.workspacePath);
+    return { approved: false };
+  }
+
+  private async requireWorkspaceTrustChange(
+    ownerSessionId: string,
+    requestId: string,
+  ): Promise<WorkspaceTrustChangeConfirmation> {
+    const confirmation = await this.readWorkspaceTrustChange(ownerSessionId, requestId);
+    if (!confirmation || confirmation.ownerSessionId !== ownerSessionId
+      || await this.hasWorkspaceTrustChangeResult(ownerSessionId, requestId)) {
+      throw new Error('Workspace trust confirmation is no longer active; request a new owner confirmation card.');
+    }
+    return confirmation;
+  }
+
+  private async expireWorkspaceTrustChange(confirmation: WorkspaceTrustChangeConfirmation): Promise<void> {
+    const timedOutAt = new Date().toISOString();
+    this.audit('workspace_set_trust', confirmation.requestingSessionId, {
+      workspacePath: confirmation.workspacePath,
+      before: confirmation.before,
+      after: confirmation.before,
+      requestedAfter: confirmation.target,
+      requestId: confirmation.requestId,
+      event: 'owner-approval-timed-out',
+      timedOutAt,
+      ownerSessionId: confirmation.ownerSessionId,
+    });
+    await persistInteractivePromptToolResult({
+      sessionId: confirmation.ownerSessionId,
+      toolUseId: confirmation.requestId,
+      result: { approved: false, timedOut: true, timedOutAt },
+    });
+    broadcastMessageLogged(confirmation.ownerSessionId, confirmation.workspacePath);
+  }
+
+  private async resolveOwnerSessionId(requestingSessionId: string): Promise<string | null> {
+    try {
+      let owner = await AISessionsRepository.get(requestingSessionId);
+      if (!owner) return null;
+      const visited = new Set([owner.id]);
+      while (owner.parentSessionId && !visited.has(owner.parentSessionId)) {
+        const parent = await AISessionsRepository.get(owner.parentSessionId);
+        if (!parent) break;
+        visited.add(parent.id);
+        owner = parent;
+      }
+      return owner.id;
+    } catch {
+      return null;
+    }
+  }
+
+  private scheduleWorkspaceTrustExpiry(ownerSessionId: string, requestId: string, expiresAt: number): void {
+    const timeout = setTimeout(() => {
+      void this.expireWorkspaceTrustChangeIfPending(ownerSessionId, requestId);
+    }, Math.max(0, expiresAt - Date.now()));
+    timeout.unref?.();
+  }
+
+  private async expireWorkspaceTrustChangeIfPending(ownerSessionId: string, requestId: string): Promise<void> {
+    try {
+      const confirmation = await this.requireWorkspaceTrustChange(ownerSessionId, requestId);
+      if (Date.now() >= confirmation.expiresAt) {
+        await this.expireWorkspaceTrustChange(confirmation);
+      }
+    } catch {
+      // The owner already resolved the durable card, or it no longer exists.
+    }
+  }
+
+  private async readWorkspaceTrustChange(
+    ownerSessionId: string,
+    requestId: string,
+  ): Promise<WorkspaceTrustChangeConfirmation | null> {
+    const messages = await AgentMessagesRepository.list(ownerSessionId, {
+      limit: 200,
+      includeHidden: true,
+    });
+    for (const message of [...messages].reverse()) {
+      if (message.direction !== 'output') continue;
+      try {
+        const content = JSON.parse(message.content) as Record<string, unknown>;
+        if (content.type !== 'nimbalyst_tool_use' || content.name !== 'WorkspaceTrustChange' || content.id !== requestId) {
+          continue;
+        }
+        const input = content.input;
+        if (!input || typeof input !== 'object' || Array.isArray(input)) continue;
+        const record = input as Record<string, unknown>;
+        const storedRequestId = readNonEmptyString(record.requestId);
+        const storedOwnerSessionId = readNonEmptyString(record.ownerSessionId);
+        const requestingSessionId = readNonEmptyString(record.requestingSessionId);
+        const workspacePath = readNonEmptyString(record.workspacePath);
+        const expiresAt = typeof record.expiresAt === 'string' ? Date.parse(record.expiresAt) : NaN;
+        const before = record.before === null ? null : record.before;
+        if (
+          storedRequestId !== requestId
+          || storedOwnerSessionId !== ownerSessionId
+          || !requestingSessionId
+          || !workspacePath
+          || !isWorkspaceTrustMode(record.target)
+          || (before !== null && !isWorkspaceTrustMode(before))
+          || !Number.isFinite(expiresAt)
+        ) {
+          continue;
+        }
+        return {
+          requestId,
+          ownerSessionId,
+          requestingSessionId,
+          workspacePath,
+          before,
+          target: record.target,
+          expiresAt,
+        };
+      } catch {
+        // Ignore malformed transcript rows; they can never authorize a trust change.
+      }
+    }
+    return null;
+  }
+
+  private async hasWorkspaceTrustChangeResult(ownerSessionId: string, requestId: string): Promise<boolean> {
+    const messages = await AgentMessagesRepository.list(ownerSessionId, {
+      limit: 200,
+      includeHidden: true,
+    });
+    return messages.some((message) => {
+      if (message.direction !== 'output') return false;
+      try {
+        const content = JSON.parse(message.content) as Record<string, unknown>;
+        return content.type === 'nimbalyst_tool_result' && content.tool_use_id === requestId;
+      } catch {
+        return false;
+      }
+    });
   }
 
   async setIssueKeyPrefix(

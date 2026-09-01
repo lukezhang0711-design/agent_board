@@ -23,6 +23,7 @@ import {
 import {
   PlanApprovalWidget,
   RedispatchWorkOrderWidget,
+  WorkspaceTrustChangeWidget,
   formatPlanOutputPath,
   hasPendingSubmittedPlanApproval,
   registerPlanApprovalWidget,
@@ -279,6 +280,20 @@ function makeRedispatchMessage(
   };
 }
 
+function makeWorkspaceTrustChangeMessage(
+  arguments_: Record<string, unknown>,
+  providerToolCallId = 'workspace-trust-request-1',
+): TranscriptViewMessage {
+  return {
+    ...makeMessage(arguments_, providerToolCallId),
+    toolCall: {
+      ...makeMessage(arguments_, providerToolCallId).toolCall!,
+      toolName: 'WorkspaceTrustChange',
+      toolDisplayName: 'WorkspaceTrustChange',
+    },
+  };
+}
+
 function renderWidget(
   arguments_: Record<string, unknown>,
   hostOverrides: Partial<InteractiveWidgetHost> = {},
@@ -327,6 +342,22 @@ function renderRedispatchWidget(
         onToggle={() => {}}
         sessionId={sessionId}
         workspacePath="/workspace"
+      />
+    </JotaiProvider>,
+  );
+}
+
+function renderWorkspaceTrustChangeWidget(
+  arguments_: Record<string, unknown>,
+  providerToolCallId = 'workspace-trust-request-1',
+) {
+  return render(
+    <JotaiProvider store={createStore()}>
+      <WorkspaceTrustChangeWidget
+        message={makeWorkspaceTrustChangeMessage(arguments_, providerToolCallId)}
+        isExpanded={false}
+        onToggle={() => {}}
+        sessionId={sessionId}
       />
     </JotaiProvider>,
   );
@@ -491,6 +522,16 @@ const redispatchArguments = {
   },
 };
 
+const workspaceTrustChangeArguments = {
+  requestId: 'workspace-trust-request-1',
+  workspacePath: '/workspace/fs',
+  requestingSessionId: sessionId,
+  before: 'ask',
+  target: 'bypass-all',
+  meaning: '代理做任何事都不再问你。',
+  expiresAt: '2026-09-01T08:00:00.000Z',
+};
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -504,9 +545,36 @@ describe('PlanApprovalWidget', () => {
       registerPlanApprovalWidget();
       expect(getTranscriptToolWidget('ExitPlanMode')).toBe(PlanApprovalWidget);
       expect(getTranscriptToolWidget('RedispatchWorkOrder')).toBe(RedispatchWorkOrderWidget);
+      expect(getTranscriptToolWidget('WorkspaceTrustChange')).toBe(WorkspaceTrustChangeWidget);
     } finally {
       unregisterPlanApprovalWidget();
     }
+  });
+
+  it('green FS-UI: renders the owner-only trust card and submits only its request ID', async () => {
+    const invoke = vi.fn().mockResolvedValue({ success: true, approved: true });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { invoke },
+    });
+    renderWorkspaceTrustChangeWidget(workspaceTrustChangeArguments);
+
+    expect(screen.getByTestId('workspace-trust-change-widget')).toBeTruthy();
+    expect(screen.getByTestId('workspace-trust-change-details').textContent)
+      .toContain('/workspace/fs');
+    expect(screen.getByTestId('workspace-trust-change-details').textContent)
+      .toContain(sessionId);
+    expect(screen.getByTestId('workspace-trust-change-meaning').textContent)
+      .toContain('代理做任何事都不再问你');
+
+    fireEvent.click(screen.getByTestId('workspace-trust-change-approve'));
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith(
+        'settings:approve-workspace-trust-change',
+        { sessionId, requestId: 'workspace-trust-request-1' },
+      );
+    });
+    expect(screen.getByTestId('workspace-trust-change-widget').getAttribute('data-state')).toBe('approved');
   });
 
   it('green FG-UI: renders redispatch confirmation and submits owner-edited final parameters', async () => {
