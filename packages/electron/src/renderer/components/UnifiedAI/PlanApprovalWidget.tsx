@@ -1455,6 +1455,155 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
   );
 };
 
+interface WorkspaceTrustChangeArgs {
+  requestId: string;
+  workspacePath: string;
+  requestingSessionId: string;
+  before: 'ask' | 'allow-all' | 'bypass-all' | null;
+  target: 'ask' | 'allow-all' | 'bypass-all';
+  meaning: string;
+}
+
+function getWorkspaceTrustChangeArgs(value: unknown): WorkspaceTrustChangeArgs | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const requestId = getDisplayString(record.requestId, '');
+  const workspacePath = getDisplayString(record.workspacePath, '');
+  const requestingSessionId = getDisplayString(record.requestingSessionId, '');
+  const target = getDisplayString(record.target, '');
+  const before = record.before === null ? null : getDisplayString(record.before, '');
+  const meaning = getDisplayString(record.meaning, '');
+  if (
+    !requestId
+    || !workspacePath
+    || !requestingSessionId
+    || !meaning
+    || !['ask', 'allow-all', 'bypass-all'].includes(target)
+    || (before !== null && !['ask', 'allow-all', 'bypass-all'].includes(before))
+  ) {
+    return null;
+  }
+  return {
+    requestId,
+    workspacePath,
+    requestingSessionId,
+    before: before as WorkspaceTrustChangeArgs['before'],
+    target: target as WorkspaceTrustChangeArgs['target'],
+    meaning,
+  };
+}
+
+function parseWorkspaceTrustChangeResult(value: unknown): { approved: boolean; timedOut?: boolean } | null {
+  if (!value) return null;
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const record = parsed as Record<string, unknown>;
+    if (record.approved === true) return { approved: true };
+    if (record.approved === false) return { approved: false, timedOut: record.timedOut === true };
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function workspaceTrustModeLabel(mode: WorkspaceTrustChangeArgs['before']): string {
+  return mode ?? 'untrusted';
+}
+
+export const WorkspaceTrustChangeWidget: React.FC<CustomToolWidgetProps> = (props) => {
+  const { message, sessionId } = props;
+  const toolCall = message.toolCall;
+  const args = getWorkspaceTrustChangeArgs(toolCall?.arguments);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localResult, setLocalResult] = useState<{ approved: boolean; timedOut?: boolean } | null>(null);
+  const result = localResult ?? parseWorkspaceTrustChangeResult(toolCall?.result);
+  const isPending = !result && toolCall?.status === 'running';
+
+  const submitDecision = useCallback(async (approved: boolean) => {
+    const invoke = window.electronAPI?.invoke;
+    if (!args || !invoke || isSubmitting || result) return;
+    setIsSubmitting(true);
+    try {
+      const response = await invoke(
+        approved
+          ? 'settings:approve-workspace-trust-change'
+          : 'settings:reject-workspace-trust-change',
+        { sessionId, requestId: args.requestId },
+      );
+      if (!response?.success) throw new Error(response?.error || 'Workspace trust response failed');
+      setLocalResult({ approved, timedOut: response.timedOut === true });
+    } catch (error) {
+      console.error('[WorkspaceTrustChangeWidget] Failed to submit owner decision:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [args, isSubmitting, result, sessionId]);
+
+  if (!args || !toolCall) {
+    return (
+      <InteractivePromptStatusCard
+        testId="workspace-trust-change-status"
+        title="Permission increase approval"
+        status="unavailable"
+        detail="权限确认卡参数无效。"
+      />
+    );
+  }
+
+  const status = result
+    ? result.approved ? 'Approved' : result.timedOut ? 'Expired' : 'Rejected'
+    : 'Awaiting review';
+  return (
+    <div
+      data-testid="workspace-trust-change-widget"
+      data-state={result ? (result.approved ? 'approved' : result.timedOut ? 'expired' : 'rejected') : 'pending'}
+      className="plan-approval-widget rounded-lg overflow-visible border border-nim-primary bg-nim-secondary"
+    >
+      <div className="flex items-start justify-between gap-3 border-b border-nim bg-nim-tertiary px-4 py-3">
+        <div className="min-w-0">
+          <div className="mb-1 text-xs font-medium text-nim">Permission increase approval</div>
+          <div className="text-sm font-semibold text-nim">代理请求提高工作区权限</div>
+        </div>
+        <span className="shrink-0 text-xs text-nim-muted">{status}</span>
+      </div>
+      <div className="space-y-3 p-4 text-[13px] text-nim">
+        <dl data-testid="workspace-trust-change-details" className="space-y-2">
+          <div><dt className="text-xs font-semibold text-nim-muted">当前模式</dt><dd>{workspaceTrustModeLabel(args.before)}</dd></div>
+          <div><dt className="text-xs font-semibold text-nim-muted">目标模式</dt><dd>{args.target}</dd></div>
+          <div><dt className="text-xs font-semibold text-nim-muted">工作区</dt><dd className="break-all">{args.workspacePath}</dd></div>
+          <div><dt className="text-xs font-semibold text-nim-muted">发起会话</dt><dd className="break-all">{args.requestingSessionId}</dd></div>
+        </dl>
+        <p data-testid="workspace-trust-change-meaning" className="rounded-md bg-nim-tertiary p-3 text-xs leading-5 text-nim-muted">
+          {args.meaning}
+        </p>
+        {isPending && (
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-nim pt-3">
+            <button
+              type="button"
+              data-testid="workspace-trust-change-reject"
+              onClick={() => void submitDecision(false)}
+              disabled={isSubmitting}
+              className="rounded-md border border-nim bg-transparent px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              拒绝
+            </button>
+            <button
+              type="button"
+              data-testid="workspace-trust-change-approve"
+              onClick={() => void submitDecision(true)}
+              disabled={isSubmitting}
+              className="rounded-md bg-[var(--nim-primary)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              批准提高权限
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const SubmittedPlanApprovalCard: React.FC<{
   props: CustomToolWidgetProps;
   args: SubmittedPlanArgs;
@@ -3486,6 +3635,7 @@ export function registerPlanApprovalWidget(): void {
   setTranscriptToolWidgets(PLAN_APPROVAL_WIDGET_SOURCE, {
     ExitPlanMode: PlanApprovalWidget,
     RedispatchWorkOrder: RedispatchWorkOrderWidget,
+    WorkspaceTrustChange: WorkspaceTrustChangeWidget,
   });
 }
 

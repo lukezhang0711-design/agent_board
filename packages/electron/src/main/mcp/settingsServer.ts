@@ -270,7 +270,7 @@ const TOOLS = [
   {
     name: "workspace_set_trust",
     description:
-      "Set the agent trust mode for a workspace. Permission modes: 'ask' (smart per-tool permission prompts), 'allow-all' (auto-approve file edits), 'bypass-all' (auto-approve every tool including shell). Set trusted=false to untrust. Bypass-all is powerful -- ask the user to confirm via AskUserQuestion before using it on unfamiliar projects.",
+      "Set the agent trust mode for a workspace. Permission modes: 'ask' (smart per-tool permission prompts), 'allow-all' (auto-approve file edits), 'bypass-all' (auto-approve every tool including shell). Set trusted=false to untrust. Any permission increase creates an owner confirmation card and does not take effect until its button is pressed; AskUserQuestion or conversation text cannot authorize it. Tightening or revoking trust takes effect directly.",
     inputSchema: {
       type: "object",
       properties: {
