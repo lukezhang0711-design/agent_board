@@ -272,7 +272,7 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
       <HelpTooltip testId="gutter-extension-dev-button" placement="right">
         <button
           ref={buttonRef}
-          className="extension-dev-indicator nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 text-nim-muted hover:text-nim"
+          className="extension-dev-indicator nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 text-nim-muted hover:text-nim"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Extension Development Mode"
           aria-expanded={menuOpen}
@@ -280,21 +280,21 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
           data-testid="gutter-extension-dev-button"
         >
           <MaterialSymbol icon="developer_mode" size={20} />
-          <span className="extension-dev-indicator-dot absolute bottom-1 right-1 w-2 h-2 rounded-full border-2 border-[var(--nim-bg-secondary)] bg-purple-500" />
+          <span className="extension-dev-indicator-dot absolute bottom-1 right-1 w-2 h-2 rounded-ui-full border-2 border-[var(--nim-bg-secondary)] bg-purple-500" />
         </button>
       </HelpTooltip>
 
       {menuOpen && (
         <div
           ref={menuRef}
-          className="extension-dev-menu absolute bottom-0 left-[calc(100%+8px)] w-60 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg shadow-lg z-[100] animate-[extension-dev-menu-appear_0.15s_ease-out]"
+          className="extension-dev-menu absolute bottom-0 left-[calc(100%+8px)] w-60 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg shadow-lg z-[100] animate-[extension-dev-menu-appear_0.15s_ease-out]"
           role="menu"
         >
           <div className="extension-dev-menu-header flex items-center justify-between pt-3 px-3 pb-2">
             <span className="extension-dev-menu-title text-[13px] font-semibold text-[var(--nim-text)]">Extension Dev Mode</span>
           </div>
 
-          <div className="extension-dev-menu-status flex items-center gap-2 mx-3 mb-2 py-2 px-2.5 rounded-md bg-purple-500/10 border border-purple-500/30 text-xs text-[var(--nim-text-muted)] [&_.material-symbols-outlined]:text-purple-500">
+          <div className="extension-dev-menu-status flex items-center gap-2 mx-3 mb-2 py-2 px-2.5 rounded-ui-base bg-purple-500/10 border border-purple-500/30 text-xs text-[var(--nim-text-muted)] [&_.material-symbols-outlined]:text-purple-500">
             <MaterialSymbol icon="check_circle" size={16} />
             <span>Development tools active</span>
           </div>
@@ -310,7 +310,7 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
 
           <div className="extension-dev-menu-actions p-1">
             <button
-              className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
+              className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
               onClick={handleOpenConsole}
               role="menuitem"
             >
@@ -318,14 +318,14 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
               <span>
                 View Logs
                 {errorCount > 0 && (
-                  <span className="extension-dev-error-badge inline-flex items-center justify-center min-w-[18px] h-[18px] px-[5px] ml-2 rounded-full bg-[var(--nim-error)] text-white text-[11px] font-semibold">{errorCount}</span>
+                  <span className="extension-dev-error-badge inline-flex items-center justify-center min-w-[18px] h-[18px] px-[5px] ml-2 rounded-ui-full bg-[var(--nim-error)] text-white text-[11px] font-semibold">{errorCount}</span>
                 )}
               </span>
             </button>
 
             {onOpenSettings && (
               <button
-                className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
+                className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
                 onClick={handleOpenSettings}
                 role="menuitem"
               >
@@ -337,7 +337,7 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
             {/* Rebuild Extensions submenu */}
             <div className="relative">
               <button
-                className="extension-dev-menu-action flex items-center justify-between w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
+                className="extension-dev-menu-action flex items-center justify-between w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
                 onClick={() => setRebuildSubmenuOpen(!rebuildSubmenuOpen)}
                 role="menuitem"
                 aria-expanded={rebuildSubmenuOpen}
@@ -353,7 +353,7 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
               {rebuildSubmenuOpen && (
                 <div
                   ref={rebuildSubmenuRef}
-                  className="fixed w-56 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg shadow-lg z-[101] animate-[extension-dev-menu-appear_0.1s_ease-out]"
+                  className="fixed w-56 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg shadow-lg z-[101] animate-[extension-dev-menu-appear_0.1s_ease-out]"
                   role="menu"
                   style={{
                     // Position will be calculated by useEffect
@@ -362,7 +362,7 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
                 >
                   <div className="p-1 max-h-[calc(100vh-48px)] overflow-y-auto">
                     <button
-                      className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded cursor-pointer transition-colors duration-100 hover:enabled:bg-[var(--nim-bg-hover)] disabled:text-[var(--nim-text-faint)] disabled:cursor-not-allowed [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
+                      className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:enabled:bg-[var(--nim-bg-hover)] disabled:text-[var(--nim-text-faint)] disabled:cursor-not-allowed [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
                       onClick={handleRebuildAll}
                       disabled={rebuildingExtension !== null}
                       role="menuitem"
@@ -378,7 +378,7 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
                     {extensions.map((ext) => (
                       <button
                         key={ext.id}
-                        className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded cursor-pointer transition-colors duration-100 hover:enabled:bg-[var(--nim-bg-hover)] disabled:text-[var(--nim-text-faint)] disabled:cursor-not-allowed [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
+                        className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:enabled:bg-[var(--nim-bg-hover)] disabled:text-[var(--nim-text-faint)] disabled:cursor-not-allowed [&_.material-symbols-outlined]:text-[var(--nim-text-muted)]"
                         onClick={() => handleRebuildExtension(ext)}
                         disabled={rebuildingExtension !== null}
                         role="menuitem"
@@ -401,7 +401,7 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
             </div>
 
             <button
-              className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded cursor-pointer transition-colors duration-100 hover:enabled:bg-[var(--nim-bg-hover)] disabled:text-[var(--nim-text-faint)] disabled:cursor-not-allowed [&_.material-symbols-outlined]:text-[var(--nim-text-muted)] [&:disabled_.material-symbols-outlined]:text-[var(--nim-text-faint)]"
+              className="extension-dev-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:enabled:bg-[var(--nim-bg-hover)] disabled:text-[var(--nim-text-faint)] disabled:cursor-not-allowed [&_.material-symbols-outlined]:text-[var(--nim-text-muted)] [&:disabled_.material-symbols-outlined]:text-[var(--nim-text-faint)]"
               onClick={handleRestart}
               disabled={isRestarting}
               role="menuitem"

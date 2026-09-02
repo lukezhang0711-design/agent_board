@@ -167,7 +167,7 @@ export function OpenAICodexPanel({
           <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Sign In</h4>
 
           {isLoggedIn ? (
-            <div className="status-box-success mb-4 py-3.5 px-4 rounded-lg text-[13px] flex items-center gap-3 justify-between bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)]">
+            <div className="status-box-success mb-4 py-3 px-4 rounded-ui-lg text-[13px] flex items-center gap-3 justify-between bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)]">
               <div className="flex items-center gap-3 flex-1">
                 <span className="status-box-icon text-xl leading-none shrink-0 text-[var(--nim-success)]">✓</span>
                 <div className="status-box-content flex flex-col gap-1 flex-1">
@@ -183,14 +183,14 @@ export function OpenAICodexPanel({
               </div>
               <div className="status-box-actions flex gap-2 shrink-0">
                 <button
-                  className="btn-small py-1.5 px-3 rounded text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="btn-small py-2 px-3 rounded-ui-base text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={checkStatus}
                   disabled={authBusy !== null}
                 >
                   Refresh
                 </button>
                 <button
-                  className="btn-small py-1.5 px-3 rounded text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="btn-small py-2 px-3 rounded-ui-base text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={handleLogout}
                   disabled={authBusy !== null}
                   data-testid="codex-logout"
@@ -203,7 +203,7 @@ export function OpenAICodexPanel({
             <>
               <div className="auth-method-row flex gap-2 mb-4">
                 <button
-                  className={`auth-method-button flex-1 py-2.5 px-4 rounded-md text-[13px] font-medium cursor-pointer transition-all border ${
+                  className={`auth-method-button flex-1 py-2.5 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
                     selectedAuthMethod === 'chatgpt'
                       ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
                       : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
@@ -214,7 +214,7 @@ export function OpenAICodexPanel({
                   ChatGPT (Recommended)
                 </button>
                 <button
-                  className={`auth-method-button flex-1 py-2.5 px-4 rounded-md text-[13px] font-medium cursor-pointer transition-all border ${
+                  className={`auth-method-button flex-1 py-2.5 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
                     selectedAuthMethod === 'api-key'
                       ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
                       : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
@@ -227,7 +227,7 @@ export function OpenAICodexPanel({
               </div>
 
               {selectedAuthMethod === 'chatgpt' && (
-                <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg">
+                <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg">
                   <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
                     Authenticate with your ChatGPT Pro, Plus, or Team subscription. No API credits needed.
                   </p>
@@ -255,7 +255,7 @@ export function OpenAICodexPanel({
               )}
 
               {selectedAuthMethod === 'api-key' && (
-                <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg">
+                <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg">
                   <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
                     Use an OpenAI API key. Pay-per-use with API credits — more expensive than the ChatGPT subscription path.
                   </p>
@@ -266,7 +266,7 @@ export function OpenAICodexPanel({
                       onChange={(e) => setPendingApiKey(e.target.value)}
                       onFocus={(e) => e.target.select()}
                       placeholder="sk-..."
-                      className="api-key-input flex-1 py-2 px-3 rounded-md bg-[var(--nim-bg)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
+                      className="api-key-input flex-1 py-2 px-3 rounded-ui-base bg-[var(--nim-bg)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
                       data-testid="codex-apikey-input"
                     />
                     <button

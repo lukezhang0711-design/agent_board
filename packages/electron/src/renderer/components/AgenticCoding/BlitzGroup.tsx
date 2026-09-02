@@ -136,7 +136,7 @@ const BlitzSessionRow: React.FC<{
   onContextMenu: (e: React.MouseEvent) => void;
 }> = memo(({ session, sessionTitle, isActive, isRenaming, isAnalysis, renameInputRef, renameValue, onRenameChange, onRenameKeyDown, onRenameBlur, onSelect, onContextMenu }) => (
   <div
-    className={`blitz-session-item flex items-center gap-2 py-1.5 px-3 mr-2 mb-0.5 cursor-pointer rounded transition-colors duration-150 select-none ${
+    className={`blitz-session-item flex items-center gap-2 py-2 px-3 mr-2 mb-0.5 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
       isActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
     } focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:outline-offset-[-2px]`}
     onClick={onSelect}
@@ -166,7 +166,7 @@ const BlitzSessionRow: React.FC<{
       <input
         ref={renameInputRef}
         type="text"
-        className="flex-1 min-w-0 py-0.5 px-1.5 text-xs font-medium border border-[var(--nim-primary)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none box-border"
+        className="flex-1 min-w-0 py-0.5 px-2 text-xs font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none box-border"
         value={renameValue}
         onChange={(e) => onRenameChange(e.target.value)}
         onKeyDown={onRenameKeyDown}
@@ -478,14 +478,14 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
     >
       {/* Header - matches WorkstreamGroup header structure */}
       <div
-        className={`blitz-group-header flex items-center gap-0 text-[0.8125rem] text-[var(--nim-text)] transition-colors duration-150 rounded-md mx-2 w-[calc(100%-1rem)] ${
+        className={`blitz-group-header flex items-center gap-0 text-[0.8125rem] text-[var(--nim-text)] transition-colors duration-150 rounded-ui-base mx-2 w-[calc(100%-1rem)] ${
           isSelected ? 'bg-[var(--nim-bg-selected)]' : isActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
         }`}
         onContextMenu={handleContextMenu}
       >
         {/* Chevron - separate click target for expand/collapse */}
         <button
-          className="flex items-center justify-center w-6 h-full min-h-[2.5rem] p-0 bg-transparent border-none cursor-pointer text-[var(--nim-text-faint)] shrink-0 rounded-l-md hover:bg-[var(--nim-bg-secondary)] focus:outline-none focus-visible:outline-2 focus-visible:outline-[var(--nim-border-focus)] focus-visible:outline-offset-[-2px]"
+          className="flex items-center justify-center w-6 h-full min-h-[2.5rem] p-0 bg-transparent border-none cursor-pointer text-[var(--nim-text-faint)] shrink-0 rounded-ui-base-l hover:bg-[var(--nim-bg-secondary)] focus:outline-none focus-visible:outline-2 focus-visible:outline-[var(--nim-border-focus)] focus-visible:outline-offset-[-2px]"
           onClick={handleChevronClick}
           aria-expanded={isExpanded}
           aria-label={`${isExpanded ? 'Collapse' : 'Expand'} blitz`}
@@ -499,7 +499,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
 
         {/* Main clickable area - icon and content */}
         <div
-          className="flex items-start gap-2 flex-1 min-w-0 py-1 pr-2 pl-1 cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-[var(--nim-border-focus)] focus-visible:outline-offset-[-2px] focus-visible:rounded"
+          className="flex items-start gap-2 flex-1 min-w-0 py-1 pr-2 pl-1 cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-[var(--nim-border-focus)] focus-visible:outline-offset-[-2px] focus-visible:rounded-ui-base"
           onClick={handleHeaderClick}
           role="button"
           tabIndex={0}
@@ -527,7 +527,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
                 <input
                   ref={renameInputRef}
                   type="text"
-                  className="flex-1 min-w-0 px-1 py-0 text-[0.8125rem] font-medium border border-[var(--nim-primary)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
+                  className="flex-1 min-w-0 px-1 py-0 text-[0.8125rem] font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
                   onKeyDown={handleRenameKeyDown}
@@ -543,7 +543,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
                 <MaterialSymbol icon="push_pin" size={12} className="shrink-0 text-[var(--nim-text-faint)] opacity-70" />
               )}
               {isArchived && !isRenaming && (
-                <span className="text-[0.5625rem] px-1.5 py-[0.0625rem] rounded-[0.625rem] font-medium bg-[rgba(156,163,175,0.15)] text-[var(--nim-text-faint)]">archived</span>
+                <span className="text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[rgba(156,163,175,0.15)] text-[var(--nim-text-faint)]">archived</span>
               )}
               {!isRenaming && <BlitzGroupStatus sessionIds={allSessionIds} />}
             </div>
@@ -604,7 +604,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
               <div key={worktreeId} className="blitz-worktree-subgroup mb-0.5">
                 {/* Worktree subgroup header */}
                 <div
-                  className={`flex items-center gap-0 text-xs text-[var(--nim-text)] rounded mr-2 ${
+                  className={`flex items-center gap-0 text-xs text-[var(--nim-text)] rounded-ui-base mr-2 ${
                     worktreeIsActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
                   }`}
                   onContextMenu={(e) => {
@@ -615,7 +615,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
                   }}
                 >
                   <button
-                    className="flex items-center justify-center w-5 h-full min-h-[1.75rem] p-0 bg-transparent border-none cursor-pointer text-[var(--nim-text-faint)] shrink-0 rounded-l hover:bg-[var(--nim-bg-secondary)] focus:outline-none"
+                    className="flex items-center justify-center w-5 h-full min-h-[1.75rem] p-0 bg-transparent border-none cursor-pointer text-[var(--nim-text-faint)] shrink-0 rounded-ui-base-l hover:bg-[var(--nim-bg-secondary)] focus:outline-none"
                     onClick={(e) => { e.stopPropagation(); onToggleWorktreeGroup(groupKey); }}
                     aria-expanded={isWorktreeExpanded}
                     aria-label={`${isWorktreeExpanded ? 'Collapse' : 'Expand'} worktree`}
@@ -694,7 +694,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
       {showContextMenu && (
         <div
           ref={contextMenuRef}
-          className="workstream-group-context-menu fixed z-[1000] min-w-[140px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-1"
+          className="workstream-group-context-menu fixed z-[1000] min-w-[140px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-1"
           style={{
             left: (adjustedContextMenuPosition || contextMenuPosition).x,
             top: (adjustedContextMenuPosition || contextMenuPosition).y
@@ -703,7 +703,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
         >
           {onBlitzRename && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleRenameClick}
             >
               <MaterialSymbol icon="edit" size={14} />
@@ -712,7 +712,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
           )}
           {onBlitzPinToggle && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handlePinToggle}
             >
               <MaterialSymbol icon="push_pin" size={14} />
@@ -723,7 +723,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
             <>
               <div className="workstream-group-context-menu-divider h-px my-1 bg-[var(--nim-border)]" />
               <button
-                className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
+                className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
                 onClick={handleArchive}
               >
                 <MaterialSymbol icon="archive" size={14} />
@@ -760,7 +760,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
         const isAnalysisContextMenu = sessionContextMenuWorktreeId?.startsWith('analysis-');
         return (
           <div
-            className="workstream-group-context-menu fixed z-[1000] min-w-[140px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-1"
+            className="workstream-group-context-menu fixed z-[1000] min-w-[140px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-1"
             style={{
               left: sessionContextMenuPosition.x,
               top: sessionContextMenuPosition.y
@@ -769,7 +769,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
           >
             {(onWorktreeRename || onSessionRename) && (
               <button
-                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                 onClick={handleSessionWorktreeRename}
               >
                 <MaterialSymbol icon="edit" size={14} />
@@ -778,7 +778,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
             )}
             {!isAnalysisContextMenu && onArchiveOtherWorktrees && worktrees.length > 1 && (
               <button
-                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                 onClick={handleArchiveOtherWorktrees}
               >
                 <MaterialSymbol icon="archive" size={14} />
@@ -787,7 +787,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
             )}
             {!isAnalysisContextMenu && onWorktreeCleanGitignored && (
               <button
-                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                 onClick={handleSessionWorktreeCleanGitignored}
               >
                 <MaterialSymbol icon="delete_sweep" size={14} />
@@ -798,7 +798,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
               <>
                 <div className="workstream-group-context-menu-divider h-px my-1 bg-[var(--nim-border)]" />
                 <button
-                  className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
+                  className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
                   onClick={handleSessionWorktreeArchive}
                 >
                   <MaterialSymbol icon="archive" size={14} />

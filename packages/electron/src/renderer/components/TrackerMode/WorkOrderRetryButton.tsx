@@ -69,7 +69,7 @@ export const WorkOrderRetryButton: React.FC<WorkOrderRetryButtonProps> = ({
     <span className="inline-flex items-center gap-2" title={title}>
       <button
         type="button"
-        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-400/50 text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base border border-red-400/50 text-red-300 hover:bg-red-500/10 disabled:opacity-50"
         onClick={handleClick}
         disabled={disabled}
         title={title}

@@ -20,7 +20,7 @@ export function UpdateAvailableToast({
     >
       {/* Dismiss button */}
       <button
-        className="update-toast-dismiss absolute top-3 right-3 w-6 h-6 border-none bg-transparent cursor-pointer rounded flex items-center justify-center p-0 text-[var(--nim-text-faint)] transition-colors duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] [&>svg]:w-3.5 [&>svg]:h-3.5"
+        className="update-toast-dismiss absolute top-3 right-3 w-6 h-6 border-none bg-transparent cursor-pointer rounded-ui-base flex items-center justify-center p-0 text-[var(--nim-text-faint)] transition-colors duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] [&>svg]:w-3.5 [&>svg]:h-3.5"
         onClick={onDismiss}
         title="Dismiss"
         aria-label="Dismiss"
@@ -48,7 +48,7 @@ export function UpdateAvailableToast({
       {/* Action buttons */}
       <div className="update-toast-actions flex gap-2 flex-wrap">
         <button
-          className="update-toast-btn update-toast-btn-text py-2 px-3 border-none rounded-md text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="update-toast-btn update-toast-btn-text py-2 px-3 border-none rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           onClick={onRemindLater}
           data-testid="remind-later-btn"
         >

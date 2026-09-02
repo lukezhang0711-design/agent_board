@@ -37,7 +37,7 @@ export const ProjectInsights: React.FC = () => {
       {projects.length > 0 ? (
         <div className="project-list grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
           {projects.map((project, index) => (
-            <div key={index} className="project-card bg-nim-secondary border border-nim rounded-lg p-5">
+            <div key={index} className="project-card bg-nim-secondary border border-nim rounded-ui-lg p-5">
               <div className="project-name text-base font-semibold text-nim-fg mb-4">{project.workspaceId.split('/').pop() || project.workspaceId}</div>
               <div className="project-stats flex flex-col gap-2">
                 <div className="project-stat flex justify-between text-sm">

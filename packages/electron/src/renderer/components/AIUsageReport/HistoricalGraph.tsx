@@ -76,7 +76,7 @@ export const HistoricalGraph: React.FC<HistoricalGraphProps> = ({ workspaceId })
           {(['week', 'month', 'quarter', 'year'] as const).map((range) => (
             <button
               key={range}
-              className={`px-3.5 py-1.5 border rounded text-[13px] cursor-pointer transition-all duration-200 ${
+              className={`px-3 py-2 border rounded-ui-base text-[13px] cursor-pointer transition-all duration-200 ${
                 timeRange === range
                   ? 'bg-[var(--nim-primary)] text-white border-[var(--nim-primary)]'
                   : 'bg-nim-secondary border-nim text-nim-muted hover:bg-nim-hover hover:text-nim'

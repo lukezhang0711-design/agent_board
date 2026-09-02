@@ -87,7 +87,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
       >
         <button
           type="button"
-          className="absolute top-3.5 right-3.5 z-[1] flex h-8 w-8 items-center justify-center rounded-md border-none bg-transparent text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+          className="absolute top-3.5 right-3.5 z-[1] flex h-8 w-8 items-center justify-center rounded-ui-base border-none bg-transparent text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
           onClick={onClose}
           aria-label="Close"
           data-testid="feedback-intake-close"
@@ -96,7 +96,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
         </button>
 
         <div className="px-6 pt-6 pb-6">
-          <div className="feedback-intake-hero mb-5 overflow-hidden rounded-[24px] border border-[var(--nim-border)] bg-[linear-gradient(135deg,rgba(56,189,248,0.10),rgba(251,191,36,0.08),rgba(255,255,255,0.02))] px-6 py-5">
+          <div className="feedback-intake-hero mb-5 overflow-hidden rounded-ui-lg border border-[var(--nim-border)] bg-[linear-gradient(135deg,rgba(56,189,248,0.10),rgba(251,191,36,0.08),rgba(255,255,255,0.02))] px-6 py-5">
             <h2
               id="feedback-intake-title"
               className="m-0 text-[24px] font-semibold leading-[1.1] text-[var(--nim-text)]"
@@ -167,7 +167,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                         type="checkbox"
                         checked={mayGatherLogs}
                         onChange={(e) => setMayGatherLogs(e.target.checked)}
-                        className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded border-2 border-[var(--nim-border)] bg-[var(--nim-bg)] checked:border-[var(--nim-primary)] checked:bg-[var(--nim-primary)] checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27white%27%3E%3Cpath%20d=%27M9%2016.17L4.83%2012l-1.42%201.41L9%2019%2021%207l-1.41-1.41L9%2016.17z%27/%3E%3C/svg%3E')] checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat"
+                        className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-ui-base border-2 border-[var(--nim-border)] bg-[var(--nim-bg)] checked:border-[var(--nim-primary)] checked:bg-[var(--nim-primary)] checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27white%27%3E%3Cpath%20d=%27M9%2016.17L4.83%2012l-1.42%201.41L9%2019%2021%207l-1.41-1.41L9%2016.17z%27/%3E%3C/svg%3E')] checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat"
                         data-testid="feedback-intake-consent"
                       />
                       <div className="min-w-0 flex-1">
@@ -195,7 +195,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                         type="checkbox"
                         checked={shouldCreateMockup}
                         onChange={(e) => setShouldCreateMockup(e.target.checked)}
-                        className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded border-2 border-[var(--nim-border)] bg-[var(--nim-bg)] checked:border-[var(--nim-primary)] checked:bg-[var(--nim-primary)] checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27white%27%3E%3Cpath%20d=%27M9%2016.17L4.83%2012l-1.42%201.41L9%2019%2021%207l-1.41-1.41L9%2016.17z%27/%3E%3C/svg%3E')] checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat"
+                        className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-ui-base border-2 border-[var(--nim-border)] bg-[var(--nim-bg)] checked:border-[var(--nim-primary)] checked:bg-[var(--nim-primary)] checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27white%27%3E%3Cpath%20d=%27M9%2016.17L4.83%2012l-1.42%201.41L9%2019%2021%207l-1.41-1.41L9%2016.17z%27/%3E%3C/svg%3E')] checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat"
                         data-testid="feedback-intake-mockup"
                       />
                       <div className="min-w-0 flex-1">
@@ -248,7 +248,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <li>
               <button
                 type="button"
-                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-md bg-transparent px-1.5 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(ISSUES_URL, 'issues')}
                 data-testid="feedback-intake-issues-link"
               >
@@ -263,7 +263,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <li>
               <button
                 type="button"
-                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-md bg-transparent px-1.5 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(DISCUSSIONS_URL, 'discussions')}
                 data-testid="feedback-intake-discussions-link"
               >
@@ -278,7 +278,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <li>
               <button
                 type="button"
-                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-md bg-transparent px-1.5 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(SUPPORT_EMAIL_URL, 'email')}
                 data-testid="feedback-intake-email-link"
               >

@@ -92,7 +92,7 @@ export function ChecksTab({ workspaceId, remote, pr, refreshToken }: ChecksTabPr
     <div className="pr-checks-tab flex flex-col flex-1 min-h-0 overflow-y-auto" data-testid="pr-checks-tab">
       {loading && checks.length === 0 ? (
         <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-sm">
-          <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-full animate-spin" />
+          <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin" />
           Loading checks…
         </div>
       ) : error ? (
@@ -104,7 +104,7 @@ export function ChecksTab({ workspaceId, remote, pr, refreshToken }: ChecksTabPr
           const meta = GROUP_META[group];
           return (
             <div key={group}>
-              <div className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-nim-faint bg-nim-secondary border-b border-nim">
+              <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-nim-faint bg-nim-secondary border-b border-nim">
                 {meta.label} ({grouped[group].length})
               </div>
               {grouped[group].map((check) => (

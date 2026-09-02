@@ -257,7 +257,7 @@ export function GenericTypeahead({
   const menuElement = (
     <div
       ref={menuRef}
-      className={`generic-typeahead bg-nim-secondary border border-nim rounded-md shadow-lg z-[1000] overflow-hidden flex flex-col ${className}`}
+      className={`generic-typeahead bg-nim-secondary border border-nim rounded-ui-base shadow-lg z-[1000] overflow-hidden flex flex-col ${className}`}
       style={{
         position: 'fixed',
         top: `${position.top}px`,
@@ -273,7 +273,7 @@ export function GenericTypeahead({
         {groupedOptions.map(({ section, options: sectionOptions }, groupIndex) => (
           <div key={section || groupIndex} className="generic-typeahead-section py-0.5 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-nim">
             {section && (
-              <div className="generic-typeahead-section-header px-3 pt-1.5 pb-1 text-[0.6875rem] font-semibold text-nim-faint uppercase tracking-wide">{section}</div>
+              <div className="generic-typeahead-section-header px-3 pt-2 pb-1 text-[0.6875rem] font-semibold text-nim-faint uppercase tracking-wide">{section}</div>
             )}
             {sectionOptions.map((option) => {
               // Calculate visual index based on flat ordered list (matches navigation order)
@@ -284,7 +284,7 @@ export function GenericTypeahead({
                 <div
                   key={option.id}
                   data-option-index={visualIndex}
-                  className={`generic-typeahead-option flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors duration-150 ${
+                  className={`generic-typeahead-option flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-150 ${
                     isSelected ? 'selected bg-nim-hover' : ''
                   } ${option.disabled ? 'disabled opacity-50 cursor-not-allowed' : ''}`}
                   onMouseDown={(e) => handleOptionMouseDown(e, option)}

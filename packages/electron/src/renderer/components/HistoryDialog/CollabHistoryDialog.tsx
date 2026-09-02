@@ -224,7 +224,7 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
                     <div
                       key={rev.revisionId}
                       data-testid={`collab-revision-${rev.revisionId}`}
-                      className={`collab-history-item flex items-center gap-2 py-1.5 px-2 mb-0.5 rounded cursor-pointer ${isSelected ? 'bg-[var(--nim-primary)] text-white' : 'hover:bg-[var(--nim-bg-hover)]'}`}
+                      className={`collab-history-item flex items-center gap-2 py-2 px-2 mb-0.5 rounded-ui-base cursor-pointer ${isSelected ? 'bg-[var(--nim-primary)] text-white' : 'hover:bg-[var(--nim-bg-hover)]'}`}
                       onClick={() => setSelectedId(rev.revisionId)}
                     >
                       <span className="material-symbols-outlined text-lg shrink-0">
@@ -251,7 +251,7 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
                 Details
               </div>
               <button
-                className="history-restore-button py-1.5 px-4 bg-[var(--nim-primary)] text-white border-none rounded-md text-[13px] font-medium cursor-pointer transition-all duration-200 hover:not-disabled:bg-[var(--nim-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="history-restore-button py-2 px-4 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 hover:not-disabled:bg-[var(--nim-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleRestore}
                 disabled={!selectedRevision || restoring || !restoreSafe || !supportsRestore}
                 title={
@@ -268,17 +268,17 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
 
             <div className="flex-1 overflow-auto p-4 text-sm text-[var(--nim-text)]">
               {error && (
-                <div className="mb-3 p-2 border border-[var(--nim-error)] rounded text-[var(--nim-error)] bg-[var(--nim-error-light)]">
+                <div className="mb-3 p-2 border border-[var(--nim-error)] rounded-ui-base text-[var(--nim-error)] bg-[var(--nim-error-light)]">
                   {error}
                 </div>
               )}
               {!supportsRestore && (
-                <div className="mb-3 p-2 border border-[var(--nim-border)] rounded text-[var(--nim-text-muted)] bg-[var(--nim-bg-secondary)] text-xs">
+                <div className="mb-3 p-2 border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] bg-[var(--nim-bg-secondary)] text-xs">
                   This editor has not opted into snapshot export and restore yet. You can still inspect revision metadata from this document.
                 </div>
               )}
               {!restoreSafe && supportsRestore && (
-                <div className="mb-3 p-2 border border-[var(--nim-warning)] rounded text-[var(--nim-warning)] bg-[var(--nim-warning-light)] text-xs">
+                <div className="mb-3 p-2 border border-[var(--nim-warning)] rounded-ui-base text-[var(--nim-warning)] bg-[var(--nim-warning-light)] text-xs">
                   This document still has unsynced local changes. Wait for the connection to reach "Connected" before restoring.
                 </div>
               )}

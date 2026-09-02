@@ -82,7 +82,7 @@ export const SessionContextMenu: React.FC<SessionContextMenuProps> = ({
     onOpenChange: (open) => { if (!open) onClose(); },
   });
 
-  const menuItemClass = 'session-context-menu-item flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0';
+  const menuItemClass = 'session-context-menu-item flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0';
 
   const handleAction = useCallback((e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
@@ -175,7 +175,7 @@ export const SessionContextMenu: React.FC<SessionContextMenuProps> = ({
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="session-context-menu z-[1000] min-w-[140px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+        className="session-context-menu z-[1000] min-w-[140px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
         onClick={(e) => e.stopPropagation()}
         onMouseLeave={onClose}
       >
@@ -219,18 +219,18 @@ export const SessionContextMenu: React.FC<SessionContextMenuProps> = ({
             <MaterialSymbol icon="chevron_right" size={12} />
           </button>
           {showPhaseSubmenu && (
-            <div className={`absolute top-0 min-w-[140px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1001] ${submenuFlipped ? 'right-full mr-0.5' : 'left-full ml-0.5'}`}>
+            <div className={`absolute top-0 min-w-[140px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1001] ${submenuFlipped ? 'right-full mr-0.5' : 'left-full ml-0.5'}`}>
               {SESSION_PHASE_COLUMNS.map((col) => (
                 <button
                   key={col.value}
-                  className={`session-context-menu-item flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 ${phase === col.value ? 'text-[var(--nim-primary)]' : 'text-[var(--nim-text)]'}`}
+                  className={`session-context-menu-item flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 ${phase === col.value ? 'text-[var(--nim-primary)]' : 'text-[var(--nim-text)]'}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onClose();
                     setSessionPhase({ sessionId, phase: col.value });
                   }}
                 >
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: col.color }} />
+                  <span className="w-2 h-2 rounded-ui-full shrink-0" style={{ backgroundColor: col.color }} />
                   {col.label}
                   {phase === col.value && <MaterialSymbol icon="check" size={14} className="ml-auto" />}
                 </button>
@@ -239,7 +239,7 @@ export const SessionContextMenu: React.FC<SessionContextMenuProps> = ({
                 <>
                   <div className="h-px bg-[var(--nim-border)] my-1" />
                   <button
-                    className="session-context-menu-item flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded text-[var(--nim-text-faint)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0"
+                    className="session-context-menu-item flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text-faint)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       onClose();
@@ -344,7 +344,7 @@ export const SessionContextMenu: React.FC<SessionContextMenuProps> = ({
         )}
         {onDelete && (
           <button
-            className="session-context-menu-item destructive flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded text-[var(--nim-error)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-error)] hover:text-white [&_svg]:shrink-0"
+            className="session-context-menu-item destructive flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-error)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-error)] hover:text-white [&_svg]:shrink-0"
             onClick={(e) => handleAction(e, onDelete)}
           >
             <MaterialSymbol icon="delete" size={14} />

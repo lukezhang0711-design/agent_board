@@ -144,7 +144,7 @@ export const ExtensionPermissionPrompt: React.FC = () => {
           {current.purpose}
         </p>
         {current.reason.kind === 're-prompt-update' && (
-          <div className="ext-permission-prompt-update-banner mb-4 flex items-start gap-2 rounded border border-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)] p-3 text-xs text-nim">
+          <div className="ext-permission-prompt-update-banner mb-4 flex items-start gap-2 rounded-ui-base border border-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)] p-3 text-xs text-nim">
             <MaterialSymbol icon="upgrade" size={16} />
             <span>
               This extension updated and now requires {current.reason.addedPermissions.length} additional{' '}
@@ -159,7 +159,7 @@ export const ExtensionPermissionPrompt: React.FC = () => {
             and so on directly. The granular checkboxes below are only for
             host-brokered services (DB, secrets, MCP). Make this trade-off
             explicit so the user is informed before granting. */}
-        <div className="ext-permission-prompt-native-banner mb-4 flex items-start gap-2 rounded border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] p-3 text-xs text-nim">
+        <div className="ext-permission-prompt-native-banner mb-4 flex items-start gap-2 rounded-ui-base border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] p-3 text-xs text-nim">
           <MaterialSymbol icon="warning" size={16} />
           <div className="flex-1 leading-relaxed">
             <div className="font-semibold mb-1">This extension will run native code on your computer.</div>
@@ -188,13 +188,13 @@ export const ExtensionPermissionPrompt: React.FC = () => {
                     return (
                       <li
                         key={d.id}
-                        className="ext-permission-prompt-item flex items-start gap-2 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] p-3"
+                        className="ext-permission-prompt-item flex items-start gap-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] p-3"
                       >
                         <div className="flex-1">
                           <div className="ext-permission-prompt-item-label flex items-center gap-2 text-sm font-medium text-nim">
                             {d.label}
                             {isNew && (
-                              <span className="ext-permission-prompt-item-new text-[10px] font-semibold uppercase tracking-wider rounded bg-[var(--nim-warning)] px-1.5 py-0.5 text-[var(--nim-bg)]">
+                              <span className="ext-permission-prompt-item-new text-[10px] font-semibold uppercase tracking-wider rounded-ui-base bg-[var(--nim-warning)] px-2 py-0.5 text-[var(--nim-bg)]">
                                 New
                               </span>
                             )}

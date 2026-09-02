@@ -118,7 +118,7 @@ export function ChannelHealthRow({
 
   return (
     <section
-      className="channel-health-row rounded-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] p-4"
+      className="channel-health-row rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] p-4"
       data-testid={`channel-health-row-${result.id}`}
     >
       <div className="flex items-start justify-between gap-4">
@@ -144,7 +144,7 @@ export function ChannelHealthRow({
           )}
           {result.failureKind === 'not_logged_in' && (
             <div
-              className="mt-2.5 flex flex-col gap-2 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] p-2.5 text-xs"
+              className="mt-2.5 flex flex-col gap-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-2.5 text-xs"
               data-testid={`channel-health-relogin-exit-${result.id}`}
             >
               {result.rawOutput && (
@@ -156,7 +156,7 @@ export function ChannelHealthRow({
                 <div className="flex items-center gap-2 text-[var(--nim-text)]">
                   <span className="text-[var(--nim-text-muted)]">重登命令：</span>
                   <code
-                    className="rounded bg-[var(--nim-bg-secondary)] px-1.5 py-0.5 font-mono text-ui-caption text-[var(--nim-text)] border border-[var(--nim-border)]"
+                    className="rounded-ui-base bg-[var(--nim-bg-secondary)] px-2 py-0.5 font-mono text-ui-caption text-[var(--nim-text)] border border-[var(--nim-border)]"
                     data-testid={`channel-health-relogin-command-${result.id}`}
                   >
                     {getReLoginCommand(result.id)}
@@ -164,7 +164,7 @@ export function ChannelHealthRow({
                 </div>
                 <button
                   type="button"
-                  className="shrink-0 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-2 py-1 text-ui-caption text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors cursor-pointer"
+                  className="shrink-0 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-2 py-1 text-ui-caption text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors cursor-pointer"
                   onClick={() => {
                     void navigator.clipboard.writeText(getReLoginCommand(result.id));
                     setCopied(true);
@@ -180,7 +180,7 @@ export function ChannelHealthRow({
         </div>
         <button
           type="button"
-          className="shrink-0 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] px-2.5 py-1.5 text-xs text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] px-2.5 py-2 text-xs text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onRerun(result.id)}
           disabled={running || !canRerun}
           data-testid={`channel-health-rerun-${result.id}`}
@@ -275,7 +275,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded bg-[var(--nim-primary)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => void run()}
               disabled={snapshot.running || !workspacePath}
               data-testid="channel-health-run-all"
@@ -284,7 +284,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
             </button>
             <button
               type="button"
-              className="rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] px-3 py-2 text-xs font-medium text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] px-3 py-2 text-xs font-medium text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => void run(undefined, true)}
               disabled={snapshot.running || !workspacePath}
               data-testid="channel-health-run-deep"

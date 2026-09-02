@@ -469,7 +469,7 @@ export function ExtensionMarketplacePanel({
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 p-6 border border-[var(--nim-warning)] rounded-lg bg-[rgba(251,191,36,0.05)]">
+        <div className="flex flex-col gap-4 p-6 border border-[var(--nim-warning)] rounded-ui-lg bg-[rgba(251,191,36,0.05)]">
           <div className="flex items-start gap-3">
             <MaterialSymbol icon="warning" size={24} className="text-[var(--nim-warning)] shrink-0 mt-0.5" />
             <div>
@@ -496,7 +496,7 @@ export function ExtensionMarketplacePanel({
 
           <div className="flex items-center gap-3 pt-2 border-t border-[var(--nim-border)]">
             <button
-              className="py-2.5 px-5 border-none rounded-md bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
+              className="py-2.5 px-5 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
               onClick={handleAcceptRisk}
               data-testid="marketplace-accept-risk"
             >
@@ -526,7 +526,7 @@ export function ExtensionMarketplacePanel({
           Error: {error}
           <button
             onClick={loadData}
-            className="ml-4 px-4 py-2 bg-[var(--nim-primary)] text-white border-none rounded cursor-pointer"
+            className="ml-4 px-4 py-2 bg-[var(--nim-primary)] text-white border-none rounded-ui-base cursor-pointer"
             data-testid="marketplace-retry"
           >
             Retry
@@ -545,7 +545,7 @@ export function ExtensionMarketplacePanel({
     return (
       <div
         key={ext.id}
-        className={`flex flex-col p-4 border rounded-lg cursor-pointer transition-all duration-150 ${
+        className={`flex flex-col p-4 border rounded-ui-lg cursor-pointer transition-all duration-150 ${
           update
             ? 'border-[rgba(96,165,250,0.4)] bg-[rgba(96,165,250,0.05)]'
             : installed
@@ -564,7 +564,7 @@ export function ExtensionMarketplacePanel({
         data-testid={`marketplace-card-${ext.id}`}
       >
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-8 h-8 rounded-md bg-[var(--nim-bg-tertiary)] flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-ui-base bg-[var(--nim-bg-tertiary)] flex items-center justify-center shrink-0">
             <MaterialSymbol icon={categoryIcon} size={18} />
           </div>
           <div className="font-semibold text-[0.9375rem] text-[var(--nim-text)] truncate">{ext.name}</div>
@@ -581,7 +581,7 @@ export function ExtensionMarketplacePanel({
           </div>
           {update ? (
             <button
-              className={`py-1.5 px-3 border-none rounded text-xs font-medium cursor-pointer transition-opacity duration-150 ${
+              className={`py-2 px-3 border-none rounded-ui-base text-xs font-medium cursor-pointer transition-opacity duration-150 ${
                 status === 'installing'
                   ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
                   : 'bg-[var(--nim-primary)] text-white hover:opacity-90'
@@ -596,7 +596,7 @@ export function ExtensionMarketplacePanel({
               {status === 'installing' ? 'Updating...' : `Update to v${update.availableVersion}`}
             </button>
           ) : installed ? (
-            <span className={`inline-flex items-center px-2 py-1 rounded text-[0.6875rem] font-semibold uppercase tracking-tight ${
+            <span className={`inline-flex items-center px-2 py-1 rounded-ui-base text-[0.6875rem] font-semibold uppercase tracking-tight ${
               isBuiltinExtension(ext.id)
                 ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
                 : 'bg-[rgba(39,174,96,0.15)] text-[#27ae60]'
@@ -605,7 +605,7 @@ export function ExtensionMarketplacePanel({
             </span>
           ) : (
             <button
-              className={`py-1.5 px-3 border-none rounded text-xs font-medium cursor-pointer transition-opacity duration-150 ${
+              className={`py-2 px-3 border-none rounded-ui-base text-xs font-medium cursor-pointer transition-opacity duration-150 ${
                 status === 'installing'
                   ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
                   : 'bg-[var(--nim-primary)] text-white hover:opacity-90'
@@ -634,13 +634,13 @@ export function ExtensionMarketplacePanel({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search extensions..."
-          className="w-full py-3 pl-4 pr-10 border border-[var(--nim-border)] rounded-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.9375rem] outline-none focus:border-[var(--nim-primary)] placeholder:text-[var(--nim-text-faint)]"
+          className="w-full py-3 pl-4 pr-10 border border-[var(--nim-border)] rounded-ui-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.9375rem] outline-none focus:border-[var(--nim-primary)] placeholder:text-[var(--nim-text-faint)]"
           data-testid="marketplace-search"
           autoFocus
         />
         {searchQuery && (
           <button
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-none rounded-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-xs cursor-pointer flex items-center justify-center hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-xs cursor-pointer flex items-center justify-center hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
             onClick={() => setSearchQuery('')}
             data-testid="marketplace-search-clear"
           >
@@ -653,7 +653,7 @@ export function ExtensionMarketplacePanel({
       {registry && (
         <div className="flex flex-wrap gap-2 mb-6" data-testid="marketplace-categories">
           <button
-            className={`py-1.5 px-3 border rounded-full text-xs font-medium cursor-pointer transition-all duration-150 ${
+            className={`py-2 px-3 border rounded-ui-full text-xs font-medium cursor-pointer transition-all duration-150 ${
               !selectedCategory
                 ? 'border-[var(--nim-primary)] bg-[var(--nim-primary)] text-white'
                 : 'border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)]'
@@ -668,7 +668,7 @@ export function ExtensionMarketplacePanel({
             return (
               <button
                 key={cat.id}
-                className={`py-1.5 px-3 border rounded-full text-xs font-medium cursor-pointer transition-all duration-150 ${
+                className={`py-2 px-3 border rounded-ui-full text-xs font-medium cursor-pointer transition-all duration-150 ${
                   selectedCategory === cat.id
                     ? 'border-[var(--nim-primary)] bg-[var(--nim-primary)] text-white'
                     : 'border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)]'
@@ -740,14 +740,14 @@ export function ExtensionMarketplacePanel({
             value={githubUrl}
             onChange={(e) => setGithubUrl(e.target.value)}
             placeholder="https://github.com/user/nimbalyst-extension"
-            className="flex-1 py-2.5 px-3 border border-[var(--nim-border)] rounded-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm outline-none focus:border-[var(--nim-primary)] placeholder:text-[var(--nim-text-faint)]"
+            className="flex-1 py-2.5 px-3 border border-[var(--nim-border)] rounded-ui-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm outline-none focus:border-[var(--nim-primary)] placeholder:text-[var(--nim-text-faint)]"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleGithubInstall();
             }}
             data-testid="marketplace-github-url"
           />
           <button
-            className="py-2.5 px-4 border-none rounded-lg bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="py-2.5 px-4 border-none rounded-ui-lg bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={handleGithubInstall}
             disabled={githubInstalling || !githubUrl.trim()}
             data-testid="marketplace-github-install"
@@ -780,7 +780,7 @@ export function ExtensionMarketplacePanel({
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            className="absolute top-4 right-4 w-7 h-7 border-none rounded-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-base cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
+            className="absolute top-4 right-4 w-7 h-7 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-base cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
             onClick={() => setSelectedExtension(null)}
           >
             x
@@ -825,7 +825,7 @@ export function ExtensionMarketplacePanel({
                     key={idx}
                     src={imgSrc}
                     alt={ss.alt}
-                    className="w-full rounded-lg border border-[var(--nim-border)] object-cover max-h-[300px]"
+                    className="w-full rounded-ui-lg border border-[var(--nim-border)] object-cover max-h-[300px]"
                     loading="lazy"
                     data-testid={`marketplace-screenshot-${idx}`}
                   />
@@ -835,7 +835,7 @@ export function ExtensionMarketplacePanel({
           )}
 
           {update && (
-            <div className="flex items-center gap-2 mb-4 py-2 px-3 rounded-md bg-[rgba(96,165,250,0.1)] border border-[rgba(96,165,250,0.3)]">
+            <div className="flex items-center gap-2 mb-4 py-2 px-3 rounded-ui-base bg-[rgba(96,165,250,0.1)] border border-[rgba(96,165,250,0.3)]">
               <MaterialSymbol icon="upgrade" size={18} className="text-[var(--nim-primary)]" />
               <span className="text-sm text-[var(--nim-text)]">
                 Update available: v{update.currentVersion} &rarr; v{update.availableVersion}
@@ -843,7 +843,7 @@ export function ExtensionMarketplacePanel({
             </div>
           )}
 
-          <div className="flex flex-col gap-2 mb-6 p-3 bg-[var(--nim-bg-secondary)] rounded-lg">
+          <div className="flex flex-col gap-2 mb-6 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-lg">
             <div className="flex items-center gap-2 text-[0.8125rem]">
               <span className="text-[var(--nim-text-faint)]">Version:</span>
               <span className="text-[var(--nim-text)] font-medium">
@@ -861,7 +861,7 @@ export function ExtensionMarketplacePanel({
                 <span className="text-[var(--nim-text-faint)]">File types:</span>
                 <div className="flex gap-1">
                   {selectedExtension.fileTypes.map(ft => (
-                    <span key={ft} className="inline-flex items-center px-2 py-0.5 rounded text-[0.6875rem] font-mono bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                    <span key={ft} className="inline-flex items-center px-2 py-0.5 rounded-ui-base text-[0.6875rem] font-mono bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                       {ft}
                     </span>
                   ))}
@@ -873,7 +873,7 @@ export function ExtensionMarketplacePanel({
                 <span className="text-[var(--nim-text-faint)]">Permissions:</span>
                 <div className="flex gap-1">
                   {selectedExtension.permissions.map(p => (
-                    <span key={p} className="inline-flex items-center px-2 py-0.5 rounded text-[0.6875rem] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                    <span key={p} className="inline-flex items-center px-2 py-0.5 rounded-ui-base text-[0.6875rem] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                       {p}
                     </span>
                   ))}
@@ -907,7 +907,7 @@ export function ExtensionMarketplacePanel({
           {selectedExtension.changelog && (
             <div className="mb-6">
               <h4 className="text-sm font-semibold text-[var(--nim-text)] mb-2">Changelog</h4>
-              <pre className="text-xs text-[var(--nim-text-muted)] bg-[var(--nim-bg-secondary)] p-3 rounded-lg m-0 whitespace-pre-wrap font-[inherit]">
+              <pre className="text-xs text-[var(--nim-text-muted)] bg-[var(--nim-bg-secondary)] p-3 rounded-ui-lg m-0 whitespace-pre-wrap font-[inherit]">
                 {selectedExtension.changelog}
               </pre>
             </div>
@@ -917,7 +917,7 @@ export function ExtensionMarketplacePanel({
             {update ? (
               <>
                 <button
-                  className={`flex-1 py-3 px-6 border-none rounded-md text-[0.9375rem] font-medium cursor-pointer transition-opacity duration-150 ${
+                  className={`flex-1 py-3 px-6 border-none rounded-ui-base text-[0.9375rem] font-medium cursor-pointer transition-opacity duration-150 ${
                     status === 'installing'
                       ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
                       : 'bg-[var(--nim-primary)] text-white hover:opacity-90'
@@ -928,7 +928,7 @@ export function ExtensionMarketplacePanel({
                   {status === 'installing' ? 'Updating...' : `Update to v${update.availableVersion}`}
                 </button>
                 <button
-                  className="py-1.5 px-3 border border-[var(--nim-error)] rounded bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
+                  className="py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
                   onClick={() => {
                     handleUninstall(selectedExtension.id);
                     setSelectedExtension(null);
@@ -939,7 +939,7 @@ export function ExtensionMarketplacePanel({
               </>
             ) : installed ? (
               <>
-                <span className={`inline-flex items-center py-1.5 px-3 rounded text-[0.8125rem] font-medium ${
+                <span className={`inline-flex items-center py-2 px-3 rounded-ui-base text-[0.8125rem] font-medium ${
                   isBuiltinExtension(selectedExtension.id)
                     ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
                     : 'bg-[rgba(39,174,96,0.15)] text-[#27ae60]'
@@ -948,7 +948,7 @@ export function ExtensionMarketplacePanel({
                 </span>
                 {!isBuiltinExtension(selectedExtension.id) && (
                   <button
-                    className="py-1.5 px-3 border border-[var(--nim-error)] rounded bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
+                    className="py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
                     onClick={() => {
                       handleUninstall(selectedExtension.id);
                       setSelectedExtension(null);
@@ -960,7 +960,7 @@ export function ExtensionMarketplacePanel({
               </>
             ) : (
               <button
-                className={`flex-1 py-3 px-6 border-none rounded-md text-[0.9375rem] font-medium cursor-pointer transition-opacity duration-150 ${
+                className={`flex-1 py-3 px-6 border-none rounded-ui-base text-[0.9375rem] font-medium cursor-pointer transition-opacity duration-150 ${
                   status === 'installing'
                     ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
                     : 'bg-[var(--nim-primary)] text-white hover:opacity-90'
@@ -994,7 +994,7 @@ export function ExtensionMarketplacePanel({
         </div>
         {onViewInstalled && (
           <button
-            className="shrink-0 inline-flex items-center gap-2 py-2 px-3 border border-[var(--nim-border)] rounded-md bg-transparent text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 hover:border-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
+            className="shrink-0 inline-flex items-center gap-2 py-2 px-3 border border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 hover:border-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
             onClick={onViewInstalled}
             data-testid="marketplace-view-installed"
           >
@@ -1006,7 +1006,7 @@ export function ExtensionMarketplacePanel({
 
       {/* Status Message */}
       {statusMessage && (
-        <div className="mb-4 py-2 px-3 rounded-md bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-sm">
+        <div className="mb-4 py-2 px-3 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-sm">
           {statusMessage}
         </div>
       )}

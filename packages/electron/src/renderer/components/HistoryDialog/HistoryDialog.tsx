@@ -496,16 +496,16 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
           </div>
           <div className="history-dialog-header-right flex items-center gap-3">
             {fileType === 'markdown' && (
-              <div className="view-variant-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md p-0.5 gap-1">
+              <div className="view-variant-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-0.5 gap-1">
                 <button
-                  className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                  className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                   onClick={() => setRichView(true)}
                   title="Rendered view"
                 >
                   Rich
                 </button>
                 <button
-                  className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${!richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                  className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${!richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                   onClick={() => setRichView(false)}
                   title="Raw source"
                 >
@@ -513,16 +513,16 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                 </button>
               </div>
             )}
-            <div className="view-mode-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md p-0.5 gap-1">
+            <div className="view-mode-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-0.5 gap-1">
               <button
-                className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${viewMode === 'changes' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${viewMode === 'changes' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                 onClick={() => setViewMode('changes')}
                 title="Show diff with previous version"
               >
                 Diff
               </button>
               <button
-                className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${viewMode === 'version' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${viewMode === 'version' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                 onClick={() => setViewMode('version')}
                 title="View full content"
               >
@@ -584,10 +584,10 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                     data-snapshot-id={snapshotId}
                     data-snapshot-type={snapshot.type}
                     data-selected={isSelected}
-                    className={`history-item mb-0.5 rounded cursor-pointer transition-all duration-150 ${isSelected ? 'selected bg-[var(--nim-primary)]' : 'hover:bg-[var(--nim-bg-hover)]'}`}
+                    className={`history-item mb-0.5 rounded-ui-base cursor-pointer transition-all duration-150 ${isSelected ? 'selected bg-[var(--nim-primary)]' : 'hover:bg-[var(--nim-bg-hover)]'}`}
                     onClick={(e) => handleSnapshotSelect(snapshotId, snapshot.timestamp, index, e.metaKey || e.ctrlKey)}
                   >
-                    <div className="history-item-content py-1.5 px-2 flex items-center justify-between">
+                    <div className="history-item-content py-2 px-2 flex items-center justify-between">
                       <div className="history-item-main flex items-center gap-2 flex-1 min-w-0">
                         <span className={`history-item-icon material-symbols-outlined text-lg shrink-0 ${isSelected ? 'text-white' : 'text-[var(--nim-text-muted)]'}`}>{getSnapshotIcon(snapshot.type)}</span>
                         <div className="history-item-info flex flex-col gap-1 min-w-0 flex-1">
@@ -609,7 +609,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                       </div>
                       <div className="history-item-actions flex items-center gap-2 shrink-0">
                         <button
-                          className={`history-item-delete w-5 h-5 border-none bg-transparent cursor-pointer opacity-0 transition-all duration-200 rounded flex items-center justify-center shrink-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-[var(--nim-error-light)] [.history-item:hover_&]:opacity-60`}
+                          className={`history-item-delete w-5 h-5 border-none bg-transparent cursor-pointer opacity-0 transition-all duration-200 rounded-ui-base flex items-center justify-center shrink-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-[var(--nim-error-light)] [.history-item:hover_&]:opacity-60`}
                           data-testid={`history-item-delete-${index}`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -634,11 +634,11 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                 <h3 className="m-0 text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">{diffMode ? 'Diff Preview' : 'Preview'}</h3>
                 {diffMode && versionAMeta && versionBMeta && (
                   <div className="diff-version-labels flex items-center gap-2 text-[11px] text-[var(--nim-text-muted)]">
-                    <span className="diff-version-label diff-version-old py-0.5 px-2 rounded bg-[var(--nim-bg-tertiary)] font-medium text-[var(--nim-error)]">
+                    <span className="diff-version-label diff-version-old py-0.5 px-2 rounded-ui-base bg-[var(--nim-bg-tertiary)] font-medium text-[var(--nim-error)]">
                       {formatVersionLabel(versionAMeta.type, versionAMeta.timestamp)}
                     </span>
                     <span className="diff-version-separator font-semibold text-[var(--nim-text-faint)]">vs</span>
-                    <span className="diff-version-label diff-version-new py-0.5 px-2 rounded bg-[var(--nim-bg-tertiary)] font-medium text-[var(--nim-success)]">
+                    <span className="diff-version-label diff-version-new py-0.5 px-2 rounded-ui-base bg-[var(--nim-bg-tertiary)] font-medium text-[var(--nim-success)]">
                       {formatVersionLabel(versionBMeta.type, versionBMeta.timestamp)}
                     </span>
                   </div>
@@ -648,7 +648,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                     {navigationState && navigationState.totalGroups > 0 && (
                       <div className="diff-navigation-controls flex items-center gap-2 ml-3">
                         <button
-                          className="diff-nav-button w-6 h-6 p-0 border border-[var(--nim-border)] bg-[var(--nim-bg)] rounded cursor-pointer flex items-center justify-center text-[var(--nim-text-muted)] transition-all duration-200 hover:not-disabled:bg-[var(--nim-bg-hover)] hover:not-disabled:text-[var(--nim-text)] disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="diff-nav-button w-6 h-6 p-0 border border-[var(--nim-border)] bg-[var(--nim-bg)] rounded-ui-base cursor-pointer flex items-center justify-center text-[var(--nim-text-muted)] transition-all duration-200 hover:not-disabled:bg-[var(--nim-bg-hover)] hover:not-disabled:text-[var(--nim-text)] disabled:opacity-40 disabled:cursor-not-allowed"
                           onClick={handleNavigatePrevious}
                           disabled={!navigationState.canGoPrevious}
                           title="Previous change"
@@ -661,7 +661,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                           {navigationState.currentIndex + 1} / {navigationState.totalGroups}
                         </span>
                         <button
-                          className="diff-nav-button w-6 h-6 p-0 border border-[var(--nim-border)] bg-[var(--nim-bg)] rounded cursor-pointer flex items-center justify-center text-[var(--nim-text-muted)] transition-all duration-200 hover:not-disabled:bg-[var(--nim-bg-hover)] hover:not-disabled:text-[var(--nim-text)] disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="diff-nav-button w-6 h-6 p-0 border border-[var(--nim-border)] bg-[var(--nim-bg)] rounded-ui-base cursor-pointer flex items-center justify-center text-[var(--nim-text-muted)] transition-all duration-200 hover:not-disabled:bg-[var(--nim-bg-hover)] hover:not-disabled:text-[var(--nim-text)] disabled:opacity-40 disabled:cursor-not-allowed"
                           onClick={handleNavigateNext}
                           disabled={!navigationState.canGoNext}
                           title="Next change"
@@ -672,8 +672,8 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                         </button>
                         {!richView && 'addedLines' in navigationState && (
                           <div className="diff-stats flex items-center gap-2 ml-2 pl-2 border-l border-[var(--nim-border)]">
-                            <span className="diff-stat diff-stat-added text-[11px] font-semibold py-0.5 px-1.5 rounded-sm text-[var(--nim-success)] bg-[var(--nim-success-light)]">+{navigationState.addedLines}</span>
-                            <span className="diff-stat diff-stat-removed text-[11px] font-semibold py-0.5 px-1.5 rounded-sm text-[var(--nim-error)] bg-[var(--nim-error-light)]">-{navigationState.removedLines}</span>
+                            <span className="diff-stat diff-stat-added text-[11px] font-semibold py-0.5 px-2 rounded-ui-base text-[var(--nim-success)] bg-[var(--nim-success-light)]">+{navigationState.addedLines}</span>
+                            <span className="diff-stat diff-stat-removed text-[11px] font-semibold py-0.5 px-2 rounded-ui-base text-[var(--nim-error)] bg-[var(--nim-error-light)]">-{navigationState.removedLines}</span>
                           </div>
                         )}
                       </div>
@@ -683,7 +683,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
               </div>
               {selectedVersions.length === 1 && (
                 <button
-                  className="history-restore-button py-1.5 px-4 bg-[var(--nim-primary)] text-white border-none rounded-md text-[13px] font-medium cursor-pointer transition-all duration-200 shrink-0 whitespace-nowrap hover:not-disabled:bg-[var(--nim-primary-hover)] hover:not-disabled:-translate-y-px hover:not-disabled:shadow-[0_2px_8px_rgba(59,130,246,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="history-restore-button py-2 px-4 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 shrink-0 whitespace-nowrap hover:not-disabled:bg-[var(--nim-primary-hover)] hover:not-disabled:-translate-y-px hover:not-disabled:shadow-[0_2px_8px_rgba(59,130,246,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleRestore}
                   disabled={!previewContent}
                 >
@@ -783,7 +783,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
 
             {loadingPreview && (richView || !diffMode) && (
               <div className="history-preview-loading absolute inset-0 flex flex-col items-center justify-center bg-[var(--nim-bg)] z-10 gap-3">
-                <div className="history-preview-loading-spinner w-10 h-10 border-[3px] border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+                <div className="history-preview-loading-spinner w-10 h-10 border-[3px] border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
                 <div className="history-preview-loading-text text-[var(--nim-text-muted)] text-sm">
                   {selectedVersions.length === 2 ? 'Loading diff...' : 'Loading preview...'}
                 </div>

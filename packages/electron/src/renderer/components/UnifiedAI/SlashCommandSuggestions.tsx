@@ -151,7 +151,7 @@ export const SlashCommandSuggestions: React.FC<SlashCommandSuggestionsProps> = (
         {displayCommands.map((cmd) => (
           <div key={cmd.name} className="slash-command-pill-wrapper group relative inline-flex">
             <button
-              className="slash-command-pill inline-flex items-center gap-1 px-3 py-1.5 text-[13px] font-medium cursor-pointer rounded-ui-lg border transition-all duration-150 bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] active:scale-[0.97]"
+              className="slash-command-pill inline-flex items-center gap-1 px-3 py-2 text-[13px] font-medium cursor-pointer rounded-ui-lg border transition-all duration-150 bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] active:scale-[0.97]"
               onClick={() => handleCommandClick(cmd)}
             >
               <span className="slash-command-pill-icon font-semibold opacity-80 text-[var(--nim-primary)] group-hover:opacity-100">/</span>
@@ -159,7 +159,7 @@ export const SlashCommandSuggestions: React.FC<SlashCommandSuggestionsProps> = (
             </button>
             {cmd.description && (
               <div
-                className="slash-command-tooltip absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 px-3 py-2 text-xs font-normal leading-relaxed text-center whitespace-normal min-w-[200px] max-w-[320px] rounded-lg border z-[100] pointer-events-none opacity-0 invisible transition-[opacity,visibility] duration-150 group-hover:opacity-100 group-hover:visible bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-muted)] shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
+                className="slash-command-tooltip absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 px-3 py-2 text-xs font-normal leading-relaxed text-center whitespace-normal min-w-[200px] max-w-[320px] rounded-ui-lg border z-[100] pointer-events-none opacity-0 invisible transition-[opacity,visibility] duration-150 group-hover:opacity-100 group-hover:visible bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-muted)] shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
                 role="tooltip"
               >
                 {cmd.description}
@@ -169,7 +169,7 @@ export const SlashCommandSuggestions: React.FC<SlashCommandSuggestionsProps> = (
         ))}
         {!isExpanded && hiddenCount > 0 && (
           <button
-            className="slash-command-pill slash-command-expand-pill inline-flex items-center gap-1 px-3 py-1.5 text-[13px] font-semibold cursor-pointer rounded-ui-lg border transition-all duration-150 bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-faint)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] active:scale-[0.97]"
+            className="slash-command-pill slash-command-expand-pill inline-flex items-center gap-1 px-3 py-2 text-[13px] font-semibold cursor-pointer rounded-ui-lg border transition-all duration-150 bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-faint)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] active:scale-[0.97]"
             onClick={handleExpandClick}
           >
             <span className="slash-command-pill-name whitespace-nowrap">+{hiddenCount}</span>

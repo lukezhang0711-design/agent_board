@@ -161,7 +161,7 @@ export function PlansPanel({ currentFilePath, onPlanSelect }: PlansPanelProps): 
     return (
       <div className="plans-panel flex flex-col h-full bg-nim">
         <div className="plans-loading flex flex-col items-center justify-center py-10 px-5 text-nim-muted gap-3">
-          <div className="spinner w-6 h-6 border-[3px] border-nim-secondary border-t-nim-accent rounded-full animate-spin"></div>
+          <div className="spinner w-6 h-6 border-[3px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin"></div>
           <span>Loading plans...</span>
         </div>
       </div>

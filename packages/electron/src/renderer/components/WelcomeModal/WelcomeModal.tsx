@@ -154,7 +154,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
             {currentStep === 'complete' && 'All Set!'}
           </h2>
           <button
-            className="welcome-modal-close flex items-center justify-center w-8 h-8 p-0 text-[28px] rounded-md bg-transparent border-none cursor-pointer transition-all duration-200 text-nim-muted hover:bg-nim-hover hover:text-nim"
+            className="welcome-modal-close flex items-center justify-center w-8 h-8 p-0 text-[28px] rounded-ui-base bg-transparent border-none cursor-pointer transition-all duration-200 text-nim-muted hover:bg-nim-hover hover:text-nim"
             onClick={handleSkip}
             title="Skip onboarding"
           >
@@ -165,7 +165,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
         {/* Content */}
         <div className="welcome-modal-content nim-scrollbar p-8 overflow-y-auto flex-1 min-h-0">
           {error && (
-            <div className="welcome-modal-error rounded-lg px-4 py-3 mb-5 bg-red-50 border border-red-200 text-red-600">
+            <div className="welcome-modal-error rounded-ui-lg px-4 py-3 mb-5 bg-red-50 border border-red-200 text-red-600">
               <strong>Error:</strong> {error}
             </div>
           )}
@@ -178,15 +178,15 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                 This quick setup will help you get started.
               </p>
               <div className="welcome-features flex flex-col gap-5 text-left">
-                <div className="welcome-feature p-4 rounded-lg bg-nim-secondary border border-nim">
+                <div className="welcome-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
                   <strong className="block mb-1.5 text-[15px] text-nim">Planning System</strong>
                   <p className="m-0 text-sm leading-normal text-nim-muted">Organize features, bugs, and tasks with structured markdown plans</p>
                 </div>
-                <div className="welcome-feature p-4 rounded-lg bg-nim-secondary border border-nim">
+                <div className="welcome-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
                   <strong className="block mb-1.5 text-[15px] text-nim">AI Integration</strong>
                   <p className="m-0 text-sm leading-normal text-nim-muted">Work with Claude Agent and other AI assistants for enhanced productivity</p>
                 </div>
-                <div className="welcome-feature p-4 rounded-lg bg-nim-secondary border border-nim">
+                <div className="welcome-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
                   <strong className="block mb-1.5 text-[15px] text-nim">Progress Tracking</strong>
                   <p className="m-0 text-sm leading-normal text-nim-muted">Visual plan view to monitor status and progress across all work items</p>
                 </div>
@@ -201,7 +201,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               </p>
 
               <div className="plan-location-options flex flex-col gap-3 mb-6">
-                <label className="plan-location-option flex items-start gap-3 p-4 rounded-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
+                <label className="plan-location-option flex items-start gap-3 p-4 rounded-ui-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
                   <input
                     type="radio"
                     name="plansLocation"
@@ -219,7 +219,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                   </div>
                 </label>
 
-                <label className="plan-location-option flex items-start gap-3 p-4 rounded-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
+                <label className="plan-location-option flex items-start gap-3 p-4 rounded-ui-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
                   <input
                     type="radio"
                     name="plansLocation"
@@ -237,7 +237,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                   </div>
                 </label>
 
-                <label className="plan-location-option flex items-start gap-3 p-4 rounded-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
+                <label className="plan-location-option flex items-start gap-3 p-4 rounded-ui-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
                   <input
                     type="radio"
                     name="plansLocation"
@@ -253,15 +253,15 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                 </label>
 
                 {plansLocation === 'custom' && (
-                  <div className="custom-location-input mt-3 p-3 rounded-md bg-nim-tertiary">
+                  <div className="custom-location-input mt-3 p-3 rounded-ui-base bg-nim-tertiary">
                     <input
                       type="text"
                       placeholder="e.g., docs/plans or .local/plans"
                       value={customPlansLocation}
                       onChange={(e) => setCustomPlansLocation(e.target.value)}
-                      className="w-full py-2 px-3 rounded text-sm mb-3 outline-none bg-nim border border-nim text-nim focus:border-nim-focus"
+                      className="w-full py-2 px-3 rounded-ui-base text-sm mb-3 outline-none bg-nim border border-nim text-nim focus:border-nim-focus"
                     />
-                    <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-md transition-colors duration-200 hover:bg-nim-hover">
+                    <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-ui-base transition-colors duration-200 hover:bg-nim-hover">
                       <input
                         type="checkbox"
                         checked={checkInPlans}
@@ -274,12 +274,12 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                 )}
               </div>
 
-              <div className="plan-location-info p-4 rounded-lg bg-nim-secondary border border-nim">
+              <div className="plan-location-info p-4 rounded-ui-lg bg-nim-secondary border border-nim">
                 <p className="m-0 mb-2 font-semibold text-nim"><strong>What happens:</strong></p>
                 <ul className="m-0 pl-6 text-nim-muted">
                   <li className="mb-1.5">Plans directory will be created at the specified location</li>
                   {!checkInPlans && (
-                    <li className="mb-1.5">The directory will be added to <code className="px-1.5 py-0.5 rounded font-mono text-[13px] bg-nim-tertiary">.gitignore</code> (not checked in)</li>
+                    <li className="mb-1.5">The directory will be added to <code className="px-2 py-0.5 rounded-ui-base font-mono text-[13px] bg-nim-tertiary">.gitignore</code> (not checked in)</li>
                   )}
                   {checkInPlans && (
                     <li className="mb-1.5">Plans will be included in your repository (team collaboration)</li>
@@ -297,7 +297,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               </p>
 
               <div className="claude-code-option mb-6">
-                <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-md transition-colors duration-200 hover:bg-nim-hover">
+                <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-ui-base transition-colors duration-200 hover:bg-nim-hover">
                   <input
                     type="checkbox"
                     checked={enableClaudeCode}
@@ -309,11 +309,11 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               </div>
 
               {enableClaudeCode && (
-                <div className="claude-code-options p-5 rounded-lg mt-4 bg-nim-secondary border border-nim">
+                <div className="claude-code-options p-5 rounded-ui-lg mt-4 bg-nim-secondary border border-nim">
                   <p className="options-intro m-0 mb-4 font-semibold text-nim">Where should commands be installed?</p>
 
                   <div className="commands-location-options">
-                    <label className="plan-location-option flex items-start gap-3 p-4 rounded-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
+                    <label className="plan-location-option flex items-start gap-3 p-4 rounded-ui-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
                       <input
                         type="radio"
                         name="commandsLocation"
@@ -328,7 +328,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                       </div>
                     </label>
 
-                    <label className="plan-location-option flex items-start gap-3 p-4 mt-3 rounded-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
+                    <label className="plan-location-option flex items-start gap-3 p-4 mt-3 rounded-ui-lg cursor-pointer transition-all duration-200 bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover">
                       <input
                         type="radio"
                         name="commandsLocation"
@@ -346,7 +346,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
 
                   <p className="options-intro m-0 mb-4 mt-6 font-semibold text-nim">Select components to install:</p>
 
-                  <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-md transition-colors duration-200 mb-2 hover:bg-nim-hover">
+                  <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-ui-base transition-colors duration-200 mb-2 hover:bg-nim-hover">
                     <input
                       type="checkbox"
                       checked={installTrackCommand}
@@ -358,7 +358,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                     </span>
                   </label>
 
-                  <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-md transition-colors duration-200 mb-2 hover:bg-nim-hover">
+                  <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-ui-base transition-colors duration-200 mb-2 hover:bg-nim-hover">
                     <input
                       type="checkbox"
                       checked={configureCLAUDEmd}
@@ -376,10 +376,10 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                     </p>
                     <ul className="m-0 pl-6 text-nim-muted">
                       <li className="mb-1.5">
-                        <code className="px-1.5 py-0.5 rounded font-mono text-[13px] bg-nim-tertiary">{commandsLocation === 'project' ? '.claude' : '~/.claude'}/commands/track.md</code> - Tracking command
+                        <code className="px-2 py-0.5 rounded-ui-base font-mono text-[13px] bg-nim-tertiary">{commandsLocation === 'project' ? '.claude' : '~/.claude'}/commands/track.md</code> - Tracking command
                       </li>
                       <li className="mb-1.5">
-                        <code className="px-1.5 py-0.5 rounded font-mono text-[13px] bg-nim-tertiary">CLAUDE.md</code> - Planning system documentation
+                        <code className="px-2 py-0.5 rounded-ui-base font-mono text-[13px] bg-nim-tertiary">CLAUDE.md</code> - Planning system documentation
                       </li>
                     </ul>
                   </div>
@@ -387,7 +387,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               )}
 
               {!enableClaudeCode && (
-                <div className="skip-info p-4 rounded-lg mt-4 bg-nim-secondary border border-nim">
+                <div className="skip-info p-4 rounded-ui-lg mt-4 bg-nim-secondary border border-nim">
                   <p className="m-0 text-nim-muted">You can enable Claude Agent integration later from project settings.</p>
                 </div>
               )}
@@ -402,7 +402,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
 
               <div className="plan-options flex flex-col gap-3">
                 <button
-                  className="plan-option-button flex items-start gap-4 p-4 rounded-lg cursor-pointer transition-all duration-200 text-left w-full bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover hover:-translate-y-0.5 hover:shadow-lg"
+                  className="plan-option-button flex items-start gap-4 p-4 rounded-ui-lg cursor-pointer transition-all duration-200 text-left w-full bg-nim-secondary border-2 border-nim hover:border-nim-primary hover:bg-nim-hover hover:-translate-y-0.5 hover:shadow-lg"
                   onClick={handleCreateExamplePlan}
                 >
                   <div className="plan-option-content flex-1">
@@ -412,8 +412,8 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                 </button>
 
 
-                <div className="plan-option-info py-3 px-4 rounded-md text-sm leading-normal bg-nim-tertiary text-nim-muted">
-                  Plans are stored in the <code className="px-1.5 py-0.5 rounded font-mono bg-nim">plans/</code> directory as markdown files with
+                <div className="plan-option-info py-3 px-4 rounded-ui-base text-sm leading-normal bg-nim-tertiary text-nim-muted">
+                  Plans are stored in the <code className="px-2 py-0.5 rounded-ui-base font-mono bg-nim">plans/</code> directory as markdown files with
                   frontmatter metadata.
                 </div>
               </div>
@@ -427,21 +427,21 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               </p>
 
               <div className="plan-view-features flex flex-col gap-4 mb-6">
-                <div className="plan-view-feature p-4 rounded-lg bg-nim-secondary border border-nim">
+                <div className="plan-view-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
                   <strong className="block mb-1.5 text-[15px] text-nim">Status Overview</strong>
                   <p className="m-0 text-sm leading-normal text-nim-muted">See all plans grouped by status (draft, in-progress, completed, etc.)</p>
                 </div>
-                <div className="plan-view-feature p-4 rounded-lg bg-nim-secondary border border-nim">
+                <div className="plan-view-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
                   <strong className="block mb-1.5 text-[15px] text-nim">Filter & Sort</strong>
                   <p className="m-0 text-sm leading-normal text-nim-muted">Filter by type, priority, or tags. Sort by date, progress, or priority.</p>
                 </div>
-                <div className="plan-view-feature p-4 rounded-lg bg-nim-secondary border border-nim">
+                <div className="plan-view-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
                   <strong className="block mb-1.5 text-[15px] text-nim">Progress Tracking</strong>
                   <p className="m-0 text-sm leading-normal text-nim-muted">Visual progress bars show completion percentage for each plan</p>
                 </div>
               </div>
 
-              <div className="plan-view-access p-4 rounded-lg bg-nim-secondary border border-nim">
+              <div className="plan-view-access p-4 rounded-ui-lg bg-nim-secondary border border-nim">
                 <p className="m-0 mb-3 font-semibold text-nim">
                   <strong>Access the plan view:</strong>
                 </p>
@@ -459,7 +459,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               <h3 className="m-0 mb-3 text-2xl text-nim">You're all set!</h3>
               <p className="mb-8 text-nim-muted">Your workspace is configured and ready to use.</p>
 
-              <div className="next-steps text-left p-5 rounded-lg mb-6 bg-nim-secondary border border-nim">
+              <div className="next-steps text-left p-5 rounded-ui-lg mb-6 bg-nim-secondary border border-nim">
                 <h4 className="m-0 mb-3 text-base text-nim">Next steps:</h4>
                 <ul className="m-0 pl-6 text-nim-muted">
                   <li className="mb-2 leading-normal">Explore your example plan document</li>
@@ -483,7 +483,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
         <div className="welcome-modal-footer flex justify-between items-center py-4 px-8 border-t border-nim bg-nim-secondary">
           <div className="welcome-modal-footer-left flex gap-3">
             <button
-              className="welcome-modal-button nim-btn-secondary py-2.5 px-5 rounded-lg text-sm font-medium"
+              className="welcome-modal-button nim-btn-secondary py-2.5 px-5 rounded-ui-lg text-sm font-medium"
               onClick={handleSkip}
               disabled={isProcessing}
             >
@@ -493,7 +493,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
           <div className="welcome-modal-footer-right flex gap-3">
             {currentStepIndex > 0 && (
               <button
-                className="welcome-modal-button nim-btn-secondary py-2.5 px-5 rounded-lg text-sm font-medium"
+                className="welcome-modal-button nim-btn-secondary py-2.5 px-5 rounded-ui-lg text-sm font-medium"
                 onClick={handleBack}
                 disabled={isProcessing}
               >
@@ -502,7 +502,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
             )}
             {currentStep !== 'complete' ? (
               <button
-                className="welcome-modal-button nim-btn-primary py-2.5 px-5 rounded-lg text-sm font-medium hover:opacity-90 hover:-translate-y-px hover:shadow-md"
+                className="welcome-modal-button nim-btn-primary py-2.5 px-5 rounded-ui-lg text-sm font-medium hover:opacity-90 hover:-translate-y-px hover:shadow-md"
                 onClick={handleNext}
                 disabled={isProcessing}
               >
@@ -510,7 +510,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               </button>
             ) : (
               <button
-                className="welcome-modal-button nim-btn-primary py-2.5 px-5 rounded-lg text-sm font-medium hover:opacity-90 hover:-translate-y-px hover:shadow-md"
+                className="welcome-modal-button nim-btn-primary py-2.5 px-5 rounded-ui-lg text-sm font-medium hover:opacity-90 hover:-translate-y-px hover:shadow-md"
                 onClick={handleComplete}
                 disabled={isProcessing}
               >

@@ -59,7 +59,7 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="claude-usage-popover w-64 overflow-y-auto rounded-lg border border-nim bg-nim-secondary shadow-lg z-50"
+        className="claude-usage-popover w-64 overflow-y-auto rounded-ui-lg border border-nim bg-nim-secondary shadow-lg z-50"
         data-testid="claude-usage-popover"
         data-component="ClaudeUsagePopover"
       >
@@ -80,14 +80,14 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="rounded p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim disabled:opacity-50"
+              className="rounded-ui-base p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim disabled:opacity-50"
               aria-label="Refresh usage"
             >
               <MaterialSymbol icon="refresh" size={14} className={isRefreshing ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={onClose}
-              className="rounded p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim"
+              className="rounded-ui-base p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim"
               aria-label="Close"
             >
               <MaterialSymbol icon="close" size={14} />

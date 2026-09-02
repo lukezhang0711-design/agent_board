@@ -78,7 +78,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
           workspaceName={workspaceName}
           actions={
             <>
-              <div className="flex items-center rounded border border-nim overflow-hidden">
+              <div className="flex items-center rounded-ui-base border border-nim overflow-hidden">
                   <button
                     className={`flex items-center justify-center w-7 h-6 transition-colors ${
                       viewMode === 'list'
@@ -134,7 +134,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
           }
         />
       )}
-      <div className="px-3 py-1.5 border-b border-nim text-[11px] font-semibold text-nim-muted uppercase tracking-wider flex items-center justify-between" data-testid="tracker-sidebar-header">
+      <div className="px-3 py-2 border-b border-nim text-[11px] font-semibold text-nim-muted uppercase tracking-wider flex items-center justify-between" data-testid="tracker-sidebar-header">
         <span>Trackers</span>
         <span className="text-[10px] font-normal text-nim-faint normal-case">工作区全部事项</span>
       </div>
@@ -152,7 +152,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
                 <button
                   key={chip.id}
                   data-testid={`tracker-filter-${chip.id}`}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2 py-1 rounded-ui-base text-[11px] font-medium transition-colors ${
                     isActive
                       ? 'bg-[var(--nim-primary)] text-white'
                       : 'bg-nim-tertiary text-nim-muted hover:bg-nim-active hover:text-nim'
@@ -204,11 +204,11 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
                   if (e.key === 'Escape') { setSavingView(false); setNewViewName(''); }
                 }}
                 placeholder="View name..."
-                className="flex-1 min-w-0 px-2 py-1 text-[11px] bg-nim border border-nim rounded text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
+                className="flex-1 min-w-0 px-2 py-1 text-[11px] bg-nim border border-nim rounded-ui-base text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
                 data-testid="tracker-saved-view-name-input"
               />
               <button
-                className="px-1.5 py-1 text-[11px] text-white bg-[var(--nim-primary)] rounded hover:opacity-90 disabled:opacity-40"
+                className="px-2 py-1 text-[11px] text-white bg-[var(--nim-primary)] rounded-ui-base hover:opacity-90 disabled:opacity-40"
                 onClick={commitSaveView}
                 disabled={!newViewName.trim()}
                 data-testid="tracker-saved-view-save"
@@ -229,11 +229,11 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
               {savedViews.map((view) => (
                 <div
                   key={view.id}
-                  className="group flex items-center gap-1 rounded-md hover:bg-nim-tertiary"
+                  className="group flex items-center gap-1 rounded-ui-base hover:bg-nim-tertiary"
                   data-testid="tracker-saved-view-item"
                 >
                   <button
-                    className="flex-1 flex items-center gap-2 px-2 py-1.5 text-left text-[12px] text-nim-muted hover:text-nim min-w-0"
+                    className="flex-1 flex items-center gap-2 px-2 py-2 text-left text-[12px] text-nim-muted hover:text-nim min-w-0"
                     onClick={() => onApplyView(view)}
                     title={`Apply view: ${view.name}`}
                   >
@@ -241,7 +241,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
                     <span className="flex-1 truncate">{view.name}</span>
                   </button>
                   <button
-                    className="opacity-0 group-hover:opacity-100 px-1.5 text-nim-faint hover:text-[#ef4444] transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 px-2 text-nim-faint hover:text-[#ef4444] transition-opacity"
                     onClick={() => onDeleteView(view.id)}
                     title="Delete view"
                     data-testid="tracker-saved-view-delete"
@@ -255,14 +255,14 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
         </div>
 
         {/* Types Section */}
-        <div className="px-1.5 py-2 border-t border-nim mt-1">
+        <div className="px-2 py-2 border-t border-nim mt-1">
           <div className="text-[10px] font-semibold text-nim-faint uppercase tracking-wider px-2 mb-1">
             Types
           </div>
 
           {/* All */}
           <button
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
+            className={`w-full flex items-center gap-2 px-2 py-2 rounded-ui-base text-sm transition-colors ${
               selectedType === 'all'
                 ? 'bg-nim-active text-nim'
                 : 'text-nim-muted hover:bg-nim-tertiary hover:text-nim'
@@ -279,7 +279,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
               key={tracker.type}
               data-testid="tracker-type-button"
               data-tracker-type={tracker.type}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
+              className={`w-full flex items-center gap-2 px-2 py-2 rounded-ui-base text-sm transition-colors ${
                 selectedType === tracker.type
                   ? 'bg-nim-active text-nim'
                   : 'text-nim-muted hover:bg-nim-tertiary hover:text-nim'

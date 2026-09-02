@@ -121,7 +121,7 @@ export const SharedLinksPanel: React.FC = () => {
         </div>
         {state === 'loaded' && shares.length > 0 && (
           <button
-            className="flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-md cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+            className="flex items-center gap-2 px-3 py-2 text-[0.8125rem] text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
             onClick={fetchShares}
           >
             <MaterialSymbol icon="refresh" size={14} />
@@ -159,7 +159,7 @@ export const SharedLinksPanel: React.FC = () => {
             {errorMessage}
           </p>
           <button
-            className="flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] text-[var(--nim-text)] bg-transparent border border-[var(--nim-border)] rounded-md cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+            className="flex items-center gap-2 px-3 py-2 text-[0.8125rem] text-[var(--nim-text)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
             onClick={fetchShares}
           >
             <MaterialSymbol icon="refresh" size={14} />
@@ -183,7 +183,7 @@ export const SharedLinksPanel: React.FC = () => {
 
       {/* Shares list */}
       {state === 'loaded' && shares.length > 0 && (
-        <div className="flex flex-col gap-0 border border-[var(--nim-border)] rounded-lg overflow-hidden">
+        <div className="flex flex-col gap-0 border border-[var(--nim-border)] rounded-ui-lg overflow-hidden">
           {shares.map((share, index) => (
             <div
               key={share.shareId}
@@ -194,7 +194,7 @@ export const SharedLinksPanel: React.FC = () => {
                   <span className="text-[0.8125rem] font-medium text-[var(--nim-text)] truncate">
                     {share.title || 'Untitled'}
                   </span>
-                  <span className="shrink-0 px-1.5 py-0.5 rounded bg-[var(--nim-bg-hover)] text-[0.625rem] uppercase tracking-[0.04em] text-[var(--nim-text-faint)]">
+                  <span className="shrink-0 px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-hover)] text-[0.625rem] uppercase tracking-[0.04em] text-[var(--nim-text-faint)]">
                     {getShareKindLabel(share)}
                   </span>
                   <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)]">
@@ -214,14 +214,14 @@ export const SharedLinksPanel: React.FC = () => {
               </div>
               <div className="shrink-0 flex items-center gap-1">
                 <button
-                  className="flex items-center justify-center w-7 h-7 rounded-md bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="flex items-center justify-center w-7 h-7 rounded-ui-base bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   title="Copy link"
                   onClick={() => handleCopyLink(share)}
                 >
                   <MaterialSymbol icon={copiedId === share.shareId ? 'check' : 'content_copy'} size={14} />
                 </button>
                 <button
-                  className="flex items-center justify-center w-7 h-7 rounded-md bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-default"
+                  className="flex items-center justify-center w-7 h-7 rounded-ui-base bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-default"
                   title="Delete shared link"
                   onClick={() => handleDelete(share)}
                   disabled={deletingId === share.shareId}

@@ -345,14 +345,14 @@ export function HelpTooltip({
         createPortal(
           <div
             ref={tooltipRef}
-            className={`help-tooltip help-tooltip--${position.placement} fixed z-[10002] max-w-[280px] px-3 py-2.5 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.15),0_2px_4px_rgba(0,0,0,0.1)] pointer-events-none nim-animate-slide-up`}
+            className={`help-tooltip help-tooltip--${position.placement} fixed z-[10002] max-w-[280px] px-3 py-2.5 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-[0_4px_16px_rgba(0,0,0,0.15),0_2px_4px_rgba(0,0,0,0.1)] pointer-events-none nim-animate-slide-up`}
             style={{ top: position.top, left: position.left }}
             role="tooltip"
           >
             <div className="help-tooltip-header flex items-center gap-2 mb-1">
               <span className="help-tooltip-title text-[13px] font-semibold text-[var(--nim-text)]">{helpContent.title}</span>
               {helpContent.shortcut && (
-                <kbd className="help-tooltip-shortcut inline-flex items-center justify-center h-5 px-1.5 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded text-[11px] font-medium text-[var(--nim-text-muted)] ml-auto shrink-0 font-sans">
+                <kbd className="help-tooltip-shortcut inline-flex items-center justify-center h-5 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[11px] font-medium text-[var(--nim-text-muted)] ml-auto shrink-0 font-sans">
                   {getShortcutDisplay(helpContent.shortcut)}
                 </kbd>
               )}

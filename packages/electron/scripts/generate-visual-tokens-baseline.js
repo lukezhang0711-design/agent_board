@@ -33,18 +33,29 @@ function walk(dir) {
   return results;
 }
 
-function scanFile(content) {
+const ALLOWED_ROUNDED = /^rounded-ui-(?:base|lg|full|none)(?:-[tblr])?$/;
+
+function scanFile(content, isExempt = false) {
   const pxFontRegex = /text-\[\d+(?:\.\d+)?px\]/g;
   const inlineFontSizeRegex = /fontSize:\s*['"]?\d+(?:\.\d+)?(?:px)?['"]?/g;
   const rawColorRegex = /(?:bg|text|border|ring)-\[#(?:[0-9a-fA-F]+)\]|(?:bg|text|border|ring)-\[rgb[a]?\([^)]+\)\]/g;
-  const nonStdRoundedRegex = /\brounded-(?:xl|2xl|\[10px\]|\[18px\]|\[20px\])\b/g;
-  const halfGapRegex = /\bgap(?:-[xy])?-(?:0\.5|1\.5|2\.5)\b/g;
+
+  let nonStdRoundedCount = 0;
+  let halfGapCount = 0;
+
+  if (!isExempt) {
+    const rawRoundeds = content.match(/(?<![a-zA-Z0-9_\-])rounded[^\s"'`>]+/g) || [];
+    nonStdRoundedCount = rawRoundeds.filter(cls => !ALLOWED_ROUNDED.test(cls)).length;
+
+    const halfSpacingRegex = /(?<![a-zA-Z0-9_\-])(?:gap(?:-[xy])?-(?:0\.5|1\.5|2\.5|3\.5)|(?:p|px|py|pt|pb|pl|pr)-(?:1\.5|3\.5))(?![a-zA-Z0-9_\-])/g;
+    halfGapCount = (content.match(halfSpacingRegex) || []).length;
+  }
 
   return {
     pxFonts: (content.match(pxFontRegex) || []).length + (content.match(inlineFontSizeRegex) || []).length,
     rawColors: (content.match(rawColorRegex) || []).length,
-    nonStdRounded: (content.match(nonStdRoundedRegex) || []).length,
-    halfGap: (content.match(halfGapRegex) || []).length,
+    nonStdRounded: nonStdRoundedCount,
+    halfGap: halfGapCount,
   };
 }
 
@@ -75,7 +86,8 @@ function generateBaseline() {
     }
 
     const content = fs.readFileSync(f, 'utf8');
-    const res = scanFile(content);
+    const isExempt = rel.startsWith('components/common/') || rel.startsWith('styles/');
+    const res = scanFile(content, isExempt);
     baseline[group].pxFonts += res.pxFonts;
     baseline[group].rawColors += res.rawColors;
     baseline[group].nonStdRounded += res.nonStdRounded;

@@ -171,7 +171,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
   if (!org) {
     return (
       <div className="org-settings-panel p-4">
-        <div className="flex items-start gap-3 p-3 bg-[var(--nim-bg-secondary)] rounded-lg">
+        <div className="flex items-start gap-3 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-lg">
           <MaterialSymbol icon="corporate_fare" size={18} className="text-[var(--nim-text-muted)] mt-0.5" />
           <div className="text-[13px] text-[var(--nim-text-muted)] leading-relaxed">
             This workspace isn’t linked to an organization yet. Create or join a team
@@ -185,7 +185,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
   return (
     <div className="org-settings-panel p-1">
       {error && (
-        <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-[var(--nim-error-bg,#3b1f1f)] text-[var(--nim-error,#f87171)] rounded-md text-[12px]">
+        <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-[var(--nim-error-bg,#3b1f1f)] text-[var(--nim-error,#f87171)] rounded-ui-base text-[12px]">
           <MaterialSymbol icon="error" size={14} />
           <span className="flex-1">{error}</span>
           <button className="opacity-70 hover:opacity-100" onClick={() => setError(null)}>
@@ -196,8 +196,8 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
 
       {/* Org header */}
       <div className="py-4 mb-2 border-b border-[var(--nim-border)]">
-        <div className="flex items-center gap-3 p-3 bg-[var(--nim-bg-secondary)] rounded-lg">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-lg">
+          <div className="w-9 h-9 rounded-ui-lg bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] flex items-center justify-center shrink-0">
             <MaterialSymbol icon="corporate_fare" size={18} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -222,7 +222,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
             return (
               <div
                 key={m.memberId}
-                className="org-member-row flex items-center gap-3 px-3 py-2 bg-[var(--nim-bg-secondary)] rounded-md"
+                className="org-member-row flex items-center gap-3 px-3 py-2 bg-[var(--nim-bg-secondary)] rounded-ui-base"
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] text-[var(--nim-text)] truncate">{m.email || m.name || m.memberId}</div>
@@ -234,7 +234,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
                 {/* Org role */}
                 {isAdmin ? (
                   <select
-                    className="text-[12px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded px-1.5 py-1 text-[var(--nim-text)]"
+                    className="text-[12px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-2 py-1 text-[var(--nim-text)]"
                     value={orgRole}
                     disabled={busy}
                     onChange={(e) => handleUpdateRole(m.memberId, e.target.value as OrgRole)}
@@ -251,7 +251,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
                     <span className="text-[11px] text-[var(--nim-text-faint)] italic w-[120px] text-right">implicit admin</span>
                   ) : isAdmin ? (
                     <select
-                      className="text-[12px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded px-1.5 py-1 text-[var(--nim-text)] w-[120px]"
+                      className="text-[12px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-2 py-1 text-[var(--nim-text)] w-[120px]"
                       value={grant ?? 'none'}
                       disabled={busy}
                       onChange={(e) => handleSetGrant(m.memberId, e.target.value as ProjectRole | 'none')}
@@ -288,13 +288,13 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
             <input
               type="email"
               placeholder="Invite by email…"
-              className="flex-1 text-[13px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded px-2.5 py-2 text-[var(--nim-text)]"
+              className="flex-1 text-[13px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-2.5 py-2 text-[var(--nim-text)]"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void handleInvite(); }}
             />
             <button
-              className="text-[13px] px-3 py-2 bg-[var(--nim-accent,#3b82f6)] text-white rounded disabled:opacity-40"
+              className="text-[13px] px-3 py-2 bg-[var(--nim-accent,#3b82f6)] text-white rounded-ui-base disabled:opacity-40"
               disabled={!inviteEmail.trim()}
               onClick={() => void handleInvite()}
             >

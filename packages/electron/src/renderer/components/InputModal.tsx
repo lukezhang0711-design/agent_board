@@ -53,7 +53,7 @@ export function InputModal({
   return (
     <div className="input-modal-overlay nim-overlay" onClick={onCancel}>
       <div
-        className="input-modal rounded-lg p-5 w-[400px] max-w-[90%] shadow-[0_10px_25px_rgba(0,0,0,0.2)] bg-[var(--nim-bg)] text-[var(--nim-text)]"
+        className="input-modal rounded-ui-lg p-5 w-[400px] max-w-[90%] shadow-[0_10px_25px_rgba(0,0,0,0.2)] bg-[var(--nim-bg)] text-[var(--nim-text)]"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
@@ -81,14 +81,14 @@ export function InputModal({
           <div className="input-modal-buttons flex justify-end gap-2">
             <button
               type="button"
-              className="input-modal-button input-modal-cancel nim-btn-secondary px-4 py-1.5 text-sm"
+              className="input-modal-button input-modal-cancel nim-btn-secondary px-4 py-2 text-sm"
               onClick={onCancel}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="input-modal-button input-modal-confirm nim-btn-primary px-4 py-1.5 text-sm"
+              className="input-modal-button input-modal-confirm nim-btn-primary px-4 py-2 text-sm"
               disabled={!value.trim()}
             >
               {confirmLabel}

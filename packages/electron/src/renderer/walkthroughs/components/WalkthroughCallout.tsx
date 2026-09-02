@@ -261,7 +261,7 @@ export function WalkthroughCallout({
             {step.title}
           </div>
           {step.shortcut && (
-            <kbd className="walkthrough-shortcut inline-flex items-center justify-center h-6 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-[5px] font-sans text-xs font-medium text-[var(--nim-text-muted)] shadow-[0_1px_2px_rgba(0,0,0,0.05)] whitespace-nowrap shrink-0">
+            <kbd className="walkthrough-shortcut inline-flex items-center justify-center h-6 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base font-sans text-xs font-medium text-[var(--nim-text-muted)] shadow-[0_1px_2px_rgba(0,0,0,0.05)] whitespace-nowrap shrink-0">
               {getShortcutDisplay(step.shortcut)}
             </kbd>
           )}
@@ -292,7 +292,7 @@ export function WalkthroughCallout({
         {step.action && (
           <div className="walkthrough-callout-action mt-3">
             <button
-              className="walkthrough-callout-action-btn inline-flex items-center gap-2 px-3.5 py-2 bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] hover:border-[color-mix(in_srgb,var(--nim-primary)_30%,transparent)]"
+              className="walkthrough-callout-action-btn inline-flex items-center gap-2 px-3 py-2 bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] hover:border-[color-mix(in_srgb,var(--nim-primary)_30%,transparent)]"
               onClick={handleActionClick}
             >
               {step.action.label}
@@ -302,18 +302,18 @@ export function WalkthroughCallout({
       </div>
 
       {/* Footer with navigation */}
-      <div className="walkthrough-callout-footer flex items-center justify-between px-4 py-3 border-t border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] rounded-b-[10px]">
+      <div className="walkthrough-callout-footer flex items-center justify-between px-4 py-3 border-t border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] rounded-ui-lg-b">
         <div className="walkthrough-callout-nav flex items-center gap-2">
           {!isFirstStep && (
             <button
-              className="walkthrough-callout-btn walkthrough-callout-btn--back px-3 py-1.5 rounded-[5px] text-[13px] font-medium border-none cursor-pointer transition-all duration-150 bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+              className="walkthrough-callout-btn walkthrough-callout-btn--back px-3 py-2 rounded-ui-base text-[13px] font-medium border-none cursor-pointer transition-all duration-150 bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
               onClick={onBack}
             >
               Back
             </button>
           )}
           <button
-            className={`walkthrough-callout-btn walkthrough-callout-btn--next px-3 py-1.5 rounded-[5px] text-[13px] font-medium border-none cursor-pointer transition-all duration-150 text-white hover:brightness-110 ${isLastStep ? 'walkthrough-callout-btn--done bg-[#10b981]' : 'bg-[var(--nim-primary)]'}`}
+            className={`walkthrough-callout-btn walkthrough-callout-btn--next px-3 py-2 rounded-ui-base text-[13px] font-medium border-none cursor-pointer transition-all duration-150 text-white hover:brightness-110 ${isLastStep ? 'walkthrough-callout-btn--done bg-[#10b981]' : 'bg-[var(--nim-primary)]'}`}
             onClick={handleNextOrComplete}
           >
             {isLastStep ? 'Done' : 'Next'}

@@ -78,7 +78,7 @@ function SharingCallout() {
 
   return (
     <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-      <div className="p-3.5 bg-nim-primary/8 border border-nim-primary/20 rounded-lg">
+      <div className="p-3 bg-nim-primary/8 border border-nim-primary/20 rounded-ui-lg">
         <div className="flex items-start gap-3">
           <MaterialSymbol icon="share" size={18} className="text-[var(--nim-primary)] shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -87,7 +87,7 @@ function SharingCallout() {
                 Sharing Sessions & Documents
               </span>
               <button
-                className="inline-flex items-center justify-center w-[18px] h-[18px] p-0 border-none rounded-full bg-[var(--nim-bg-tertiary)] cursor-pointer hover:bg-[var(--nim-bg-active)] transition-colors"
+                className="inline-flex items-center justify-center w-[18px] h-[18px] p-0 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] cursor-pointer hover:bg-[var(--nim-bg-active)] transition-colors"
                 onClick={() => setExpanded(!expanded)}
                 title={expanded ? 'Hide details' : 'How does sharing work?'}
               >
@@ -545,7 +545,7 @@ export function SyncPanel() {
           <div className="flex gap-2">
             <button
               onClick={() => handleEnvironmentSwitch('development')}
-              className={`flex-1 px-3 py-2 text-xs border border-nim rounded-md cursor-pointer ${
+              className={`flex-1 px-3 py-2 text-xs border border-nim rounded-ui-base cursor-pointer ${
                 currentEnvironment === 'development'
                   ? 'bg-nim-primary text-nim-on-primary font-semibold'
                   : 'bg-nim-secondary text-nim-muted font-normal'
@@ -555,7 +555,7 @@ export function SyncPanel() {
             </button>
             <button
               onClick={() => handleEnvironmentSwitch('production')}
-              className={`flex-1 px-3 py-2 text-xs border border-nim rounded-md cursor-pointer ${
+              className={`flex-1 px-3 py-2 text-xs border border-nim rounded-ui-base cursor-pointer ${
                 currentEnvironment === 'production'
                   ? 'bg-nim-primary text-nim-on-primary font-semibold'
                   : 'bg-nim-secondary text-nim-muted font-normal'
@@ -583,8 +583,8 @@ export function SyncPanel() {
                   ? acct.personalOrgId === config.personalOrgId
                   : acct.isPrimary;
                 return (
-                  <div key={acct.personalOrgId} className={`flex items-center gap-3 p-2.5 rounded-lg ${isSyncAccount ? 'bg-nim-primary/8 border border-nim-primary/20' : 'bg-nim-secondary'}`}>
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${isSyncAccount ? 'bg-nim-primary' : 'bg-nim-tertiary'}`}>
+                  <div key={acct.personalOrgId} className={`flex items-center gap-3 p-2.5 rounded-ui-lg ${isSyncAccount ? 'bg-nim-primary/8 border border-nim-primary/20' : 'bg-nim-secondary'}`}>
+                    <div className={`w-9 h-9 rounded-ui-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${isSyncAccount ? 'bg-nim-primary' : 'bg-nim-tertiary'}`}>
                       {(acct.email?.[0] || '?').toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -614,7 +614,7 @@ export function SyncPanel() {
                     </div>
                     <button
                       onClick={() => handleRemoveAccount(acct.personalOrgId)}
-                      className="px-3 py-1.5 text-xs bg-transparent border border-nim rounded text-nim-muted cursor-pointer hover:bg-nim-hover shrink-0"
+                      className="px-3 py-2 text-xs bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover shrink-0"
                     >
                       Sign Out
                     </button>
@@ -622,8 +622,8 @@ export function SyncPanel() {
                 );
               })
             ) : (
-              <div className="flex items-center gap-3 p-2.5 bg-nim-secondary rounded-lg">
-                <div className="w-9 h-9 rounded-full bg-nim-primary flex items-center justify-center text-nim-on-primary font-semibold text-sm">
+              <div className="flex items-center gap-3 p-2.5 bg-nim-secondary rounded-ui-lg">
+                <div className="w-9 h-9 rounded-ui-full bg-nim-primary flex items-center justify-center text-nim-on-primary font-semibold text-sm">
                   {(stytchAuth.user.name?.first_name?.[0] || stytchAuth.user.emails[0]?.email[0] || '?').toUpperCase()}
                 </div>
                 <div className="flex-1">
@@ -638,7 +638,7 @@ export function SyncPanel() {
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="px-3 py-1.5 text-xs bg-transparent border border-nim rounded text-nim-muted cursor-pointer hover:bg-nim-hover"
+                  className="px-3 py-2 text-xs bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover"
                 >
                   Sign Out
                 </button>
@@ -647,7 +647,7 @@ export function SyncPanel() {
             {/* Add Account button */}
             <button
               onClick={handleAddAccount}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-nim-muted bg-transparent border border-dashed border-nim rounded-lg cursor-pointer hover:bg-nim-hover hover:text-nim transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-xs text-nim-muted bg-transparent border border-dashed border-nim rounded-ui-lg cursor-pointer hover:bg-nim-hover hover:text-nim transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -657,11 +657,11 @@ export function SyncPanel() {
             </button>
           </div>
         ) : showAuthForm ? (
-          <div className="p-4 bg-nim-secondary rounded-lg">
+          <div className="p-4 bg-nim-secondary rounded-ui-lg">
             {magicLinkSent ? (
               // Magic link sent confirmation
               <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-3 bg-nim-primary rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 mx-auto mb-3 bg-nim-primary rounded-ui-full flex items-center justify-center">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                     <path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6z" />
                     <path d="M22 6l-10 7L2 6" />
@@ -679,7 +679,7 @@ export function SyncPanel() {
                     setEmail('');
                     setShowAuthForm(false);
                   }}
-                  className="px-4 py-2 bg-transparent border border-nim rounded-md text-nim-muted text-[13px] cursor-pointer hover:bg-nim-hover"
+                  className="px-4 py-2 bg-transparent border border-nim rounded-ui-base text-nim-muted text-[13px] cursor-pointer hover:bg-nim-hover"
                 >
                   Done
                 </button>
@@ -690,7 +690,7 @@ export function SyncPanel() {
                 <button
                   onClick={handleGoogleSignIn}
                   disabled={authLoading || !isStytchAvailable}
-                  className={`w-full px-4 py-2.5 flex items-center justify-center gap-3 bg-white border border-nim rounded-md text-[#333] font-medium text-[13px] ${
+                  className={`w-full px-4 py-2.5 flex items-center justify-center gap-3 bg-white border border-nim rounded-ui-base text-[#333] font-medium text-[13px] ${
                     authLoading ? 'cursor-wait opacity-70' : 'cursor-pointer opacity-100'
                   }`}
                 >
@@ -717,12 +717,12 @@ export function SyncPanel() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
                     disabled={!isStytchAvailable || authLoading}
-                    className="w-full px-3 py-2 mb-3 border border-nim rounded-md bg-nim text-nim text-[13px]"
+                    className="w-full px-3 py-2 mb-3 border border-nim rounded-ui-base bg-nim text-nim text-[13px]"
                   />
                   <button
                     type="submit"
                     disabled={authLoading || !isStytchAvailable || !email}
-                    className={`w-full px-4 py-2.5 bg-nim-primary border-none rounded-md text-nim-on-primary font-medium text-[13px] ${
+                    className={`w-full px-4 py-2.5 bg-nim-primary border-none rounded-ui-base text-nim-on-primary font-medium text-[13px] ${
                       authLoading ? 'cursor-wait' : 'cursor-pointer'
                     } ${(authLoading || !email) ? 'opacity-70' : 'opacity-100'}`}
                   >
@@ -750,14 +750,14 @@ export function SyncPanel() {
             )}
           </div>
         ) : (
-          <div className="p-4 bg-nim-secondary rounded-lg text-center">
+          <div className="p-4 bg-nim-secondary rounded-ui-lg text-center">
             <p className="text-[13px] text-nim-muted m-0 mb-3">
               Sign in to sync sessions across all your devices.
             </p>
             <button
               onClick={() => setShowAuthForm(true)}
               disabled={!isStytchAvailable}
-              className={`px-5 py-2 bg-nim-primary border-none rounded-md text-nim-on-primary font-medium text-[13px] ${
+              className={`px-5 py-2 bg-nim-primary border-none rounded-ui-base text-nim-on-primary font-medium text-[13px] ${
                 isStytchAvailable ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-50'
               }`}
             >
@@ -782,7 +782,7 @@ export function SyncPanel() {
       {stytchAuth.isAuthenticated && (
           <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
             <h4 className="provider-panel-section-title text-[15px] font-semibold mb-3 text-[var(--nim-text)]">Mobile App</h4>
-            <div className="flex gap-3.5 p-3.5 bg-nim-secondary rounded-lg">
+            <div className="flex gap-3 p-3 bg-nim-secondary rounded-ui-lg">
               <div className="w-11 h-11 rounded-ui-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                   <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
@@ -799,7 +799,7 @@ export function SyncPanel() {
                 <div className="flex items-center gap-2">
                   <button
                       onClick={() => window.electronAPI.openExternal('https://apps.apple.com/app/id6756393105')}
-                      className="inline-flex items-center gap-2 px-2.5 py-1 bg-white rounded text-[11px] font-medium text-gray-900 border-none cursor-pointer hover:bg-gray-100"
+                      className="inline-flex items-center gap-2 px-2.5 py-1 bg-white rounded-ui-base text-[11px] font-medium text-gray-900 border-none cursor-pointer hover:bg-gray-100"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
@@ -810,7 +810,7 @@ export function SyncPanel() {
               </div>
               {/* Pair Device button - right side of card */}
               <button
-                  className="self-center flex flex-col items-center gap-2 px-4 py-2.5 bg-nim-primary border-none rounded-lg text-nim-on-primary text-[14px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  className="self-center flex flex-col items-center gap-2 px-4 py-2.5 bg-nim-primary border-none rounded-ui-lg text-nim-on-primary text-[14px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   onClick={() => {
                     if (enabledProjectCount === 0) {
                       setPairError('Enable at least one project to sync before pairing your device.');
@@ -859,7 +859,7 @@ export function SyncPanel() {
                 updateConfig({ preventSleepMode: mode, preventSleepWhenSyncing: undefined });
                 window.electronAPI.invoke('sync:set-prevent-sleep', mode);
               }}
-              className="bg-nim-secondary border border-nim rounded px-2 py-1 text-[12px] text-nim cursor-pointer shrink-0"
+              className="bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-[12px] text-nim cursor-pointer shrink-0"
             >
               <option value="off">Off</option>
               <option value="always">Always</option>
@@ -867,7 +867,7 @@ export function SyncPanel() {
             </select>
           </div>
           {(config.preventSleepMode ?? (config.preventSleepWhenSyncing ? 'always' : 'off')) === 'off' && enabledProjectCount > 0 && (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-500">
+            <div className="flex items-center gap-2 mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-ui-lg text-[11px] text-amber-500">
               <svg className="shrink-0" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
               </svg>
@@ -884,7 +884,7 @@ export function SyncPanel() {
           {availableProjects.length > 0 && !showAddProject && (
             <button
               onClick={() => setShowAddProject(true)}
-              className="flex items-center gap-1 px-2 py-0.5 text-[11px] bg-transparent border border-nim rounded text-nim-muted cursor-pointer hover:bg-nim-hover hover:text-nim"
+              className="flex items-center gap-1 px-2 py-0.5 text-[11px] bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover hover:text-nim"
             >
               <MaterialSymbol icon="add" size={14} />
               Add
@@ -896,7 +896,7 @@ export function SyncPanel() {
           <button
             onClick={() => setShowAddProject(true)}
             disabled={availableProjects.length === 0}
-            className={`flex items-center gap-2 px-3 py-2 text-[12px] bg-transparent border border-dashed border-nim rounded-lg w-full ${
+            className={`flex items-center gap-2 px-3 py-2 text-[12px] bg-transparent border border-dashed border-nim rounded-ui-lg w-full ${
               availableProjects.length === 0
                 ? 'text-nim-disabled cursor-not-allowed'
                 : 'text-nim-muted cursor-pointer hover:bg-nim-hover hover:text-nim'
@@ -906,11 +906,11 @@ export function SyncPanel() {
             Add a project to sync
           </button>
         ) : (
-          <div className="bg-nim-secondary rounded-lg overflow-hidden">
+          <div className="bg-nim-secondary rounded-ui-lg overflow-hidden">
             {syncedProjects.map((project) => {
               const docSyncEnabled = (config.docSyncEnabledProjects ?? []).includes(project.path);
               return (
-                <div key={project.path} className="flex items-center gap-2 px-2.5 py-1.5 border-b border-[var(--nim-border)] last:border-b-0 group">
+                <div key={project.path} className="flex items-center gap-2 px-2.5 py-2 border-b border-[var(--nim-border)] last:border-b-0 group">
                   <span className="text-[13px] text-nim truncate flex-1">{project.name}</span>
                   {isAlpha && (
                     <label className="flex items-center gap-1 cursor-pointer shrink-0" title="Sync .md files to mobile">
@@ -937,7 +937,7 @@ export function SyncPanel() {
               <button
                 key={project.path}
                 onClick={() => handleAddProject(project.path)}
-                className="flex items-center gap-2 px-2.5 py-1.5 w-full bg-transparent border-none border-b border-[var(--nim-border)] last:border-b-0 cursor-pointer hover:bg-nim-hover text-left"
+                className="flex items-center gap-2 px-2.5 py-2 w-full bg-transparent border-none border-b border-[var(--nim-border)] last:border-b-0 cursor-pointer hover:bg-nim-hover text-left"
               >
                 <MaterialSymbol icon="add" size={14} className="text-[var(--nim-primary)] shrink-0" />
                 <span className="text-[13px] text-nim-muted truncate">{project.name}</span>
@@ -960,7 +960,7 @@ export function SyncPanel() {
           <select
             value={config.idleTimeoutMinutes ?? 5}
             onChange={(e) => handleFieldChange('idleTimeoutMinutes', Number(e.target.value))}
-            className="px-1.5 py-0.5 text-[11px] bg-nim-secondary border border-nim rounded text-nim-muted cursor-pointer"
+            className="px-2 py-0.5 text-[11px] bg-nim-secondary border border-nim rounded-ui-base text-nim-muted cursor-pointer"
           >
             <option value={1}>1 min</option>
             <option value={2}>2 min</option>
@@ -979,7 +979,7 @@ export function SyncPanel() {
           <button
             onClick={loadDevices}
             disabled={devicesLoading}
-            className={`ml-2 px-1.5 py-0.5 text-[10px] bg-nim-secondary border border-nim rounded text-nim-faint ${
+            className={`ml-2 px-2 py-0.5 text-[10px] bg-nim-secondary border border-nim rounded-ui-base text-nim-faint ${
               devicesLoading ? 'cursor-wait' : 'cursor-pointer hover:bg-nim-hover'
             }`}
           >
@@ -995,9 +995,9 @@ export function SyncPanel() {
           {connectedDevices.map((device) => (
             <div
               key={device.deviceId}
-              className="flex items-center gap-3 px-2.5 py-2 bg-nim-secondary rounded-md mb-1.5 last:mb-0"
+              className="flex items-center gap-3 px-2.5 py-2 bg-nim-secondary rounded-ui-base mb-1.5 last:mb-0"
             >
-              <div className={`w-2 h-2 rounded-full ${device.isOnline ? 'bg-green-500' : 'bg-neutral-500'}`} />
+              <div className={`w-2 h-2 rounded-ui-full ${device.isOnline ? 'bg-green-500' : 'bg-neutral-500'}`} />
               <div className="flex-1">
                 <div className="text-[13px] text-nim">
                   {device.name}
@@ -1018,7 +1018,7 @@ export function SyncPanel() {
 
       {/* Encryption footer */}
       <div className="provider-panel-section py-4">
-        <div className="p-3.5 bg-nim-secondary border border-nim rounded-lg">
+        <div className="p-3 bg-nim-secondary border border-nim rounded-ui-lg">
           <div className="flex items-center gap-2 mb-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--nim-success, #22c55e)" strokeWidth="2" className="shrink-0">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -1047,12 +1047,12 @@ export function SyncPanel() {
                 setShowDeleteConfirm(true);
                 setDeleteError(null);
               }}
-              className="px-4 py-2 text-[13px] bg-transparent border border-red-500/40 rounded-md text-red-500 cursor-pointer hover:bg-red-500/10"
+              className="px-4 py-2 text-[13px] bg-transparent border border-red-500/40 rounded-ui-base text-red-500 cursor-pointer hover:bg-red-500/10"
             >
               Delete Account
             </button>
           ) : (
-            <div className="p-4 bg-nim-secondary rounded-lg border border-red-500/30">
+            <div className="p-4 bg-nim-secondary rounded-ui-lg border border-red-500/30">
               <p className="text-[13px] text-nim-muted m-0 mb-3">
                 This will permanently delete your account and all synced data, including sessions, shared links, and device pairings. This cannot be undone.
               </p>
@@ -1064,7 +1064,7 @@ export function SyncPanel() {
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 placeholder="DELETE"
-                className="w-full px-3 py-2 mb-3 border border-nim rounded-md bg-nim text-nim text-[13px]"
+                className="w-full px-3 py-2 mb-3 border border-nim rounded-ui-base bg-nim text-nim text-[13px]"
                 disabled={deleteLoading}
                 autoFocus
               />
@@ -1075,7 +1075,7 @@ export function SyncPanel() {
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
-                  className={`px-4 py-2 text-[13px] border-none rounded-md text-white font-medium ${
+                  className={`px-4 py-2 text-[13px] border-none rounded-ui-base text-white font-medium ${
                     deleteConfirmText === 'DELETE' && !deleteLoading
                       ? 'bg-red-600 cursor-pointer hover:bg-red-700'
                       : 'bg-red-600/40 cursor-not-allowed'
@@ -1090,7 +1090,7 @@ export function SyncPanel() {
                     setDeleteError(null);
                   }}
                   disabled={deleteLoading}
-                  className="px-4 py-2 text-[13px] bg-transparent border border-nim rounded-md text-nim-muted cursor-pointer hover:bg-nim-hover"
+                  className="px-4 py-2 text-[13px] bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover"
                 >
                   Cancel
                 </button>

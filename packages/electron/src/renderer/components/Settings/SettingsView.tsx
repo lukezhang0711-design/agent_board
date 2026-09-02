@@ -211,7 +211,7 @@ const ExtensionAgentSettingsPanel: React.FC<{
         </p>
         <button
           type="button"
-          className="px-3 py-1.5 rounded text-xs bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
+          className="px-3 py-2 rounded-ui-base text-xs bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
           onClick={onOpenInstalledExtensions}
         >
           Open Installed Extensions
@@ -868,7 +868,7 @@ export function SettingsView({
         return (
           <>
             {hasWorkspaceMcpServers && scope === 'user' && (
-              <div className="settings-project-indicator flex items-start gap-3 py-3 px-4 mb-6 bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)] rounded-lg text-[var(--nim-text)] [&_.material-symbols-outlined]:text-[var(--nim-info)] [&_.material-symbols-outlined]:shrink-0 [&_.material-symbols-outlined]:mt-0.5">
+              <div className="settings-project-indicator flex items-start gap-3 py-3 px-4 mb-6 bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)] rounded-ui-lg text-[var(--nim-text)] [&_.material-symbols-outlined]:text-[var(--nim-info)] [&_.material-symbols-outlined]:shrink-0 [&_.material-symbols-outlined]:mt-0.5">
                 <MaterialSymbol icon="info" size={20} />
                 <div className="settings-project-indicator-text flex flex-col gap-1">
                   <strong className="text-sm font-semibold text-[var(--nim-text)]">
@@ -966,7 +966,7 @@ export function SettingsView({
             </p>
             <button
               type="button"
-              className="px-3 py-1.5 rounded text-xs bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
+              className="px-3 py-2 rounded-ui-base text-xs bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
               onClick={() => setSelectedCategory('installed-extensions')}
             >
               Open Installed Extensions
@@ -998,9 +998,9 @@ export function SettingsView({
         <h1 className="settings-view-title text-base font-semibold text-[var(--nim-text)] m-0">Settings</h1>
 
         <div className="settings-scope-container flex items-center gap-3">
-          <div className="settings-scope-tabs flex bg-[var(--nim-bg-tertiary)] p-1 rounded-lg">
+          <div className="settings-scope-tabs flex bg-[var(--nim-bg-tertiary)] p-1 rounded-ui-lg">
             <button
-              className={`settings-scope-tab py-1.5 px-4 rounded-md text-xs font-medium cursor-pointer transition-all duration-150 border-none ${
+              className={`settings-scope-tab py-2 px-4 rounded-ui-base text-xs font-medium cursor-pointer transition-all duration-150 border-none ${
                 scope === 'user'
                   ? 'bg-[var(--nim-primary)] text-white shadow-sm'
                   : 'bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -1010,7 +1010,7 @@ export function SettingsView({
               User
             </button>
             <button
-              className={`settings-scope-tab py-1.5 px-4 rounded-md text-xs font-medium cursor-pointer transition-all duration-150 border-none disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`settings-scope-tab py-2 px-4 rounded-ui-base text-xs font-medium cursor-pointer transition-all duration-150 border-none disabled:opacity-50 disabled:cursor-not-allowed ${
                 scope === 'project'
                   ? 'bg-[var(--nim-primary)] text-white shadow-sm'
                   : 'bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -1055,7 +1055,7 @@ export function SettingsView({
           <div className="settings-panel-container max-w-[800px]">
             {selectedCatalogWarning && (
               <div
-                className="mb-4 rounded-lg border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] px-3 py-2 text-xs leading-relaxed text-[var(--nim-error)]"
+                className="mb-4 rounded-ui-lg border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] px-3 py-2 text-xs leading-relaxed text-[var(--nim-error)]"
                 role="alert"
                 data-testid="settings-model-catalog-warning"
               >

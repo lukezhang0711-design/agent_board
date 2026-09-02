@@ -681,7 +681,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
         <div className="flex items-center gap-2 shrink-0" data-testid="tracker-scope-header">
           <MaterialSymbol icon="track_changes" size={16} className="text-[var(--nim-primary)]" />
           <span className="text-sm font-semibold text-nim">{title}</span>
-          <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-medium tabular-nums" data-testid="tracker-header-count">{filteredItems.length}</span>
+          <span className="text-[11px] px-2 py-0.2 rounded-ui-full bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-medium tabular-nums" data-testid="tracker-header-count">{filteredItems.length}</span>
           <span className="text-[11px] text-nim-faint">工作区全部事项</span>
         </div>
 
@@ -758,7 +758,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
                 setShowTagDropdown(true);
               }
             }}
-            className="w-full pl-7 pr-7 py-1 text-xs bg-nim-secondary border border-nim rounded text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
+            className="w-full pl-7 pr-7 py-1 text-xs bg-nim-secondary border border-nim rounded-ui-base text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
             aria-label="Search trackers or filter by tag"
           />
           {(searchQuery || tagFilter.length > 0 || showTagDropdown) && (
@@ -784,7 +784,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
                 ...tagMenu.floatingStyles,
                 width: searchInputRef.current?.offsetWidth,
               }}
-              className="bg-nim-secondary border border-nim rounded shadow-lg z-[100] overflow-y-auto"
+              className="bg-nim-secondary border border-nim rounded-ui-base shadow-lg z-[100] overflow-y-auto"
               data-testid="tracker-tag-dropdown"
               {...tagMenu.getFloatingProps()}
             >
@@ -793,7 +793,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
                   <button
                     key={tag.name}
                     type="button"
-                    className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between cursor-pointer transition-colors ${
+                    className={`w-full text-left px-3 py-2 text-[12px] flex items-center justify-between cursor-pointer transition-colors ${
                       index === highlightedTagIndex
                         ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]'
                         : 'text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-tertiary)]'
@@ -820,7 +820,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
               <button
                 key={tag}
                 type="button"
-                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border cursor-pointer bg-blue-400/[0.12] border-blue-400/30 text-blue-400 hover:bg-blue-400/[0.18]"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-ui-full text-[11px] border cursor-pointer bg-blue-400/[0.12] border-blue-400/30 text-blue-400 hover:bg-blue-400/[0.18]"
                 onClick={() => removeTagFilter(tag)}
                 title={`Remove #${tag} filter`}
                 data-testid={`tracker-tag-chip-${tag}`}
@@ -844,8 +844,8 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
                   onClick={() => toggleSource(key)}
                   className={
                     active
-                      ? 'px-2 py-0.5 rounded-full text-[11px] border bg-[var(--nim-primary)]/15 border-[var(--nim-primary)]/40 text-nim'
-                      : 'px-2 py-0.5 rounded-full text-[11px] border border-nim text-nim-muted hover:bg-nim-tertiary'
+                      ? 'px-2 py-0.5 rounded-ui-full text-[11px] border bg-[var(--nim-primary)]/15 border-[var(--nim-primary)]/40 text-nim'
+                      : 'px-2 py-0.5 rounded-ui-full text-[11px] border border-nim text-nim-muted hover:bg-nim-tertiary'
                   }
                   title={`Filter by ${sourceKeyLabel(key)}`}
                   data-testid={`tracker-source-filter-${key}`}
@@ -861,7 +861,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
 
         <div className="relative" ref={importMenuRef}>
           <button
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-nim-muted border border-nim rounded hover:bg-nim-tertiary hover:text-nim transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-nim-muted border border-nim rounded-ui-base hover:bg-nim-tertiary hover:text-nim transition-colors"
             onClick={() => setImportMenuOpen(!importMenuOpen)}
             title="Import from files"
           >
@@ -869,23 +869,23 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
             Import
           </button>
           {importMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-[220px] bg-nim border border-nim rounded-md shadow-lg z-50 py-1">
+            <div className="absolute right-0 top-full mt-1 w-[220px] bg-nim border border-nim rounded-ui-base shadow-lg z-50 py-1">
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim text-left"
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim text-left"
                 onClick={() => handleBulkImport('nimbalyst-local/plans')}
               >
                 <MaterialSymbol icon="folder_open" size={14} />
                 Import from nimbalyst-local/plans
               </button>
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim text-left"
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim text-left"
                 onClick={() => handleBulkImport('plans')}
               >
                 <MaterialSymbol icon="folder_open" size={14} />
                 Import from plans/
               </button>
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim text-left"
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim text-left"
                 onClick={() => handleBulkImport('design')}
               >
                 <MaterialSymbol icon="folder_open" size={14} />
@@ -897,7 +897,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
               {externalImporters.map((imp) => (
                 <button
                   key={imp.id}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim text-left"
                   onClick={() => {
                     setImportMenuOpen(false);
                     setSourceDialog({
@@ -918,7 +918,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
 
         {/* Import status toast */}
         {importStatus && (
-          <span className="text-[11px] text-nim-muted bg-nim-secondary px-2 py-0.5 rounded">
+          <span className="text-[11px] text-nim-muted bg-nim-secondary px-2 py-0.5 rounded-ui-base">
             {importStatus}
           </span>
         )}
@@ -930,7 +930,7 @@ export const TrackerMainView: React.FC<TrackerMainViewProps> = ({
           return model?.creatable !== false;
         })() && (
           <button
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-[var(--nim-primary)] rounded hover:opacity-90 transition-opacity"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-[var(--nim-primary)] rounded-ui-base hover:opacity-90 transition-opacity"
             onClick={() => handleNewItem(filterType !== 'all' ? filterType : 'task')}
             data-testid="tracker-toolbar-new-button"
           >
@@ -1183,14 +1183,14 @@ const QuickAddOverlay: React.FC<QuickAddOverlayProps> = ({ type, tracker, onSubm
             e.stopPropagation();
           }}
           placeholder={`New ${displayName.toLowerCase()}...`}
-          className="flex-1 min-w-0 px-3 py-1.5 bg-nim border border-nim rounded text-sm text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
+          className="flex-1 min-w-0 px-3 py-2 bg-nim border border-nim rounded-ui-base text-sm text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
           data-testid="tracker-quick-add-input"
         />
 
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value)}
-          className="px-2 py-1.5 bg-nim border border-nim rounded text-sm text-nim focus:outline-none focus:border-[var(--nim-primary)] shrink-0"
+          className="px-2 py-2 bg-nim border border-nim rounded-ui-base text-sm text-nim focus:outline-none focus:border-[var(--nim-primary)] shrink-0"
         >
           <option value="low">Low</option>
           <option value="medium">Medium</option>
@@ -1201,7 +1201,7 @@ const QuickAddOverlay: React.FC<QuickAddOverlayProps> = ({ type, tracker, onSubm
         <button
           type="submit"
           disabled={!title.trim()}
-          className="px-3 py-1.5 rounded text-sm font-medium text-white border-none cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 shrink-0"
+          className="px-3 py-2 rounded-ui-base text-sm font-medium text-white border-none cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 shrink-0"
           style={{ backgroundColor: color }}
         >
           Add
@@ -1210,7 +1210,7 @@ const QuickAddOverlay: React.FC<QuickAddOverlayProps> = ({ type, tracker, onSubm
         <button
           type="button"
           onClick={onClose}
-          className="p-1 rounded hover:bg-nim-tertiary text-nim-muted shrink-0"
+          className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted shrink-0"
           title="Cancel (Esc)"
         >
           <MaterialSymbol icon="close" size={18} />

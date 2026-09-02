@@ -113,7 +113,7 @@ function ChildRunStateBar({ sessionId }: { sessionId: string }) {
       {active.map(s => (
         <div key={s.key} className="flex items-center gap-1">
           <div
-            className="w-[5px] h-[5px] rounded-full shrink-0"
+            className="w-[5px] h-[5px] rounded-ui-full shrink-0"
             style={{ background: s.color }}
           />
           <span className="text-ui-micro whitespace-nowrap" style={{ color: s.color }}>
@@ -279,7 +279,7 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
 function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'running') {
     return (
-      <span className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-blue-400/10" style={{ color: info.badgeColor }}>
+      <span className="flex items-center gap-1 text-ui-micro px-1 py-px rounded-ui-base bg-blue-400/10" style={{ color: info.badgeColor }}>
         <span className={`material-symbols-outlined text-ui-compact ${info.spinIcon ? 'animate-spin' : ''}`}>{info.badgeIcon}</span>
         {info.badgeLabel}
       </span>
@@ -287,7 +287,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   }
   if (info.state === 'waiting') {
     return (
-      <span className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-orange-500/10" style={{ color: info.badgeColor }}>
+      <span className="flex items-center gap-1 text-ui-micro px-1 py-px rounded-ui-base bg-orange-500/10" style={{ color: info.badgeColor }}>
         <MaterialSymbol icon="help_outline" size={12} />
         {info.badgeLabel}
       </span>
@@ -296,7 +296,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'queued') {
     return (
       <span
-        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-slate-400/10"
+        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded-ui-base bg-slate-400/10"
         style={{ color: info.badgeColor }}
         title="等待 Head 调度槽位"
       >
@@ -308,7 +308,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'interrupted') {
     return (
       <span
-        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-orange-500/10"
+        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded-ui-base bg-orange-500/10"
         style={{ color: info.badgeColor }}
         title="已被 Head 中断"
       >
@@ -320,7 +320,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'failed') {
     return (
       <span
-        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-red-500/10"
+        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded-ui-base bg-red-500/10"
         style={{ color: info.badgeColor }}
         title="工单失败"
       >
@@ -477,7 +477,7 @@ function TranscriptPeek({ sessionId, anchorRef, onClose }: TranscriptPeekProps) 
   return createPortal(
     <div
       ref={peekRef}
-      className="fixed z-[100] w-[600px] h-[350px] bg-nim-secondary border border-nim rounded-lg shadow-2xl overflow-hidden flex flex-col"
+      className="fixed z-[100] w-[600px] h-[350px] bg-nim-secondary border border-nim rounded-ui-lg shadow-2xl overflow-hidden flex flex-col"
       style={{ top: position?.top ?? 0, left: position?.left ?? 0, visibility: position ? 'visible' : 'hidden' }}
       onMouseLeave={onClose}
     >
@@ -627,7 +627,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
     <>
       <div
         ref={cardRef}
-        className={`w-full text-left p-2.5 rounded-md border transition-colors cursor-default ${
+        className={`w-full text-left p-2.5 rounded-ui-base border transition-colors cursor-default ${
           isFocused
             ? 'border-[var(--nim-primary)] ring-1 ring-[var(--nim-primary)]'
             : isSelected
@@ -657,7 +657,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
               <input
                 ref={renameInputRef}
                 type="text"
-                className="w-full px-1 py-0.5 text-xs font-medium border border-[var(--nim-primary)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
+                className="w-full px-1 py-0.5 text-xs font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
                 value={renameValue}
                 onChange={(e) => setRenameValue(e.target.value)}
                 onKeyDown={handleRenameKeyDown}
@@ -704,7 +704,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
             {tags.slice(0, 4).map(tag => (
               <span
                 key={tag}
-                className="text-ui-micro font-medium px-1.5 py-px rounded bg-white/[0.06] text-nim-muted"
+                className="text-ui-micro font-medium px-2 py-px rounded-ui-base bg-white/[0.06] text-nim-muted"
               >
                 {tag}
               </span>
@@ -746,7 +746,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
           <div className="flex items-center gap-2">
             <span
               ref={peekIconRef}
-              className="w-4 h-4 rounded flex items-center justify-center text-nim-disabled hover:text-nim-muted transition-colors"
+              className="w-4 h-4 rounded-ui-base flex items-center justify-center text-nim-disabled hover:text-nim-muted transition-colors"
               title="预览记录"
               data-testid="session-kanban-peek"
               onMouseEnter={handlePeekEnter}
@@ -874,7 +874,7 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
   if (isCollapsed) {
     return (
       <div
-        className={`session-kanban-column flex flex-col w-10 shrink-0 rounded-lg bg-nim-secondary cursor-pointer transition-colors ${
+        className={`session-kanban-column flex flex-col w-10 shrink-0 rounded-ui-lg bg-nim-secondary cursor-pointer transition-colors ${
           isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2' : ''
         }`}
         data-testid="session-kanban-column"
@@ -886,7 +886,7 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
       >
         <div className="flex flex-col items-center gap-1 py-3">
           <span
-            className="w-2 h-2 rounded-full shrink-0"
+            className="w-2 h-2 rounded-ui-full shrink-0"
             style={{ backgroundColor: color }}
           />
           <span className="text-ui-micro font-semibold text-nim-faint">
@@ -904,7 +904,7 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
   }
 
   return (
-    <div className="session-kanban-column flex flex-col min-w-[240px] max-w-[300px] flex-1 rounded-lg bg-nim-secondary" data-testid="session-kanban-column" data-phase={phase}>
+    <div className="session-kanban-column flex flex-col min-w-[240px] max-w-[300px] flex-1 rounded-ui-lg bg-nim-secondary" data-testid="session-kanban-column" data-phase={phase}>
       {/* Column header */}
       <div
         className="flex items-center gap-2 px-3 py-2 border-b border-nim cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
@@ -919,7 +919,7 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
         }}
       >
         <span
-          className="w-2 h-2 rounded-full shrink-0"
+          className="w-2 h-2 rounded-ui-full shrink-0"
           style={{ backgroundColor: color }}
         />
         <span className="text-ui-caption font-semibold text-nim uppercase tracking-wide truncate">
@@ -939,8 +939,8 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
 
       {/* Column cards */}
       <div
-        className={`flex-1 overflow-y-auto p-1.5 space-y-1.5 transition-colors ${
-          isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2 rounded' : ''
+        className={`flex-1 overflow-y-auto p-2 space-y-1.5 transition-colors ${
+          isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2 rounded-ui-base' : ''
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -1047,7 +1047,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
   if (!isExpanded) {
     return (
       <div
-        className={`session-kanban-column flex flex-col w-10 shrink-0 rounded-lg bg-nim-secondary cursor-pointer transition-colors ${
+        className={`session-kanban-column flex flex-col w-10 shrink-0 rounded-ui-lg bg-nim-secondary cursor-pointer transition-colors ${
           isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2' : ''
         }`}
         data-testid="session-kanban-column"
@@ -1059,7 +1059,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
       >
         <div className="flex flex-col items-center gap-1 py-3">
           <span
-            className="w-2 h-2 rounded-full shrink-0 bg-neutral-600"
+            className="w-2 h-2 rounded-ui-full shrink-0 bg-neutral-600"
           />
           <div className="flex items-center gap-1">
             <span className="text-ui-micro font-semibold text-nim-faint">
@@ -1067,7 +1067,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
             </span>
             {queuedCount > 0 && (
               <span
-                className="flex items-center gap-1 rounded bg-nim-warning-subtle px-1 py-px text-ui-micro font-semibold text-[var(--nim-warning)]"
+                className="flex items-center gap-1 rounded-ui-base bg-nim-warning-subtle px-1 py-px text-ui-micro font-semibold text-[var(--nim-warning)]"
                 title={`${queuedCount} 个派发正在等待 Head 调度槽位`}
               >
                 <MaterialSymbol icon="schedule" size={11} />
@@ -1089,7 +1089,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
   // Expanded: full column
   return (
     <div
-      className="session-kanban-column flex flex-col min-w-[240px] max-w-[300px] flex-1 rounded-lg bg-nim-secondary"
+      className="session-kanban-column flex flex-col min-w-[240px] max-w-[300px] flex-1 rounded-ui-lg bg-nim-secondary"
       data-testid="session-kanban-column"
       data-phase="unphased"
     >
@@ -1106,7 +1106,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
           onHeaderContextMenu(e, 'unphased', sessions.map(s => s.id));
         }}
       >
-        <span className="w-2 h-2 rounded-full shrink-0 bg-neutral-600" />
+        <span className="w-2 h-2 rounded-ui-full shrink-0 bg-neutral-600" />
         <span className="text-ui-caption font-semibold text-nim uppercase tracking-wide truncate">
           收件箱
         </span>
@@ -1124,8 +1124,8 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
 
       {/* Column cards */}
       <div
-        className={`flex-1 overflow-y-auto p-1.5 space-y-1.5 transition-colors ${
-          isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2 rounded' : ''
+        className={`flex-1 overflow-y-auto p-2 space-y-1.5 transition-colors ${
+          isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2 rounded-ui-base' : ''
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -1274,7 +1274,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
   const groupedChildSessionCount = useAtomValue(sessionKanbanGroupedChildCountAtom);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 border-b border-nim bg-nim shrink-0" data-testid="kanban-toolbar">
+    <div className="flex items-center gap-2 px-3 py-2 border-b border-nim bg-nim shrink-0" data-testid="kanban-toolbar">
       {/* Scope Title with PageHeader styling */}
       <div className="flex items-center gap-2 shrink-0 pr-2 border-r border-nim" data-testid="kanban-scope-header">
         <span className="text-xs font-semibold text-nim">看板</span>
@@ -1301,19 +1301,19 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
             }
           }}
           data-testid="kanban-search"
-          className="w-full pl-7 pr-2 py-1 text-ui-caption bg-nim-secondary border border-nim rounded text-nim placeholder:text-nim-faint focus:outline-none focus:border-nim-primary"
+          className="w-full pl-7 pr-2 py-1 text-ui-caption bg-nim-secondary border border-nim rounded-ui-base text-nim placeholder:text-nim-faint focus:outline-none focus:border-nim-primary"
         />
 
         {/* Tag typeahead dropdown */}
         {showTagDropdown && filteredTags.length > 0 && (
           <div
             ref={dropdownRef}
-            className="absolute left-0 right-0 top-full mt-1 bg-nim-secondary border border-nim rounded shadow-lg z-50 max-h-[200px] overflow-y-auto"
+            className="absolute left-0 right-0 top-full mt-1 bg-nim-secondary border border-nim rounded-ui-base shadow-lg z-50 max-h-[200px] overflow-y-auto"
           >
             {filteredTags.slice(0, 15).map((tag, i) => (
               <button
                 key={tag.name}
-                className={`w-full text-left px-2.5 py-1.5 text-ui-caption flex items-center justify-between cursor-pointer transition-colors ${
+                className={`w-full text-left px-2.5 py-2 text-ui-caption flex items-center justify-between cursor-pointer transition-colors ${
                   i === highlightedIndex ? 'bg-nim-tertiary text-nim' : 'text-nim-muted hover:bg-nim-tertiary'
                 }`}
                 onMouseEnter={() => setHighlightedIndex(i)}
@@ -1328,7 +1328,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
         {showTagDropdown && filteredTags.length === 0 && tagQuery && (
           <div
             ref={dropdownRef}
-            className="absolute left-0 right-0 top-full mt-1 bg-nim-secondary border border-nim rounded shadow-lg z-50"
+            className="absolute left-0 right-0 top-full mt-1 bg-nim-secondary border border-nim rounded-ui-base shadow-lg z-50"
           >
             <div className="px-2.5 py-2 text-ui-caption text-nim-faint italic">
               无匹配标签
@@ -1341,7 +1341,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
       {filter.tags.map(tag => (
         <button
           key={tag}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-ui-caption border cursor-pointer shrink-0 bg-nim-primary-subtle border-nim-primary-subtle text-nim-primary"
+          className="flex items-center gap-1 px-2 py-0.5 rounded-ui-full text-ui-caption border cursor-pointer shrink-0 bg-nim-primary-subtle border-nim-primary-subtle text-nim-primary"
           onClick={() => removeTag(tag)}
         >
           #{tag}
@@ -1352,7 +1352,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
       {/* Selection indicator */}
       {selectedCount > 0 && (
         <button
-          className="flex items-center gap-1 px-2 py-0.5 rounded text-ui-caption border border-nim-primary-subtle text-nim-primary bg-nim-primary-subtle cursor-pointer shrink-0"
+          className="flex items-center gap-1 px-2 py-0.5 rounded-ui-base text-ui-caption border border-nim-primary-subtle text-nim-primary bg-nim-primary-subtle cursor-pointer shrink-0"
           onClick={onClearSelection}
           title="清除选择 (Esc)"
         >
@@ -1373,7 +1373,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
 
       {/* Show completed toggle */}
       <button
-        className={`flex items-center gap-1 px-2 py-0.5 rounded text-ui-caption border transition-colors shrink-0 ${
+        className={`flex items-center gap-1 px-2 py-0.5 rounded-ui-base text-ui-caption border transition-colors shrink-0 ${
           filter.showComplete
             ? 'border-nim-primary-subtle text-nim-primary bg-nim-primary-subtle'
             : 'border-nim text-nim-faint hover:text-nim'
@@ -1412,7 +1412,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
     onOpenChange: (open) => { if (!open) onClose(); },
   });
 
-  const menuItemClass = 'flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0';
+  const menuItemClass = 'flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0';
   const count = sessionIds.length;
 
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
@@ -1426,7 +1426,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
           ref={menu.refs.setFloating}
           style={menu.floatingStyles}
           {...menu.getFloatingProps()}
-          className="z-[1000] min-w-[160px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+          className="z-[1000] min-w-[160px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
           onMouseLeave={onClose}
         >
           <div className="px-2.5 py-2 text-[0.8125rem] text-[var(--nim-text-faint)] italic">
@@ -1443,7 +1443,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="z-[1000] min-w-[180px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+        className="z-[1000] min-w-[180px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
         onClick={(e) => e.stopPropagation()}
         onMouseLeave={onClose}
       >
@@ -1480,14 +1480,14 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
             <MaterialSymbol icon="chevron_right" size={12} />
           </button>
           {showMoveSubmenu && (
-            <div className={`absolute top-0 min-w-[140px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1001] ${submenuFlipped ? 'right-full mr-0.5' : 'left-full ml-0.5'}`}>
+            <div className={`absolute top-0 min-w-[140px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1001] ${submenuFlipped ? 'right-full mr-0.5' : 'left-full ml-0.5'}`}>
               {SESSION_PHASE_COLUMNS.filter(col => col.value !== phase).map((col) => (
                 <button
                   key={col.value}
-                  className={`flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
+                  className={`flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
                   onClick={(e) => { e.stopPropagation(); onClose(); onMoveAll(sessionIds, col.value); }}
                 >
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: col.color }} />
+                  <span className="w-2 h-2 rounded-ui-full shrink-0" style={{ backgroundColor: col.color }} />
                   {col.label}
                 </button>
               ))}
@@ -1495,7 +1495,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
                 <>
                   <div className="h-px bg-[var(--nim-border)] my-1" />
                   <button
-                    className={`flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded text-[var(--nim-text-faint)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
+                    className={`flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text-faint)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
                     onClick={(e) => { e.stopPropagation(); onClose(); onRemovePhase(sessionIds); }}
                   >
                     <MaterialSymbol icon="close" size={14} />
@@ -1511,7 +1511,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
 
         {/* Archive all */}
         <button
-          className="flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded text-[var(--nim-error)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-error)] hover:text-white [&_svg]:shrink-0"
+          className="flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-error)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-error)] hover:text-white [&_svg]:shrink-0"
           onClick={(e) => { e.stopPropagation(); onClose(); onArchiveAll(sessionIds); }}
         >
           <MaterialSymbol icon="archive" size={14} />
@@ -1555,7 +1555,7 @@ function ArchiveGutter({ onArchive }: { onArchive: (sessionIds: string[]) => voi
 
   return (
     <div
-      className={`flex flex-col items-center justify-center w-10 shrink-0 rounded-lg transition-all ${
+      className={`flex flex-col items-center justify-center w-10 shrink-0 rounded-ui-lg transition-all ${
         isDragOver
           ? 'bg-nim-error-subtle outline outline-2 outline-dashed outline-nim-error-subtle -outline-offset-2'
           : 'bg-nim-secondary'

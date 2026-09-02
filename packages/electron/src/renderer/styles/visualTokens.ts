@@ -159,24 +159,15 @@ export const visualTokens: VisualTokensTable = {
     },
   },
 
-  // 3. 圆角令牌（3 档正式 + 2 档过渡，从基准 6px 推导）
+  // 3. 圆角令牌（3 档正式 + 1 档过渡接缝，从基准 6px 推导）
   radius: {
     none: {
       id: 'none',
       name: '无圆角',
       value: '0px',
       cssClass: 'rounded-none / rounded-ui-none',
-      description: '【过渡档·新代码禁入，存量逐步迁走】直角容器、无圆角表格与边缘接缝',
+      description: '【过渡档·直角接缝】直角容器、无圆角表格与边缘接缝',
       legacySources: ['rounded-none'],
-      status: 'transitional',
-    },
-    sm: {
-      id: 'sm',
-      name: '小圆角',
-      value: '4px',
-      cssClass: 'rounded-sm / rounded-ui-sm',
-      description: '【过渡档·新代码禁入，存量逐步迁走】紧凑徽标、小按钮、状态 Tag',
-      legacySources: ['rounded-sm', 'rounded'],
       status: 'transitional',
     },
     base: {

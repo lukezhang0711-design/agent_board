@@ -65,7 +65,7 @@ function MemberAvatar({ name, email, color, isPending }: {
 }) {
   if (isPending) {
     return (
-      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">
+      <div className="w-8 h-8 rounded-ui-full flex items-center justify-center shrink-0 bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">
         <MaterialSymbol icon="mail" size={14} />
       </div>
     );
@@ -74,7 +74,7 @@ function MemberAvatar({ name, email, color, isPending }: {
   const initial = (name?.[0] || email[0] || '?').toUpperCase();
   return (
     <div
-      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[13px] font-semibold text-white"
+      className="w-8 h-8 rounded-ui-full flex items-center justify-center shrink-0 text-[13px] font-semibold text-white"
       style={{ background: color }}
     >
       {initial}
@@ -160,7 +160,7 @@ function TeamPricingNotice() {
 
 function EncryptionCard() {
   return (
-    <div className="p-3.5 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg">
+    <div className="p-3 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg">
       <div className="flex items-center gap-2 mb-2">
         <MaterialSymbol icon="lock" size={16} className="text-[var(--nim-success)]" />
         <span className="text-[13px] font-semibold text-[var(--nim-success)]">
@@ -181,7 +181,7 @@ function EncryptionCard() {
 
 function ErrorBanner({ error, onDismiss }: { error: string; onDismiss: () => void }) {
   return (
-    <div className="flex items-center gap-2 p-2.5 mb-3 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-md">
+    <div className="flex items-center gap-2 p-2.5 mb-3 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-ui-base">
       <MaterialSymbol icon="error" size={14} className="text-[var(--nim-error)] shrink-0" />
       <span className="flex-1 text-[12px] text-[var(--nim-error)]">{error}</span>
       <button
@@ -208,7 +208,7 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
 }) {
   if (!fingerprint) {
     return (
-      <div className="px-3.5 py-2.5 bg-[var(--nim-bg)] text-[12px] text-[var(--nim-text-faint)]">
+      <div className="px-3 py-2.5 bg-[var(--nim-bg)] text-[12px] text-[var(--nim-text-faint)]">
         Loading fingerprint...
       </div>
     );
@@ -217,9 +217,9 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
   const shortFingerprint = fingerprint.fingerprint.split(':').slice(0, 16).join(':');
 
   return (
-    <div className="px-3.5 py-3 bg-[var(--nim-bg)] border-b border-[var(--nim-bg-secondary)]">
+    <div className="px-3 py-3 bg-[var(--nim-bg)] border-b border-[var(--nim-bg-secondary)]">
       {fingerprint.trustStatus === 'fingerprint-changed' && (
-        <div className="flex items-center gap-2 p-2 mb-2.5 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded">
+        <div className="flex items-center gap-2 p-2 mb-2.5 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-ui-base">
           <MaterialSymbol icon="warning" size={14} className="text-[var(--nim-error)] shrink-0" />
           <span className="text-[11px] text-[var(--nim-error)]">
             This member's identity key has changed since you last verified it.
@@ -230,7 +230,7 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
 
       <div className="mb-2">
         <div className="text-[11px] text-[var(--nim-text-faint)] mb-1">Identity Key Fingerprint</div>
-        <div className="px-2.5 py-2 bg-[var(--nim-bg-secondary)] rounded font-mono text-[11px] text-[var(--nim-text-muted)] leading-relaxed break-all select-text">
+        <div className="px-2.5 py-2 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-[11px] text-[var(--nim-text-muted)] leading-relaxed break-all select-text">
           {shortFingerprint}
         </div>
       </div>
@@ -244,14 +244,14 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
         {fingerprint.trustStatus === 'verified' ? (
           <button
             onClick={onRevoke}
-            className="px-2.5 py-1 text-[11px] bg-transparent border border-[rgba(239,68,68,0.4)] rounded text-[var(--nim-error)] cursor-pointer hover:bg-[rgba(239,68,68,0.1)]"
+            className="px-2.5 py-1 text-[11px] bg-transparent border border-[rgba(239,68,68,0.4)] rounded-ui-base text-[var(--nim-error)] cursor-pointer hover:bg-[rgba(239,68,68,0.1)]"
           >
             Revoke Trust
           </button>
         ) : (
           <button
             onClick={onVerify}
-            className="px-2.5 py-1 text-[11px] bg-[var(--nim-success)] border-none rounded text-white cursor-pointer hover:opacity-90"
+            className="px-2.5 py-1 text-[11px] bg-[var(--nim-success)] border-none rounded-ui-base text-white cursor-pointer hover:opacity-90"
           >
             Mark as Verified
           </button>
@@ -259,7 +259,7 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
         {isAdmin && onReshareKey && (
           <button
             onClick={onReshareKey}
-            className="px-2.5 py-1 text-[11px] bg-transparent border border-[var(--nim-border)] rounded text-[var(--nim-text-muted)] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+            className="px-2.5 py-1 text-[11px] bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
             title="Re-share the encryption key with this member (e.g., after they changed devices)"
           >
             Re-share Key
@@ -283,7 +283,7 @@ function NoTeamState({ gitRemote, onCreateTeam, loading }: {
     <>
       {/* CTA Card */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-lg text-center">
+        <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-ui-lg text-center">
           <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(96,165,250,0.15)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="group" size={24} className="text-[var(--nim-primary)]" />
           </div>
@@ -293,7 +293,7 @@ function NoTeamState({ gitRemote, onCreateTeam, loading }: {
           <button
             onClick={onCreateTeam}
             disabled={loading}
-            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-md text-white text-[13px] font-medium ${
+            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-[13px] font-medium ${
               loading ? 'cursor-wait opacity-70' : 'cursor-pointer'
             }`}
           >
@@ -311,7 +311,7 @@ function NoTeamState({ gitRemote, onCreateTeam, loading }: {
         <p className="text-[13px] leading-relaxed text-[var(--nim-text-muted)] mb-3">
           Teams are linked to a git remote, so any member who opens a clone of the same repo is automatically connected.
         </p>
-        <div className="flex items-center gap-2 px-3 py-2.5 bg-[var(--nim-bg-secondary)] rounded-md">
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-[var(--nim-bg-secondary)] rounded-ui-base">
           <MaterialSymbol icon="commit" size={16} className="text-[var(--nim-text-faint)]" />
           <span className="text-[12px] font-mono text-[var(--nim-text-muted)]">
             {gitRemote || 'No git remote detected'}
@@ -367,8 +367,8 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
     <>
       {/* Team Header Card */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <div className="flex items-center gap-3 p-3 bg-[var(--nim-bg-secondary)] rounded-lg">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-lg">
+          <div className="w-9 h-9 rounded-ui-lg bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] flex items-center justify-center shrink-0">
             <MaterialSymbol icon="group" size={18} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -390,7 +390,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
         </p>
         {team.gitRemoteHash ? (
           <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2 px-3 py-2.5 bg-[var(--nim-bg-secondary)] rounded-md">
+            <div className="flex-1 flex items-center gap-2 px-3 py-2.5 bg-[var(--nim-bg-secondary)] rounded-ui-base">
               <MaterialSymbol icon="link" size={14} className="text-[var(--nim-success)] shrink-0" />
               <span className="text-[12px] font-mono text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
                 {localGitRemote || `${team.gitRemoteHash.slice(0, 12)}...`}
@@ -399,14 +399,14 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
             {isAdmin && (
               <button
                 onClick={onUnlinkProject}
-                className="px-2.5 py-2 text-[11px] bg-transparent border border-[var(--nim-border)] rounded text-[var(--nim-text-faint)] cursor-pointer hover:bg-[var(--nim-bg-hover)] shrink-0"
+                className="px-2.5 py-2 text-[11px] bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-faint)] cursor-pointer hover:bg-[var(--nim-bg-hover)] shrink-0"
               >
                 Unlink
               </button>
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-[var(--nim-bg-secondary)] rounded-md">
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-[var(--nim-bg-secondary)] rounded-ui-base">
             <MaterialSymbol icon="link_off" size={14} className="text-[var(--nim-text-faint)] shrink-0" />
             <span className="flex-1 text-[12px] text-[var(--nim-text-faint)]">
               No project linked
@@ -414,7 +414,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
             {isAdmin && localGitRemote && (
               <button
                 onClick={onLinkProject}
-                className="px-2.5 py-1 text-[11px] bg-[var(--nim-primary)] border-none rounded text-white cursor-pointer"
+                className="px-2.5 py-1 text-[11px] bg-[var(--nim-primary)] border-none rounded-ui-base text-white cursor-pointer"
               >
                 Link This Project
               </button>
@@ -432,7 +432,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
           </span>
         </h4>
 
-        <div className="bg-[var(--nim-bg-secondary)] rounded-lg overflow-hidden">
+        <div className="bg-[var(--nim-bg-secondary)] rounded-ui-lg overflow-hidden">
           {team.members.map((member) => {
             const fp = fingerprints.get(member.id);
             // Use fingerprint-based trust for non-pending members
@@ -449,7 +449,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
             return (
               <div key={member.id}>
                 <div
-                  className={`flex items-center gap-3 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0 ${
+                  className={`flex items-center gap-3 px-3 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0 ${
                     member.trustStatus === 'pending' ? 'opacity-70' : ''
                   }`}
                 >
@@ -495,7 +495,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
                     <div className="shrink-0">
                       <button
                         onClick={() => onRemoveMember(member.id)}
-                        className={`px-2.5 py-1 text-[11px] bg-transparent border rounded cursor-pointer ${
+                        className={`px-2.5 py-1 text-[11px] bg-transparent border rounded-ui-base cursor-pointer ${
                           member.trustStatus === 'pending'
                             ? 'border-[var(--nim-border)] text-[var(--nim-text-disabled)] hover:bg-[var(--nim-bg-hover)]'
                             : 'border-[rgba(239,68,68,0.4)] text-[var(--nim-error)] hover:bg-[rgba(239,68,68,0.1)]'
@@ -524,7 +524,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
 
           {/* Invite Input Row (admin only) */}
           {isAdmin && (
-            <div className="flex items-center gap-2 px-3.5 py-2 border-t border-[var(--nim-bg)] bg-[rgba(255,255,255,0.02)]">
+            <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--nim-bg)] bg-[rgba(255,255,255,0.02)]">
               <MaterialSymbol icon="add" size={14} className="text-[var(--nim-text-disabled)] shrink-0" />
               <input
                 type="email"
@@ -532,12 +532,12 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
                 onChange={(e) => setInviteEmail(e.target.value)}
                 onKeyDown={handleInviteKeyDown}
                 placeholder="Invite by email address..."
-                className="flex-1 py-1.5 px-2.5 border border-[var(--nim-border)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] text-[12px] outline-none placeholder:text-[var(--nim-text-disabled)]"
+                className="flex-1 py-2 px-2.5 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-[12px] outline-none placeholder:text-[var(--nim-text-disabled)]"
               />
               <button
                 onClick={handleInvite}
                 disabled={!inviteEmail.trim()}
-                className={`px-3 py-1.5 bg-[var(--nim-primary)] border-none rounded text-white text-[12px] font-medium whitespace-nowrap ${
+                className={`px-3 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-[12px] font-medium whitespace-nowrap ${
                   inviteEmail.trim()
                     ? 'cursor-pointer opacity-100'
                     : 'cursor-not-allowed opacity-50'
@@ -559,7 +559,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
           <p className="text-[12px] text-[var(--nim-text-muted)] mb-2 leading-relaxed">
             Share this fingerprint with your team members so they can verify your identity.
           </p>
-          <div className="px-2.5 py-2 bg-[var(--nim-bg-secondary)] rounded font-mono text-[11px] text-[var(--nim-text-muted)] leading-relaxed break-all select-text">
+          <div className="px-2.5 py-2 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-[11px] text-[var(--nim-text-muted)] leading-relaxed break-all select-text">
             {myFingerprint.split(':').slice(0, 16).join(':')}
           </div>
         </div>
@@ -578,7 +578,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
           </h4>
           <button
             onClick={onDeleteTeam}
-            className="px-3.5 py-1.5 text-[12px] bg-transparent border border-[rgba(239,68,68,0.4)] rounded-md text-[var(--nim-error)] cursor-pointer hover:bg-[rgba(239,68,68,0.1)]"
+            className="px-3 py-2 text-[12px] bg-transparent border border-[rgba(239,68,68,0.4)] rounded-ui-base text-[var(--nim-error)] cursor-pointer hover:bg-[rgba(239,68,68,0.1)]"
           >
             Delete Team
           </button>
@@ -602,7 +602,7 @@ function InvitePendingState({ invite, onAccept, loading, gitRemote }: {
     <>
       {/* Invite Card */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-lg text-center">
+        <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-ui-lg text-center">
           <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(251,191,36,0.15)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="mail" size={24} className="text-[var(--nim-warning)]" />
           </div>
@@ -615,7 +615,7 @@ function InvitePendingState({ invite, onAccept, loading, gitRemote }: {
           <button
             onClick={onAccept}
             disabled={loading}
-            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-md text-white text-[13px] font-medium ${
+            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-[13px] font-medium ${
               loading ? 'cursor-wait opacity-70' : 'cursor-pointer'
             }`}
           >
@@ -633,7 +633,7 @@ function InvitePendingState({ invite, onAccept, loading, gitRemote }: {
         <p className="text-[13px] leading-relaxed text-[var(--nim-text-muted)] mb-3">
           Teams are linked to a git remote, so any member who opens a clone of the same repo is automatically connected.
         </p>
-        <div className="flex items-center gap-2 px-3 py-2.5 bg-[var(--nim-bg-secondary)] rounded-md">
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-[var(--nim-bg-secondary)] rounded-ui-base">
           <MaterialSymbol icon="commit" size={16} className="text-[var(--nim-text-faint)]" />
           <span className="text-[12px] font-mono text-[var(--nim-text-muted)]">
             {gitRemote || 'No git remote detected'}
@@ -1107,7 +1107,7 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
           </p>
           <TeamPricingNotice />
         </div>
-        <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-lg text-center">
+        <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-ui-lg text-center">
           <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(96,165,250,0.15)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="account_circle" size={24} className="text-[var(--nim-primary)]" />
           </div>

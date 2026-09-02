@@ -295,7 +295,7 @@ export function WorktreeBaseBranchPicker({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Leave blank to auto-generate (e.g. swift-rabbit)"
-              className="worktree-name-input px-3 py-2 text-[13px] rounded-md border border-nim bg-nim-secondary text-nim focus:outline-none focus:border-nim-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="worktree-name-input px-3 py-2 text-[13px] rounded-ui-base border border-nim bg-nim-secondary text-nim focus:outline-none focus:border-nim-primary disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="worktree-name-input"
               autoComplete="off"
               spellCheck={false}
@@ -353,7 +353,7 @@ export function WorktreeBaseBranchPicker({
 
             {!isLoading && !loadError && hasAnyBranch && (
               <div
-                className="worktree-base-branch-list flex flex-col gap-3 max-h-[44vh] overflow-y-auto rounded-md border border-nim bg-nim-secondary p-2"
+                className="worktree-base-branch-list flex flex-col gap-3 max-h-[44vh] overflow-y-auto rounded-ui-base border border-nim bg-nim-secondary p-2"
                 role="radiogroup"
                 aria-label="Base branch"
               >
@@ -383,7 +383,7 @@ export function WorktreeBaseBranchPicker({
 
           {submitError && (
             <div
-              className="worktree-base-branch-submit-error text-[12px] text-[var(--nim-error)] px-3 py-2 rounded-md border border-[var(--nim-error)] bg-[var(--nim-error)]/10"
+              className="worktree-base-branch-submit-error text-[12px] text-[var(--nim-error)] px-3 py-2 rounded-ui-base border border-[var(--nim-error)] bg-[var(--nim-error)]/10"
               data-testid="worktree-base-branch-submit-error"
               role="alert"
             >
@@ -395,7 +395,7 @@ export function WorktreeBaseBranchPicker({
         <div className="worktree-base-branch-picker-footer flex justify-end gap-3 px-6 py-4 border-t border-nim">
           <button
             type="button"
-            className="worktree-base-branch-cancel nim-btn-secondary px-4 py-2 text-[13px] font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="worktree-base-branch-cancel nim-btn-secondary px-4 py-2 text-[13px] font-medium rounded-ui-lg disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="worktree-base-branch-cancel"
             onClick={handleCancel}
             disabled={isSubmitting}
@@ -404,7 +404,7 @@ export function WorktreeBaseBranchPicker({
           </button>
           <button
             type="button"
-            className="worktree-base-branch-create nim-btn-primary px-5 py-2 text-[13px] font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            className="worktree-base-branch-create nim-btn-primary px-5 py-2 text-[13px] font-semibold rounded-ui-lg disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
             data-testid="worktree-base-branch-create"
             onClick={() => void handleSubmit()}
             disabled={!canSubmit}
@@ -421,7 +421,7 @@ export function WorktreeBaseBranchPicker({
 function Spinner() {
   return (
     <span
-      className="worktree-base-branch-spinner inline-block w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin"
+      className="worktree-base-branch-spinner inline-block w-3 h-3 rounded-ui-full border-2 border-current border-t-transparent animate-spin"
       aria-hidden="true"
       data-testid="worktree-base-branch-spinner"
     />
@@ -457,7 +457,7 @@ function BranchSection({ title, branches, current, selected, onSelect, disabled 
                 type="button"
                 role="radio"
                 aria-checked={isSelected}
-                className={`worktree-base-branch-item flex items-center w-full px-2 py-1.5 text-left text-[12px] bg-transparent border-none cursor-pointer gap-2 rounded-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`worktree-base-branch-item flex items-center w-full px-2 py-2 text-left text-[12px] bg-transparent border-none cursor-pointer gap-2 rounded-ui-base disabled:opacity-50 disabled:cursor-not-allowed ${
                   isSelected
                     ? 'bg-[var(--nim-primary)]/15 text-nim'
                     : 'text-nim hover:bg-nim-hover'

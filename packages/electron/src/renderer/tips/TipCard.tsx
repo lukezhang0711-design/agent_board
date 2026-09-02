@@ -131,25 +131,25 @@ export function TipCard({
     'tip-card tip-card--inline w-full max-w-[560px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]';
 
   // Inline cards use larger spacing and typography than the compact floating card.
-  const headerPadding = isFloating ? 'gap-3 px-3.5 pt-3.5' : 'gap-3.5 px-5 pt-5';
+  const headerPadding = isFloating ? 'gap-3 px-3 pt-3' : 'gap-3 px-5 pt-5';
   const iconSize = isFloating
-    ? 'w-8 h-8 rounded-[7px]'
-    : 'w-11 h-11 rounded-lg';
+    ? 'w-8 h-8 rounded-ui-base'
+    : 'w-11 h-11 rounded-ui-lg';
   const titleClasses = isFloating
     ? 'text-[13px] font-semibold text-[var(--nim-text)] leading-tight'
     : 'text-[16px] font-semibold text-[var(--nim-text)] leading-snug';
   const bodyClasses = isFloating
-    ? 'text-[12.5px] leading-relaxed text-[var(--nim-text-muted)] px-3.5 pt-2 pb-3.5'
+    ? 'text-[12.5px] leading-relaxed text-[var(--nim-text-muted)] px-3 pt-2 pb-3'
     : 'text-[14px] leading-relaxed text-[var(--nim-text-muted)] px-5 pt-3 pb-4';
   const bodyIndent = isFloating
     ? (tip.content.icon ? '3.5rem' : '0.875rem')
     : (tip.content.icon ? '4.75rem' : '1.25rem');
   const actionsClasses = isFloating
-    ? 'flex items-center gap-3 px-3.5 pb-3.5'
+    ? 'flex items-center gap-3 px-3 pb-3'
     : 'flex items-center gap-3 px-5 pb-5';
   const primaryButtonClasses = isFloating
-    ? 'inline-flex items-center gap-2 px-3.5 py-1.5 bg-[var(--nim-primary)] text-white border-none rounded-md text-[12.5px] font-medium cursor-pointer transition-all duration-150 hover:brightness-110 font-[inherit]'
-    : 'inline-flex items-center gap-2 px-3.5 py-1.5 bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_18%,transparent)] font-[inherit]';
+    ? 'inline-flex items-center gap-2 px-3 py-2 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-[12.5px] font-medium cursor-pointer transition-all duration-150 hover:brightness-110 font-[inherit]'
+    : 'inline-flex items-center gap-2 px-3 py-2 bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_18%,transparent)] font-[inherit]';
   const secondaryButtonClasses = isFloating
     ? 'text-[12.5px] text-[var(--nim-text-faint)] bg-transparent border-none cursor-pointer font-[inherit] transition-colors duration-150 hover:text-[var(--nim-text-muted)] hover:underline'
     : 'text-[13px] text-[var(--nim-text-faint)] bg-transparent border-none cursor-pointer font-[inherit] transition-colors duration-150 hover:text-[var(--nim-text-muted)] hover:underline';
@@ -176,7 +176,7 @@ export function TipCard({
         </div>
         {isFloating && onDismiss && (
           <button
-            className="nim-btn-icon w-6 h-6 flex items-center justify-center shrink-0 -mt-0.5 -mr-1 text-[var(--nim-text-faint)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] rounded transition-all duration-150"
+            className="nim-btn-icon w-6 h-6 flex items-center justify-center shrink-0 -mt-0.5 -mr-1 text-[var(--nim-text-faint)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] rounded-ui-base transition-all duration-150"
             onClick={onDismiss}
             aria-label="Dismiss tip"
           >

@@ -57,11 +57,11 @@ export function EffortLevelSelector({ level, onLevelChange, supportedLevels }: E
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-1 min-w-[120px] rounded-lg p-1 z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+        <div className="absolute bottom-full left-0 mb-1 min-w-[120px] rounded-ui-lg p-1 z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
           {supportedOptions.map(l => (
             <button
               key={l.key}
-              className={`flex items-center justify-between gap-2 px-2 py-1.5 w-full border-none rounded text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${l.key === level ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : ''}`}
+              className={`flex items-center justify-between gap-2 px-2 py-2 w-full border-none rounded-ui-base text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${l.key === level ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : ''}`}
               onClick={() => { onLevelChange(l.key); setIsOpen(false); }}
             >
               <span>{l.label}</span>

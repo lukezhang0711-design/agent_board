@@ -49,15 +49,31 @@
 }
 
 /* =============================================================================
- * 2. Border Radius Tokens (圆角令牌 - 3 档正式 + 2 档过渡)
+ * 2. Border Radius Tokens (圆角令牌 - 3 档正式 + 1 档过渡接缝)
  * ============================================================================= */
-/* 过渡档（新代码不许用，存量逐步迁走） */
+/* 过渡档（直角接缝） */
 .rounded-ui-none {
   border-radius: 0px;
 }
 
-.rounded-ui-sm {
-  border-radius: 4px;
+.rounded-ui-none-t {
+  border-top-left-radius: 0px;
+  border-top-right-radius: 0px;
+}
+
+.rounded-ui-none-b {
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+}
+
+.rounded-ui-none-l {
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+}
+
+.rounded-ui-none-r {
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
 }
 
 /* 正式档 */
@@ -65,12 +81,72 @@
   border-radius: 6px;
 }
 
+.rounded-ui-base-t {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.rounded-ui-base-b {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.rounded-ui-base-l {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.rounded-ui-base-r {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
 .rounded-ui-lg {
   border-radius: 10px;
 }
 
+.rounded-ui-lg-t {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.rounded-ui-lg-b {
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.rounded-ui-lg-l {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+.rounded-ui-lg-r {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
 .rounded-ui-full {
   border-radius: 9999px;
+}
+
+.rounded-ui-full-t {
+  border-top-left-radius: 9999px;
+  border-top-right-radius: 9999px;
+}
+
+.rounded-ui-full-b {
+  border-bottom-left-radius: 9999px;
+  border-bottom-right-radius: 9999px;
+}
+
+.rounded-ui-full-l {
+  border-top-left-radius: 9999px;
+  border-bottom-left-radius: 9999px;
+}
+
+.rounded-ui-full-r {
+  border-top-right-radius: 9999px;
+  border-bottom-right-radius: 9999px;
 }
 
 /* =============================================================================

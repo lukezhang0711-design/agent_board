@@ -197,7 +197,7 @@ export function ContextUsageDisplay({
   return (
     <div
       ref={rootRef}
-      className={`context-usage-display ${usageClass} relative inline-flex items-center py-0.5 px-2 rounded-md text-[11px] font-medium whitespace-nowrap bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] ml-auto ${enableTooltip ? 'cursor-pointer' : 'cursor-default'} gap-1 focus:outline-2 focus:outline-[var(--nim-primary)] focus:outline-offset-2 max-[400px]:hidden ${usageStyles[usageClass as keyof typeof usageStyles]}`}
+      className={`context-usage-display ${usageClass} relative inline-flex items-center py-0.5 px-2 rounded-ui-base text-[11px] font-medium whitespace-nowrap bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] ml-auto ${enableTooltip ? 'cursor-pointer' : 'cursor-default'} gap-1 focus:outline-2 focus:outline-[var(--nim-primary)] focus:outline-offset-2 max-[400px]:hidden ${usageStyles[usageClass as keyof typeof usageStyles]}`}
       tabIndex={hasTokenData ? 0 : -1}
       aria-label={label}
       aria-describedby={shouldShowTooltip ? tooltipId : undefined}
@@ -220,7 +220,7 @@ export function ContextUsageDisplay({
               <span>{hasContextWindow ? 'Context Breakdown' : 'Token Usage'}</span>
               {helpContent && (
                 <button
-                  className="tooltip-help-button inline-flex items-center justify-center w-[18px] h-[18px] p-0 border-none rounded-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
+                  className="tooltip-help-button inline-flex items-center justify-center w-[18px] h-[18px] p-0 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
                   onClick={(e) => {
                     e.stopPropagation();
                     setHelpExpanded(!helpExpanded);
@@ -241,7 +241,7 @@ export function ContextUsageDisplay({
 
           {/* Expandable help section */}
           {helpExpanded && helpContent && (
-            <div className="tooltip-help-section bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md p-2.5 mb-2.5 overflow-hidden box-border whitespace-normal">
+            <div className="tooltip-help-section bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-2.5 mb-2.5 overflow-hidden box-border whitespace-normal">
               <div className="tooltip-help-title text-xs font-semibold text-[var(--nim-text)] mb-1 whitespace-normal">{helpContent.title}</div>
               <div className="tooltip-help-body text-[11px] text-[var(--nim-text-muted)] leading-[1.4] whitespace-normal break-words">{helpContent.body}</div>
             </div>
@@ -268,8 +268,8 @@ export function ContextUsageDisplay({
           {/* Category bar (only for Claude Code with context data) */}
           {hasContextWindow && formattedCategories.length > 0 && (
             <>
-              <div className="tooltip-bar relative h-2.5 rounded-full overflow-hidden bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] mb-2.5">
-                <div className="tooltip-bar-fill flex h-full rounded-full" style={{ width: `${usedPercentage}%` }}>
+              <div className="tooltip-bar relative h-2.5 rounded-ui-full overflow-hidden bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] mb-2.5">
+                <div className="tooltip-bar-fill flex h-full rounded-ui-full" style={{ width: `${usedPercentage}%` }}>
                   {usedCategories.map((cat, index) => {
                     // Calculate width relative to the used portion
                     const relativeWidth = usedPercentage > 0 ? (cat.width / usedPercentage) * 100 : 0;
@@ -293,7 +293,7 @@ export function ContextUsageDisplay({
                       key={`${cat.name}-${index}`}
                     >
                       <span
-                        className={`tooltip-dot w-2 h-2 rounded-full inline-block ${isFreeSpace ? 'bg-transparent border border-[var(--nim-border)]' : ''}`}
+                        className={`tooltip-dot w-2 h-2 rounded-ui-full inline-block ${isFreeSpace ? 'bg-transparent border border-[var(--nim-border)]' : ''}`}
                         style={isFreeSpace ? undefined : { backgroundColor: cat.color }}
                       />
                       <span className="tooltip-category-name text-[var(--nim-text)]">{cat.name}</span>

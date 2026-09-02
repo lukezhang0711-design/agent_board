@@ -170,7 +170,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
         <div className="qr-modal-body p-5">
           {/* Local dev server notice */}
           {isLocalServer && localIP && (
-            <div className="qr-dev-notice mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <div className="qr-dev-notice mb-4 p-3 rounded-ui-lg bg-amber-500/10 border border-amber-500/20">
               <div className="qr-dev-notice-header flex items-center gap-2 text-amber-500 font-medium text-sm mb-2">
                 <svg className="qr-dev-notice-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
@@ -187,11 +187,11 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                   onChange={(e) => setUseLocalIP(e.target.checked)}
                 />
                 <span className="qr-dev-toggle-text text-xs text-nim">
-                  Use LAN IP: <code className="bg-nim-secondary px-1 py-0.5 rounded">{localIP}</code>
+                  Use LAN IP: <code className="bg-nim-secondary px-1 py-0.5 rounded-ui-base">{localIP}</code>
                 </span>
               </label>
               <p className="qr-dev-notice-url text-xs text-nim-faint mt-2 mb-0">
-                Server URL in QR: <code className="bg-nim-secondary px-1 py-0.5 rounded">{effectiveUrl}</code>
+                Server URL in QR: <code className="bg-nim-secondary px-1 py-0.5 rounded-ui-base">{effectiveUrl}</code>
               </p>
             </div>
           )}
@@ -200,7 +200,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
             <div className="qr-error text-center py-8">
               <p className="text-nim-error mb-4">{error}</p>
               <button
-                className="qr-regenerate-button px-4 py-2 bg-nim-primary text-nim-on-primary rounded-md text-sm font-medium cursor-pointer hover:bg-nim-primary-hover"
+                className="qr-regenerate-button px-4 py-2 bg-nim-primary text-nim-on-primary rounded-ui-base text-sm font-medium cursor-pointer hover:bg-nim-primary-hover"
                 onClick={generateQR}
               >
                 Try Again
@@ -212,7 +212,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                 <img
                   src={qrDataUrl}
                   alt="QR Code for mobile pairing"
-                  className="qr-code-image rounded-lg cursor-pointer"
+                  className="qr-code-image rounded-ui-lg cursor-pointer"
                   onClick={(e) => {
                     if (e.metaKey && qrPayload) {
                       handleCopyPayload();
@@ -229,7 +229,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                 <p className="qr-step">4. Sign in with the same account as desktop</p>
               </div>
 
-              <div className="qr-info mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-[13px] text-nim-muted">
+              <div className="qr-info mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-ui-lg text-[13px] text-nim-muted">
                 <div className="flex items-center gap-2 mb-2">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -244,7 +244,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
 
               {/* Prevent sleep suggestion */}
               {onPreventSleepModeChange && (
-                <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-ui-lg">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <span className="text-[13px] font-medium text-nim">Prevent sleep while syncing</span>
@@ -255,7 +255,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                     <select
                       value={preventSleepMode ?? 'off'}
                       onChange={(e) => onPreventSleepModeChange(e.target.value as 'off' | 'always' | 'pluggedIn')}
-                      className="bg-nim-secondary border border-nim rounded px-2 py-1 text-[12px] text-nim cursor-pointer shrink-0 mt-0.5"
+                      className="bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-[12px] text-nim cursor-pointer shrink-0 mt-0.5"
                     >
                       <option value="off">Off</option>
                       <option value="always">Always</option>
@@ -265,7 +265,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                 </div>
               )}
 
-              <div className="qr-warning flex items-center gap-2 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-600">
+              <div className="qr-warning flex items-center gap-2 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-ui-lg text-xs text-amber-600">
                 <svg className="qr-warning-icon shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
                 </svg>
@@ -273,7 +273,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
               </div>
 
               <button
-                className="qr-regenerate-button w-full mt-4 px-4 py-2 bg-nim-secondary text-nim-muted border border-nim rounded-md text-sm font-medium cursor-pointer hover:bg-nim-hover"
+                className="qr-regenerate-button w-full mt-4 px-4 py-2 bg-nim-secondary text-nim-muted border border-nim rounded-ui-base text-sm font-medium cursor-pointer hover:bg-nim-hover"
                 onClick={generateQR}
               >
                 Regenerate QR Code
@@ -283,7 +283,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
               {qrPayload && (
                 <div className="qr-dev-copy">
                   <button
-                    className={`qr-dev-copy-button w-full mt-3 px-4 py-2 border border-nim rounded-md text-[13px] font-medium cursor-pointer flex items-center justify-center gap-2 ${
+                    className={`qr-dev-copy-button w-full mt-3 px-4 py-2 border border-nim rounded-ui-base text-[13px] font-medium cursor-pointer flex items-center justify-center gap-2 ${
                       copied
                         ? 'bg-green-500 text-white border-green-500'
                         : 'bg-nim-tertiary text-nim-muted hover:bg-nim-hover'
@@ -310,7 +310,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
             </>
           ) : (
             <div className="qr-loading flex flex-col items-center justify-center py-8">
-              <div className="qr-spinner w-8 h-8 border-2 border-nim-primary border-t-transparent rounded-full animate-spin mb-3" />
+              <div className="qr-spinner w-8 h-8 border-2 border-nim-primary border-t-transparent rounded-ui-full animate-spin mb-3" />
               <p className="text-nim-muted text-sm">Generating QR code...</p>
             </div>
           )}

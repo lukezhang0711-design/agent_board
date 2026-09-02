@@ -75,9 +75,9 @@ const UsageSection: React.FC<UsageSectionProps> = ({
           {Math.round(utilization)}%
         </div>
       </div>
-      <div className="relative h-1.5 bg-nim-tertiary rounded-full overflow-hidden mb-1.5">
+      <div className="relative h-1.5 bg-nim-tertiary rounded-ui-full overflow-hidden mb-1.5">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${colors.bar}`}
+          className={`h-full rounded-ui-full transition-all duration-300 ${colors.bar}`}
           style={{ width: `${Math.min(utilization, 100)}%` }}
         />
         <div
@@ -144,7 +144,7 @@ export const GeminiUsagePopover: React.FC<GeminiUsagePopoverProps> = ({
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="w-60 bg-nim-secondary border border-nim rounded-lg shadow-lg z-50 overflow-y-auto"
+        className="w-60 bg-nim-secondary border border-nim rounded-ui-lg shadow-lg z-50 overflow-y-auto"
         data-testid="gemini-usage-popover"
       >
         {/* Header */}
@@ -160,14 +160,14 @@ export const GeminiUsagePopover: React.FC<GeminiUsagePopoverProps> = ({
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-1 rounded hover:bg-nim-tertiary text-nim-muted hover:text-nim transition-colors disabled:opacity-50"
+              className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted hover:text-nim transition-colors disabled:opacity-50"
               aria-label="Refresh usage"
             >
               <MaterialSymbol icon="refresh" size={14} className={isRefreshing ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={onClose}
-              className="p-1 rounded hover:bg-nim-tertiary text-nim-muted hover:text-nim transition-colors"
+              className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted hover:text-nim transition-colors"
               aria-label="Close"
             >
               <MaterialSymbol icon="close" size={14} />

@@ -82,7 +82,7 @@ const SessionItem: React.FC<{
     <div className="ai-session-time text-xs text-[var(--nim-text-faint)] shrink-0">{formatTime(session.updatedAt)}</div>
     {onOpenChat && (
       <button
-        className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-tertiary)] transition-colors duration-150 bg-transparent border-none cursor-pointer"
+        className="shrink-0 w-6 h-6 flex items-center justify-center rounded-ui-base text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-tertiary)] transition-colors duration-150 bg-transparent border-none cursor-pointer"
         title="Open in Chat panel"
         onClick={(e) => { e.stopPropagation(); onOpenChat(session.id); }}
       >
@@ -612,7 +612,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
             <button
               ref={aiSessionsButtonRef}
               data-testid="ai-sessions-button"
-              className={`unified-header-button nim-btn-icon w-7 h-7 rounded border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${
+              className={`unified-header-button nim-btn-icon w-7 h-7 rounded-ui-base border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${
                 showAISessions ? 'active bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]' : ''
               }`}
               onClick={() => {
@@ -630,7 +630,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
             </button>
 
             {showAISessions && (
-              <div className="unified-header-ai-dropdown absolute top-[calc(100%+4px)] right-0 min-w-[300px] max-w-[400px] overflow-hidden rounded-md z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+              <div className="unified-header-ai-dropdown absolute top-[calc(100%+4px)] right-0 min-w-[300px] max-w-[400px] overflow-hidden rounded-ui-base z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 {/* Dropdown header */}
                 <div className="ai-sessions-header px-4 py-2.5 border-b border-[var(--nim-border)]">
                   <div className="ai-sessions-title text-[11px] font-semibold uppercase tracking-wide text-[var(--nim-text-muted)]">
@@ -645,14 +645,14 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                     {hasGroupedSessions ? (
                       <>
                         {/* Current workspace sessions */}
-                        <div className="ai-sessions-group-header px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)]">
+                        <div className="ai-sessions-group-header px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)]">
                           {isInWorktree ? 'This worktree' : 'This project'}
                         </div>
                         {currentWorkspaceSessions.map((session) => (
                           <SessionItem key={session.id} session={session} onClick={onSwitchToAgentMode ? handleLoadSessionInAgentMode : undefined} onOpenChat={onOpenSessionInChat ? handleLoadSessionInChat : undefined} formatTime={formatRelativeTime} />
                         ))}
                         {/* Other sessions */}
-                        <div className="ai-sessions-group-header px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)]">
+                        <div className="ai-sessions-group-header px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)]">
                           Other sessions
                         </div>
                         {otherSessions.map((session) => (
@@ -673,7 +673,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                 {onSwitchToAgentMode && (
                   <div className="ai-session-start-container px-3 py-2.5 border-t border-[var(--nim-border)]">
                     <button
-                      className="ai-session-start-button w-full py-1.5 px-3 border border-[var(--nim-border)] rounded text-[13px] font-medium text-left cursor-pointer flex items-center gap-2 transition-all duration-150 text-[var(--nim-text-muted)] bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
+                      className="ai-session-start-button w-full py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-[13px] font-medium text-left cursor-pointer flex items-center gap-2 transition-all duration-150 text-[var(--nim-text-muted)] bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
                       onClick={handleStartAgentSession}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -694,7 +694,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
           <div className="unified-header-dropdown-container relative">
             <button
               ref={tocButtonRef}
-              className={`unified-header-button nim-btn-icon w-7 h-7 rounded border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${
+              className={`unified-header-button nim-btn-icon w-7 h-7 rounded-ui-base border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${
                 showTOC ? 'active bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]' : ''
               }`}
               onClick={() => setShowTOC(!showTOC)}
@@ -711,7 +711,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
             </button>
 
             {showTOC && (
-              <div className="unified-header-toc-dropdown absolute top-[calc(100%+4px)] right-0 min-w-[250px] max-w-[350px] max-h-[400px] overflow-y-auto overflow-hidden rounded-md z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+              <div className="unified-header-toc-dropdown absolute top-[calc(100%+4px)] right-0 min-w-[250px] max-w-[350px] max-h-[400px] overflow-y-auto overflow-hidden rounded-ui-base z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 {tocItems.length > 0 ? (
                   <ul className="toc-list list-none m-0 py-1 px-0">
                     {tocItems.map((item) => (
@@ -745,7 +745,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
         {/* Share Link Button (markdown files only) */}
         {showShareLinkButton && (
           <button
-            className="unified-header-button nim-btn-icon w-7 h-7 rounded border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+            className="unified-header-button nim-btn-icon w-7 h-7 rounded-ui-base border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
             onClick={handleShareLink}
             title="Share Link"
           >
@@ -764,7 +764,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
           <div className="unified-header-dropdown-container relative">
             <button
               ref={sharedDocMenu.refs.setReference}
-              className={`unified-header-button nim-btn-icon w-7 h-7 rounded border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${
+              className={`unified-header-button nim-btn-icon w-7 h-7 rounded-ui-base border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${
                 sharedDocMenu.isOpen ? 'active bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]' : ''
               }`}
               onClick={() => sharedDocMenu.setIsOpen(!sharedDocMenu.isOpen)}
@@ -783,7 +783,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                 <div
                   ref={sharedDocMenu.refs.setFloating}
                   style={sharedDocMenu.floatingStyles}
-                  className="min-w-[260px] overflow-hidden rounded-md z-[1000] py-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+                  className="min-w-[260px] overflow-hidden rounded-ui-base z-[1000] py-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
                   {...sharedDocMenu.getFloatingProps()}
                 >
                   <div className="px-3 py-2 border-b border-[var(--nim-border)]">
@@ -845,7 +845,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
         <div className="unified-header-dropdown-container relative">
           <button
             ref={actionsMenu.refs.setReference}
-            className={`unified-header-button nim-btn-icon w-7 h-7 rounded border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${
+            className={`unified-header-button nim-btn-icon w-7 h-7 rounded-ui-base border-none bg-transparent cursor-pointer flex items-center justify-center transition-all duration-150 text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${
               showActionsMenu ? 'active bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]' : ''
             }`}
             onClick={() => setShowActionsMenu(!showActionsMenu)}
@@ -864,7 +864,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
             <div
               ref={actionsMenu.refs.setFloating}
               style={actionsMenu.floatingStyles}
-              className="unified-header-actions-dropdown min-w-[220px] overflow-visible rounded-md z-[1000] py-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+              className="unified-header-actions-dropdown min-w-[220px] overflow-visible rounded-ui-base z-[1000] py-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
               {...actionsMenu.getFloatingProps()}
             >
               {/* Toggle Source Mode */}
@@ -968,7 +968,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                       <span className="dropdown-item-chevron ml-auto text-sm text-[var(--nim-text-faint)]">&#8250;</span>
 
                       {showDocTypeSubmenu && (
-                        <div className="dropdown-submenu absolute right-full left-auto top-0 min-w-[180px] py-1 rounded-md z-[1001] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+                        <div className="dropdown-submenu absolute right-full left-auto top-0 min-w-[180px] py-1 rounded-ui-base z-[1001] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                           {TRACKER_TYPES.map((type) => (
                             <button
                               key={type.type}
@@ -1075,7 +1075,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
               {extensionMenuItems.length > 0 && (
                 <>
                   <div className="dropdown-divider h-px my-1 bg-[var(--nim-border)]" />
-                  <div className="dropdown-section-label pt-1.5 pb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
+                  <div className="dropdown-section-label pt-2 pb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
                     {extensionId || 'Extension'}
                   </div>
                   {extensionMenuItems.map((item, index) => (

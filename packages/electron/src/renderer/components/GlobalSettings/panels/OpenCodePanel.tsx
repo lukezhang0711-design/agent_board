@@ -257,7 +257,7 @@ export function OpenCodePanel({
               The OpenCode CLI is required to run the agent.
             </p>
             <button
-              className="inline-flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90"
+              className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90"
               onClick={handleInstall}
             >
               Install OpenCode CLI
@@ -266,7 +266,7 @@ export function OpenCodePanel({
               <div className="text-xs mt-2 text-[var(--nim-error)]">
                 {installError}
                 <p className="mt-1 text-[var(--nim-text-muted)]">
-                  Try running manually: <code className="text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 rounded">npm i -g opencode-ai</code>
+                  Try running manually: <code className="text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 rounded-ui-base">npm i -g opencode-ai</code>
                 </p>
               </div>
             )}
@@ -308,7 +308,7 @@ export function OpenCodePanel({
               data-testid="opencode-model-select"
               value={selectedModel}
               onChange={(e) => handleModelChange(e.target.value)}
-              className="w-full py-2 px-3 rounded-md bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
+              className="w-full py-2 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
             >
               <option value="">OpenCode default</option>
               <optgroup label="Hosted">
@@ -343,11 +343,11 @@ export function OpenCodePanel({
                 onChange={(e) => { setLmStudioBaseUrl(e.target.value); seededFromConfig.current = true; }}
                 onFocus={(e) => e.target.select()}
                 placeholder="http://127.0.0.1:1234"
-                className="flex-1 min-w-[220px] py-2 px-3 rounded-md bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
+                className="flex-1 min-w-[220px] py-2 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
               />
               <button
                 data-testid="opencode-lmstudio-connect"
-                className="inline-flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90 disabled:opacity-60 disabled:cursor-wait"
+                className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90 disabled:opacity-60 disabled:cursor-wait"
                 onClick={handleConnectLMStudio}
                 disabled={lmStudioStatus === 'configuring' || !lmStudioBaseUrl.trim()}
               >
@@ -356,7 +356,7 @@ export function OpenCodePanel({
               {lmStudioBridgeConfigured && (
                 <button
                   data-testid="opencode-lmstudio-disconnect"
-                  className="inline-flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
+                  className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={handleDisconnectLMStudio}
                   disabled={lmStudioStatus === 'configuring'}
                 >
@@ -396,10 +396,10 @@ export function OpenCodePanel({
                   onChange={(e) => onApiKeyChange('opencode', e.target.value)}
                   onFocus={(e) => e.target.select()}
                   placeholder="API key (optional)"
-                  className="api-key-input flex-1 py-2 px-3 rounded-md bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
+                  className="api-key-input flex-1 py-2 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
                 />
                 <button
-                  className={`test-button inline-flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium whitespace-nowrap cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] ${
+                  className={`test-button inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium whitespace-nowrap cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] ${
                     config.testStatus === 'testing' ? 'opacity-60 cursor-wait' : ''
                   } ${config.testStatus === 'success' ? 'text-[var(--nim-success)] border-[var(--nim-success)]' : ''} ${
                     config.testStatus === 'error' ? 'text-[var(--nim-error)] border-[var(--nim-error)]' : ''

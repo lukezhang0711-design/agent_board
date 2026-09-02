@@ -108,8 +108,8 @@ export interface AgentWorkstreamPanelProps {
  * Measurement runs in a hidden layer that mirrors the real pill widths, so the
  * visible row never has to render-then-clip the overflowing pills.
  */
-const TAG_PILL_CLASS = "group flex items-center gap-1 text-[10px] font-medium leading-none pl-1.5 pr-1 py-0.5 rounded-full whitespace-nowrap cursor-default text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)]";
-const TAG_OVERFLOW_PILL_CLASS = "flex items-center gap-1 text-[10px] font-medium leading-none px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--nim-text)_14%,transparent)] border-none";
+const TAG_PILL_CLASS = "group flex items-center gap-1 text-[10px] font-medium leading-none pl-2 pr-1 py-0.5 rounded-ui-full whitespace-nowrap cursor-default text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)]";
+const TAG_OVERFLOW_PILL_CLASS = "flex items-center gap-1 text-[10px] font-medium leading-none px-2 py-0.5 rounded-ui-full whitespace-nowrap cursor-pointer text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--nim-text)_14%,transparent)] border-none";
 
 const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstreamId }) => {
   const tags = useAtomValue(workstreamTagsAtom(workstreamId));
@@ -255,7 +255,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
         <input
           ref={tagInputRef}
           type="text"
-          className="text-[10px] leading-none py-0.5 px-1.5 rounded-full border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] outline-none w-[80px]"
+          className="text-[10px] leading-none py-0.5 px-2 rounded-ui-full border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] outline-none w-[80px]"
           placeholder="add tag..."
           value={tagInput}
           onChange={(e) => setTagInput(e.target.value)}
@@ -270,7 +270,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
         {filteredSuggestions.length > 0 && (
           <div
             ref={tagDropdownRef}
-            className="absolute top-full left-0 mt-1 min-w-[120px] rounded-md z-[10000] py-0.5 text-[11px] bg-nim border border-nim shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+            className="absolute top-full left-0 mt-1 min-w-[120px] rounded-ui-base z-[10000] py-0.5 text-[11px] bg-nim border border-nim shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
           >
             {filteredSuggestions.map(s => (
               <div
@@ -286,7 +286,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
       </div>
     ) : (
       <button
-        className="flex items-center justify-center w-4 h-4 rounded-full border border-dashed border-[var(--nim-border)] bg-transparent cursor-pointer text-[var(--nim-text-faint)] hover:border-[var(--nim-text-faint)] hover:text-[var(--nim-text-muted)] transition-colors duration-100"
+        className="flex items-center justify-center w-4 h-4 rounded-ui-full border border-dashed border-[var(--nim-border)] bg-transparent cursor-pointer text-[var(--nim-text-faint)] hover:border-[var(--nim-text-faint)] hover:text-[var(--nim-text-muted)] transition-colors duration-100"
         onClick={() => setIsEditingTags(true)}
         title="Add tag"
       >
@@ -309,7 +309,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
         {tags.map(tag => (
           <span key={tag} data-measure-tag className={TAG_PILL_CLASS}>
             {tag}
-            <span className="flex items-center justify-center w-3 h-3 rounded-full">
+            <span className="flex items-center justify-center w-3 h-3 rounded-ui-full">
               <MaterialSymbol icon="close" size={10} />
             </span>
           </span>
@@ -321,9 +321,9 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
         )}
         <div data-measure-trailing>
           {isEditingTags ? (
-            <span className="inline-block w-[80px] h-[18px] rounded-full border border-[var(--nim-border)]" />
+            <span className="inline-block w-[80px] h-[18px] rounded-ui-full border border-[var(--nim-border)]" />
           ) : (
-            <span className="flex items-center justify-center w-4 h-4 rounded-full border border-dashed border-[var(--nim-border)]">
+            <span className="flex items-center justify-center w-4 h-4 rounded-ui-full border border-dashed border-[var(--nim-border)]">
               <MaterialSymbol icon="add" size={10} />
             </span>
           )}
@@ -334,7 +334,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
         <span key={tag} className={TAG_PILL_CLASS}>
           {tag}
           <button
-            className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-3 h-3 rounded-full border-none bg-transparent cursor-pointer text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] transition-opacity duration-100"
+            className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-3 h-3 rounded-ui-full border-none bg-transparent cursor-pointer text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] transition-opacity duration-100"
             onClick={() => handleRemoveTag(tag)}
             title={`Remove tag "${tag}"`}
           >
@@ -359,7 +359,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
                 ref={overflowRefs.setFloating}
                 style={overflowFloatingStyles}
                 {...getOverflowFloatingProps()}
-                className="z-[10000] min-w-[140px] max-h-[300px] overflow-y-auto rounded-md py-1 bg-nim border border-nim shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+                className="z-[10000] min-w-[140px] max-h-[300px] overflow-y-auto rounded-ui-base py-1 bg-nim border border-nim shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
               >
                 {hiddenTags.map(tag => (
                   <div
@@ -368,7 +368,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
                   >
                     <span className="truncate">{tag}</span>
                     <button
-                      className="flex items-center justify-center w-4 h-4 rounded-full opacity-0 group-hover:opacity-100 text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] bg-transparent border-none cursor-pointer"
+                      className="flex items-center justify-center w-4 h-4 rounded-ui-full opacity-0 group-hover:opacity-100 text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] bg-transparent border-none cursor-pointer"
                       onClick={() => handleRemoveTag(tag)}
                       title={`Remove tag "${tag}"`}
                     >
@@ -567,7 +567,7 @@ const WorkstreamHeader: React.FC<{
             <input
               ref={inputRef}
               type="text"
-              className="workstream-header-title-input text-sm font-semibold text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-accent)] rounded py-0.5 px-1 m-0 outline-none w-full min-w-[150px] max-w-[500px]"
+              className="workstream-header-title-input text-sm font-semibold text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-accent)] rounded-ui-base py-0.5 px-1 m-0 outline-none w-full min-w-[150px] max-w-[500px]"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleRenameSubmit}
@@ -575,7 +575,7 @@ const WorkstreamHeader: React.FC<{
             />
           ) : (
             <h2
-              className="workstream-header-title max-w-full m-0 text-sm font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight cursor-pointer py-0.5 px-1 rounded transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-header-title max-w-full m-0 text-sm font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight cursor-pointer py-0.5 px-1 rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleTitleClick}
               title="Click to rename"
             >
@@ -587,14 +587,14 @@ const WorkstreamHeader: React.FC<{
 
         {isProcessing && (
           <div className="workstream-header-processing shrink-0 flex items-center justify-center">
-            <span className="workstream-header-spinner w-4 h-4 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+            <span className="workstream-header-spinner w-4 h-4 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
           </div>
         )}
 
         {/* Terminal button - only show for worktree sessions, positioned before layout controls */}
         {worktreeId && onOpenTerminal && (
           <button
-            className="workstream-terminal-btn w-8 h-8 flex items-center justify-center rounded text-[var(--nim-text-faint)] cursor-pointer border-none bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] mr-2"
+            className="workstream-terminal-btn w-8 h-8 flex items-center justify-center rounded-ui-base text-[var(--nim-text-faint)] cursor-pointer border-none bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] mr-2"
             onClick={onOpenTerminal}
             onContextMenu={handleTerminalContextMenu}
             title="Open terminal in worktree"
@@ -607,7 +607,7 @@ const WorkstreamHeader: React.FC<{
         {terminalContextMenu && (
           <div
             ref={terminalContextMenuRef}
-            className="fixed p-1 min-w-[140px] rounded-md z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+            className="fixed p-1 min-w-[140px] rounded-ui-base z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
             style={{
               left: terminalContextMenu.x,
               top: terminalContextMenu.y,
@@ -616,7 +616,7 @@ const WorkstreamHeader: React.FC<{
             }}
           >
             <div
-              className="flex items-center gap-3 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+              className="flex items-center gap-3 px-3 py-2 rounded-ui-base cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
               onClick={handleNewTerminalClick}
             >
               <MaterialSymbol icon="add" size={18} />
@@ -634,7 +634,7 @@ const WorkstreamHeader: React.FC<{
 
         {/* Archive/Unarchive button */}
         <button
-          className="workstream-archive-button flex items-center gap-2 h-8 px-2 rounded text-[var(--nim-text-faint)] text-[11px] font-medium cursor-pointer border-none bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
+          className="workstream-archive-button flex items-center gap-2 h-8 px-2 rounded-ui-base text-[var(--nim-text-faint)] text-[11px] font-medium cursor-pointer border-none bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
           onClick={isArchived ? handleUnarchive : handleArchive}
           title={isArchived ? `Unarchive ${getSessionTypeLabel().toLowerCase()}` : `Archive ${getSessionTypeLabel().toLowerCase()}`}
         >
@@ -644,7 +644,7 @@ const WorkstreamHeader: React.FC<{
 
         {/* Toggle files sidebar */}
         <button
-          className={`workstream-sidebar-toggle w-8 h-8 flex items-center justify-center rounded cursor-pointer border-none bg-transparent ml-2 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] ${sidebarVisible ? 'active text-[var(--nim-primary)]' : 'text-[var(--nim-text-faint)]'}`}
+          className={`workstream-sidebar-toggle w-8 h-8 flex items-center justify-center rounded-ui-base cursor-pointer border-none bg-transparent ml-2 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] ${sidebarVisible ? 'active text-[var(--nim-primary)]' : 'text-[var(--nim-text-faint)]'}`}
           onClick={onToggleSidebar}
           title={sidebarVisible ? 'Hide edited files' : 'Show edited files'}
         >

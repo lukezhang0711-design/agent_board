@@ -55,7 +55,7 @@ export const ExtensionProjectIntroModal: React.FC<ExtensionProjectIntroModalProp
           ))}
         </div>
 
-        <div className="mx-7 mb-5 rounded-lg bg-nim-secondary px-4 py-3">
+        <div className="mx-7 mb-5 rounded-ui-lg bg-nim-secondary px-4 py-3">
           <span className="text-[13px] leading-5 text-nim-muted">
             Describe what you want to the agent, and it will scaffold, build, and install the extension for you.
           </span>
@@ -63,19 +63,19 @@ export const ExtensionProjectIntroModal: React.FC<ExtensionProjectIntroModalProp
 
         <div className="flex items-center justify-end gap-3 border-t border-nim px-7 py-4">
           <button
-            className="nim-btn-secondary rounded-lg px-4 py-2 text-sm font-medium"
+            className="nim-btn-secondary rounded-ui-lg px-4 py-2 text-sm font-medium"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="rounded-lg border border-nim bg-transparent px-4 py-2 text-sm font-medium text-nim-muted transition-colors hover:bg-nim-secondary hover:text-nim"
+            className="rounded-ui-lg border border-nim bg-transparent px-4 py-2 text-sm font-medium text-nim-muted transition-colors hover:bg-nim-secondary hover:text-nim"
             onClick={onDontShowAgain}
           >
             Don&apos;t Show Again
           </button>
           <button
-            className="nim-btn-primary rounded-lg px-5 py-2 text-sm font-semibold"
+            className="nim-btn-primary rounded-ui-lg px-5 py-2 text-sm font-semibold"
             onClick={onContinue}
           >
             Continue

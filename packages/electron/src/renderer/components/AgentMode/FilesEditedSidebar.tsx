@@ -551,7 +551,7 @@ export const FilesEditedSidebar: React.FC<FilesEditedSidebarProps> = React.memo(
               window.dispatchEvent(new CustomEvent('file-edits-sidebar:expand-all'));
             }}
             disabled={!groupByDirectory}
-            className="files-edited-sidebar__control-btn flex items-center justify-center w-6 h-6 border-none rounded bg-transparent text-[var(--nim-text-muted)] cursor-pointer hover:enabled:bg-[var(--nim-bg-tertiary)] disabled:text-[var(--nim-text-disabled)] disabled:cursor-default disabled:opacity-50"
+            className="files-edited-sidebar__control-btn flex items-center justify-center w-6 h-6 border-none rounded-ui-base bg-transparent text-[var(--nim-text-muted)] cursor-pointer hover:enabled:bg-[var(--nim-bg-tertiary)] disabled:text-[var(--nim-text-disabled)] disabled:cursor-default disabled:opacity-50"
             title="Expand all"
           >
             <MaterialSymbol icon="unfold_more" size={16} />
@@ -561,7 +561,7 @@ export const FilesEditedSidebar: React.FC<FilesEditedSidebarProps> = React.memo(
               window.dispatchEvent(new CustomEvent('file-edits-sidebar:collapse-all'));
             }}
             disabled={!groupByDirectory}
-            className="files-edited-sidebar__control-btn flex items-center justify-center w-6 h-6 border-none rounded bg-transparent text-[var(--nim-text-muted)] cursor-pointer hover:enabled:bg-[var(--nim-bg-tertiary)] disabled:text-[var(--nim-text-disabled)] disabled:cursor-default disabled:opacity-50"
+            className="files-edited-sidebar__control-btn flex items-center justify-center w-6 h-6 border-none rounded-ui-base bg-transparent text-[var(--nim-text-muted)] cursor-pointer hover:enabled:bg-[var(--nim-bg-tertiary)] disabled:text-[var(--nim-text-disabled)] disabled:cursor-default disabled:opacity-50"
             title="Collapse all"
           >
             <MaterialSymbol icon="unfold_less" size={16} />
@@ -580,7 +580,7 @@ export const FilesEditedSidebar: React.FC<FilesEditedSidebarProps> = React.memo(
             </span>
           </div>
           <button
-            className="files-edited-sidebar__keep-all-btn flex items-center gap-1 px-2.5 py-1 bg-transparent border border-[var(--nim-warning)] rounded text-[var(--nim-warning)] text-[11px] font-medium cursor-pointer transition-all duration-200 font-inherit hover:enabled:bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="files-edited-sidebar__keep-all-btn flex items-center gap-1 px-2.5 py-1 bg-transparent border border-[var(--nim-warning)] rounded-ui-base text-[var(--nim-warning)] text-[11px] font-medium cursor-pointer transition-all duration-200 font-inherit hover:enabled:bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)] disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleKeepAll}
             disabled={isClearing}
             title="Accept all pending AI changes"

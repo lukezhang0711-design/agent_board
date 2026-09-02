@@ -101,7 +101,7 @@ export function PlanListItem({ plan, isActive, onClick }: PlanListItemProps): JS
       </div>
 
       {plan.progress > 0 && (
-        <div className="plan-progress-bar h-[3px] bg-nim-secondary rounded-sm overflow-hidden mb-1.5">
+        <div className="plan-progress-bar h-[3px] bg-nim-secondary rounded-ui-base overflow-hidden mb-1.5">
           <div
             className="plan-progress-fill h-full transition-[width] duration-300 ease-in-out"
             style={{
@@ -115,7 +115,7 @@ export function PlanListItem({ plan, isActive, onClick }: PlanListItemProps): JS
       <div className="plan-list-item-footer flex items-center justify-between gap-2">
         <span className="plan-updated-time text-[11px] text-nim-faint">{formatDate(plan.lastUpdated)}</span>
         <span
-          className="plan-status-badge text-[10px] px-1.5 py-0.5 rounded-sm border capitalize font-medium whitespace-nowrap"
+          className="plan-status-badge text-[10px] px-2 py-0.5 rounded-ui-base border capitalize font-medium whitespace-nowrap"
           style={{
             backgroundColor: `${statusColor}20`,
             color: statusColor,

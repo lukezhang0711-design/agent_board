@@ -74,7 +74,7 @@ export function ReleaseNotesDialog({
       >
         {/* Close button */}
         <button
-          className="update-dialog-close absolute top-4 right-4 w-7 h-7 border-none bg-transparent cursor-pointer rounded-md flex items-center justify-center p-0 text-[var(--nim-text-faint)] transition-colors duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] [&>svg]:w-4 [&>svg]:h-4"
+          className="update-dialog-close absolute top-4 right-4 w-7 h-7 border-none bg-transparent cursor-pointer rounded-ui-base flex items-center justify-center p-0 text-[var(--nim-text-faint)] transition-colors duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] [&>svg]:w-4 [&>svg]:h-4"
           onClick={onClose}
           title="Close"
           aria-label="Close"
@@ -93,21 +93,21 @@ export function ReleaseNotesDialog({
         {/* Version comparison */}
         <div className="update-dialog-version-row flex items-center gap-2 mb-5 flex-wrap">
           <span className="update-dialog-version-label text-xs text-[var(--nim-text-muted)]">You are currently on:</span>
-          <span className="update-dialog-version-badge text-xs font-medium text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] py-1 px-2 rounded font-mono" data-testid="current-version-badge">{currentVersion}</span>
+          <span className="update-dialog-version-badge text-xs font-medium text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] py-1 px-2 rounded-ui-base font-mono" data-testid="current-version-badge">{currentVersion}</span>
           <span className="update-dialog-version-arrow flex items-center text-[var(--nim-text-faint)] [&>svg]:w-4 [&>svg]:h-4">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </span>
           <span className="update-dialog-version-label text-xs text-[var(--nim-text-muted)]">The latest version is:</span>
-          <span className="update-dialog-version-badge update-dialog-version-badge-new text-xs font-medium py-1 px-2 rounded font-mono bg-[var(--nim-primary)] text-white" data-testid="new-version-badge">{newVersion}</span>
+          <span className="update-dialog-version-badge update-dialog-version-badge-new text-xs font-medium py-1 px-2 rounded-ui-base font-mono bg-[var(--nim-primary)] text-white" data-testid="new-version-badge">{newVersion}</span>
         </div>
 
         {/* Release notes */}
         <div className="update-dialog-content flex-1 overflow-y-auto mb-5 pr-2">
           <h3 className="update-dialog-notes-title text-sm font-semibold text-[var(--nim-text)] m-0 mb-3">{newVersion} - Release Notes</h3>
           <div
-            className="update-dialog-notes text-[13px] text-[var(--nim-text-muted)] leading-relaxed [&_h1]:text-[var(--nim-text)] [&_h1]:text-base [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-[var(--nim-text)] [&_h2]:text-sm [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-[var(--nim-text)] [&_h3]:text-[13px] [&_h3]:mt-4 [&_h3]:mb-2 [&_p]:my-2 [&_ul]:my-2 [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:pl-5 [&_li]:my-1 [&_code]:bg-[var(--nim-bg-tertiary)] [&_code]:py-0.5 [&_code]:px-1.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[var(--nim-bg-tertiary)] [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:p-0"
+            className="update-dialog-notes text-[13px] text-[var(--nim-text-muted)] leading-relaxed [&_h1]:text-[var(--nim-text)] [&_h1]:text-base [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-[var(--nim-text)] [&_h2]:text-sm [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-[var(--nim-text)] [&_h3]:text-[13px] [&_h3]:mt-4 [&_h3]:mb-2 [&_p]:my-2 [&_ul]:my-2 [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:pl-5 [&_li]:my-1 [&_code]:bg-[var(--nim-bg-tertiary)] [&_code]:py-0.5 [&_code]:px-2 [&_code]:rounded-ui-base [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[var(--nim-bg-tertiary)] [&_pre]:p-3 [&_pre]:rounded-ui-lg [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:p-0"
             data-testid="release-notes-content"
             dangerouslySetInnerHTML={{ __html: renderedReleaseNotes }}
           />
@@ -116,14 +116,14 @@ export function ReleaseNotesDialog({
         {/* Action buttons */}
         <div className="update-dialog-actions flex gap-3 justify-end">
           <button
-            className="update-dialog-btn update-dialog-btn-secondary flex items-center gap-2 py-2.5 px-[18px] border border-[var(--nim-border)] rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 font-[inherit] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+            className="update-dialog-btn update-dialog-btn-secondary flex items-center gap-2 py-2.5 px-[18px] border border-[var(--nim-border)] rounded-ui-lg text-sm font-medium cursor-pointer transition-all duration-200 font-[inherit] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
             onClick={onClose}
             data-testid="release-notes-later-btn"
           >
             Later
           </button>
           <button
-            className="update-dialog-btn update-dialog-btn-primary flex items-center gap-2 py-2.5 px-[18px] border-none rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 font-[inherit] bg-[var(--nim-primary)] text-white hover:brightness-110 [&>svg]:w-4 [&>svg]:h-4"
+            className="update-dialog-btn update-dialog-btn-primary flex items-center gap-2 py-2.5 px-[18px] border-none rounded-ui-lg text-sm font-medium cursor-pointer transition-all duration-200 font-[inherit] bg-[var(--nim-primary)] text-white hover:brightness-110 [&>svg]:w-4 [&>svg]:h-4"
             onClick={onUpdate}
             data-testid="release-notes-update-btn"
           >

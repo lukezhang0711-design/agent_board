@@ -282,13 +282,13 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
       openContextMenu(e);
     }}>
       {/* Content Mode Switcher - Top Group (Files) */}
-      <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-1.5 py-1">
+      <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-2 py-1">
         {contentModeButtonsTop.map((button) => {
           const testId = `${button.id}-mode-button`;
           return (
             <HelpTooltip key={button.id} testId={testId} placement="right">
               <button
-                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                 onClick={() => {
                   // Clear any active fullscreen extension panel when switching to a content mode
                   onExtensionPanelChange?.(null);
@@ -313,7 +313,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
                   fill={contentMode === button.contentMode && !activeExtensionPanel}
                 />
                 {button.badge !== undefined && button.badge > 0 && (
-                  <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
+                  <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
                 )}
               </button>
             </HelpTooltip>
@@ -322,13 +322,13 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
       </div>
 
       {/* Content Mode Switcher - Agent Group (Agent) */}
-      <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-1.5 py-1">
+      <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-2 py-1">
         {contentModeButtonsAgent.map((button) => {
           const testId = `${button.id}-mode-button`;
           return (
             <HelpTooltip key={button.id} testId={testId} placement="right">
               <button
-                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                 onClick={() => {
                   // Clear any active fullscreen extension panel when switching to a content mode
                   onExtensionPanelChange?.(null);
@@ -352,7 +352,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
                   fill={contentMode === button.contentMode && !activeExtensionPanel}
                 />
                 {button.badge !== undefined && button.badge > 0 && (
-                  <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
+                  <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
                 )}
               </button>
             </HelpTooltip>
@@ -361,13 +361,13 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
       </div>
 
       {/* Content Mode Switcher - Tracker Group */}
-      <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-1.5 py-1">
+      <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-2 py-1">
         {contentModeButtonsTracker.map((button) => {
           const testId = `${button.id}-button`;
           return (
             <HelpTooltip key={button.id} testId={testId} placement="right">
               <button
-                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                 onClick={() => {
                   // Clear any active fullscreen extension panel when switching to a content mode
                   onExtensionPanelChange?.(null);
@@ -392,13 +392,13 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
 
       {/* Content Mode Switcher - PR Review Group - only shown when workspace has a GitHub remote */}
       {hasPrRemote && (
-        <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-1.5 py-1">
+        <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-2 py-1">
           {contentModeButtonsPrReview.map((button) => {
             const testId = `${button.id}-button`;
             return (
               <HelpTooltip key={button.id} testId={testId} placement="right">
                 <button
-                  className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                  className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                   onClick={() => {
                     onExtensionPanelChange?.(null);
                     handleButtonClick(button);
@@ -421,13 +421,13 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
 
       {/* Content Mode Switcher - Collab Group (Shared Docs) - only shown when workspace has a team */}
       {hasTeam && (
-        <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-1.5 py-1">
+        <div className="nav-section nav-content-modes flex flex-col items-center gap-1 w-full px-2 py-1">
           {contentModeButtonsCollab.map((button) => {
             const testId = `${button.id}-button`;
             return (
               <HelpTooltip key={button.id} testId={testId} placement="right">
                 <button
-                  className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                  className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${contentMode === button.contentMode && !activeExtensionPanel ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                   onClick={() => {
                     // Clear any active fullscreen extension panel when switching to a content mode
                     onExtensionPanelChange?.(null);
@@ -455,13 +455,13 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
 
       {/* Fullscreen Extension Panels - appear below Agent as additional modes */}
       {extensionPanelButtons.filter(p => p.placement === 'fullscreen').length > 0 && (
-        <div className="nav-section nav-extension-modes flex flex-col items-center gap-1 w-full px-1.5 py-1 pt-2 mt-1 border-t border-nim">
+        <div className="nav-section nav-extension-modes flex flex-col items-center gap-1 w-full px-2 py-1 pt-2 mt-1 border-t border-nim">
           {extensionPanelButtons
             .filter(panel => panel.placement === 'fullscreen')
             .map((panel) => (
               <button
                 key={panel.id}
-                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${activeExtensionPanel === panel.id ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${activeExtensionPanel === panel.id ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                 onClick={() => {
                   const newPanelId = activeExtensionPanel === panel.id ? null : panel.id;
                   onExtensionPanelChange?.(newPanelId);
@@ -490,18 +490,18 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
       )}
 
       {/* Quick Access */}
-      <div className="nav-section nav-quick-access flex flex-col items-center gap-1 w-full px-1.5 py-1 flex-1 pt-2">
+      <div className="nav-section nav-quick-access flex flex-col items-center gap-1 w-full px-2 py-1 flex-1 pt-2">
         {quickAccessButtons.map((button) => (
           <button
             key={button.id}
-            className="nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
+            className="nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
             onClick={() => handleButtonClick(button)}
             title={button.label}
             aria-label={button.label}
           >
             <MaterialSymbol icon={button.icon} size={20} />
             {button.badge !== undefined && button.badge > 0 && (
-              <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
+              <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
             )}
           </button>
         ))}
@@ -509,13 +509,13 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
 
       {/* Extension Panels - Sidebar panels only (fullscreen panels are in top modes section) */}
       {extensionPanelButtons.filter(p => p.placement === 'sidebar').length > 0 && (
-        <div className="nav-section nav-extension-panels flex flex-col items-center gap-1 w-full px-1.5 py-1">
+        <div className="nav-section nav-extension-panels flex flex-col items-center gap-1 w-full px-2 py-1">
           {extensionPanelButtons
             .filter(panel => panel.placement === 'sidebar')
             .map((panel) => (
               <button
                 key={panel.id}
-                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${activeExtensionPanel === panel.id ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${activeExtensionPanel === panel.id ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                 onClick={() => {
                   // Toggle panel: if clicking active panel, deactivate it
                   const newPanelId = activeExtensionPanel === panel.id ? null : panel.id;
@@ -549,20 +549,20 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
 
       {/* Voice Mode - persistent button with integrated context ring */}
       {!isHidden('voice-mode') && (
-        <div className="nav-section nav-voice-mode flex flex-col items-center gap-1 w-full px-1.5 py-1" onContextMenu={(e) => openContextMenu(e, 'voice-mode')}>
+        <div className="nav-section nav-voice-mode flex flex-col items-center gap-1 w-full px-2 py-1" onContextMenu={(e) => openContextMenu(e, 'voice-mode')}>
           <VoiceModeButton workspacePath={workspacePath} />
         </div>
       )}
 
       {/* Bottom Panel Toggles - Above Settings */}
-      <div className="nav-section nav-bottom-panels flex flex-col items-center gap-1 w-full px-1.5 py-1">
+      <div className="nav-section nav-bottom-panels flex flex-col items-center gap-1 w-full px-2 py-1">
         {bottomPanelButtons.map((button) => {
           const isActive = button.id === 'terminal' && terminalPanelVisible;
           const testId = `${button.id}-panel-button`;
           return (
             <HelpTooltip key={button.id} testId={testId} placement="right">
               <button
-                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${isActive ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${isActive ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                 onClick={() => handleButtonClick(button)}
                 aria-label={button.label}
                 data-testid={testId}
@@ -578,7 +578,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
           return (
             <HelpTooltip key={panel.id} testId={testId} placement="right">
               <button
-                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${isActive ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${isActive ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
                 onClick={() => {
                   const newPanelId = isActive ? null : panel.id;
                   onExtensionBottomPanelChange?.(newPanelId);
@@ -607,7 +607,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
 
 
       {/* Settings (bottom) */}
-      <div className="nav-section nav-settings flex flex-col items-center gap-1 w-full px-1.5 py-1 mt-auto pt-2 border-t border-nim">
+      <div className="nav-section nav-settings flex flex-col items-center gap-1 w-full px-2 py-1 mt-auto pt-2 border-t border-nim">
 
         {/* AI Usage Indicator - Consolidated usage limits for Claude, Codex, Gemini */}
         {!isHidden('ai-usage') && (
@@ -657,7 +657,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
         {/* Skill Library - Direct entry to Skill Library */}
         <HelpTooltip testId="gutter-skill-library-button" placement="right">
           <button
-            className="nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
+            className="nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
             onClick={() => handleNavigateSettings('user', 'skill-library')}
             aria-label="技能库"
             data-testid="gutter-skill-library-button"
@@ -671,7 +671,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
 
         {/* Theme Toggle - Above Settings */}
         {!isHidden('theme-toggle') && (
-          <div className="nav-section nav-theme flex flex-col items-center gap-1 w-full px-1.5 py-1" onContextMenu={(e) => openContextMenu(e, 'theme-toggle')}>
+          <div className="nav-section nav-theme flex flex-col items-center gap-1 w-full px-2 py-1" onContextMenu={(e) => openContextMenu(e, 'theme-toggle')}>
             <ThemeToggleButton />
           </div>
         )}
@@ -679,7 +679,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
         {!isHidden('feedback') && (
           <HelpTooltip testId="gutter-feedback-button" placement="right">
             <button
-              className="nimbalyst-feedback-button nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
+              className="nimbalyst-feedback-button nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
               onClick={() => {
                 // console.log('[NavigationGutter] Feedback button clicked');
                 onOpenFeedback?.();
@@ -708,7 +708,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
           <HelpTooltip testId="gutter-user-button" placement="right">
             <button
               ref={userMenuButtonRef}
-              className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${userMenuOpen ? 'bg-nim-tertiary text-nim' : needsSignIn ? 'bg-transparent text-nim-warning hover:bg-nim-tertiary' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+              className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${userMenuOpen ? 'bg-nim-tertiary text-nim' : needsSignIn ? 'bg-transparent text-nim-warning hover:bg-nim-tertiary' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               aria-label={needsSignIn ? 'User menu (signed out -- sync requires sign in)' : 'User menu'}
               aria-expanded={userMenuOpen}

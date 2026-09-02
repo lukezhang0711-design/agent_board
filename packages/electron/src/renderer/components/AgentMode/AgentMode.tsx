@@ -578,7 +578,7 @@ export const AgentMode = forwardRef<AgentModeRef, AgentModeProps>(function Agent
       <p className="m-0 text-sm">Select a session or create a new one to get started</p>
       <button
         onClick={() => dispatchCreateNewSession(undefined)}
-        className="agent-mode-new-button py-2 px-4 rounded-md border border-nim-border bg-nim-bg-secondary text-nim cursor-pointer text-sm transition-colors hover:bg-nim-bg-active"
+        className="agent-mode-new-button py-2 px-4 rounded-ui-base border border-nim-border bg-nim-bg-secondary text-nim cursor-pointer text-sm transition-colors hover:bg-nim-bg-active"
       >
         New Session
       </button>

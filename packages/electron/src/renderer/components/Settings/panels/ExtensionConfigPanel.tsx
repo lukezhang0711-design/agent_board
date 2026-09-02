@@ -160,7 +160,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
               checked={Boolean(value)}
               onChange={(e) => onChange(e.target.checked)}
               disabled={disabled}
-              className="w-4 h-4 rounded border-[var(--nim-border)] accent-[var(--nim-primary)]"
+              className="w-4 h-4 rounded-ui-base border-[var(--nim-border)] accent-[var(--nim-primary)]"
             />
             <span className="config-field-label text-sm text-[var(--nim-text)]">{description || propertyKey}</span>
           </label>
@@ -178,7 +178,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
                 value={String(value ?? '')}
                 onChange={(e) => onChange(e.target.value)}
                 disabled={disabled}
-                className="px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm"
+                className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm"
               >
                 {property.enum.map((opt, idx) => (
                   <option key={String(opt)} value={String(opt)}>
@@ -203,7 +203,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
               placeholder={placeholder}
               pattern={property.pattern}
               disabled={disabled}
-              className="px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
+              className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
             />
           </label>
         </div>
@@ -222,7 +222,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
               max={property.maximum}
               placeholder={placeholder}
               disabled={disabled}
-              className="px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
+              className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
             />
           </label>
         </div>

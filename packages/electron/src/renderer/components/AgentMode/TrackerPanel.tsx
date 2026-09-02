@@ -153,7 +153,7 @@ const TrackerItemRow: React.FC<TrackerItemRowProps> = React.memo(({ itemId, onNa
 
   return (
     <button
-      className="tracker-item-row w-full flex items-center gap-2 px-2 py-1.5 rounded bg-transparent border-none cursor-pointer text-left hover:bg-[var(--nim-bg-hover)] transition-colors"
+      className="tracker-item-row w-full flex items-center gap-2 px-2 py-2 rounded-ui-base bg-transparent border-none cursor-pointer text-left hover:bg-[var(--nim-bg-hover)] transition-colors"
       onClick={handleClick}
       title={`${item.primaryType}: ${title}`}
       data-testid="tracker-item-row"
@@ -169,7 +169,7 @@ const TrackerItemRow: React.FC<TrackerItemRowProps> = React.memo(({ itemId, onNa
       </span>
       {status && (
         <span
-          className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+          className="text-[10px] px-2 py-0.5 rounded-ui-base font-medium shrink-0"
           style={{ backgroundColor: `${color}15`, color }}
         >
           {status}

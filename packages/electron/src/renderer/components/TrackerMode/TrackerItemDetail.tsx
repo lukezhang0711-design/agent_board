@@ -115,7 +115,7 @@ const TypeTagsEditor: React.FC<{
       <div className="flex items-center gap-2">
         <span className="text-[10px] text-nim-faint font-medium uppercase tracking-wider">Type Tags</span>
         <button
-          className="text-[10px] text-nim-muted hover:text-nim px-1 py-0.5 rounded hover:bg-nim-tertiary"
+          className="text-[10px] text-nim-muted hover:text-nim px-1 py-0.5 rounded-ui-base hover:bg-nim-tertiary"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? 'Done' : '+ Add'}
@@ -129,7 +129,7 @@ const TypeTagsEditor: React.FC<{
             return (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded cursor-pointer group"
+                className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-ui-base cursor-pointer group"
                 style={{ color: tagColor, backgroundColor: `${tagColor}15`, border: `1px solid ${tagColor}30` }}
                 onClick={() => onUpdate(typeTags.filter(t => t !== tag))}
                 title={`Remove ${tagModel?.displayName || tag} tag`}
@@ -148,7 +148,7 @@ const TypeTagsEditor: React.FC<{
             return (
               <button
                 key={m.type}
-                className="text-[10px] font-medium px-1.5 py-0.5 rounded hover:opacity-80"
+                className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base hover:opacity-80"
                 style={{ color: tagColor, backgroundColor: `${tagColor}10`, border: `1px dashed ${tagColor}40` }}
                 onClick={() => {
                   onUpdate([...typeTags, m.type]);
@@ -1016,7 +1016,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           )}
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span
-              className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+              className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
               style={{
                 color: typeColor,
                 backgroundColor: `${typeColor}20`,
@@ -1033,7 +1033,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 return (
                   <span
                     key={tag}
-                    className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                    className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
                     style={{
                       color: tagColor,
                       backgroundColor: `${tagColor}15`,
@@ -1046,7 +1046,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               })}
             {isNativeItem(item) && (
               <span
-                className="text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1 bg-gray-500/[0.125] text-gray-400"
+                className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base flex items-center gap-1 bg-gray-500/[0.125] text-gray-400"
                 title="Stored in database — not backed by a file"
                 data-testid="tracker-source-db-badge"
               >
@@ -1058,7 +1058,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               <span className="text-[10px] text-nim-faint font-mono">{item.issueKey || item.id}</span>
             )}
             {item.archived && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#6b728020] text-nim-faint">
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base bg-[#6b728020] text-nim-faint">
                 Archived
               </span>
             )}
@@ -1123,7 +1123,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
         <div className="flex items-center gap-1 shrink-0">
           {teamOrgId && (
             <button
-              className="p-1 rounded hover:bg-nim-tertiary text-nim-muted"
+              className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted"
               onClick={handleCopyLink}
               title="Copy shareable link"
               data-testid="tracker-copy-link"
@@ -1143,7 +1143,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
             )}
           {onArchive && (
             <button
-              className="p-1 rounded hover:bg-nim-tertiary text-nim-muted"
+              className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted"
               onClick={() => onArchive(item.id, !item.archived)}
               title={item.archived ? 'Unarchive' : 'Archive'}
             >
@@ -1153,7 +1153,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           )}
           {onDelete && (
             <button
-              className="p-1 rounded hover:bg-nim-tertiary text-nim-muted hover:text-[#ef4444]"
+              className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted hover:text-[#ef4444]"
               onClick={() => {
                 if (window.confirm(`Delete "${getRecordTitle(item)}"? This cannot be undone.`)) {
                   onDelete(item.id);
@@ -1165,7 +1165,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
             </button>
           )}
           <button
-            className="p-1 rounded hover:bg-nim-tertiary text-nim-muted"
+            className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted"
             onClick={onClose}
             title="Close (Esc)"
           >
@@ -1184,7 +1184,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           <span className="flex-1">The source body changed upstream. Update to overwrite the local body, or dismiss to keep yours.</span>
           <button
             type="button"
-            className="px-2 py-0.5 rounded text-white bg-[var(--nim-primary)] hover:opacity-90 disabled:opacity-50"
+            className="px-2 py-0.5 rounded-ui-base text-white bg-[var(--nim-primary)] hover:opacity-90 disabled:opacity-50"
             disabled={bodyBusy}
             onClick={() => handleBodyAction('applyBody')}
           >
@@ -1192,7 +1192,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           </button>
           <button
             type="button"
-            className="px-2 py-0.5 rounded border border-nim text-nim-muted hover:bg-nim-tertiary disabled:opacity-50"
+            className="px-2 py-0.5 rounded-ui-base border border-nim text-nim-muted hover:bg-nim-tertiary disabled:opacity-50"
             disabled={bodyBusy}
             onClick={() => handleBodyAction('dismissBody')}
           >
@@ -1276,14 +1276,14 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           </label>
           {contentMode === 'local-pglite' && localEditorConfig ? (
             <div
-              className="tracker-content-editor border border-nim rounded bg-nim min-h-[200px] overflow-hidden"
+              className="tracker-content-editor border border-nim rounded-ui-base bg-nim min-h-[200px] overflow-hidden"
               data-testid="tracker-detail-content-editor"
             >
               <NimbalystEditor key={`${item.id}-${externalContentEpoch}`} config={localEditorConfig} />
             </div>
           ) : contentMode === 'collaborative' && collabEditorConfig ? (
             <div
-              className="tracker-content-editor relative border border-nim rounded bg-nim min-h-[200px] overflow-hidden"
+              className="tracker-content-editor relative border border-nim rounded-ui-base bg-nim min-h-[200px] overflow-hidden"
               data-testid="tracker-detail-content-editor"
             >
               {!hasSyncedOnce && (
@@ -1296,7 +1296,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               )}
               {reviewState?.hasUnreviewed && (
                 <div
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs border-b border-nim bg-nim-tertiary"
+                  className="flex items-center gap-2 px-3 py-2 text-xs border-b border-nim bg-nim-tertiary"
                   data-testid="tracker-content-review-banner"
                 >
                   <MaterialSymbol icon="rate_review" size={14} className="text-nim-warning" />
@@ -1307,13 +1307,13 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                       : 'collaborators'}
                   </span>
                   <button
-                    className="px-2 py-0.5 rounded text-[11px] font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                    className="px-2 py-0.5 rounded-ui-base text-[11px] font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
                     onClick={acceptRemoteChanges}
                   >
                     Accept
                   </button>
                   <button
-                    className="px-2 py-0.5 rounded text-[11px] font-medium text-nim-muted hover:text-nim hover:bg-nim-tertiary border border-nim transition-colors"
+                    className="px-2 py-0.5 rounded-ui-base text-[11px] font-medium text-nim-muted hover:text-nim hover:bg-nim-tertiary border border-nim transition-colors"
                     onClick={rejectRemoteChanges}
                   >
                     Reject
@@ -1332,7 +1332,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 {item.system.documentPath}
               </span>
               <button
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded border border-nim text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-ui-base border border-nim text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
                 onClick={handleOpenDocument}
               >
                 <MaterialSymbol icon="open_in_new" size={14} />
@@ -1354,7 +1354,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               <div className="flex items-center gap-1">
                 {canLinkExistingSession && (
                   <button
-                    className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
+                    className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-ui-base text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
                     onClick={() => {
                       setLinkSessionError(null);
                       setSessionSearchQuery('');
@@ -1369,7 +1369,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 )}
                 {onLaunchSession && (
                   <button
-                    className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
+                    className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-ui-base text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
                     onClick={() => onLaunchSession(item.id)}
                     title="Launch a new AI session for this item"
                   >
@@ -1380,9 +1380,9 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               </div>
             </div>
             {isLinkingExistingSession && (
-              <div className="tracker-session-linker mb-2 rounded border border-nim bg-nim-tertiary p-2">
+              <div className="tracker-session-linker mb-2 rounded-ui-base border border-nim bg-nim-tertiary p-2">
                 <input
-                  className="w-full rounded border border-nim bg-nim px-2 py-1.5 text-xs text-nim outline-none focus:border-nim-focus"
+                  className="w-full rounded-ui-base border border-nim bg-nim px-2 py-2 text-xs text-nim outline-none focus:border-nim-focus"
                   type="text"
                   value={sessionSearchQuery}
                   onChange={(e) => setSessionSearchQuery(e.target.value)}
@@ -1393,7 +1393,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                     filteredAvailableSessions.map((session) => (
                       <button
                         key={session.id}
-                        className="tracker-session-linker-option w-full rounded px-2 py-1.5 text-left hover:bg-nim-hover transition-colors disabled:opacity-60"
+                        className="tracker-session-linker-option w-full rounded-ui-base px-2 py-2 text-left hover:bg-nim-hover transition-colors disabled:opacity-60"
                         onClick={() => handleLinkExistingSession(session.id)}
                         disabled={linkingSessionId !== null}
                         title={`Link session: ${session.title || 'Untitled session'}`}
@@ -1427,7 +1427,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 {linkedSessions.map((session) => (
                   <button
                     key={session.id}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-nim-tertiary transition-colors group"
+                    className="w-full flex items-center gap-2 px-2 py-2 rounded-ui-base text-left hover:bg-nim-tertiary transition-colors group"
                     onClick={() => onSwitchToAgentMode?.(session.id)}
                     title={`Open session: ${session.title}`}
                   >
@@ -1457,7 +1457,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               {item.system.linkedCommits.slice().reverse().map((commit: { sha: string; message: string; sessionId?: string; timestamp: string }) => (
                 <div
                   key={commit.sha}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-nim-tertiary transition-colors group"
+                  className="flex items-center gap-2 px-2 py-2 rounded-ui-base hover:bg-nim-tertiary transition-colors group"
                 >
                   <button
                     className="text-[11px] font-mono text-nim-primary hover:underline shrink-0"
@@ -1533,7 +1533,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 <span className="text-nim-faint shrink-0">Created by</span>
                 <UserAvatar identity={item.system.authorIdentity} showName size={16} />
                 {item.system.createdByAgent && (
-                  <span className="text-[10px] text-nim-faint bg-nim-tertiary px-1 py-0.5 rounded">via AI</span>
+                  <span className="text-[10px] text-nim-faint bg-nim-tertiary px-1 py-0.5 rounded-ui-base">via AI</span>
                 )}
               </div>
             )}
@@ -1563,7 +1563,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 <span className="text-nim-faint">Sync</span>
                 <div className="text-nim-muted">
                   <span
-                    className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
+                    className="inline-block px-2 py-0.5 rounded-ui-base text-[10px] font-medium"
                     style={{
                       backgroundColor: item.syncStatus === 'synced' ? '#22c55e20' : item.syncStatus === 'pending' ? '#eab30820' : '#6b728020',
                       color: item.syncStatus === 'synced' ? '#22c55e' : item.syncStatus === 'pending' ? '#eab308' : '#6b7280',
@@ -1684,7 +1684,7 @@ const BacklinksSection: React.FC<{ itemId: string }> = ({ itemId }) => {
           return (
             <span
               key={`${b.sourceItemId}:${b.sourceFieldId}`}
-              className="tracker-backlink-pill inline-flex items-center gap-1 rounded-full bg-nim-tertiary px-2 py-0.5 text-[11px] text-nim"
+              className="tracker-backlink-pill inline-flex items-center gap-1 rounded-ui-full bg-nim-tertiary px-2 py-0.5 text-[11px] text-nim"
               title={`${label} — ${relLabel}`}
             >
               <span className="text-nim-faint">{relLabel}:</span>
@@ -1799,7 +1799,7 @@ const CommentsSection: React.FC<{ itemId: string; comments?: any[] }> = ({ itemI
           && isSameIdentity(comment.authorIdentity ?? null, currentIdentity);
         const isEditing = editingId === comment.id;
         return (
-          <div key={comment.id} className={`tracker-comment group rounded bg-nim-tertiary p-2 space-y-1${comment._optimistic ? ' opacity-70' : ''}`}>
+          <div key={comment.id} className={`tracker-comment group rounded-ui-base bg-nim-tertiary p-2 space-y-1${comment._optimistic ? ' opacity-70' : ''}`}>
             <div className="flex items-center gap-2 text-[11px]">
               <span className="font-medium text-nim-muted">{comment.authorIdentity?.displayName || 'You'}</span>
               <span className="text-nim-faint">{getRelativeTimeString(comment.createdAt)}</span>
@@ -1834,18 +1834,18 @@ const CommentsSection: React.FC<{ itemId: string; comments?: any[] }> = ({ itemI
                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave(comment.id); }
                     if (e.key === 'Escape') { setEditingId(null); }
                   }}
-                  className="flex-1 bg-nim-secondary border border-nim rounded px-2 py-1 text-xs text-nim outline-none focus:border-nim-primary"
+                  className="flex-1 bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-xs text-nim outline-none focus:border-nim-primary"
                 />
                 <button
                   onClick={() => handleEditSave(comment.id)}
                   disabled={!editBody.trim()}
-                  className="px-2 py-1 rounded text-xs bg-nim-primary text-nim-on-primary disabled:opacity-40"
+                  className="px-2 py-1 rounded-ui-base text-xs bg-nim-primary text-nim-on-primary disabled:opacity-40"
                 >
                   Save
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="px-2 py-1 rounded text-xs text-nim-muted hover:text-nim"
+                  className="px-2 py-1 rounded-ui-base text-xs text-nim-muted hover:text-nim"
                 >
                   Cancel
                 </button>
@@ -1863,12 +1863,12 @@ const CommentsSection: React.FC<{ itemId: string; comments?: any[] }> = ({ itemI
           onChange={e => setNewComment(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
           placeholder="Add a comment..."
-          className="flex-1 bg-nim-secondary border border-nim rounded px-2 py-1 text-xs text-nim placeholder:text-nim-faint outline-none focus:border-nim-primary"
+          className="flex-1 bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-xs text-nim placeholder:text-nim-faint outline-none focus:border-nim-primary"
         />
         <button
           onClick={handleSubmit}
           disabled={!newComment.trim() || submitting}
-          className="px-2 py-1 rounded text-xs bg-nim-primary text-nim-on-primary disabled:opacity-40 hover:opacity-90 transition-opacity"
+          className="px-2 py-1 rounded-ui-base text-xs bg-nim-primary text-nim-on-primary disabled:opacity-40 hover:opacity-90 transition-opacity"
         >
           Post
         </button>

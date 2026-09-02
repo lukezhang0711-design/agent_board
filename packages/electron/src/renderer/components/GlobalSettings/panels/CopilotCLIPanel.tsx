@@ -76,11 +76,11 @@ export function CopilotCLIPanel({
             <p className="text-[13px] text-[var(--nim-text-muted)] mb-3 leading-relaxed">
               The GitHub Copilot CLI is required to run the agent. Install it with:
             </p>
-            <code className="block text-[13px] text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-3 py-2 rounded mb-3 select-text">
+            <code className="block text-[13px] text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-3 py-2 rounded-ui-base mb-3 select-text">
               npm install -g @github/copilot
             </code>
             <button
-              className="inline-flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90"
+              className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90"
               onClick={handleInstall}
             >
               Install Copilot CLI
@@ -89,7 +89,7 @@ export function CopilotCLIPanel({
               <div className="text-xs mt-2 text-[var(--nim-error)]">
                 {installError}
                 <p className="mt-1 text-[var(--nim-text-muted)]">
-                  Try running manually: <code className="text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 rounded">npm install -g @github/copilot</code>
+                  Try running manually: <code className="text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 rounded-ui-base">npm install -g @github/copilot</code>
                 </p>
               </div>
             )}

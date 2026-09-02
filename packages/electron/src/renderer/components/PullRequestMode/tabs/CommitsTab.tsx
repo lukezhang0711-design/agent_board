@@ -60,7 +60,7 @@ export function CommitsTab({ workspaceId, remote, pr, refreshToken }: CommitsTab
     <div className="pr-commits-tab flex flex-col flex-1 min-h-0 overflow-y-auto" data-testid="pr-commits-tab">
       {loading && commits.length === 0 ? (
         <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-sm">
-          <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-full animate-spin" />
+          <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin" />
           Loading commits…
         </div>
       ) : error ? (
@@ -93,7 +93,7 @@ export function CommitsTab({ workspaceId, remote, pr, refreshToken }: CommitsTab
               </div>
             </div>
             <button
-              className="flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-mono text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors shrink-0"
+              className="flex items-center gap-1 px-2 py-1 rounded-ui-base text-[11px] font-mono text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors shrink-0"
               onClick={() => handleCopy(commit.sha)}
               title="Copy SHA"
             >

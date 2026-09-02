@@ -363,7 +363,7 @@ Best for quick edits and tasks that do not require multi-file operations.`,
       <div className="settings-sidebar-content p-3">
         {filteredGroups.map((group) => (
           <div key={group.title} className="settings-sidebar-group mb-4">
-            <div className="settings-sidebar-group-title flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-muted)]">
+            <div className="settings-sidebar-group-title flex items-center gap-2 px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-muted)]">
               {group.title}
               {group.infoTooltip && (
                 <span
@@ -380,7 +380,7 @@ Best for quick edits and tasks that do not require multi-file operations.`,
               .map((item) => (
                 <div
                   key={item.id}
-                  className={`settings-sidebar-item flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${
+                  className={`settings-sidebar-item flex items-center gap-2 px-2 py-2 rounded-ui-base cursor-pointer text-sm transition-colors ${
                     selectedCategory === item.id
                       ? 'bg-[var(--nim-bg-selected)] text-[var(--nim-text)]'
                       : 'text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]'
@@ -391,13 +391,13 @@ Best for quick edits and tasks that do not require multi-file operations.`,
                   <span className="settings-sidebar-item-name flex-1 truncate">{item.name}</span>
                   {item.isAlpha && <AlphaBadge size="xs" tooltip={SETTINGS_ALPHA_TOOLTIP} />}
                   {item.badge && (
-                    <span className="settings-sidebar-item-badge text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                    <span className="settings-sidebar-item-badge text-[10px] font-medium px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                       {item.badge}
                     </span>
                   )}
                   {item.statusDot && (
                     <span
-                      className={`settings-sidebar-item-status w-2 h-2 rounded-full shrink-0 ${
+                      className={`settings-sidebar-item-status w-2 h-2 rounded-ui-full shrink-0 ${
                         item.statusDot === 'success'
                           ? 'bg-[var(--nim-success)]'
                           : item.statusDot === 'error'
@@ -414,7 +414,7 @@ Best for quick edits and tasks that do not require multi-file operations.`,
       {tooltip &&
         createPortal(
           <div
-            className="settings-sidebar-tooltip fixed z-[10000] max-w-[280px] px-3 py-2 bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-lg shadow-lg text-sm text-[var(--nim-text)] whitespace-pre-wrap pointer-events-none transform -translate-y-1/2"
+            className="settings-sidebar-tooltip fixed z-[10000] max-w-[280px] px-3 py-2 bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-lg shadow-lg text-sm text-[var(--nim-text)] whitespace-pre-wrap pointer-events-none transform -translate-y-1/2"
             style={{ top: `${tooltip.top}px`, left: `${tooltip.left}px` }}
           >
             {tooltip.text}

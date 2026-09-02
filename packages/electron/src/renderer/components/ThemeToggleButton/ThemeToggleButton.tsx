@@ -117,7 +117,7 @@ export const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ className 
       <HelpTooltip testId="gutter-theme-button" placement="right">
         <button
           ref={buttonRef}
-          className={`theme-toggle-button nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${className}`}
+          className={`theme-toggle-button nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${className}`}
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Change theme"
           aria-expanded={isMenuOpen}
@@ -131,14 +131,14 @@ export const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ className 
       {isMenuOpen && (
         <div
           ref={menuRef}
-          className="theme-menu absolute bottom-0 left-full ml-2 bg-nim-secondary border border-nim rounded-md p-1 min-w-[200px] shadow-lg z-[1000]"
+          className="theme-menu absolute bottom-0 left-full ml-2 bg-nim-secondary border border-nim rounded-ui-base p-1 min-w-[200px] shadow-lg z-[1000]"
           role="menu"
           aria-label="Theme selection"
         >
           {availableThemes.map(theme => (
             <button
               key={theme.id}
-              className="theme-menu-item flex items-center gap-2 w-full py-2 px-3 border-none bg-transparent text-nim text-[13px] text-left cursor-pointer rounded transition-colors duration-100 hover:bg-nim-hover"
+              className="theme-menu-item flex items-center gap-2 w-full py-2 px-3 border-none bg-transparent text-nim text-[13px] text-left cursor-pointer rounded-ui-base transition-colors duration-100 hover:bg-nim-hover"
               onClick={() => selectTheme(theme.id)}
               role="menuitem"
             >

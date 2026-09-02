@@ -223,7 +223,7 @@ export function HistoryWindow() {
                   <div className="snapshot-info flex-1 min-w-0">
                     <div className="snapshot-date text-sm text-[var(--nim-text)] mb-1">{formatDate(snapshot.timestamp)}</div>
                     <div className="snapshot-meta flex gap-3 text-xs text-[var(--nim-text-muted)]">
-                      <span className={`snapshot-type inline-flex items-center px-1.5 py-0.5 rounded font-medium ${
+                      <span className={`snapshot-type inline-flex items-center px-2 py-0.5 rounded-ui-base font-medium ${
                         selectedSnapshot?.timestamp === snapshot.timestamp
                           ? 'bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]'
                           : 'bg-[var(--nim-bg-tertiary)]'
@@ -232,7 +232,7 @@ export function HistoryWindow() {
                     </div>
                   </div>
                   <button
-                    className="snapshot-delete absolute right-3 top-1/2 -translate-y-1/2 p-1 bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer rounded opacity-0 transition-all duration-150 hover:bg-[var(--nim-error-subtle)] hover:text-[var(--nim-error)] group-hover:opacity-100 [.snapshot-item:hover_&]:opacity-100"
+                    className="snapshot-delete absolute right-3 top-1/2 -translate-y-1/2 p-1 bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer rounded-ui-base opacity-0 transition-all duration-150 hover:bg-[var(--nim-error-subtle)] hover:text-[var(--nim-error)] group-hover:opacity-100 [.snapshot-item:hover_&]:opacity-100"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(snapshot);
@@ -252,7 +252,7 @@ export function HistoryWindow() {
             <h2 className="m-0 text-sm font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Preview</h2>
             {selectedSnapshot && (
               <div className="preview-actions flex gap-2">
-                <button className="btn-restore nim-btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md" onClick={handleRestore}>
+                <button className="btn-restore nim-btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-ui-base" onClick={handleRestore}>
                   <MaterialSymbol icon="restore" size={18} />
                   Restore This Version
                 </button>

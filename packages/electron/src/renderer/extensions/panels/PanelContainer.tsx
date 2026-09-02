@@ -61,7 +61,7 @@ class PanelErrorBoundary extends React.Component<
             {this.state.error?.message || 'An unknown error occurred'}
           </div>
           <button
-            className="panel-error-retry mt-2 px-4 py-2 border border-[var(--nim-border)] rounded bg-transparent text-[var(--nim-text)] text-[13px] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+            className="panel-error-retry mt-2 px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-text)] text-[13px] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
             onClick={() => this.setState({ hasError: false, error: undefined })}
           >
             Retry

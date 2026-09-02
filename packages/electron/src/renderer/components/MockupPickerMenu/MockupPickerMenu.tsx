@@ -349,7 +349,7 @@ function MockupPickerMenu({ onClose }: MockupPickerMenuProps): JSX.Element {
     <div className="mockup-picker-overlay fixed inset-0 z-[1000] flex items-start justify-center pt-[20vh]">
       <div
         ref={menuRef}
-        className="mockup-picker-menu flex flex-col overflow-hidden w-80 max-h-[400px] rounded-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_4px_20px_rgba(0,0,0,0.15)]"
+        className="mockup-picker-menu flex flex-col overflow-hidden w-80 max-h-[400px] rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_4px_20px_rgba(0,0,0,0.15)]"
         onKeyDown={handleKeyDown}
       >
         {isCreatingNew ? (
@@ -386,11 +386,11 @@ function MockupPickerMenu({ onClose }: MockupPickerMenuProps): JSX.Element {
                 options.map((option, index) => (
                   <div
                     key={option.id}
-                    className={`mockup-picker-item flex flex-col gap-1 px-3 py-2 rounded cursor-pointer text-[var(--nim-text)] ${
+                    className={`mockup-picker-item flex flex-col gap-1 px-3 py-2 rounded-ui-base cursor-pointer text-[var(--nim-text)] ${
                       index === selectedIndex ? 'selected bg-[var(--nim-bg-hover)]' : ''
                     } ${
                       option.isNew
-                        ? 'new-item text-[var(--nim-primary)] font-medium border-b border-b-[var(--nim-border)] mb-1 rounded-t rounded-b-none'
+                        ? 'new-item text-[var(--nim-primary)] font-medium border-b border-b-[var(--nim-border)] mb-1 rounded-ui-base-t rounded-ui-none-b'
                         : 'hover:bg-[var(--nim-bg-hover)]'
                     }`}
                     onClick={() => handleSelect(option)}

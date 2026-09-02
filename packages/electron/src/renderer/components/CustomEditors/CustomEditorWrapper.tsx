@@ -105,14 +105,14 @@ const ErrorFallback: React.FC<{
         {extensionId && (
           <p className="custom-editor-error-extension m-0 mb-4 text-[13px] text-[var(--nim-text-muted)]">
             Extension:{' '}
-            <code className="px-1.5 py-0.5 bg-[var(--nim-bg-secondary)] rounded font-mono text-xs">
+            <code className="px-2 py-0.5 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-xs">
               {extensionId}
             </code>
             {componentName && (
               <>
                 {' '}
                 / Component:{' '}
-                <code className="px-1.5 py-0.5 bg-[var(--nim-bg-secondary)] rounded font-mono text-xs">
+                <code className="px-2 py-0.5 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-xs">
                   {componentName}
                 </code>
               </>
@@ -129,13 +129,13 @@ const ErrorFallback: React.FC<{
             <summary className="cursor-pointer text-[13px] text-[var(--nim-text-muted)] py-2 hover:text-[var(--nim-text)]">
               Error Details
             </summary>
-            <pre className="mt-2 p-3 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md text-[11px] font-mono text-[var(--nim-text-muted)] overflow-x-auto whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto">
+            <pre className="mt-2 p-3 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[11px] font-mono text-[var(--nim-text-muted)] overflow-x-auto whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto">
               {error.stack}
             </pre>
           </details>
         )}
         {isRenderLoop && (
-          <div className="custom-editor-error-hint m-0 mb-5 px-4 py-3 bg-[color-mix(in_srgb,var(--nim-warning)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-warning)_30%,transparent)] rounded-lg text-left">
+          <div className="custom-editor-error-hint m-0 mb-5 px-4 py-3 bg-[color-mix(in_srgb,var(--nim-warning)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-warning)_30%,transparent)] rounded-ui-lg text-left">
             <strong className="block mb-2 text-[13px] text-[var(--nim-text)]">
               Common causes:
             </strong>

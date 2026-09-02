@@ -467,7 +467,7 @@ export function VoiceModeButton({ workspacePath }: VoiceModeButtonProps) {
   const contextExtraContent = (isVoiceActive && tokenUsage) ? (
     <div className="flex items-center gap-2 text-xs">
       <div
-        className="w-2 h-2 rounded-full shrink-0"
+        className="w-2 h-2 rounded-ui-full shrink-0"
         style={{ backgroundColor: getRingStrokeColor() }}
       />
       <span className="text-[var(--nim-text-muted)]">
@@ -486,7 +486,7 @@ export function VoiceModeButton({ workspacePath }: VoiceModeButtonProps) {
           onClick={handleToggleVoice}
           disabled={isDisabled}
           data-testid="voice-mode-toggle"
-          className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-md cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${
+          className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${
             isVoiceActive && isSleeping
               ? 'bg-[#92400e] text-[#fbbf24] hover:bg-[#78350f]'
               : isVoiceActive
@@ -541,7 +541,7 @@ export function VoiceModeButton({ workspacePath }: VoiceModeButtonProps) {
         </button>
         {error && (
           <div
-            className="voice-mode-error-popover absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 bg-nim border border-nim-error rounded-lg p-3 min-w-[200px] max-w-[300px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1000]"
+            className="voice-mode-error-popover absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 bg-nim border border-nim-error rounded-ui-lg p-3 min-w-[200px] max-w-[300px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1000]"
           >
             <div className="flex items-start gap-2 text-nim">
               <MaterialSymbol icon="error" size={18} className="text-nim-error shrink-0" />

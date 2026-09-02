@@ -94,7 +94,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
   return (
     <div className="overview-dashboard flex flex-col gap-4">
       <div className="stats-grid grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
-        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Total Sessions
           </div>
@@ -108,7 +108,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           )}
         </div>
 
-        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Total Tokens
           </div>
@@ -120,7 +120,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           </div>
         </div>
 
-        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Normal Input
           </div>
@@ -129,7 +129,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           </div>
         </div>
 
-        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Read
           </div>
@@ -138,7 +138,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           </div>
         </div>
 
-        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Creation
           </div>
@@ -147,7 +147,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           </div>
         </div>
 
-        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+        <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Hit Rate
           </div>
@@ -157,7 +157,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
         </div>
 
         {mostUsedProvider && (
-          <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md px-4 py-3">
+          <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
             <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
               Most Used
             </div>
@@ -201,9 +201,9 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
                       {provider.totalTokens.toLocaleString()}
                     </span>
                   </div>
-                  <div className="provider-bar-track h-1.5 bg-[var(--nim-bg-tertiary)] rounded-sm overflow-hidden">
+                  <div className="provider-bar-track h-1.5 bg-[var(--nim-bg-tertiary)] rounded-ui-base overflow-hidden">
                     <div
-                      className="provider-bar-fill h-full bg-[var(--nim-primary)] rounded-sm transition-[width] duration-300 ease-out"
+                      className="provider-bar-fill h-full bg-[var(--nim-primary)] rounded-ui-base transition-[width] duration-300 ease-out"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>

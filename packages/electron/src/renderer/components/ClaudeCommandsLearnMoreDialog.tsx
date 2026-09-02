@@ -83,7 +83,7 @@ export function ClaudeCommandsLearnMoreDialog({
             Claude Commands for Nimbalyst
           </h2>
           <button
-            className="claude-commands-learn-more-close nim-btn-icon w-8 h-8 text-[28px] leading-none rounded transition-all duration-200"
+            className="claude-commands-learn-more-close nim-btn-icon w-8 h-8 text-[28px] leading-none rounded-ui-base transition-all duration-200"
             onClick={onClose}
             aria-label="Close"
           >
@@ -108,13 +108,13 @@ export function ClaudeCommandsLearnMoreDialog({
             </h3>
             <p className="m-0 mb-3 text-[13px] leading-relaxed text-[var(--nim-text-muted)]">
               A{' '}
-              <code className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded px-1.5 py-0.5 font-mono text-xs text-[var(--nim-text)]">
+              <code className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-2 py-0.5 font-mono text-xs text-[var(--nim-text)]">
                 nimbalyst-local
               </code>{' '}
               folder will be created in your project root to store working
               documents:
             </p>
-            <div className="claude-commands-folder-structure bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg px-4 py-3 my-3">
+            <div className="claude-commands-folder-structure bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg px-4 py-3 my-3">
               <pre className="m-0 font-mono text-xs leading-relaxed text-[var(--nim-text-muted)] whitespace-pre">
                 {`nimbalyst-local/
 ├── plans/        # Plan documents (.md)
@@ -125,7 +125,7 @@ export function ClaudeCommandsLearnMoreDialog({
             </div>
             <p className="claude-commands-learn-more-note m-0 text-xs italic text-[var(--nim-text-faint)]">
               This folder is automatically added to{' '}
-              <code className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded px-1.5 py-0.5 font-mono text-xs text-[var(--nim-text)]">
+              <code className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-2 py-0.5 font-mono text-xs text-[var(--nim-text)]">
                 .gitignore
               </code>{' '}
               to keep your repository clean and avoid merge conflicts.
@@ -148,7 +148,7 @@ export function ClaudeCommandsLearnMoreDialog({
                 {group.commands.map((cmd) => (
                   <div
                     key={cmd.name}
-                    className="claude-commands-item bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg px-3.5 py-3"
+                    className="claude-commands-item bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg px-3 py-3"
                   >
                     <div className="claude-commands-item-header mb-1.5">
                       <code className="claude-commands-item-name text-[13px] font-semibold text-[var(--nim-primary)]">
@@ -185,7 +185,7 @@ export function ClaudeCommandsLearnMoreDialog({
 
         <div className="claude-commands-learn-more-footer flex justify-end px-6 py-4 border-t border-[var(--nim-border)]">
           <button
-            className="claude-commands-learn-more-btn nim-btn-primary px-5 py-2.5 rounded-md text-sm font-medium"
+            className="claude-commands-learn-more-btn nim-btn-primary px-5 py-2.5 rounded-ui-base text-sm font-medium"
             onClick={onClose}
           >
             Got it

@@ -76,7 +76,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="ai-usage-popover w-80 max-h-[85vh] overflow-y-auto rounded-lg border border-nim bg-nim-secondary shadow-lg z-50 flex flex-col"
+        className="ai-usage-popover w-80 max-h-[85vh] overflow-y-auto rounded-ui-lg border border-nim bg-nim-secondary shadow-lg z-50 flex flex-col"
         data-testid="ai-usage-popover"
         data-component="AIUsagePopover"
       >
@@ -90,7 +90,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="rounded p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim disabled:opacity-50"
+              className="rounded-ui-base p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim disabled:opacity-50"
               aria-label="刷新全部用量"
               title="刷新全部用量"
             >
@@ -98,7 +98,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="rounded p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim"
+              className="rounded-ui-base p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim"
               aria-label="关闭"
             >
               <MaterialSymbol icon="close" size={16} />
@@ -223,9 +223,9 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                                 {model.utilization}%
                               </div>
                             </div>
-                            <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-nim-tertiary">
+                            <div className="mb-1.5 h-1.5 overflow-hidden rounded-ui-full bg-nim-tertiary">
                               <div
-                                className={`h-full rounded-full transition-all duration-300 ${colors.bar}`}
+                                className={`h-full rounded-ui-full transition-all duration-300 ${colors.bar}`}
                                 style={{ width: `${barWidth}%` }}
                               />
                             </div>
@@ -251,9 +251,9 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                         {Math.round(geminiUsage?.fiveHour?.utilization ?? 0)}%
                       </div>
                     </div>
-                    <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-nim-tertiary">
+                    <div className="mb-1.5 h-1.5 overflow-hidden rounded-ui-full bg-nim-tertiary">
                       <div
-                        className="h-full rounded-full bg-green-500"
+                        className="h-full rounded-ui-full bg-green-500"
                         style={{ width: `${Math.min(geminiUsage?.fiveHour?.utilization ?? 0, 100)}%` }}
                       />
                     </div>
@@ -263,7 +263,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
             ) : (
               /* Branch B: Token Fallback without Progress Bar */
               <div
-                className="flex flex-col gap-2 p-2.5 rounded-md bg-nim-tertiary/50 border border-nim/50 text-ui-compact"
+                className="flex flex-col gap-2 p-2.5 rounded-ui-base bg-nim-tertiary/50 border border-nim/50 text-ui-compact"
                 data-testid="gemini-token-fallback"
               >
                 <div className="flex items-center justify-between">

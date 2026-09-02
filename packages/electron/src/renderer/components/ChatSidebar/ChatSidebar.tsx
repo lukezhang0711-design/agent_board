@@ -282,7 +282,7 @@ export const ChatSidebar = forwardRef<ChatSidebarRef, ChatSidebarProps>(({
         style={{ width: onWidthChange ? width : undefined }}
         data-session-id={sessionId}
       >
-        <div className="chat-sidebar-spinner w-6 h-6 border-2 border-nim border-t-nim-primary rounded-full animate-spin" />
+        <div className="chat-sidebar-spinner w-6 h-6 border-2 border-nim border-t-nim-primary rounded-ui-full animate-spin" />
       </div>
     );
   }
@@ -328,7 +328,7 @@ export const ChatSidebar = forwardRef<ChatSidebarRef, ChatSidebarProps>(({
         <div className="flex items-center gap-1">
           {onSwitchToAgentMode && (
             <button
-              className="chat-sidebar-maximize-button flex items-center justify-center w-7 h-7 rounded-md text-nim-muted border-none cursor-pointer transition-colors duration-150 hover:bg-nim-bg-active hover:text-nim bg-transparent"
+              className="chat-sidebar-maximize-button flex items-center justify-center w-7 h-7 rounded-ui-base text-nim-muted border-none cursor-pointer transition-colors duration-150 hover:bg-nim-bg-active hover:text-nim bg-transparent"
               onClick={() => onSwitchToAgentMode(sessionId ?? undefined)}
               title="Open in agent mode"
             >
@@ -336,7 +336,7 @@ export const ChatSidebar = forwardRef<ChatSidebarRef, ChatSidebarProps>(({
             </button>
           )}
           <button
-            className="chat-sidebar-new-button flex items-center gap-1 px-3 py-1.5 rounded-md text-[0.8125rem] font-medium bg-nim-primary text-nim-on-primary border-none cursor-pointer transition-opacity duration-150 hover:opacity-90"
+            className="chat-sidebar-new-button flex items-center gap-1 px-3 py-2 rounded-ui-base text-[0.8125rem] font-medium bg-nim-primary text-nim-on-primary border-none cursor-pointer transition-opacity duration-150 hover:opacity-90"
             onClick={handleNewSession}
             title="Start new conversation"
           >

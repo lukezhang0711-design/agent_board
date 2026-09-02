@@ -179,7 +179,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
       data-testid="import-from-source-dialog"
     >
       <div
-        className="w-[640px] max-w-[92vw] max-h-[80vh] flex flex-col bg-nim border border-nim rounded-lg shadow-xl overflow-hidden"
+        className="w-[640px] max-w-[92vw] max-h-[80vh] flex flex-col bg-nim border border-nim rounded-ui-lg shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -188,7 +188,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
           <span className="text-sm font-semibold text-nim">Import from {providerLabel}</span>
           <div className="flex-1" />
           <button
-            className="p-1 rounded hover:bg-nim-tertiary text-nim-muted"
+            className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted"
             onClick={onClose}
             title="Close"
           >
@@ -200,7 +200,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
         <div className="flex items-center gap-2 px-4 py-2 border-b border-nim shrink-0 flex-wrap">
           {bindings && bindings.length > 1 && (
             <select
-              className="text-xs bg-nim-secondary border border-nim rounded px-2 py-1 text-nim"
+              className="text-xs bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
               value={bindingId ?? ''}
               onChange={(e) => setBindingId(e.target.value)}
             >
@@ -215,7 +215,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
             <span className="text-xs text-nim-muted font-mono">{bindings[0].label}</span>
           )}
           <select
-            className="text-xs bg-nim-secondary border border-nim rounded px-2 py-1 text-nim"
+            className="text-xs bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
             value={stateFilter}
             onChange={(e) => setStateFilter(e.target.value as StateFilter)}
           >
@@ -234,13 +234,13 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
-              className="w-full pl-7 pr-2 py-1 text-xs bg-nim-secondary border border-nim rounded text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
+              className="w-full pl-7 pr-2 py-1 text-xs bg-nim-secondary border border-nim rounded-ui-base text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
             />
           </div>
           <label className="flex items-center gap-1 text-xs text-nim-muted">
             Import as
             <select
-              className="text-xs bg-nim-secondary border border-nim rounded px-2 py-1 text-nim"
+              className="text-xs bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
               value={primaryType}
               onChange={(e) => setPrimaryType(e.target.value)}
             >
@@ -275,14 +275,14 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
           )}
           {items.length > 0 && (
             <>
-              <label className="flex items-center gap-2 px-4 py-1.5 border-b border-nim text-xs text-nim-muted sticky top-0 bg-nim">
+              <label className="flex items-center gap-2 px-4 py-2 border-b border-nim text-xs text-nim-muted sticky top-0 bg-nim">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} />
                 Select all ({items.length})
               </label>
               {items.map((item) => (
                 <label
                   key={item.externalId}
-                  className="flex items-start gap-2 px-4 py-1.5 hover:bg-nim-tertiary cursor-pointer border-b border-nim/40"
+                  className="flex items-start gap-2 px-4 py-2 hover:bg-nim-tertiary cursor-pointer border-b border-nim/40"
                 >
                   <input
                     type="checkbox"
@@ -310,14 +310,14 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
           </span>
           <div className="flex-1" />
           <button
-            className="px-3 py-1 text-xs text-nim-muted border border-nim rounded hover:bg-nim-tertiary"
+            className="px-3 py-1 text-xs text-nim-muted border border-nim rounded-ui-base hover:bg-nim-tertiary"
             onClick={onClose}
             disabled={importing}
           >
             Cancel
           </button>
           <button
-            className="px-3 py-1 text-xs font-medium text-white bg-[var(--nim-primary)] rounded hover:opacity-90 disabled:opacity-50"
+            className="px-3 py-1 text-xs font-medium text-white bg-[var(--nim-primary)] rounded-ui-base hover:opacity-90 disabled:opacity-50"
             onClick={runImport}
             disabled={importing || selected.size === 0}
             data-testid="import-from-source-confirm"

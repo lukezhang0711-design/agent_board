@@ -86,7 +86,7 @@ const SessionPhaseBadge = memo<{ phase: string }>(({ phase }) => {
   if (!style) return null;
   return (
     <span
-      className="session-list-item-phase text-[0.5625rem] leading-tight px-1 py-px rounded font-medium whitespace-nowrap"
+      className="session-list-item-phase text-[0.5625rem] leading-tight px-1 py-px rounded-ui-base font-medium whitespace-nowrap"
       style={{ color: style.color, backgroundColor: style.bg }}
     >
       {style.label}
@@ -421,7 +421,7 @@ export const SessionListItem = memo<SessionListItemProps>(({
         id={"session-list-item-" + id}
       data-testid={isWorktreeSession ? 'worktree-session-item' : isWorkstream ? 'workstream-session-item' : 'session-list-item'}
       data-session-type={isWorktreeSession ? 'worktree' : isWorkstream ? 'workstream' : 'session'}
-      className={`session-list-item relative flex items-start gap-3 py-1 px-3 pl-8 cursor-pointer rounded mx-2 transition-[background-color,opacity] duration-150 select-none
+      className={`session-list-item relative flex items-start gap-3 py-1 px-3 pl-8 cursor-pointer rounded-ui-base mx-2 transition-[background-color,opacity] duration-150 select-none
         hover:bg-[var(--nim-bg-hover)]
         focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:-outline-offset-2
         ${isActive ? 'active bg-[var(--nim-bg-selected)]' : ''}
@@ -503,7 +503,7 @@ export const SessionListItem = memo<SessionListItemProps>(({
           <input
             ref={renameInputRef}
             type="text"
-            className="session-list-item-rename-input w-full px-2 py-1 text-[0.8125rem] font-medium border border-[var(--nim-primary)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none box-border"
+            className="session-list-item-rename-input w-full px-2 py-1 text-[0.8125rem] font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none box-border"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={handleRenameKeyDown}
@@ -523,14 +523,14 @@ export const SessionListItem = memo<SessionListItemProps>(({
       </div>
       <div className="session-list-item-right shrink-0 flex items-center gap-2 ml-auto">
         {uncommittedCount !== undefined && uncommittedCount > 0 && (
-          <span className="session-list-item-badge uncommitted text-[0.6875rem] px-1.5 py-0.5 rounded-ui-lg font-semibold whitespace-nowrap bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]" title={`${uncommittedCount} uncommitted change${uncommittedCount !== 1 ? 's' : ''}`}>
+          <span className="session-list-item-badge uncommitted text-[0.6875rem] px-2 py-0.5 rounded-ui-lg font-semibold whitespace-nowrap bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]" title={`${uncommittedCount} uncommitted change${uncommittedCount !== 1 ? 's' : ''}`}>
             {uncommittedCount}
           </span>
         )}
         <SessionStatusIndicator sessionId={id} messageCount={messageCount} />
         {/*{(onArchive || onUnarchive) && (*/}
         {/*  <button*/}
-        {/*    className={`session-list-item-archive shrink-0 flex items-center justify-center w-5 h-5 p-0 bg-transparent border-none rounded text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:outline-offset-1*/}
+        {/*    className={`session-list-item-archive shrink-0 flex items-center justify-center w-5 h-5 p-0 bg-transparent border-none rounded-ui-base text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:outline-offset-1*/}
         {/*      ${isHovering ? 'visible opacity-70 pointer-events-auto hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)] hover:opacity-100' : 'opacity-0 pointer-events-none'}*/}
         {/*      disabled:cursor-default disabled:opacity-0 disabled:pointer-events-none*/}
         {/*    `}*/}

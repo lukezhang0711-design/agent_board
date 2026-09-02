@@ -212,7 +212,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
         {/* Header */}
         <div className="nim-modal-header relative overflow-hidden bg-[linear-gradient(180deg,var(--nim-bg-secondary),var(--nim-bg))]">
           <div
-            className="absolute -top-12 -right-12 h-28 w-28 rounded-full bg-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] blur-2xl"
+            className="absolute -top-12 -right-12 h-28 w-28 rounded-ui-full bg-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] blur-2xl"
             aria-hidden="true"
           />
           <div className="flex items-start gap-3">
@@ -224,7 +224,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <h2 className="m-0 text-[18px] font-semibold text-nim">New Blitz</h2>
-                <span className="text-[10px] uppercase tracking-wide text-nim-faint border border-nim rounded-full px-2 py-0.5">
+                <span className="text-[10px] uppercase tracking-wide text-nim-faint border border-nim rounded-ui-full px-2 py-0.5">
                   Beta
                 </span>
               </div>
@@ -233,7 +233,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
               </p>
             </div>
           </div>
-          <span className="text-[11px] text-nim-faint px-2.5 py-1 rounded-full border border-nim bg-nim-tertiary">
+          <span className="text-[11px] text-nim-faint px-2.5 py-1 rounded-ui-full border border-nim bg-nim-tertiary">
             Max 10 worktrees
           </span>
         </div>
@@ -248,7 +248,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
             </div>
             <textarea
               ref={textareaRef}
-              className="w-full p-3 text-[14px] bg-nim border border-nim rounded-lg text-nim resize-none outline-none focus:border-nim-focus transition-colors placeholder:text-nim-faint"
+              className="w-full p-3 text-[14px] bg-nim border border-nim rounded-ui-lg text-nim resize-none outline-none focus:border-nim-focus transition-colors placeholder:text-nim-faint"
               rows={4}
               placeholder="Enter the prompt to run across all sessions..."
               value={prompt}
@@ -281,7 +281,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
                   {modelSelections.map(model => (
                     <label
                       key={model.id}
-                      className={`grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2.5 py-2 cursor-pointer transition-colors rounded-lg border border-nim bg-nim ${
+                      className={`grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2.5 py-2 cursor-pointer transition-colors rounded-ui-lg border border-nim bg-nim ${
                         model.checked
                           ? 'bg-nim-selected border-l-2 border-l-[var(--nim-primary)]'
                           : 'hover:bg-nim-hover border-l-2 border-l-transparent'
@@ -303,7 +303,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
                         value={model.count}
                         onChange={(e) => updateCount(model.id, parseInt(e.target.value) || 1)}
                         disabled={!model.checked || creating}
-                        className={`w-14 px-2 py-1 text-center text-[13px] bg-nim-secondary border border-nim rounded text-nim outline-none focus:border-nim-focus ${
+                        className={`w-14 px-2 py-1 text-center text-[13px] bg-nim-secondary border border-nim rounded-ui-base text-nim outline-none focus:border-nim-focus ${
                           !model.checked ? 'opacity-30' : ''
                         }`}
                       />
@@ -324,7 +324,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
               When all sessions complete, an analysis session compares the results.
             </p>
             <select
-              className="w-full px-3 py-2 text-[13px] bg-nim border border-nim rounded-lg text-nim outline-none focus:border-nim-focus transition-colors cursor-pointer"
+              className="w-full px-3 py-2 text-[13px] bg-nim border border-nim rounded-ui-lg text-nim outline-none focus:border-nim-focus transition-colors cursor-pointer"
               value={analysisModel}
               onChange={(e) => setAnalysisModel(e.target.value)}
               disabled={creating || loading || modelSelections.length === 0}
@@ -341,7 +341,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
 
           {/* Error */}
           {error && (
-            <div className="text-[13px] text-nim-error p-3 bg-nim-error/10 border border-nim-error/30 rounded-lg select-text">
+            <div className="text-[13px] text-nim-error p-3 bg-nim-error/10 border border-nim-error/30 rounded-ui-lg select-text">
               {error}
             </div>
           )}
@@ -350,14 +350,14 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
         {/* Footer */}
         <div className="nim-modal-footer">
           <button
-            className="nim-btn-secondary px-5 py-2 text-sm font-medium rounded-lg"
+            className="nim-btn-secondary px-5 py-2 text-sm font-medium rounded-ui-lg"
             onClick={onClose}
             disabled={creating}
           >
             Cancel
           </button>
           <button
-            className="nim-btn-primary px-5 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="nim-btn-primary px-5 py-2 text-sm font-semibold rounded-ui-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleSubmit}
             disabled={!isValid || creating}
           >

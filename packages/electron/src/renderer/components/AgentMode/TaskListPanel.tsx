@@ -101,7 +101,7 @@ const TaskRow: React.FC<TaskRowProps> = React.memo(({ task, openIds }) => {
 
   return (
     <div
-      className={`task-list-item flex items-start gap-2 py-1 px-1 rounded text-xs ${
+      className={`task-list-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-xs ${
         task.status === 'in_progress' ? 'bg-[var(--nim-bg-hover)]' : ''
       } ${task.status === 'completed' ? 'opacity-60' : ''}`}
       data-status={task.status}
@@ -112,7 +112,7 @@ const TaskRow: React.FC<TaskRowProps> = React.memo(({ task, openIds }) => {
           <span className="text-[var(--nim-text-faint)] text-[10px]">○</span>
         )}
         {task.status === 'in_progress' && (
-          <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+          <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
         {task.status === 'completed' && (
           <span className="text-[#4ade80] text-[10px]">●</span>

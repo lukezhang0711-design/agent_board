@@ -96,11 +96,11 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
             {currentMetricLabels.description}
           </p>
         </div>
-        <div className="metric-toggle flex gap-1 bg-[var(--nim-bg-secondary)] p-1 rounded-md">
+        <div className="metric-toggle flex gap-1 bg-[var(--nim-bg-secondary)] p-1 rounded-ui-base">
           {(['messages', 'edits', 'sessions'] as ActivityMetric[]).map((m) => (
             <button
               key={m}
-              className={`metric-button border-none px-3 py-1.5 text-xs font-medium text-[var(--nim-text-muted)] cursor-pointer rounded transition-all duration-200 whitespace-nowrap hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${metric === m ? 'active bg-[var(--nim-bg)] text-[var(--nim-text)] shadow-sm' : ''}`}
+              className={`metric-button border-none px-3 py-2 text-xs font-medium text-[var(--nim-text-muted)] cursor-pointer rounded-ui-base transition-all duration-200 whitespace-nowrap hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${metric === m ? 'active bg-[var(--nim-bg)] text-[var(--nim-text)] shadow-sm' : ''}`}
               onClick={() => setMetric(m)}
             >
               {METRIC_LABELS[m].title.replace(/^(AI |Documents )/g, '')}
@@ -141,7 +141,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
                 return (
                   <div
                     key={hour}
-                    className="heatmap-cell aspect-square rounded-sm bg-nim border border-nim cursor-pointer transition-all duration-200 flex items-center justify-center min-h-[20px] max-h-[28px] relative hover:scale-110 hover:z-10 hover:border-nim"
+                    className="heatmap-cell aspect-square rounded-ui-base bg-nim border border-nim cursor-pointer transition-all duration-200 flex items-center justify-center min-h-[20px] max-h-[28px] relative hover:scale-110 hover:z-10 hover:border-nim"
                     style={{
                       backgroundColor: intensity > 0 ? `rgba(59, 130, 246, ${intensity * 0.8})` : undefined,
                     }}
@@ -162,7 +162,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
         <div className="heatmap-legend flex items-center gap-2 mt-2 justify-center text-[10px] text-[var(--nim-text-muted)]">
           <span>Less</span>
           <div
-            className="legend-gradient w-[100px] h-2 rounded-sm"
+            className="legend-gradient w-[100px] h-2 rounded-ui-base"
             style={{
               background:
                 'linear-gradient(to right, rgba(var(--nim-accent-rgb), 0), rgba(var(--nim-accent-rgb), 0.8))',

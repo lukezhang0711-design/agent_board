@@ -135,7 +135,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
         ref={refs.setReference}
         {...getReferenceProps()}
         type="button"
-        className={`unified-quick-open-filter-chip inline-flex items-center gap-2 px-2 py-1 text-xs rounded border cursor-pointer transition-colors duration-100 ${
+        className={`unified-quick-open-filter-chip inline-flex items-center gap-2 px-2 py-1 text-xs rounded-ui-base border cursor-pointer transition-colors duration-100 ${
           value
             ? 'bg-[rgba(0,122,255,0.12)] border-[var(--nim-primary)] text-[var(--nim-primary)]'
             : 'bg-nim-secondary border-nim text-nim-muted hover:text-nim hover:bg-nim-hover'
@@ -150,7 +150,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
           <span
             role="button"
             tabIndex={-1}
-            className="ml-0.5 flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-[rgba(0,122,255,0.25)]"
+            className="ml-0.5 flex items-center justify-center w-3.5 h-3.5 rounded-ui-full hover:bg-[rgba(0,122,255,0.25)]"
             onClick={(e) => {
               e.stopPropagation();
               handlePick(null);
@@ -169,11 +169,11 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
             ref={refs.setFloating}
             style={{ ...floatingStyles, zIndex: 100000 }}
             {...getFloatingProps()}
-            className="unified-quick-open-filter-menu rounded-md border border-nim bg-nim shadow-[0_8px_24px_rgba(0,0,0,0.3)] min-w-[220px] max-h-[300px] overflow-y-auto p-1"
+            className="unified-quick-open-filter-menu rounded-ui-base border border-nim bg-nim shadow-[0_8px_24px_rgba(0,0,0,0.3)] min-w-[220px] max-h-[300px] overflow-y-auto p-1"
           >
             <button
               type="button"
-              className="w-full text-left px-3 py-1.5 text-sm rounded cursor-pointer text-nim-muted hover:bg-nim-hover hover:text-nim"
+              className="w-full text-left px-3 py-2 text-sm rounded-ui-base cursor-pointer text-nim-muted hover:bg-nim-hover hover:text-nim"
               onClick={() => handlePick(null)}
             >
               Any
@@ -186,7 +186,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
                   <button
                     key={opt.value}
                     type="button"
-                    className={`w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm rounded cursor-pointer ${
+                    className={`w-full flex items-center gap-2 text-left px-3 py-2 text-sm rounded-ui-base cursor-pointer ${
                       opt.value === value
                         ? 'bg-[rgba(0,122,255,0.15)] text-[var(--nim-primary)]'
                         : 'text-nim hover:bg-nim-hover'
@@ -195,7 +195,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
                   >
                     {opt.color && (
                       <span
-                        className="shrink-0 w-2 h-2 rounded-full"
+                        className="shrink-0 w-2 h-2 rounded-ui-full"
                         style={{ backgroundColor: opt.color }}
                       />
                     )}
@@ -215,11 +215,11 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
                 {history.map((entry) => (
                   <div
                     key={entry}
-                    className="group flex items-center rounded hover:bg-nim-hover"
+                    className="group flex items-center rounded-ui-base hover:bg-nim-hover"
                   >
                     <button
                       type="button"
-                      className="flex-1 text-left px-3 py-1.5 text-sm cursor-pointer text-nim truncate"
+                      className="flex-1 text-left px-3 py-2 text-sm cursor-pointer text-nim truncate"
                       onClick={() => handlePick(entry)}
                       title={entry}
                     >
@@ -228,7 +228,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
                     {onRemoveFromHistory && (
                       <button
                         type="button"
-                        className="opacity-0 group-hover:opacity-100 p-1 mr-1 rounded text-nim-faint hover:text-nim hover:bg-nim-tertiary cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 p-1 mr-1 rounded-ui-base text-nim-faint hover:text-nim hover:bg-nim-tertiary cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           onRemoveFromHistory(entry);

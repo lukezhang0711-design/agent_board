@@ -106,7 +106,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
         {...menu.getReferenceProps()}
         onClick={() => menu.setIsOpen(!menu.isOpen)}
         data-testid="files-scope-dropdown"
-        className={`files-scope-dropdown__trigger flex flex-col items-start gap-0 px-2 py-1 -mx-2 -my-1 border-none rounded cursor-pointer transition-colors max-w-full ${
+        className={`files-scope-dropdown__trigger flex flex-col items-start gap-0 px-2 py-1 -mx-2 -my-1 border-none rounded-ui-base cursor-pointer transition-colors max-w-full ${
           menu.isOpen ? 'bg-[var(--nim-bg-tertiary)]' : 'bg-transparent hover:bg-[var(--nim-bg-hover)]'
         }`}
       >
@@ -135,7 +135,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
             ref={menu.refs.setFloating}
             style={menu.floatingStyles}
             {...menu.getFloatingProps()}
-            className="files-scope-dropdown__menu min-w-[260px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-lg shadow-lg z-[1000] overflow-hidden"
+            className="files-scope-dropdown__menu min-w-[260px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-lg z-[1000] overflow-hidden"
           >
             {/* Show Files section */}
             <div className="files-scope-dropdown__section px-3 py-2 border-b border-[var(--nim-border)]">
@@ -152,7 +152,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
                   return (
                     <label
                       key={mode}
-                      className="files-scope-dropdown__option flex items-start gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+                      className="files-scope-dropdown__option flex items-start gap-2 px-2 py-2 rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)]"
                     >
                       <input
                         type="radio"
@@ -183,7 +183,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
                 <div className="files-scope-dropdown__section-header text-[10px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wide mb-1.5">
                   Scope
                 </div>
-                <label className="files-scope-dropdown__option flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-[var(--nim-bg-hover)]">
+                <label className="files-scope-dropdown__option flex items-center gap-2 px-2 py-2 rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)]">
                   <input
                     type="radio"
                     name="sessionFilter"
@@ -195,7 +195,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
                     All sessions ({workstreamSessionCount})
                   </span>
                 </label>
-                <label className="files-scope-dropdown__option flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-[var(--nim-bg-hover)]">
+                <label className="files-scope-dropdown__option flex items-center gap-2 px-2 py-2 rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)]">
                   <input
                     type="radio"
                     name="sessionFilter"
@@ -215,7 +215,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
               <div className="files-scope-dropdown__section-header text-[10px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wide mb-1.5">
                 Display
               </div>
-              <label className="files-scope-dropdown__option flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-[var(--nim-bg-hover)]">
+              <label className="files-scope-dropdown__option flex items-center gap-2 px-2 py-2 rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)]">
                 <input
                   type="checkbox"
                   checked={groupByDirectory}

@@ -190,7 +190,7 @@ export const TranscriptEmbeddedFileCard: React.FC<TranscriptEmbeddedFileCardProp
   return (
     <div
       ref={cardRef}
-      className={`transcript-embedded-file mt-2 rounded-md border bg-[var(--nim-bg)] ${
+      className={`transcript-embedded-file mt-2 rounded-ui-base border bg-[var(--nim-bg)] ${
         isActive
           ? 'border-[color-mix(in_srgb,var(--nim-primary)_45%,var(--nim-border))]'
           : 'border-[var(--nim-border)]'
@@ -221,7 +221,7 @@ export const TranscriptEmbeddedFileCard: React.FC<TranscriptEmbeddedFileCardProp
         {onOpenFile && (
           <button
             type="button"
-            className="flex h-6 w-6 items-center justify-center rounded border-none bg-transparent p-0 text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+            className="flex h-6 w-6 items-center justify-center rounded-ui-base border-none bg-transparent p-0 text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
             onClick={handleOpenFile}
             title="Open file"
             aria-label="Open file"

@@ -151,7 +151,7 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
         <div className="text-[var(--nim-error)] text-sm">{error}</div>
         <button
           onClick={loadStats}
-          className="py-1.5 px-4 rounded text-sm border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="py-2 px-4 rounded-ui-base text-sm border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
         >
           Retry
         </button>
@@ -174,7 +174,7 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
           <h2 className="text-xl font-semibold">Database Overview</h2>
           <button
             onClick={loadStats}
-            className="py-1 px-3 rounded text-sm border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+            className="py-1 px-3 rounded-ui-base text-sm border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           >
             Refresh
           </button>
@@ -182,15 +182,15 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 rounded-lg border border-[var(--nim-border)] bg-nim-secondary">
+          <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
             <div className="text-sm text-[var(--nim-text-muted)] mb-1">Total Size</div>
             <div className="text-2xl font-semibold">{stats.totalSize}</div>
           </div>
-          <div className="p-4 rounded-lg border border-[var(--nim-border)] bg-nim-secondary">
+          <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
             <div className="text-sm text-[var(--nim-text-muted)] mb-1">Tables</div>
             <div className="text-2xl font-semibold">{stats.tableStats.length}</div>
           </div>
-          <div className="p-4 rounded-lg border border-[var(--nim-border)] bg-nim-secondary">
+          <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
             <div className="text-sm text-[var(--nim-text-muted)] mb-1">Total Rows</div>
             <div className="text-2xl font-semibold">{totalRows.toLocaleString()}</div>
           </div>
@@ -198,7 +198,7 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
 
         {/* Backup Status */}
         {stats.backupStatus && (
-          <div className="p-4 rounded-lg border border-[var(--nim-border)] bg-nim-secondary">
+          <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
             <h3 className="text-sm font-semibold mb-3">Backup Status</h3>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
@@ -237,7 +237,7 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
           const pct = Math.min(100, Math.max(0, ((cur - minBytes) / range) * 100));
           const overFloor = cur > minBytes * 1.05;
           return (
-            <div className="database-dashboard-wal p-4 rounded-lg border border-[var(--nim-border)] bg-nim-secondary">
+            <div className="database-dashboard-wal p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
               <h3 className="text-sm font-semibold mb-3">Write-Ahead Log</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
@@ -246,9 +246,9 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
                     {stats.walStats.totalSize} ({stats.walStats.fileCount} {stats.walStats.fileCount === 1 ? 'segment' : 'segments'})
                   </span>
                 </div>
-                <div className="h-1.5 bg-[var(--nim-bg-tertiary)] rounded-full overflow-hidden">
+                <div className="h-1.5 bg-[var(--nim-bg-tertiary)] rounded-ui-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${overFloor ? 'bg-[var(--nim-warning)]' : 'bg-[var(--nim-primary)]'}`}
+                    className={`h-full rounded-ui-full transition-all ${overFloor ? 'bg-[var(--nim-warning)]' : 'bg-[var(--nim-primary)]'}`}
                     style={{ width: `${Math.max(pct, 1)}%` }}
                   />
                 </div>
@@ -271,7 +271,7 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
         })()}
 
         {/* Table Statistics */}
-        <div className="rounded-lg border border-[var(--nim-border)] bg-nim-secondary overflow-hidden">
+        <div className="rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary overflow-hidden">
           <div className="p-4 border-b border-[var(--nim-border)]">
             <h3 className="text-sm font-semibold">Tables by Size</h3>
           </div>
@@ -297,9 +297,9 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
                         <span className="w-20 text-right">{table.size}</span>
                       </div>
                     </div>
-                    <div className="h-1.5 bg-[var(--nim-bg-tertiary)] rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-[var(--nim-bg-tertiary)] rounded-ui-full overflow-hidden">
                       <div
-                        className="h-full bg-[var(--nim-primary)] rounded-full transition-all"
+                        className="h-full bg-[var(--nim-primary)] rounded-ui-full transition-all"
                         style={{ width: `${Math.max(percentage, 1)}%` }}
                       />
                     </div>
@@ -312,13 +312,13 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg border border-[var(--nim-border)] bg-nim-secondary">
+          <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
             <div className="text-sm text-[var(--nim-text-muted)] mb-1">AI Sessions</div>
             <div className="text-xl font-semibold">
               {parseInt(stats.basicStats?.ai_sessions_count || '0').toLocaleString()}
             </div>
           </div>
-          <div className="p-4 rounded-lg border border-[var(--nim-border)] bg-nim-secondary">
+          <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
             <div className="text-sm text-[var(--nim-text-muted)] mb-1">Document History Entries</div>
             <div className="text-xl font-semibold">
               {parseInt(stats.basicStats?.history_count || '0').toLocaleString()}
