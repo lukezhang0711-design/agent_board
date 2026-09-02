@@ -61,7 +61,9 @@ function createMockRecord(overrides: {
       documentPath: "/mock/workspace/item.md",
     },
     source: "native",
-  } as TrackerRecord;
+    archived: false,
+    syncStatus: "synced",
+  } as unknown as TrackerRecord;
 }
 
 describe("施工单 GF — 事项看板红绿全量断言 (FB-164)", () => {
@@ -244,10 +246,7 @@ describe("施工单 GF — 事项看板红绿全量断言 (FB-164)", () => {
 
     it("Session 看板原样保留 \"本次派发相关\"", () => {
       render(
-        <SessionKanbanBoard
-          onOpenSession={vi.fn()}
-          workspacePath="/workspace"
-        />
+        <SessionKanbanBoard onSessionOpen={vi.fn()} />
       );
 
       expect(screen.getByText("本次派发相关")).toBeTruthy();
