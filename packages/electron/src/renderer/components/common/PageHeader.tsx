@@ -57,13 +57,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         )}
 
         <div className="flex items-baseline gap-2 min-w-0">
-          <h2 className="page-header-title m-0 text-base sm:text-lg font-semibold text-[var(--nim-text)] leading-tight tracking-tight truncate">
+          <h2 className="page-header-title m-0 text-ui-title font-semibold text-[var(--nim-text)] leading-tight tracking-tight truncate">
             {title}
           </h2>
 
           {count !== undefined && count !== null && (
             <span
-              className="page-header-count px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] tabular-nums"
+              className="page-header-count px-2 py-0.5 rounded-ui-full text-ui-caption font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] tabular-nums"
               data-testid="page-header-count"
             >
               {count}
@@ -72,7 +72,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         </div>
 
         {subtitle && (
-          <span className="page-header-subtitle text-xs text-[var(--nim-text-muted)] opacity-80 truncate">
+          <span className="page-header-subtitle text-ui-caption text-[var(--nim-text-muted)] truncate">
             {subtitle}
           </span>
         )}

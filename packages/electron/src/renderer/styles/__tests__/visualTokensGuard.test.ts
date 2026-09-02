@@ -11,6 +11,13 @@ const TARGET_FILES = [
   'components/UsageIndicator/AIUsageIndicator.tsx',
   'components/UsageIndicator/AIUsagePopover.tsx',
   'components/UsageIndicator/UsagePoolList.tsx',
+  'components/common/PageHeader.tsx',
+  'components/common/EmptyStateMessage.tsx',
+  'components/common/AgentBusyIndicator.tsx',
+  'components/common/SettingsSection.tsx',
+  'components/common/ItemCard.tsx',
+  'components/common/StatusBadge.tsx',
+  'components/common/Toolbar.tsx',
 ];
 
 const RENDERER_ROOT = path.resolve(__dirname, '../..');
