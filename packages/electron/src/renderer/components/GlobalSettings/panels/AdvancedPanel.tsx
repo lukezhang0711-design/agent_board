@@ -3,6 +3,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { usePostHog } from 'posthog-js/react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import { SettingsToggle } from '../SettingsToggle';
 import { ClaudeCliChannelToggle } from './ClaudeCliChannelToggle';
 import { HelpTooltip } from '../../../help';
@@ -201,8 +202,7 @@ export function AdvancedPanel() {
       />
 
       {/* Application Mode - Always shown at the top */}
-      <div className="provider-panel-section">
-          <h4 className="provider-panel-section-title" onClick={handleModeClick}>Application Mode</h4>
+      <SettingsSection title="Application Mode">
           <p className="provider-panel-hint">
             Choose between a simplified experience or full developer features for this project.
           </p>
@@ -264,14 +264,11 @@ export function AdvancedPanel() {
               </div>
             </label>
           </div>
-        </div>
+        </SettingsSection>
 
       {/* Secret Features Menu - Cmd+Click on "Application Mode" title to show */}
       {showFeaturesMenu && (
-        <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">
-            Feature Availability
-          </h4>
+        <SettingsSection title="Feature Availability">
           <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
             See which features are available based on your current mode settings.
           </p>
@@ -347,12 +344,11 @@ export function AdvancedPanel() {
           <p className="text-xs text-[var(--nim-text-faint)] mt-3">
             Developer mode: {developerMode ? 'ON' : 'OFF'}
           </p>
-        </div>
+        </SettingsSection>
       )}
 
       {/* ── Release Channel ── */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Release Channel</h4>
+      <SettingsSection title="Release Channel">
         <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
           Choose which release stream Nimbalyst pulls auto-updates from. Alpha and beta features are configured separately on each feature&apos;s settings page.
         </p>
@@ -385,11 +381,10 @@ export function AdvancedPanel() {
             </p>
           </div>
         )}
-      </div>
+      </SettingsSection>
 
       {/* ── General ── */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-2 text-[var(--nim-text)]">General</h4>
+      <SettingsSection title="General">
 
         <MultiProjectModeToggle />
 
@@ -423,13 +418,17 @@ export function AdvancedPanel() {
             </button>
           </div>
         )}
-      </div>
+      </SettingsSection>
 
       {/* ── Tracker Automation ── */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0" data-testid="tracker-automation-section">
-        <HelpTooltip testId="tracker-automation-section">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-2 text-[var(--nim-text)] inline-block">Tracker Automation</h4>
-        </HelpTooltip>
+      <SettingsSection
+        title={
+          <HelpTooltip testId="tracker-automation-section">
+            <span className="inline-block">Tracker Automation</span>
+          </HelpTooltip>
+        }
+        testId="tracker-automation-section"
+      >
 
         <SettingsToggle
           checked={trackerAutomation.enabled}
@@ -446,11 +445,10 @@ export function AdvancedPanel() {
             description="Change tracker item status to done when a commit message uses a closing keyword."
           />
         )}
-      </div>
+      </SettingsSection>
 
       {/* ── Tools & Environment ── */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-2 text-[var(--nim-text)]">Tools & Environment</h4>
+      <SettingsSection title="Tools & Environment">
 
         <ClaudeCliChannelToggle />
 
@@ -611,7 +609,7 @@ export function AdvancedPanel() {
             )}
           </div>
         </div>
-      </div>
+      </SettingsSection>
 
     </div>
   );

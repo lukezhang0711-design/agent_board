@@ -3,6 +3,7 @@ import { usePostHog } from 'posthog-js/react';
 import { useAtom, useAtomValue } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import { QRPairingModal } from './QRPairingModal';
 import {
   syncConfigAtom,
@@ -509,11 +510,12 @@ export function SyncPanel() {
       />
 
       {/* Team Collaboration (alpha) */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-        <div className="flex items-center gap-2 mb-2">
-          <h4 className="provider-panel-section-title text-base font-semibold text-[var(--nim-text)] m-0">Team Collaboration</h4>
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </div>
+      <SettingsSection title={
+          <span className="flex items-center gap-2">
+            Team Collaboration
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }>
         <SettingsToggle
           variant="enable"
           name="Enable team collaboration"
@@ -533,13 +535,12 @@ export function SyncPanel() {
             });
           }}
         />
-      </div>
+      </SettingsSection>
 
       {/* Environment Toggle - Dev Only */}
       {/*{isDevelopment && (*/}
       {false && (
-        <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Environment (Dev Only)</h4>
+        <SettingsSection title="Environment (Dev Only)">
           <div className="flex gap-2">
             <button
               onClick={() => handleEnvironmentSwitch('development')}
@@ -567,7 +568,7 @@ export function SyncPanel() {
               ? 'Using test Stytch + localhost:8790'
               : 'Using live Stytch + sync.nimbalyst.com'}
           </p>
-        </div>
+        </SettingsSection>
       )}
 
       {/* Account Section */}

@@ -3,6 +3,7 @@ import { ProviderConfig } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../../common/AlphaBadge';
 import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 
 interface CopilotCLIPanelProps {
   config: ProviderConfig;
@@ -77,8 +78,7 @@ export function CopilotCLIPanel({
         subtitle={CLI_STATUS_LABEL[cliStatus]}
       />
 
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Copilot CLI</h4>
+      <SettingsSection title="Copilot CLI">
 
         {cliStatus === 'checking' && (
           <p className="text-ui-body text-[var(--nim-text-muted)]">Checking for Copilot CLI...</p>
@@ -127,7 +127,7 @@ export function CopilotCLIPanel({
           </a>
           {' '}for installation and authentication details.
         </p>
-      </div>
+      </SettingsSection>
 
       <SettingsToggle
         variant="enable"

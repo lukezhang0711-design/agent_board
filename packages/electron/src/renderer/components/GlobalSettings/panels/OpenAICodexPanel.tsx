@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import { ProviderConfig, Model } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
 import { useSetting, useSetSetting } from '../../../hooks/useSetting';
@@ -135,20 +136,22 @@ export function OpenAICodexPanel({
         subtitle={config.enabled ? (isLoggedIn ? 'Signed In' : 'Not Signed In') : 'Disabled'}
       />
 
-      <SettingsToggle
-        variant="enable"
-        name="Enable OpenAI Codex"
-        checked={config.enabled || false}
-        onChange={onToggle}
-      />
+      <SettingsSection title="General">
+        <SettingsToggle
+          variant="enable"
+          name="Enable OpenAI Codex"
+          checked={config.enabled || false}
+          onChange={onToggle}
+        />
 
-      <SettingsToggle
-        variant="enable"
-        name="Show Usage Indicator"
-        description="Display Codex usage limits in the navigation gutter"
-        checked={usageIndicatorEnabled}
-        onChange={setUsageIndicatorEnabled}
-      />
+        <SettingsToggle
+          variant="enable"
+          name="Show Usage Indicator"
+          description="Display Codex usage limits in the navigation gutter"
+          checked={usageIndicatorEnabled}
+          onChange={setUsageIndicatorEnabled}
+        />
+      </SettingsSection>
 
       {legacyAcpConfig.enabled && (
         <div data-testid="codex-acp-deprecation-notice" className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">

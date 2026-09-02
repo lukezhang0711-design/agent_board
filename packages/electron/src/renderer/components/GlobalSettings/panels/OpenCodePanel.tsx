@@ -3,6 +3,7 @@ import { ProviderConfig } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../../common/AlphaBadge';
 import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import { OPENCODE_PRESET_MODELS } from '@nimbalyst/runtime/ai/modelConstants';
 import type { OpenCodeFileConfig } from '@nimbalyst/runtime/ai/server';
 
@@ -253,8 +254,7 @@ export function OpenCodePanel({
         subtitle={CLI_STATUS_LABEL[cliStatus]}
       />
 
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">OpenCode CLI</h4>
+      <SettingsSection title="OpenCode CLI">
 
         {cliStatus === 'checking' && (
           <p className="text-ui-body text-[var(--nim-text-muted)]">Checking for OpenCode CLI...</p>
@@ -300,7 +300,7 @@ export function OpenCodePanel({
           </a>
           {' '}for more details.
         </p>
-      </div>
+      </SettingsSection>
 
       <SettingsToggle
         variant="enable"
@@ -311,8 +311,7 @@ export function OpenCodePanel({
 
       {config.enabled && (
         <>
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Default model</h4>
+          <SettingsSection title="Default model">
             <select
               data-testid="opencode-model-select"
               value={selectedModel}
@@ -340,10 +339,9 @@ export function OpenCodePanel({
                 </optgroup>
               )}
             </select>
-          </div>
+          </SettingsSection>
 
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">LM Studio integration</h4>
+          <SettingsSection title="LM Studio integration">
             <div className="flex items-center gap-2 flex-wrap mb-2">
               <input
                 data-testid="opencode-lmstudio-base-url"
@@ -383,20 +381,25 @@ export function OpenCodePanel({
                 {lmStudioMessage}
               </div>
             )}
-          </div>
+          </SettingsSection>
 
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Updates</h4>
+          <SettingsSection title="Updates">
             <SettingsToggle
               variant="enable"
               name="Disable OpenCode auto-update"
               checked={autoUpdateOptedOut}
               onChange={(checked) => handleAutoUpdateToggle(!checked)}
             />
-          </div>
+          </SettingsSection>
 
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">API Configuration <span className="text-xs font-normal text-[var(--nim-text-muted)]">(optional)</span></h4>
+          <SettingsSection
+            title={
+              <span className="flex items-baseline gap-2">
+                API Configuration
+                <span className="text-ui-compact font-normal text-[var(--nim-text-muted)]">(optional)</span>
+              </span>
+            }
+          >
             <div className="api-key-section mt-4">
               <div className="api-key-row flex gap-2 items-center">
                 <input
@@ -425,7 +428,7 @@ export function OpenCodePanel({
                 <div className="test-error text-xs mt-2 text-[var(--nim-error)]">{config.testMessage}</div>
               )}
             </div>
-          </div>
+          </SettingsSection>
 
           {configError && (
             <div className="provider-panel-section py-2 text-xs text-[var(--nim-error)]">

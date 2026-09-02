@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { SettingsToggle } from '../SettingsToggle';
 import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import {
   notificationSettingsAtom,
   setNotificationSettingsAtom,
@@ -61,8 +62,7 @@ export function NotificationsPanel() {
     <div className="provider-panel flex flex-col">
       <PageHeader icon="notifications" title="Notifications" />
 
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Completion Sounds</h4>
+      <SettingsSection title="Completion Sounds">
 
         <SettingsToggle
           checked={completionSoundEnabled}
@@ -100,10 +100,9 @@ export function NotificationsPanel() {
             </button>
           </div>
         )}
-      </div>
+      </SettingsSection>
 
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">OS Notifications</h4>
+      <SettingsSection title="OS Notifications">
 
         <SettingsToggle
           checked={osNotificationsEnabled}
@@ -145,10 +144,9 @@ export function NotificationsPanel() {
             </div>
           </>
         )}
-      </div>
+      </SettingsSection>
 
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Session Blocked Notifications</h4>
+      <SettingsSection title="Session Blocked Notifications">
 
         <SettingsToggle
           checked={settings.sessionBlockedNotificationsEnabled}
@@ -156,7 +154,7 @@ export function NotificationsPanel() {
           name="Notify When Session Needs Attention"
           description="Notify when a session is waiting for input (permissions, questions, plan reviews, commits)."
         />
-      </div>
+      </SettingsSection>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAtomValue } from 'jotai';
 import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import { ProviderConfig, Model } from '../../Settings/SettingsView';
 import {ClaudeForWindowsInstallation} from "../../../../main/services/CLIManager.ts";
 import {usePostHog} from "posthog-js/react";
@@ -320,78 +321,80 @@ export function ClaudeCodePanel({
         subtitle={config.enabled ? 'Enabled' : 'Disabled'}
       />
 
-      <SettingsToggle
-        variant="enable"
-        name="Enable Claude Agent"
-        checked={config.enabled || false}
-        onChange={(checked) => {
-          // console.log('[ClaudeCodePanel] Toggle changed to:', checked);
-          onToggle(checked);
-        }}
-      />
+      <SettingsSection title="General">
+  <SettingsToggle
+          variant="enable"
+          name="Enable Claude Agent"
+          checked={config.enabled || false}
+          onChange={(checked) => {
+            // console.log('[ClaudeCodePanel] Toggle changed to:', checked);
+            onToggle(checked);
+          }}
+        />
 
-      {/* Usage Indicator Toggle */}
-      <SettingsToggle
-        variant="enable"
-        name="Show Usage Indicator"
-        description="Display API usage limits in the navigation gutter"
-        checked={usageIndicatorEnabled}
-        onChange={setUsageIndicatorEnabled}
-        testId="claude-agent-usage-indicator-toggle"
-      />
+        {/* Usage Indicator Toggle */}
+        <SettingsToggle
+          variant="enable"
+          name="Show Usage Indicator"
+          description="Display API usage limits in the navigation gutter"
+          checked={usageIndicatorEnabled}
+          onChange={setUsageIndicatorEnabled}
+          testId="claude-agent-usage-indicator-toggle"
+        />
 
-      {/* Custom Claude Installation */}
-      <div className="provider-enable flex flex-col gap-2 py-4 mb-4 border-b border-[var(--nim-border)]">
-        <div>
-          <span className="provider-enable-label text-sm font-medium text-[var(--nim-text)]">Custom Claude Installation</span>
-          <p className="text-xs text-[var(--nim-text-muted)] mt-1">
-            {scope === 'project'
-              ? 'Override the Claude executable path for this project only. Leave empty to inherit the global setting.'
-              : 'Override the default Claude executable path. Use this to point to a custom Claude CLI wrapper (e.g., for corporate SSO authentication).'}
-          </p>
+        {/* Custom Claude Installation */}
+        <div className="provider-enable flex flex-col gap-2 py-4 mb-4 border-b border-[var(--nim-border)]">
+          <div>
+            <span className="provider-enable-label text-sm font-medium text-[var(--nim-text)]">Custom Claude Installation</span>
+            <p className="text-xs text-[var(--nim-text-muted)] mt-1">
+              {scope === 'project'
+                ? 'Override the Claude executable path for this project only. Leave empty to inherit the global setting.'
+                : 'Override the default Claude executable path. Use this to point to a custom Claude CLI wrapper (e.g., for corporate SSO authentication).'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="text"
+              value={customClaudeCodePath}
+              onChange={(e) => setCustomClaudeCodePathState(e.target.value)}
+              onBlur={(e) => handleSaveCustomClaudeCodePath(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveCustomClaudeCodePath((e.target as HTMLInputElement).value);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              placeholder={scope === 'project' && globalCustomClaudeCodePath
+                ? `Inheriting: ${globalCustomClaudeCodePath}`
+                : '/usr/local/bin/claude'}
+              className="flex-1 py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
+            />
+            <button
+              onClick={handleBrowseCustomClaudeCodePath}
+              className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors whitespace-nowrap"
+            >
+              Browse
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 mt-1">
-          <input
-            type="text"
-            value={customClaudeCodePath}
-            onChange={(e) => setCustomClaudeCodePathState(e.target.value)}
-            onBlur={(e) => handleSaveCustomClaudeCodePath(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleSaveCustomClaudeCodePath((e.target as HTMLInputElement).value);
-                (e.target as HTMLInputElement).blur();
-              }
-            }}
-            placeholder={scope === 'project' && globalCustomClaudeCodePath
-              ? `Inheriting: ${globalCustomClaudeCodePath}`
-              : '/usr/local/bin/claude'}
-            className="flex-1 py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
-          />
-          <button
-            onClick={handleBrowseCustomClaudeCodePath}
-            className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors whitespace-nowrap"
-          >
-            Browse
-          </button>
-        </div>
-      </div>
 
-      {/* Plan Tracking Toggle */}
-      <SettingsToggle
-        variant="enable"
-        name="Plan Tracking"
-        checked={planTrackingEnabled}
-        onChange={handleSetPlanTrackingEnabled}
-      />
+        {/* Plan Tracking Toggle */}
+        <SettingsToggle
+          variant="enable"
+          name="Plan Tracking"
+          checked={planTrackingEnabled}
+          onChange={handleSetPlanTrackingEnabled}
+        />
 
-      {/* Agent Teams Toggle (Experimental) */}
-      <SettingsToggle
-        variant="enable"
-        name="Agent Teams (Experimental)"
-        description="Allow Claude to coordinate multiple agents working together as a team. Uses more tokens but enables parallel work."
-        checked={agentTeamsEnabled}
-        onChange={handleToggleAgentTeams}
-      />
+        {/* Agent Teams Toggle (Experimental) */}
+        <SettingsToggle
+          variant="enable"
+          name="Agent Teams (Experimental)"
+          description="Allow Claude to coordinate multiple agents working together as a team. Uses more tokens but enables parallel work."
+          checked={agentTeamsEnabled}
+          onChange={handleToggleAgentTeams}
+        />
+      </SettingsSection>
 
       { isWindowsPlatform && isCheckingClaudeWindowsStatus && (
         <div className="installation-status p-4 rounded-ui-lg bg-nim-warning-subtle border border-nim-warning-subtle">
@@ -450,8 +453,7 @@ export function ClaudeCodePanel({
 
       {config.enabled && isClaudeCodeWindowsReady() && (
         <>
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Authentication</h4>
+          <SettingsSection title="Authentication">
             <div className="api-key-section mt-4">
               {/* Authentication Method Selector */}
               <div className="auth-method-selector mb-4">
@@ -617,23 +619,21 @@ export function ClaudeCodePanel({
                 </>
               )}
             </div>
-          </div>
+          </SettingsSection>
 
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Tool Permissions</h4>
+          <SettingsSection title="Tool Permissions">
             <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-2">
               Tool permissions are now managed per-project. When Claude Agent attempts to use a tool,
               you'll be prompted to allow or deny the action.
             </p>
-          </div>
+          </SettingsSection>
 
           {/* Environment Variables are user-level only (~/.claude/settings.json applies
               to every workspace). Hiding this section in the Project tab prevents users
               from believing they're setting a per-project value when they're really
               changing global state. See issue #185. */}
           {scope === 'user' && (
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Environment Variables</h4>
+          <SettingsSection title="Environment Variables">
             <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
               Configure environment variables that will be set for all Claude Code sessions.
               These are stored in <code className="text-xs bg-[var(--nim-bg-tertiary)] px-1 py-0.5 rounded-ui-base">~/.claude/settings.json</code> and apply to every project.
@@ -750,7 +750,7 @@ export function ClaudeCodePanel({
                 </div>
               </>
             )}
-          </div>
+          </SettingsSection>
           )}
         </>
       )}
