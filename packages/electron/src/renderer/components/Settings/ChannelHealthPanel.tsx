@@ -5,6 +5,7 @@ import { settingAtom } from '../../store/atoms/settingAtomFamily';
 import { apiKeysAtom } from '../../store/atoms/appSettings';
 import { filterVisibleChannelHealthResults } from '../../../shared/claudeChannelVisibility';
 import { SettingsToggle } from '../GlobalSettings/SettingsToggle';
+import { PageHeader } from '../common/PageHeader';
 
 export { filterVisibleChannelHealthResults } from '../../../shared/claudeChannelVisibility';
 
@@ -266,11 +267,11 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
 
   return (
     <div className="channel-health-panel provider-panel flex flex-col" data-testid="channel-health-panel">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h3 className="provider-panel-title m-0 text-xl font-semibold text-[var(--nim-text)]">通道体检</h3>
-          </div>
+      <PageHeader
+        icon="health_and_safety"
+        title={<span className="provider-panel-title">通道体检</span>}
+        count={visibleResults.length}
+        actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -292,8 +293,9 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
               深度体检
             </button>
           </div>
-        </div>
-      </div>
+        }
+        className="provider-panel-header mb-6"
+      />
 
       <SettingsToggle
         checked={autoCheckOnStartup}

@@ -7,6 +7,7 @@ import { globalRegistry, getRoleField } from '@nimbalyst/runtime/plugins/Tracker
 import { getRecordTitle, getRecordStatus, getRecordPriority, getRecordSortOrder, getFieldByRole, buildKanbanStatusColumns } from '@nimbalyst/runtime/plugins/TrackerPlugin/trackerRecordAccessors';
 import { generateKeyBetween } from '@nimbalyst/runtime/utils/fractionalIndex';
 import { UserAvatar } from '@nimbalyst/runtime/plugins/TrackerPlugin/components/UserAvatar';
+import { EmptyStateMessage } from '../common/EmptyStateMessage';
 
 // ── Module-level drag-and-drop handler ──────────────────────────────────
 // Registered once on `document`, survives HMR. The component sets the
@@ -546,11 +547,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   if (allItems.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-nim-muted">
-        <div className="text-center">
-          <MaterialSymbol icon="view_kanban" size={48} className="opacity-30" />
-          <p className="mt-2 text-sm">No items to display</p>
-        </div>
+      <div className="flex-1 flex items-center justify-center p-6 text-nim-muted" data-testid="tracker-kanban-board-empty">
+        <EmptyStateMessage
+          icon="view_kanban"
+          title="暂无看板卡片"
+          actionHint="在工作区创建事项或等待任务派发，事项将在此处按状态流转。"
+          testId="tracker-kanban-empty"
+        />
       </div>
     );
   }
@@ -604,97 +607,116 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
             {/* Column cards */}
             <div className="kanban-cards-container flex-1 overflow-y-auto p-1.5">
-              {colItems.map((item, cardIndex) => (
-                <React.Fragment key={item.id}>
-                  {/* Drop insertion line */}
-                  {dragOverColumn === col.value && dropIndex === cardIndex && dragItemId !== item.id && (
-                    <div className="h-[2px] bg-[var(--nim-primary)] rounded-full mx-1 my-0.5" />
-                  )}
-                <button
-                  data-testid="tracker-kanban-card"
-                  data-item-id={item.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, item)}
-                  onDragEnd={handleDragEnd}
-                  className={`tracker-kanban-card w-full text-left p-2.5 rounded-md bg-nim hover:bg-nim-tertiary border transition-colors cursor-grab active:cursor-grabbing mb-1.5 ${
-                    dragItemId === item.id ? 'opacity-40' : ''
-                  } ${
-                    selectedIds.has(item.id) || (selectedItemId && item.id === selectedItemId)
-                      ? 'border-[var(--nim-primary)]'
-                      : 'border-nim'
-                  }`}
-                  onClick={(e) => handleCardSelect(e, item)}
-                  onContextMenu={(e) => handleCardContextMenu(e, item)}
-                >
-                  <div className="flex items-start gap-2">
-                    {/* Priority dot */}
-                    <span
-                      className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                      style={{ backgroundColor: PRIORITY_COLORS[getRecordPriority(item) || 'medium'] || '#6b7280' }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      {item.issueKey && (
-                        <div className="text-[10px] font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-0.5">
-                          {item.issueKey}
-                        </div>
+              {colItems.length === 0 ? (
+                <EmptyStateMessage
+                  title="该阶段暂无卡片"
+                  actionHint="可拖拽卡片至此列，或新建事项"
+                  className="my-3 py-4 px-2"
+                  testId="tracker-kanban-column-empty"
+                />
+              ) : (
+                colItems.map((item, cardIndex) => {
+                  const rawDesc = item.fields?.description || item.fields?.summary || item.fields?.body;
+                  const description = typeof rawDesc === 'string' ? rawDesc : undefined;
+                  return (
+                    <React.Fragment key={item.id}>
+                      {/* Drop insertion line */}
+                      {dragOverColumn === col.value && dropIndex === cardIndex && dragItemId !== item.id && (
+                        <div className="h-[2px] bg-[var(--nim-primary)] rounded-full mx-1 my-0.5" />
                       )}
-                      <div className="text-sm text-nim leading-snug line-clamp-2">
-                        {getRecordTitle(item)}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        {/* Type badge */}
-                        <span
-                          className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                          style={{
-                            color: TYPE_COLORS[item.primaryType] || '#6b7280',
-                            backgroundColor: `${TYPE_COLORS[item.primaryType] || '#6b7280'}20`,
-                          }}
-                        >
-                          {item.primaryType}
-                        </span>
-                        {/* Secondary type tags */}
-                        {item.typeTags
-                          .filter(tag => tag !== item.primaryType)
-                          .map(tag => (
-                            <span
-                              key={tag}
-                              className="text-[9px] font-medium px-1 py-0.5 rounded"
-                              style={{
-                                color: TYPE_COLORS[tag] || '#6b7280',
-                                backgroundColor: `${TYPE_COLORS[tag] || '#6b7280'}12`,
-                                border: `1px solid ${TYPE_COLORS[tag] || '#6b7280'}30`,
-                              }}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        {/* Priority label */}
-                        {(() => { const p = getRecordPriority(item); return p && p !== 'medium' ? (
+                      <button
+                        data-testid="tracker-kanban-card"
+                        data-item-id={item.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, item)}
+                        onDragEnd={handleDragEnd}
+                        className={`tracker-kanban-card w-full text-left p-2.5 rounded-md bg-nim hover:bg-nim-tertiary border transition-colors cursor-grab active:cursor-grabbing mb-1.5 ${
+                          dragItemId === item.id ? 'opacity-40' : ''
+                        } ${
+                          selectedIds.has(item.id) || (selectedItemId && item.id === selectedItemId)
+                            ? 'border-[var(--nim-primary)]'
+                            : 'border-nim'
+                        }`}
+                        onClick={(e) => handleCardSelect(e, item)}
+                        onContextMenu={(e) => handleCardContextMenu(e, item)}
+                      >
+                        <div className="flex items-start gap-2">
+                          {/* Priority dot */}
                           <span
-                            className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                            style={{
-                              color: PRIORITY_COLORS[p] || '#6b7280',
-                              backgroundColor: `${PRIORITY_COLORS[p] || '#6b7280'}20`,
-                            }}
-                          >
-                            {p}
-                          </span>
-                        ) : null; })()}
-                        {/* Owner avatar */}
-                        {(() => {
-                          const owner = getFieldByRole(item, 'assignee') as string | undefined;
-                          return owner ? (
-                            <span className="ml-auto">
-                              <UserAvatar identity={owner} size={18} />
-                            </span>
-                          ) : null;
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-                </React.Fragment>
-              ))}
+                            className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                            style={{ backgroundColor: PRIORITY_COLORS[getRecordPriority(item) || 'medium'] || '#6b7280' }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            {item.issueKey && (
+                              <div className="text-[10px] font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-0.5">
+                                {item.issueKey}
+                              </div>
+                            )}
+                            <div className="text-sm font-medium text-nim leading-snug line-clamp-2">
+                              {getRecordTitle(item)}
+                            </div>
+                            {description && (
+                              <div className="text-[11px] text-nim-muted truncate mt-1 leading-normal">
+                                {description}
+                              </div>
+                            )}
+                            {/* Footer: Bottom row */}
+                            <div className="flex items-center gap-1.5 mt-2 pt-1 border-t border-nim/20 text-[10px]">
+                              {/* Type badge */}
+                              <span
+                                className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                style={{
+                                  color: TYPE_COLORS[item.primaryType] || '#6b7280',
+                                  backgroundColor: `${TYPE_COLORS[item.primaryType] || '#6b7280'}20`,
+                                }}
+                              >
+                                {item.primaryType}
+                              </span>
+                              {/* Secondary type tags */}
+                              {item.typeTags
+                                .filter(tag => tag !== item.primaryType)
+                                .map(tag => (
+                                  <span
+                                    key={tag}
+                                    className="text-[9px] font-medium px-1 py-0.5 rounded"
+                                    style={{
+                                      color: TYPE_COLORS[tag] || '#6b7280',
+                                      backgroundColor: `${TYPE_COLORS[tag] || '#6b7280'}12`,
+                                      border: `1px solid ${TYPE_COLORS[tag] || '#6b7280'}30`,
+                                    }}
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              {/* Priority label */}
+                              {(() => { const p = getRecordPriority(item); return p && p !== 'medium' ? (
+                                <span
+                                  className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                  style={{
+                                    color: PRIORITY_COLORS[p] || '#6b7280',
+                                    backgroundColor: `${PRIORITY_COLORS[p] || '#6b7280'}20`,
+                                  }}
+                                >
+                                  {p}
+                                </span>
+                              ) : null; })()}
+                              {/* Owner avatar */}
+                              {(() => {
+                                const owner = getFieldByRole(item, 'assignee') as string | undefined;
+                                return owner ? (
+                                  <span className="ml-auto">
+                                    <UserAvatar identity={owner} size={18} />
+                                  </span>
+                                ) : null;
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    </React.Fragment>
+                  );
+                })
+              )}
               {/* Drop indicator after last card */}
               {dragOverColumn === col.value && dropIndex === colItems.length && (
                 <div className="h-[2px] bg-[var(--nim-primary)] rounded-full mx-1 my-0.5" />

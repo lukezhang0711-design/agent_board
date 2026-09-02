@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { copyToClipboard, MaterialSymbol } from '@nimbalyst/runtime';
+import { EmptyStateMessage } from '../common/EmptyStateMessage';
 
 import { FilePreviewBody } from './FilePreviewBody';
 import {
@@ -475,9 +476,12 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
                 正在读取本会话的产物…
               </div>
             ) : shelfItems.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-nim px-3 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-shelf-empty">
-                这个 Head 还没有工人交付的文件。
-              </div>
+              <EmptyStateMessage
+                title="暂无交付产物"
+                actionHint="工人修改或交付文件后，将自动汇总在此处供快速预览与跳转。"
+                className="py-6 px-3"
+                testId="file-preview-shelf-empty"
+              />
             ) : (
               <>
                 <div className="file-preview-shelf-search mb-2 flex items-center gap-1 rounded border border-nim bg-[var(--nim-bg)] px-2 py-1">
@@ -492,9 +496,12 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
                   />
                 </div>
                 {filteredShelfItems.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-nim px-3 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-shelf-no-matches">
-                    没有匹配的文件
-                  </div>
+                  <EmptyStateMessage
+                    title="没有匹配的文件"
+                    actionHint="请尝试更换搜索词，或清空搜索框查看全部交付产物。"
+                    className="py-4 px-2"
+                    testId="file-preview-shelf-no-matches"
+                  />
                 ) : (
                   <ul className="space-y-1">
                     {filteredShelfItems.map((item) => (
