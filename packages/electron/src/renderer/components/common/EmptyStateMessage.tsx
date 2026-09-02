@@ -35,11 +35,11 @@ export const EmptyStateMessage: React.FC<EmptyStateMessageProps> = ({
 }) => {
   return (
     <div
-      className={`empty-state-message flex flex-col items-center justify-center text-center p-6 rounded-lg border border-dashed border-[var(--nim-border)] bg-[var(--nim-bg-subtle)]/50 ${className}`.trim()}
+      className={`empty-state-message flex flex-col items-center justify-center text-center p-6 rounded-ui-lg border border-dashed border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] ${className}`.trim()}
       data-testid={testId}
     >
       {icon && (
-        <div className="empty-state-icon mb-2 text-[var(--nim-text-faint)]">
+        <div className="empty-state-icon mb-2 text-[var(--nim-text-subtle)]">
           {typeof icon === 'string' ? (
             <MaterialSymbol icon={icon} size={28} />
           ) : (
@@ -48,12 +48,12 @@ export const EmptyStateMessage: React.FC<EmptyStateMessageProps> = ({
         </div>
       )}
 
-      <div className="empty-state-title text-sm font-semibold text-[var(--nim-text)]" data-testid="empty-state-title">
+      <div className="empty-state-title text-ui-body font-semibold text-[var(--nim-text)]" data-testid="empty-state-title">
         {title}
       </div>
 
       {actionHint && (
-        <div className="empty-state-hint mt-1 text-xs text-[var(--nim-text-muted)] max-w-[60ch] leading-relaxed" data-testid="empty-state-hint">
+        <div className="empty-state-hint mt-1 text-ui-compact text-[var(--nim-text-muted)] max-w-[60ch] leading-relaxed" data-testid="empty-state-hint">
           {actionHint}
         </div>
       )}

@@ -49,10 +49,10 @@ export const AgentBusyIndicator: React.FC<AgentBusyIndicatorProps> = ({
 
   return (
     <div
-      className={`agent-busy-indicator inline-flex items-center gap-2 px-2.5 py-1 rounded-full border transition-colors ${
+      className={`agent-busy-indicator inline-flex items-center gap-2 px-2.5 py-1 rounded-ui-full border transition-colors ${
         isWorking
-          ? 'bg-[rgba(59,130,246,0.08)] border-[rgba(59,130,246,0.3)] text-[var(--nim-primary)]'
-          : 'bg-[var(--nim-bg-subtle)] border-[var(--nim-border)] text-[var(--nim-text-muted)]'
+          ? 'bg-nim-primary-subtle border-nim-primary-subtle text-[var(--nim-primary)]'
+          : 'bg-[var(--nim-bg-secondary)] border-[var(--nim-border)] text-[var(--nim-text-muted)]'
       } ${className}`.trim()}
       data-testid={testId}
       data-running-count={runningCount}
@@ -64,12 +64,12 @@ export const AgentBusyIndicator: React.FC<AgentBusyIndicatorProps> = ({
       onClick={onClick}
     >
       {/* Avatar / Provider Icon Stack */}
-      <div className="flex items-center -space-x-1.5 shrink-0" data-testid="agent-avatar-stack">
+      <div className="flex items-center -space-x-1 shrink-0" data-testid="agent-avatar-stack">
         {activeSessions.length > 0 ? (
           activeSessions.slice(0, 3).map((session, index) => (
             <div
               key={session.id || index}
-              className="w-5 h-5 rounded-full ring-1 ring-[var(--nim-bg)] bg-[var(--nim-bg-secondary)] flex items-center justify-center overflow-hidden text-[10px]"
+              className="w-5 h-5 rounded-ui-full ring-1 ring-[var(--nim-bg)] bg-[var(--nim-bg-secondary)] flex items-center justify-center overflow-hidden text-ui-micro"
               title={session.title || session.provider || 'Agent'}
             >
               <MaterialSymbol icon="smart_toy" size={12} />
@@ -77,9 +77,9 @@ export const AgentBusyIndicator: React.FC<AgentBusyIndicatorProps> = ({
           ))
         ) : (
           <div
-            className={`w-5 h-5 rounded-full ring-1 ring-[var(--nim-bg)] flex items-center justify-center text-[11px] ${
+            className={`w-5 h-5 rounded-ui-full ring-1 ring-[var(--nim-bg)] flex items-center justify-center text-ui-caption ${
               isWorking
-                ? 'bg-blue-500/20 text-blue-500'
+                ? 'bg-nim-primary-subtle text-[var(--nim-primary)]'
                 : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
             }`}
           >
@@ -93,12 +93,12 @@ export const AgentBusyIndicator: React.FC<AgentBusyIndicatorProps> = ({
       </div>
 
       {/* Concise One Sentence */}
-      <span className="text-xs font-medium tracking-tight whitespace-nowrap" data-testid="agent-busy-text">
+      <span className="text-ui-compact font-medium tracking-tight whitespace-nowrap" data-testid="agent-busy-text">
         {statusSentence}
       </span>
 
       {queuedCount > 0 && (
-        <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono">
+        <span className="text-ui-micro px-1.5 py-0.5 rounded-ui-full bg-nim-warning-subtle text-[var(--nim-warning)] border border-nim-warning-subtle font-mono">
           +{queuedCount} queued
         </span>
       )}

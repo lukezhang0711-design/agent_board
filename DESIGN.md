@@ -108,7 +108,35 @@ spacing:
     cssClass: gap-6
     use: "大区块分隔、主弹窗内容内边距"
 
-components: {} # 由 GB 单补齐（包含七个通用零件：PageHeader / EmptyStateMessage / AgentBusyIndicator / SettingsSection / ItemCard / StatusBadge / Toolbar）
+components: # 施工单 GB 补齐：七个通用展示零件（全产品共用，纯展示组件，零逻辑零状态）
+  PageHeader:
+    file: "packages/electron/src/renderer/components/common/PageHeader.tsx"
+    use: "统一页面/面板顶部标题栏，左标题+计数+副标题，右侧主操作区"
+    tokens: "text-ui-title, text-ui-caption, rounded-ui-full, gap-2, gap-3"
+  EmptyStateMessage:
+    file: "packages/electron/src/renderer/components/common/EmptyStateMessage.tsx"
+    use: "统一两行式空状态，主标题+行动指引次行+可选操作按钮"
+    tokens: "rounded-ui-lg, text-ui-body, text-ui-compact, var(--nim-text-subtle)"
+  AgentBusyIndicator:
+    file: "packages/electron/src/renderer/components/common/AgentBusyIndicator.tsx"
+    use: "全局代理并发忙碌度紧凑胶囊，一句话概括+头像叠放+排队徽标"
+    tokens: "bg-nim-primary-subtle, bg-nim-warning-subtle, rounded-ui-full, text-ui-micro, text-ui-compact"
+  SettingsSection:
+    file: "packages/electron/src/renderer/components/common/SettingsSection.tsx"
+    use: "设置页分组统一外壳，小标题+可选说明+控件容器+底部分隔"
+    tokens: "text-ui-subhead, text-ui-compact, border-b var(--nim-border), gap-1, gap-3"
+  ItemCard:
+    file: "packages/electron/src/renderer/components/common/ItemCard.tsx"
+    use: "固定四段信息层级卡片（编号/徽章、两行截断标题、单行截断说明、底栏头像/时间）"
+    tokens: "rounded-ui-lg, text-ui-body, text-ui-caption, text-ui-micro, line-clamp-2, truncate"
+  StatusBadge:
+    file: "packages/electron/src/renderer/components/common/StatusBadge.tsx"
+    use: "五种固定状态徽章（在跑、等确认、已完成、失败、待办），全令牌色驱动"
+    tokens: "bg-nim-*-subtle, border-nim-*-subtle, rounded-ui-full, text-ui-micro"
+  Toolbar:
+    file: "packages/electron/src/renderer/components/common/Toolbar.tsx"
+    use: "固定摆法工具栏，左侧搜索框占主要宽度，右侧筛选+排序+操作按钮固定间距"
+    tokens: "rounded-ui-base, gap-2, gap-3, bg-[var(--nim-bg-secondary)]"
 ---
 
 # Nimbalyst 设计语言规范
