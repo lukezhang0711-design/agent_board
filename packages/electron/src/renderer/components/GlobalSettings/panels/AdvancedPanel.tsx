@@ -329,8 +329,8 @@ export function AdvancedPanel() {
                         <span
                           className={`text-xs px-2 py-0.5 rounded-ui-base ${
                             isAvailable
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
+                              ? 'bg-nim-success-subtle text-[var(--nim-success)]'
+                              : 'bg-nim-error-subtle text-[var(--nim-error)]'
                           }`}
                         >
                           {isAvailable ? 'Available' : 'Hidden'}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { SettingsToggle } from '../SettingsToggle';
+import { PageHeader } from '../../common/PageHeader';
 import {
   notificationSettingsAtom,
   setNotificationSettingsAtom,
@@ -58,12 +59,7 @@ export function NotificationsPanel() {
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">Notifications</h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Configure audio and visual notifications for AI interactions.
-        </p>
-      </div>
+      <PageHeader icon="notifications" title="Notifications" />
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Completion Sounds</h4>

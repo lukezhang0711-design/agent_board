@@ -865,7 +865,7 @@ export function SyncPanel() {
             </select>
           </div>
           {(config.preventSleepMode ?? (config.preventSleepWhenSyncing ? 'always' : 'off')) === 'off' && enabledProjectCount > 0 && (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-ui-lg text-ui-caption text-amber-500">
+            <div className="flex items-center gap-2 mt-2 p-2 bg-nim-warning-subtle border border-nim-warning-subtle rounded-ui-lg text-ui-caption text-[var(--nim-warning)]">
               <svg className="shrink-0" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
               </svg>
@@ -995,7 +995,7 @@ export function SyncPanel() {
               key={device.deviceId}
               className="flex items-center gap-3 px-3 py-2 bg-nim-secondary rounded-ui-base mb-2 last:mb-0"
             >
-              <div className={`w-2 h-2 rounded-ui-full ${device.isOnline ? 'bg-green-500' : 'bg-neutral-500'}`} />
+              <div className={`w-2 h-2 rounded-ui-full ${device.isOnline ? 'bg-[var(--nim-success)]' : 'bg-[var(--nim-text-faint)]'}`} />
               <div className="flex-1">
                 <div className="text-ui-body text-nim">
                   {device.name}
@@ -1045,12 +1045,12 @@ export function SyncPanel() {
                 setShowDeleteConfirm(true);
                 setDeleteError(null);
               }}
-              className="px-4 py-2 text-ui-body bg-transparent border border-red-500/40 rounded-ui-base text-red-500 cursor-pointer hover:bg-red-500/10"
+              className="px-4 py-2 text-ui-body bg-transparent border border-nim-error-subtle rounded-ui-base text-[var(--nim-error)] cursor-pointer hover:bg-nim-error-subtle"
             >
               Delete Account
             </button>
           ) : (
-            <div className="p-4 bg-nim-secondary rounded-ui-lg border border-red-500/30">
+            <div className="p-4 bg-nim-secondary rounded-ui-lg border border-nim-error-subtle">
               <p className="text-ui-body text-nim-muted m-0 mb-3">
                 This will permanently delete your account and all synced data, including sessions, shared links, and device pairings. This cannot be undone.
               </p>
@@ -1067,7 +1067,7 @@ export function SyncPanel() {
                 autoFocus
               />
               {deleteError && (
-                <p className="text-red-500 text-xs mb-3 m-0">{deleteError}</p>
+                <p className="text-[var(--nim-error)] text-xs mb-3 m-0">{deleteError}</p>
               )}
               <div className="flex gap-2">
                 <button
@@ -1075,8 +1075,8 @@ export function SyncPanel() {
                   disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
                   className={`px-4 py-2 text-ui-body border-none rounded-ui-base text-white font-medium ${
                     deleteConfirmText === 'DELETE' && !deleteLoading
-                      ? 'bg-red-600 cursor-pointer hover:bg-red-700'
-                      : 'bg-red-600/40 cursor-not-allowed'
+                      ? 'bg-[var(--nim-error)] cursor-pointer hover:opacity-90'
+                      : 'bg-nim-error-subtle cursor-not-allowed'
                   }`}
                 >
                   {deleteLoading ? 'Deleting...' : 'Delete Account'}

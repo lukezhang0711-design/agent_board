@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ProviderConfig } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../../common/AlphaBadge';
+import { PageHeader } from '../../common/PageHeader';
 
 interface CopilotCLIPanelProps {
   config: ProviderConfig;
@@ -17,6 +18,14 @@ interface CopilotCLIPanelProps {
 }
 
 type CLIStatus = 'checking' | 'installed' | 'not-installed' | 'installing' | 'install-error';
+
+const CLI_STATUS_LABEL: Record<CLIStatus, string> = {
+  checking: 'Checking',
+  installed: 'Installed',
+  'not-installed': 'Not Installed',
+  installing: 'Installing',
+  'install-error': 'Install Failed',
+};
 
 export function CopilotCLIPanel({
   config,
@@ -57,26 +66,30 @@ export function CopilotCLIPanel({
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
-          GitHub Copilot
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </h3>
-      </div>
+      <PageHeader
+        icon="terminal"
+        title={
+          <span className="flex items-center gap-2">
+            GitHub Copilot
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }
+        subtitle={CLI_STATUS_LABEL[cliStatus]}
+      />
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
         <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Copilot CLI</h4>
 
         {cliStatus === 'checking' && (
-          <p className="text-[13px] text-[var(--nim-text-muted)]">Checking for Copilot CLI...</p>
+          <p className="text-ui-body text-[var(--nim-text-muted)]">Checking for Copilot CLI...</p>
         )}
 
         {(cliStatus === 'not-installed' || cliStatus === 'install-error') && (
           <div>
-            <p className="text-[13px] text-[var(--nim-text-muted)] mb-3 leading-relaxed">
+            <p className="text-ui-body text-[var(--nim-text-muted)] mb-3 leading-relaxed">
               The GitHub Copilot CLI is required to run the agent. Install it with:
             </p>
-            <code className="block text-[13px] text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-3 py-2 rounded-ui-base mb-3 select-text">
+            <code className="block text-ui-body text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-3 py-2 rounded-ui-base mb-3 select-text">
               npm install -g @github/copilot
             </code>
             <button
@@ -98,11 +111,11 @@ export function CopilotCLIPanel({
 
         {cliStatus === 'installing' && (
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-[var(--nim-text-muted)]">Installing Copilot CLI...</span>
+            <span className="text-ui-body text-[var(--nim-text-muted)]">Installing Copilot CLI...</span>
           </div>
         )}
 
-        <p className="text-[13px] text-[var(--nim-text-muted)] mt-3 leading-relaxed">
+        <p className="text-ui-body text-[var(--nim-text-muted)] mt-3 leading-relaxed">
           See the{' '}
           <a
             href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference"

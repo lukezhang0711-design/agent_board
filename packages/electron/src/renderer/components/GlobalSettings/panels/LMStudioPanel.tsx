@@ -1,6 +1,7 @@
 import React from 'react';
 import { ProviderConfig, Model } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
+import { PageHeader } from '../../common/PageHeader';
 
 interface LMStudioPanelProps {
   config: ProviderConfig;
@@ -29,9 +30,11 @@ export function LMStudioPanel({
 }: LMStudioPanelProps) {
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">LM Studio</h3>
-      </div>
+      <PageHeader
+        icon="memory"
+        title="LM Studio"
+        subtitle={config.enabled ? 'Enabled' : 'Disabled'}
+      />
 
       <SettingsToggle
         variant="enable"

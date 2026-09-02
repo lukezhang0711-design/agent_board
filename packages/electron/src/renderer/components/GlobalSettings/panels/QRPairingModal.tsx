@@ -170,8 +170,8 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
         <div className="qr-modal-body p-5">
           {/* Local dev server notice */}
           {isLocalServer && localIP && (
-            <div className="qr-dev-notice mb-4 p-3 rounded-ui-lg bg-amber-500/10 border border-amber-500/20">
-              <div className="qr-dev-notice-header flex items-center gap-2 text-amber-500 font-medium text-sm mb-2">
+            <div className="qr-dev-notice mb-4 p-3 rounded-ui-lg bg-nim-warning-subtle border border-nim-warning-subtle">
+              <div className="qr-dev-notice-header flex items-center gap-2 text-[var(--nim-warning)] font-medium text-sm mb-2">
                 <svg className="qr-dev-notice-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
                 </svg>
@@ -229,13 +229,13 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                 <p className="qr-step">4. Sign in with the same account as desktop</p>
               </div>
 
-              <div className="qr-info mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-ui-lg text-[13px] text-nim-muted">
+              <div className="qr-info mt-3 p-3 bg-nim-success-subtle border border-nim-success-subtle rounded-ui-lg text-ui-body text-nim-muted">
                 <div className="flex items-center gap-2 mb-2">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
-                  <span className="font-semibold text-green-500">End-to-End Encrypted</span>
+                  <span className="font-semibold text-[var(--nim-success)]">End-to-End Encrypted</span>
                 </div>
                 <p className="m-0">
                   This QR code securely transfers your encryption key. Your keys never touch our servers - only your devices can decrypt your data.
@@ -244,18 +244,18 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
 
               {/* Prevent sleep suggestion */}
               {onPreventSleepModeChange && (
-                <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-ui-lg">
+                <div className="mt-3 p-3 bg-nim-primary-subtle border border-nim-primary-subtle rounded-ui-lg">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
-                      <span className="text-[13px] font-medium text-nim">Prevent sleep while syncing</span>
-                      <p className="text-[11px] text-nim-muted mt-1 mb-0">
+                      <span className="text-ui-body font-medium text-nim">Prevent sleep while syncing</span>
+                      <p className="text-ui-caption text-nim-muted mt-1 mb-0">
                         Keeps your computer awake so you can send prompts from your phone. Display can still turn off.
                       </p>
                     </div>
                     <select
                       value={preventSleepMode ?? 'off'}
                       onChange={(e) => onPreventSleepModeChange(e.target.value as 'off' | 'always' | 'pluggedIn')}
-                      className="bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-[12px] text-nim cursor-pointer shrink-0 mt-1"
+                      className="bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-ui-compact text-nim cursor-pointer shrink-0 mt-1"
                     >
                       <option value="off">Off</option>
                       <option value="always">Always</option>
@@ -265,7 +265,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                 </div>
               )}
 
-              <div className="qr-warning flex items-center gap-2 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-ui-lg text-xs text-amber-600">
+              <div className="qr-warning flex items-center gap-2 mt-3 p-3 bg-nim-warning-subtle border border-nim-warning-subtle rounded-ui-lg text-xs text-[var(--nim-warning)]">
                 <svg className="qr-warning-icon shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
                 </svg>
@@ -283,9 +283,9 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
               {qrPayload && (
                 <div className="qr-dev-copy">
                   <button
-                    className={`qr-dev-copy-button w-full mt-3 px-4 py-2 border border-nim rounded-ui-base text-[13px] font-medium cursor-pointer flex items-center justify-center gap-2 ${
+                    className={`qr-dev-copy-button w-full mt-3 px-4 py-2 border border-nim rounded-ui-base text-ui-body font-medium cursor-pointer flex items-center justify-center gap-2 ${
                       copied
-                        ? 'bg-green-500 text-white border-green-500'
+                        ? 'bg-[var(--nim-success)] text-[var(--nim-on-primary)] border-[var(--nim-success)]'
                         : 'bg-nim-tertiary text-nim-muted hover:bg-nim-hover'
                     }`}
                     onClick={handleCopyPayload}
@@ -302,7 +302,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                     </svg>
                     {copied ? 'Copied!' : 'Copy Pairing Data'}
                   </button>
-                  <p className="mt-2 text-[11px] text-nim-faint text-center">
+                  <p className="mt-2 text-ui-caption text-nim-faint text-center">
                     Can't scan? Paste this into the mobile app's Manual Setup
                   </p>
                 </div>
