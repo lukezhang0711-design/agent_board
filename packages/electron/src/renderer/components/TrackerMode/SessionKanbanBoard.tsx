@@ -68,6 +68,8 @@ import { SessionContextMenu } from '../AgenticCoding/SessionContextMenu';
 import { ArchiveWorktreeDialog } from '../AgentMode/ArchiveWorktreeDialog';
 import { useArchiveWorktreeDialog } from '../../hooks/useArchiveWorktreeDialog';
 import { useFloatingMenu, FloatingPortal, virtualElement } from '../../hooks/useFloatingMenu';
+import { PageHeader } from '../common/PageHeader';
+import { EmptyStateMessage } from '../common/EmptyStateMessage';
 
 // ============================================================
 // Keyboard Navigation Types
@@ -945,9 +947,12 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
         onDrop={handleDrop}
       >
         {sessions.length === 0 ? (
-          <div className="flex items-center justify-center py-6 text-nim-disabled text-[11px] italic">
-            No sessions
-          </div>
+          <EmptyStateMessage
+            title="该阶段暂无卡片"
+            actionHint="可将其他阶段的卡片拖拽至此，或等待工人推进任务。"
+            className="my-3 py-4 px-2"
+            testId="kanban-column-empty"
+          />
         ) : (
           sessions.map(session => (
             <div
@@ -1273,9 +1278,11 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 border-b border-nim bg-nim shrink-0" data-testid="kanban-toolbar">
-      {/* Scope Title */}
+      {/* Scope Title with PageHeader styling */}
       <div className="flex items-center gap-1.5 shrink-0 pr-2 border-r border-nim" data-testid="kanban-scope-header">
+        <MaterialSymbol icon="view_kanban" size={16} className="text-[var(--nim-primary)]" />
         <span className="text-xs font-semibold text-nim">Kanban</span>
+        <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-medium tabular-nums" data-testid="kanban-header-count">{totalCount}</span>
         <span className="text-[11px] text-nim-faint">本次派发相关</span>
       </div>
 
@@ -2134,11 +2141,13 @@ export const SessionKanbanBoard: React.FC<SessionKanbanBoardProps> = ({ onSessio
       <SessionKanbanToolbar selectedCount={selectedIds.size} onClearSelection={() => setSelectedIds(new Set())} />
 
       {isEmpty ? (
-        <div className="flex-1 flex items-center justify-center text-nim-muted" data-testid="kanban-empty-state">
-          <div className="text-center max-w-[300px]">
-            <MaterialSymbol icon="view_kanban" size={48} className="opacity-30" />
-            <p className="mt-2 text-sm">No sessions on the board</p>
-          </div>
+        <div className="flex-1 flex items-center justify-center p-6" data-testid="kanban-empty-state">
+          <EmptyStateMessage
+            icon="view_kanban"
+            title="暂无看板卡片"
+            actionHint="在对话区发送提示词或派发新任务，生成的会话与工单将在此处流转。"
+            testId="kanban-board-empty"
+          />
         </div>
       ) : (
         <div className="flex-1 flex gap-2 p-2 overflow-x-auto overflow-y-hidden">

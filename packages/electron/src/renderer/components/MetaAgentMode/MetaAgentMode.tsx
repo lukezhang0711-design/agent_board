@@ -9,6 +9,7 @@ import { createMetaAgentSession } from '../../utils/metaAgentUtils';
 import { resolveTranscriptClickPath } from '../../utils/resolveTranscriptClickPath';
 import { SessionTranscript } from '../UnifiedAI/SessionTranscript';
 import { FilePreviewRail, type ArtifactShelfItem } from './FilePreviewRail';
+import { AgentBusyIndicator } from '../common/AgentBusyIndicator';
 
 interface MetaAgentModeProps {
   workspacePath: string;
@@ -288,12 +289,26 @@ export function MetaAgentMode({
   return (
     <div className="meta-agent-mode relative flex-1 flex min-h-0" data-testid="meta-agent-mode">
       <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
-        <div
-          className="meta-agent-identity-badge shrink-0 self-start m-3 rounded-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-2.5 py-1 text-[11px] font-bold tracking-[0.12em] text-[var(--nim-primary)]"
-          data-testid="meta-agent-identity-badge"
-          aria-label="META AGENT"
-        >
-          META AGENT
+        <div className="flex items-center justify-between gap-3 m-3 mb-0">
+          <div
+            className="meta-agent-identity-badge shrink-0 self-start rounded-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-2.5 py-1 text-[11px] font-bold tracking-[0.12em] text-[var(--nim-primary)]"
+            data-testid="meta-agent-identity-badge"
+            aria-label="META AGENT"
+          >
+            META AGENT
+          </div>
+
+          <AgentBusyIndicator
+            runningCount={summary.runningCount}
+            totalCount={summary.total}
+            queuedCount={summary.queuedCount}
+            activeSessions={childSessions.map((s) => ({
+              id: s.sessionId,
+              title: s.title,
+              provider: s.provider,
+              status: s.status,
+            }))}
+          />
         </div>
         {planAutoApproveEnabled && (
           <div data-testid="meta-agent-test-mode-badge" className="shrink-0 bg-amber-500 px-3 py-1 text-center text-xs font-semibold text-amber-950">

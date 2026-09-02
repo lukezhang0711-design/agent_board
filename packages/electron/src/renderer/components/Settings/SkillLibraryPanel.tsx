@@ -14,6 +14,8 @@ import {
 } from '../../utils/dispatchSkillLibrary';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { getEffectiveSkillTaxonomy } from '../../../shared/skillTaxonomy';
+import { PageHeader } from '../common/PageHeader';
+import { EmptyStateMessage } from '../common/EmptyStateMessage';
 
 interface SkillLibraryPanelProps {
   workspacePath?: string;
@@ -433,20 +435,24 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
 
   return (
     <div className="skill-library-panel flex flex-col gap-6">
-      {/* Header with Title and Overview */}
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
-          <h2 className="text-lg font-semibold text-[var(--nim-text)]">技能库</h2>
-          {status !== 'loading' && (
-            <div className="text-xs font-semibold text-[var(--nim-text-muted)] tracking-wide">
-              {totalSkills} 个技能 · 约 {formatTokenCount(totalTokens)} token
-            </div>
-          )}
-        </div>
-        <p className="text-sm text-[var(--nim-text-muted)] max-w-[72ch]">
-          库级禁用后，该技能会从所有包移除，也不会出现在派发可选清单里。
-        </p>
-      </div>
+      {/* Unified PageHeader */}
+      <PageHeader
+        icon="extension"
+        title="技能库"
+        count={status !== 'loading' ? totalSkills : undefined}
+        subtitle={status !== 'loading' ? `约 ${formatTokenCount(totalTokens)} token` : undefined}
+        actions={
+          <button
+            type="button"
+            data-testid="header-create-bundle-btn"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--nim-primary)] text-white hover:opacity-90 transition-opacity cursor-pointer border-none"
+            onClick={handleCreateBundle}
+          >
+            <MaterialSymbol icon="add" size={14} />
+            <span>新建技能包</span>
+          </button>
+        }
+      />
 
       {/* Verbatim Scan Errors */}
       {scanErrors.length > 0 && (
@@ -478,20 +484,21 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
       {/* Bundles Section - Above the skill cards wall */}
       <div className="flex flex-col gap-3">
         {settings.bundles.length === 0 ? (
-          <div
-            data-testid="bundle-empty-guide"
-            className="flex items-center justify-between gap-3 p-3 rounded-lg border border-[var(--nim-border)] bg-[var(--nim-bg-subtle)] text-sm text-[var(--nim-text-muted)]"
-          >
-            <span>选中几个技能，存成一个包</span>
-            <button
-              type="button"
-              data-testid="create-bundle-btn"
-              className="px-3 py-1.5 text-xs font-medium rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
-              onClick={handleCreateBundle}
-            >
-              + 新建
-            </button>
-          </div>
+          <EmptyStateMessage
+            title="暂无技能包"
+            actionHint="选中几个技能，存成一个包"
+            action={
+              <button
+                type="button"
+                data-testid="create-bundle-btn"
+                className="px-3 py-1.5 text-xs font-medium rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
+                onClick={handleCreateBundle}
+              >
+                + 新建
+              </button>
+            }
+            testId="bundle-empty-guide"
+          />
         ) : (
           <div className="flex flex-wrap items-center gap-2" data-testid="bundle-tags-list">
             {settings.bundles.map((bundle) => {
@@ -670,9 +677,11 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           <div className="py-8 text-center text-sm text-[var(--nim-text-muted)]">读取中...</div>
         ) : searchQuery.trim() ? (
           searchGroups.length === 0 ? (
-            <div className="rounded-lg border border-[var(--nim-border)] px-4 py-8 text-center text-sm text-[var(--nim-text-muted)]">
-              没有找到匹配的技能。
-            </div>
+            <EmptyStateMessage
+              title="未找到匹配技能"
+              actionHint="请尝试更换搜索关键词，或清除搜索框查看全部技能。"
+              testId="skill-search-empty"
+            />
           ) : (
             searchGroups.map((group) => {
               const selectedCountInGroup = editingBundle
@@ -706,10 +715,12 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               );
             })
           )
-        ) : categoryGroups.length === 0 ? (
-          <div className="rounded-lg border border-[var(--nim-border)] px-4 py-8 text-center text-sm text-[var(--nim-text-muted)]">
-            未发现本机技能。
-          </div>
+        ) : categoryGroups.length === 0 || totalSkills === 0 ? (
+          <EmptyStateMessage
+            title="暂无可用技能"
+            actionHint="请在工作区或全局添加技能文件（SKILL.md），刷新后即可在此启用。"
+            testId="skill-library-empty"
+          />
         ) : (
           categoryGroups.map((group) => {
             const isExpanded = expandedCategory === group.category;

@@ -2,10 +2,12 @@ import React from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import type { UsagePool, UsagePoolMap } from '../../../shared/usage';
 import { formatResetTime } from '../../store/atoms/claudeUsageAtoms';
+import { EmptyStateMessage } from '../common/EmptyStateMessage';
 
 interface UsagePoolListProps {
   pools: UsagePoolMap;
   emptyMessage: string;
+  emptyActionHint?: string;
 }
 
 function getPoolColors(pool: UsagePool): { text: string; bar: string } {
@@ -40,11 +42,18 @@ export function formatUsageLastUpdated(timestamp: number): string {
   return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
 }
 
-export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessage }) => {
+export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessage, emptyActionHint }) => {
   const rows = Object.values(pools).sort((left, right) => left.name.localeCompare(right.name));
 
   if (rows.length === 0) {
-    return <div className="usage-pool-list-empty text-[12px] text-nim-muted">{emptyMessage}</div>;
+    return (
+      <EmptyStateMessage
+        title={emptyMessage || '暂无额度数据'}
+        actionHint={emptyActionHint || '请确认已登录对应账号并点击右上角刷新，或发起会话后重试。'}
+        className="my-2 py-4 px-3"
+        testId="usage-pool-list-empty"
+      />
+    );
   }
 
   return (
