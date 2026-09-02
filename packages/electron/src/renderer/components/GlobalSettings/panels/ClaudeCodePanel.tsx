@@ -455,7 +455,7 @@ export function ClaudeCodePanel({
                 <label className="auth-method-label block text-[13px] font-semibold mb-2 text-[var(--nim-text)]">Authentication Method</label>
                 <div className="auth-method-buttons flex gap-2">
                   <button
-                    className={`auth-method-button flex-1 py-2.5 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
+                    className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
                       selectedAuthMethod === 'login'
                         ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
                         : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
@@ -468,7 +468,7 @@ export function ClaudeCodePanel({
                     Claude Plan (Recommended)
                   </button>
                   <button
-                    className={`auth-method-button flex-1 py-2.5 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
+                    className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
                       selectedAuthMethod === 'api-key'
                         ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
                         : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
@@ -537,7 +537,7 @@ export function ClaudeCodePanel({
                             Refresh
                           </button>
                         </div>
-                        <div className="mt-3 pt-2.5 border-t border-[var(--nim-border)] flex items-center justify-between gap-2 text-xs">
+                        <div className="mt-3 pt-3 border-t border-[var(--nim-border)] flex items-center justify-between gap-2 text-xs">
                           <div className="flex items-center gap-2 text-[var(--nim-text)]">
                             <span className="text-[var(--nim-text-muted)]">终端重登命令：</span>
                             <code className="rounded-ui-base bg-[var(--nim-bg-tertiary)] px-2 py-0.5 font-mono text-[11px] text-[var(--nim-text)] border border-[var(--nim-border)]" data-testid="claude-code-relogin-command">

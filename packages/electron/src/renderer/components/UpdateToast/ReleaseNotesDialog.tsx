@@ -116,14 +116,14 @@ export function ReleaseNotesDialog({
         {/* Action buttons */}
         <div className="update-dialog-actions flex gap-3 justify-end">
           <button
-            className="update-dialog-btn update-dialog-btn-secondary flex items-center gap-2 py-2.5 px-[18px] border border-[var(--nim-border)] rounded-ui-lg text-sm font-medium cursor-pointer transition-all duration-200 font-[inherit] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+            className="update-dialog-btn update-dialog-btn-secondary flex items-center gap-2 py-3 px-[18px] border border-[var(--nim-border)] rounded-ui-lg text-sm font-medium cursor-pointer transition-all duration-200 font-[inherit] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
             onClick={onClose}
             data-testid="release-notes-later-btn"
           >
             Later
           </button>
           <button
-            className="update-dialog-btn update-dialog-btn-primary flex items-center gap-2 py-2.5 px-[18px] border-none rounded-ui-lg text-sm font-medium cursor-pointer transition-all duration-200 font-[inherit] bg-[var(--nim-primary)] text-white hover:brightness-110 [&>svg]:w-4 [&>svg]:h-4"
+            className="update-dialog-btn update-dialog-btn-primary flex items-center gap-2 py-3 px-[18px] border-none rounded-ui-lg text-sm font-medium cursor-pointer transition-all duration-200 font-[inherit] bg-[var(--nim-primary)] text-white hover:brightness-110 [&>svg]:w-4 [&>svg]:h-4"
             onClick={onUpdate}
             data-testid="release-notes-update-btn"
           >

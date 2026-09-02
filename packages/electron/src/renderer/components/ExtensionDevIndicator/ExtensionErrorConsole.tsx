@@ -307,7 +307,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
             logs.map((log, index) => (
               <div
                 key={`${log.timestamp}-${index}`}
-                className={`log-entry log-${log.level} px-2 py-2 rounded-ui-base mb-0.5 transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] ${
+                className={`log-entry log-${log.level} px-2 py-2 rounded-ui-base mb-1 transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] ${
                   expandedLogs.has(index) ? 'expanded bg-[var(--nim-bg-secondary)]' : ''
                 } ${log.stack ? 'cursor-pointer' : 'cursor-default'}`}
                 onClick={() => log.stack && toggleExpand(index)}

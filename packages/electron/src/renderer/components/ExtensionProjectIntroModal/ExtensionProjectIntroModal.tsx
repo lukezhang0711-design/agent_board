@@ -47,7 +47,7 @@ export const ExtensionProjectIntroModal: React.FC<ExtensionProjectIntroModalProp
         <div className="flex flex-col gap-3 px-7 pb-5">
           {capabilities.map((cap) => (
             <div key={cap.icon} className="flex items-start gap-3">
-              <span className="material-symbols-outlined mt-0.5 text-[18px] text-[var(--nim-primary)]">
+              <span className="material-symbols-outlined mt-1 text-[18px] text-[var(--nim-primary)]">
                 {cap.icon}
               </span>
               <span className="text-[13px] leading-5 text-nim-muted">{cap.text}</span>

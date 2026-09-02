@@ -271,7 +271,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
             </div>
 
             {scopeNotice && (
-              <div className="session-import-scope-notice px-5 py-2.5 border-b border-[var(--nim-border)] bg-[rgba(59,130,246,0.08)] text-[13px] text-[var(--nim-text-muted)]">
+              <div className="session-import-scope-notice px-5 py-3 border-b border-[var(--nim-border)] bg-[rgba(59,130,246,0.08)] text-[13px] text-[var(--nim-text-muted)]">
                 {scopeNotice}
               </div>
             )}
@@ -309,7 +309,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
 
                   return (
                     <div key={workspacePath} className="session-import-workspace-group m-0">
-                      <div className="session-import-workspace-header flex items-center gap-2 px-5 py-2.5 bg-[var(--nim-bg-secondary)] border-t border-[var(--nim-border)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]">
+                      <div className="session-import-workspace-header flex items-center gap-2 px-5 py-3 bg-[var(--nim-bg-secondary)] border-t border-[var(--nim-border)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]">
                         <button
                           className="session-import-workspace-toggle bg-transparent border-none text-[var(--nim-text-muted)] cursor-pointer p-0 flex items-center justify-center"
                           onClick={() => toggleExpandWorkspace(workspacePath)}
@@ -355,7 +355,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
                                 checked={session.selected}
                                 onChange={() => toggleSession(session.sessionId)}
                                 aria-label={`Select ${session.title}`}
-                                className="mt-0.5 cursor-pointer"
+                                className="mt-1 cursor-pointer"
                               />
                               <div className="session-import-session-info flex-1 min-w-0">
                                 <div className="session-import-session-title text-sm text-[var(--nim-text)] font-medium mb-1">{session.title}</div>

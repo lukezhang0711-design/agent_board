@@ -116,7 +116,7 @@ export const TagBoard: React.FC<TagBoardProps> = ({
                     key={item.id}
                     data-testid="tracker-tag-board-card"
                     data-item-id={item.id}
-                    className={`w-full text-left p-2.5 rounded-ui-base bg-nim hover:bg-nim-tertiary border transition-colors cursor-pointer mb-1.5 ${
+                    className={`w-full text-left p-3 rounded-ui-base bg-nim hover:bg-nim-tertiary border transition-colors cursor-pointer mb-2 ${
                       selectedItemId && item.id === selectedItemId
                         ? 'border-[var(--nim-primary)]'
                         : 'border-nim'
@@ -125,19 +125,19 @@ export const TagBoard: React.FC<TagBoardProps> = ({
                   >
                     <div className="flex items-start gap-2">
                       <span
-                        className="w-2 h-2 rounded-ui-full mt-1.5 shrink-0"
+                        className="w-2 h-2 rounded-ui-full mt-2 shrink-0"
                         style={{ backgroundColor: PRIORITY_COLORS[getRecordPriority(item) || 'medium'] || '#6b7280' }}
                       />
                       <div className="flex-1 min-w-0">
                         {item.issueKey && (
-                          <div className="text-[10px] font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-0.5">
+                          <div className="text-[10px] font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-1">
                             {item.issueKey}
                           </div>
                         )}
                         <div className="text-sm text-nim leading-snug line-clamp-2">
                           {getRecordTitle(item)}
                         </div>
-                        <div className="flex items-center gap-2 mt-1.5">
+                        <div className="flex items-center gap-2 mt-2">
                           <span
                             className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
                             style={{

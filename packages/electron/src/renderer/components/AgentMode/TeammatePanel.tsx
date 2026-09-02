@@ -264,7 +264,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ task }) => {
       } ${isDone ? 'opacity-60' : ''}`}
       data-status={task.status}
     >
-      <div className="shrink-0 w-4 h-4 flex items-center justify-center mt-0.5">
+      <div className="shrink-0 w-4 h-4 flex items-center justify-center mt-1">
         {isRunning && (
           <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
@@ -339,7 +339,7 @@ const TeammateItem: React.FC<TeammateItemProps> = React.memo(({ teammate, onClic
       role="button"
       tabIndex={0}
     >
-      <div className="teammate-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-0.5">
+      <div className="teammate-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-1">
         {teammate.status === 'running' && (
           <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}

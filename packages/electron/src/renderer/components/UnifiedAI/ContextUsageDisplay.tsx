@@ -241,7 +241,7 @@ export function ContextUsageDisplay({
 
           {/* Expandable help section */}
           {helpExpanded && helpContent && (
-            <div className="tooltip-help-section bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-2.5 mb-2.5 overflow-hidden box-border whitespace-normal">
+            <div className="tooltip-help-section bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-3 mb-3 overflow-hidden box-border whitespace-normal">
               <div className="tooltip-help-title text-xs font-semibold text-[var(--nim-text)] mb-1 whitespace-normal">{helpContent.title}</div>
               <div className="tooltip-help-body text-[11px] text-[var(--nim-text-muted)] leading-[1.4] whitespace-normal break-words">{helpContent.body}</div>
             </div>
@@ -268,7 +268,7 @@ export function ContextUsageDisplay({
           {/* Category bar (only for Claude Code with context data) */}
           {hasContextWindow && formattedCategories.length > 0 && (
             <>
-              <div className="tooltip-bar relative h-2.5 rounded-ui-full overflow-hidden bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] mb-2.5">
+              <div className="tooltip-bar relative h-2.5 rounded-ui-full overflow-hidden bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] mb-3">
                 <div className="tooltip-bar-fill flex h-full rounded-ui-full" style={{ width: `${usedPercentage}%` }}>
                   {usedCategories.map((cat, index) => {
                     // Calculate width relative to the used portion

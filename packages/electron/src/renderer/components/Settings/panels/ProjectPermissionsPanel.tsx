@@ -416,7 +416,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                   type="checkbox"
                   checked={permissions.allowAllUsesClassifier}
                   onChange={(e) => handleAllowAllUsesClassifierChange(e.target.checked)}
-                  className="mt-0.5"
+                  className="mt-1"
                 />
                 <span className="text-xs text-[var(--nim-text-muted)]">风险操作仍需确认</span>
               </label>

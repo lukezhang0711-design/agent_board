@@ -62,13 +62,13 @@ export const WorktreeOnboardingModal: React.FC<WorktreeOnboardingModalProps> = (
 
         <div className="worktree-onboarding-footer flex justify-end gap-3 px-7 py-5 border-t border-nim">
           <button
-            className="worktree-onboarding-secondary-button nim-btn-secondary px-5 py-2.5 text-sm font-medium rounded-ui-lg"
+            className="worktree-onboarding-secondary-button nim-btn-secondary px-5 py-3 text-sm font-medium rounded-ui-lg"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="worktree-onboarding-primary-button nim-btn-primary px-6 py-2.5 text-sm font-semibold rounded-ui-lg shadow-[0_2px_8px_rgba(88,166,255,0.2)] hover:shadow-[0_4px_12px_rgba(88,166,255,0.3)] hover:-translate-y-px active:translate-y-0 transition-all duration-150"
+            className="worktree-onboarding-primary-button nim-btn-primary px-6 py-3 text-sm font-semibold rounded-ui-lg shadow-[0_2px_8px_rgba(88,166,255,0.2)] hover:shadow-[0_4px_12px_rgba(88,166,255,0.3)] hover:-translate-y-px active:translate-y-0 transition-all duration-150"
             onClick={onContinue}
           >
             Create Worktree

@@ -1071,7 +1071,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               : externalOrigin.externalId;
             return (
               <div
-                className="flex items-center gap-2 mt-1.5 text-[11px]"
+                className="flex items-center gap-2 mt-2 text-[11px]"
                 data-testid="tracker-source-chip"
                 title={installed ? undefined : 'Install the importer to refresh this item'}
               >
@@ -1347,7 +1347,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
         {/* Linked Sessions */}
         {(linkedSessions.length > 0 || onLaunchSession || canLinkExistingSession || isLinkingExistingSession) && (
           <div className="pt-1 border-t border-nim">
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-2">
               <label className="text-[11px] font-medium text-nim-muted uppercase tracking-[0.5px]">
                 Sessions{linkedSessions.length > 0 ? ` (${linkedSessions.length})` : ''}
               </label>
@@ -1450,7 +1450,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
         {/* Linked Commits */}
         {item.system.linkedCommits && item.system.linkedCommits.length > 0 && (
           <div className="pt-1 border-t border-nim">
-            <label className="text-[11px] font-medium text-nim-muted uppercase tracking-[0.5px] mb-1.5 block">
+            <label className="text-[11px] font-medium text-nim-muted uppercase tracking-[0.5px] mb-2 block">
               Commits ({item.system.linkedCommits.length})
             </label>
             <div className="space-y-1">

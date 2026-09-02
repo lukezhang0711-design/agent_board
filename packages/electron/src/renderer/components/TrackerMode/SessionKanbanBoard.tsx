@@ -627,7 +627,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
     <>
       <div
         ref={cardRef}
-        className={`w-full text-left p-2.5 rounded-ui-base border transition-colors cursor-default ${
+        className={`w-full text-left p-3 rounded-ui-base border transition-colors cursor-default ${
           isFocused
             ? 'border-[var(--nim-primary)] ring-1 ring-[var(--nim-primary)]'
             : isSelected
@@ -650,7 +650,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
         data-work-order-failed={workOrderFailed ? 'true' : undefined}
       >
         {/* Title row: type/provider icon + title + unread dot */}
-        <div className="flex items-start gap-2 mb-1.5">
+        <div className="flex items-start gap-2 mb-2">
           <CardTypeIcon type={cardType} provider={session.provider} />
           <div className="flex-1 min-w-0">
             {isRenaming ? (
@@ -675,7 +675,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
 
         {workOrderAttemptNumber !== undefined && (
           <div
-            className="text-ui-micro text-nim-faint mb-1.5"
+            className="text-ui-micro text-nim-faint mb-2"
             data-testid="work-order-attempt-summary"
           >
             第 {workOrderAttemptNumber} 次尝试
@@ -693,14 +693,14 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
 
         {/* Child run states (workstream/worktree only) */}
         {cardType !== 'session' && session.childCount > 0 && (
-          <div className="mb-1.5">
+          <div className="mb-2">
             <ChildRunStateBar sessionId={session.id} />
           </div>
         )}
 
         {/* Tags */}
         {tags.length > 0 && (
-          <div className="flex gap-1 flex-wrap mb-1.5">
+          <div className="flex gap-1 flex-wrap mb-2">
             {tags.slice(0, 4).map(tag => (
               <span
                 key={tag}
@@ -1313,7 +1313,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
             {filteredTags.slice(0, 15).map((tag, i) => (
               <button
                 key={tag.name}
-                className={`w-full text-left px-2.5 py-2 text-ui-caption flex items-center justify-between cursor-pointer transition-colors ${
+                className={`w-full text-left px-3 py-2 text-ui-caption flex items-center justify-between cursor-pointer transition-colors ${
                   i === highlightedIndex ? 'bg-nim-tertiary text-nim' : 'text-nim-muted hover:bg-nim-tertiary'
                 }`}
                 onMouseEnter={() => setHighlightedIndex(i)}
@@ -1330,7 +1330,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
             ref={dropdownRef}
             className="absolute left-0 right-0 top-full mt-1 bg-nim-secondary border border-nim rounded-ui-base shadow-lg z-50"
           >
-            <div className="px-2.5 py-2 text-ui-caption text-nim-faint italic">
+            <div className="px-3 py-2 text-ui-caption text-nim-faint italic">
               无匹配标签
             </div>
           </div>
@@ -1412,7 +1412,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
     onOpenChange: (open) => { if (!open) onClose(); },
   });
 
-  const menuItemClass = 'flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0';
+  const menuItemClass = 'flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0';
   const count = sessionIds.length;
 
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
@@ -1429,7 +1429,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
           className="z-[1000] min-w-[160px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
           onMouseLeave={onClose}
         >
-          <div className="px-2.5 py-2 text-[0.8125rem] text-[var(--nim-text-faint)] italic">
+          <div className="px-3 py-2 text-[0.8125rem] text-[var(--nim-text-faint)] italic">
             本列暂无会话
           </div>
         </div>
@@ -1480,11 +1480,11 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
             <MaterialSymbol icon="chevron_right" size={12} />
           </button>
           {showMoveSubmenu && (
-            <div className={`absolute top-0 min-w-[140px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1001] ${submenuFlipped ? 'right-full mr-0.5' : 'left-full ml-0.5'}`}>
+            <div className={`absolute top-0 min-w-[140px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1001] ${submenuFlipped ? 'right-full mr-1' : 'left-full ml-1'}`}>
               {SESSION_PHASE_COLUMNS.filter(col => col.value !== phase).map((col) => (
                 <button
                   key={col.value}
-                  className={`flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
+                  className={`flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
                   onClick={(e) => { e.stopPropagation(); onClose(); onMoveAll(sessionIds, col.value); }}
                 >
                   <span className="w-2 h-2 rounded-ui-full shrink-0" style={{ backgroundColor: col.color }} />
@@ -1495,7 +1495,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
                 <>
                   <div className="h-px bg-[var(--nim-border)] my-1" />
                   <button
-                    className={`flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text-faint)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
+                    className={`flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text-faint)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
                     onClick={(e) => { e.stopPropagation(); onClose(); onRemovePhase(sessionIds); }}
                   >
                     <MaterialSymbol icon="close" size={14} />
@@ -1511,7 +1511,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
 
         {/* Archive all */}
         <button
-          className="flex items-center gap-2 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-error)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-error)] hover:text-white [&_svg]:shrink-0"
+          className="flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-error)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-error)] hover:text-white [&_svg]:shrink-0"
           onClick={(e) => { e.stopPropagation(); onClose(); onArchiveAll(sessionIds); }}
         >
           <MaterialSymbol icon="archive" size={14} />

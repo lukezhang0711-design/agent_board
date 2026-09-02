@@ -150,7 +150,7 @@ export function ClaudeCommandsLearnMoreDialog({
                     key={cmd.name}
                     className="claude-commands-item bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg px-3 py-3"
                   >
-                    <div className="claude-commands-item-header mb-1.5">
+                    <div className="claude-commands-item-header mb-2">
                       <code className="claude-commands-item-name text-[13px] font-semibold text-[var(--nim-primary)]">
                         {cmd.name}
                       </code>
@@ -185,7 +185,7 @@ export function ClaudeCommandsLearnMoreDialog({
 
         <div className="claude-commands-learn-more-footer flex justify-end px-6 py-4 border-t border-[var(--nim-border)]">
           <button
-            className="claude-commands-learn-more-btn nim-btn-primary px-5 py-2.5 rounded-ui-base text-sm font-medium"
+            className="claude-commands-learn-more-btn nim-btn-primary px-5 py-3 rounded-ui-base text-sm font-medium"
             onClick={onClose}
           >
             Got it

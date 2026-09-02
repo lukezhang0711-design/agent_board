@@ -20,15 +20,15 @@ const TabDirtyIndicator = memo<{ filePath: string }>(({ filePath }) => {
   const hasUnacceptedChanges = useTabHasUnacceptedChanges(filePath);
 
   if (hasUnacceptedChanges) {
-    return <span className="tab-unaccepted-indicator font-bold ml-0.5 text-xl leading-none text-[var(--nim-primary)]" title="Has unaccepted AI changes">•</span>;
+    return <span className="tab-unaccepted-indicator font-bold ml-1 text-xl leading-none text-[var(--nim-primary)]" title="Has unaccepted AI changes">•</span>;
   }
 
   if (isDirty) {
-    return <span className="tab-dirty-indicator font-bold ml-0.5 text-[var(--nim-warning)]" title="Unsaved changes">•</span>;
+    return <span className="tab-dirty-indicator font-bold ml-1 text-[var(--nim-warning)]" title="Unsaved changes">•</span>;
   }
 
   if (hasCollabUnsyncedChanges) {
-    return <span className="tab-dirty-indicator font-bold ml-0.5 text-orange-500" title="Collaborative changes not yet synced">•</span>;
+    return <span className="tab-dirty-indicator font-bold ml-1 text-orange-500" title="Collaborative changes not yet synced">•</span>;
   }
 
   return null;
@@ -130,7 +130,7 @@ const TabItem: React.FC<TabItemProps> = ({
       )}
       {tab.isPinned && <span className="tab-pin-icon text-[10px] mr-1 opacity-70">📌</span>}
       {tab.isProcessing && (
-        <span className="tab-processing-indicator inline-flex items-center justify-center mr-1.5 text-[var(--nim-primary)] opacity-80" title="Processing...">
+        <span className="tab-processing-indicator inline-flex items-center justify-center mr-2 text-[var(--nim-primary)] opacity-80" title="Processing...">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32 16" strokeLinecap="round">
               <animateTransform
@@ -146,7 +146,7 @@ const TabItem: React.FC<TabItemProps> = ({
         </span>
       )}
       {tab.hasUnread && !tab.isProcessing && (
-        <span className="tab-unread-indicator inline-block w-2 h-2 rounded-ui-full bg-[var(--nim-primary)] mr-1.5 shrink-0" title="Unread response"></span>
+        <span className="tab-unread-indicator inline-block w-2 h-2 rounded-ui-full bg-[var(--nim-primary)] mr-2 shrink-0" title="Unread response"></span>
       )}
       {editingTabId === tab.id ? (
         <input

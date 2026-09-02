@@ -622,7 +622,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     <React.Fragment key={item.id}>
                       {/* Drop insertion line */}
                       {dragOverColumn === col.value && dropIndex === cardIndex && dragItemId !== item.id && (
-                        <div className="h-[2px] bg-[var(--nim-primary)] rounded-ui-full mx-1 my-0.5" />
+                        <div className="h-[2px] bg-[var(--nim-primary)] rounded-ui-full mx-1 my-1" />
                       )}
                       <button
                         data-testid="tracker-kanban-card"
@@ -630,7 +630,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         draggable
                         onDragStart={(e) => handleDragStart(e, item)}
                         onDragEnd={handleDragEnd}
-                        className={`tracker-kanban-card w-full text-left p-2.5 rounded-ui-base bg-nim hover:bg-nim-tertiary border transition-colors cursor-grab active:cursor-grabbing mb-1.5 ${
+                        className={`tracker-kanban-card w-full text-left p-3 rounded-ui-base bg-nim hover:bg-nim-tertiary border transition-colors cursor-grab active:cursor-grabbing mb-2 ${
                           dragItemId === item.id ? 'opacity-40' : ''
                         } ${
                           selectedIds.has(item.id) || (selectedItemId && item.id === selectedItemId)
@@ -643,12 +643,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         <div className="flex items-start gap-2">
                           {/* Priority dot */}
                           <span
-                            className="w-2 h-2 rounded-ui-full mt-1.5 shrink-0"
+                            className="w-2 h-2 rounded-ui-full mt-2 shrink-0"
                             style={{ backgroundColor: PRIORITY_COLORS[getRecordPriority(item) || 'medium'] || '#6b7280' }}
                           />
                           <div className="flex-1 min-w-0">
                             {item.issueKey && (
-                              <div className="text-[10px] font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-0.5">
+                              <div className="text-[10px] font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-1">
                                 {item.issueKey}
                               </div>
                             )}
@@ -719,7 +719,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               )}
               {/* Drop indicator after last card */}
               {dragOverColumn === col.value && dropIndex === colItems.length && (
-                <div className="h-[2px] bg-[var(--nim-primary)] rounded-ui-full mx-1 my-0.5" />
+                <div className="h-[2px] bg-[var(--nim-primary)] rounded-ui-full mx-1 my-1" />
               )}
               {/* Drop zone spacer -- ensures there's always a target area below the last card */}
               <div className="min-h-[40px]" />

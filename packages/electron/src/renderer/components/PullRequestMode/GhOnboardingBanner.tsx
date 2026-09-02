@@ -79,7 +79,7 @@ export function GhOnboardingBanner({
       className="gh-onboarding-banner flex items-start gap-3 px-4 py-3 border-b border-[var(--nim-border)] bg-nim-tertiary"
       role="status"
     >
-      <MaterialSymbol icon="info" size={20} className="text-nim-accent shrink-0 mt-0.5" />
+      <MaterialSymbol icon="info" size={20} className="text-nim-accent shrink-0 mt-1" />
 
       <div className="flex-1 min-w-0">
         {notInstalled ? (

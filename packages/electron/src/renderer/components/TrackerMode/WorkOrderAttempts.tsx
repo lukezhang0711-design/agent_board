@@ -323,7 +323,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
           {filteredAttempts.map((attempt, index) => (
             <div
               key={`${attempt.attempt}-${attempt.startedAt}-${index}`}
-              className="rounded-ui-base border border-nim bg-nim-tertiary/30 px-2.5 py-2 space-y-1"
+              className="rounded-ui-base border border-nim bg-nim-tertiary/30 px-3 py-2 space-y-1"
               data-testid="work-order-attempt"
               data-outcome={attempt.outcome}
             >

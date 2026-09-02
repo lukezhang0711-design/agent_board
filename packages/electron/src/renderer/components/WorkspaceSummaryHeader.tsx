@@ -42,7 +42,7 @@ export function WorkspaceSummaryHeader({
         />
       )}
       <div
-        className={`workspace-summary-header px-3 pt-2.5 pb-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg)] gap-2 min-h-14 shrink-0 ${headerClassName}`.trim()}
+        className={`workspace-summary-header px-3 pt-3 pb-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg)] gap-2 min-h-14 shrink-0 ${headerClassName}`.trim()}
       >
         <div className="workspace-summary-header-top flex items-start gap-2">
           <div className="workspace-summary-header-title-row flex items-baseline gap-3 min-w-0 flex-1">
@@ -62,7 +62,7 @@ export function WorkspaceSummaryHeader({
           ) : null}
         </div>
         <div
-          className="workspace-summary-header-path mt-0.5 text-[11px] text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap opacity-75 font-normal"
+          className="workspace-summary-header-path mt-1 text-[11px] text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap opacity-75 font-normal"
           title={workspacePath}
         >
           {workspacePath}

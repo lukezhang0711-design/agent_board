@@ -49,7 +49,7 @@ export const AgentBusyIndicator: React.FC<AgentBusyIndicatorProps> = ({
 
   return (
     <div
-      className={`agent-busy-indicator inline-flex items-center gap-2 px-2.5 py-1 rounded-ui-full border transition-colors ${
+      className={`agent-busy-indicator inline-flex items-center gap-2 px-3 py-1 rounded-ui-full border transition-colors ${
         isWorking
           ? 'bg-nim-primary-subtle border-nim-primary-subtle text-[var(--nim-primary)]'
           : 'bg-[var(--nim-bg-secondary)] border-[var(--nim-border)] text-[var(--nim-text-muted)]'

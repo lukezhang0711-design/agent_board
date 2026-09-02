@@ -71,7 +71,7 @@ export function PullRequestRow({ pr, selected, onSelect }: PullRequestRowProps):
             />
           )}
         </span>
-        <span className="flex items-center gap-2 mt-0.5 text-[11px] text-nim-faint min-w-0">
+        <span className="flex items-center gap-2 mt-1 text-[11px] text-nim-faint min-w-0">
           <span className="font-bold font-mono">#{pr.number}</span>
           {pr.authorLogin && <span className="truncate max-w-[120px]">{pr.authorLogin}</span>}
           <span className="truncate min-w-0 font-mono" title={pr.headRef}>

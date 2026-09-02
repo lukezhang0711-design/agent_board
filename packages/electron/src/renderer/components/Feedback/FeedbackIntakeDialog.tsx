@@ -167,14 +167,14 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                         type="checkbox"
                         checked={mayGatherLogs}
                         onChange={(e) => setMayGatherLogs(e.target.checked)}
-                        className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-ui-base border-2 border-[var(--nim-border)] bg-[var(--nim-bg)] checked:border-[var(--nim-primary)] checked:bg-[var(--nim-primary)] checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27white%27%3E%3Cpath%20d=%27M9%2016.17L4.83%2012l-1.42%201.41L9%2019%2021%207l-1.41-1.41L9%2016.17z%27/%3E%3C/svg%3E')] checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat"
+                        className="mt-1 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-ui-base border-2 border-[var(--nim-border)] bg-[var(--nim-bg)] checked:border-[var(--nim-primary)] checked:bg-[var(--nim-primary)] checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27white%27%3E%3Cpath%20d=%27M9%2016.17L4.83%2012l-1.42%201.41L9%2019%2021%207l-1.41-1.41L9%2016.17z%27/%3E%3C/svg%3E')] checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat"
                         data-testid="feedback-intake-consent"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="m-0 text-[13px] font-medium leading-snug text-[var(--nim-text)]">
                           Include logs and environment details
                         </p>
-                        <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--nim-text-muted)]">
+                        <p className="mt-2 text-[12px] leading-relaxed text-[var(--nim-text-muted)]">
                           Logs may include file paths, workspace names, and error details. The
                           assistant anonymizes them first, and you review the final report before it
                           is posted.
@@ -195,14 +195,14 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                         type="checkbox"
                         checked={shouldCreateMockup}
                         onChange={(e) => setShouldCreateMockup(e.target.checked)}
-                        className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-ui-base border-2 border-[var(--nim-border)] bg-[var(--nim-bg)] checked:border-[var(--nim-primary)] checked:bg-[var(--nim-primary)] checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27white%27%3E%3Cpath%20d=%27M9%2016.17L4.83%2012l-1.42%201.41L9%2019%2021%207l-1.41-1.41L9%2016.17z%27/%3E%3C/svg%3E')] checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat"
+                        className="mt-1 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-ui-base border-2 border-[var(--nim-border)] bg-[var(--nim-bg)] checked:border-[var(--nim-primary)] checked:bg-[var(--nim-primary)] checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27white%27%3E%3Cpath%20d=%27M9%2016.17L4.83%2012l-1.42%201.41L9%2019%2021%207l-1.41-1.41L9%2016.17z%27/%3E%3C/svg%3E')] checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat"
                         data-testid="feedback-intake-mockup"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="m-0 text-[13px] font-medium leading-snug text-[var(--nim-text)]">
                           Explore the idea with a UX mockup first
                         </p>
-                        <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--nim-text-muted)]">
+                        <p className="mt-2 text-[12px] leading-relaxed text-[var(--nim-text-muted)]">
                           Best for interface or workflow changes. The assistant can sketch a mockup,
                           refine it with you, and include that visual direction in the request.
                         </p>
@@ -240,7 +240,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
           </div>
         </div>
 
-        <div className="border-t border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-8 pt-4 pb-4.5">
+        <div className="border-t border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-8 pt-4 pb-4">
           <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
             Other ways to reach us
           </p>

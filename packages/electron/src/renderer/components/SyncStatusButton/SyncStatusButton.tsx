@@ -282,14 +282,14 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
           </div>
 
           {status.userEmail && (
-            <div className="sync-menu-user flex items-center gap-2 px-3 py-2.5 border-b border-[var(--nim-border)] text-[var(--nim-text-muted)] text-xs">
+            <div className="sync-menu-user flex items-center gap-2 px-3 py-3 border-b border-[var(--nim-border)] text-[var(--nim-text-muted)] text-xs">
               <MaterialSymbol icon="account_circle" size={16} />
               <span>{status.userEmail}</span>
             </div>
           )}
 
           {status.error && (
-            <div className="sync-menu-error flex items-center gap-2 px-3 py-2.5 bg-[rgba(239,68,68,0.1)] text-[#ef4444] text-xs">
+            <div className="sync-menu-error flex items-center gap-2 px-3 py-3 bg-[rgba(239,68,68,0.1)] text-[#ef4444] text-xs">
               <MaterialSymbol icon="error" size={16} />
               <span>{status.error}</span>
             </div>
@@ -338,7 +338,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
 
           <div className="sync-menu-actions p-2">
             <button
-              className="sync-menu-action flex items-center gap-3 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="sync-menu-action flex items-center gap-3 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleToggleProjectSync}
               role="menuitem"
             >
@@ -348,7 +348,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
               <span>{status.projectEnabled ? 'Disable sync for this project' : 'Enable sync for this project'}</span>
             </button>
             <button
-              className="sync-menu-action flex items-center gap-3 w-full px-2.5 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="sync-menu-action flex items-center gap-3 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleOpenSettings}
               role="menuitem"
             >

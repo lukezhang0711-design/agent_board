@@ -868,7 +868,7 @@ const FilesPane: React.FC<FilesPaneProps> = memo(({
           {displayFiles.map((file, index) => (
             <li
               key={`${file.path}-${index}`}
-              className={`unified-quick-open-item relative group px-4 py-2.5 cursor-pointer border-l-[3px] transition-all duration-100 ${
+              className={`unified-quick-open-item relative group px-4 py-3 cursor-pointer border-l-[3px] transition-all duration-100 ${
                 index === selectedIndex
                   ? 'selected bg-nim-selected border-l-nim-primary'
                   : 'border-transparent hover:bg-nim-hover'
@@ -904,7 +904,7 @@ const FilesPane: React.FC<FilesPaneProps> = memo(({
                   <span className="nim-badge-primary text-[10px]">Recent</span>
                 )}
               </div>
-              <div className="text-xs mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-nim-faint">
+              <div className="text-xs mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-nim-faint">
                 {getRelativeDir(file.path, workspacePath)}
               </div>
             </li>
@@ -1107,7 +1107,7 @@ const InFilesPane: React.FC<InFilesPaneProps> = memo(({
           {displayResults.map((file, index) => (
             <li
               key={`${file.path}-${index}`}
-              className={`unified-quick-open-item px-4 py-2.5 cursor-pointer border-l-[3px] transition-all duration-100 ${
+              className={`unified-quick-open-item px-4 py-3 cursor-pointer border-l-[3px] transition-all duration-100 ${
                 index === selectedIndex
                   ? 'selected bg-nim-selected border-l-nim-primary'
                   : 'border-transparent hover:bg-nim-hover'
@@ -1125,7 +1125,7 @@ const InFilesPane: React.FC<InFilesPaneProps> = memo(({
                   </span>
                 )}
               </div>
-              <div className="text-xs mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-nim-faint">
+              <div className="text-xs mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-nim-faint">
                 {getRelativeDir(file.path, workspacePath)}
               </div>
               {file.matches && file.matches.length > 0 && (
@@ -1551,7 +1551,7 @@ const SessionsPane: React.FC<SessionsPaneProps> = memo(({
             {displaySessions.map((session, index) => (
               <li
                 key={session.id}
-                className={`unified-quick-open-item flex items-start gap-3 py-2.5 px-4 cursor-pointer border-l-[3px] transition-all duration-100 ${
+                className={`unified-quick-open-item flex items-start gap-3 py-3 px-4 cursor-pointer border-l-[3px] transition-all duration-100 ${
                   index === selectedIndex
                     ? 'selected bg-nim-selected border-l-nim-primary'
                     : 'border-transparent hover:bg-nim-hover'
@@ -1583,7 +1583,7 @@ const SessionsPane: React.FC<SessionsPaneProps> = memo(({
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-nim-faint mt-0.5">
+                  <div className="text-xs text-nim-faint mt-1">
                     {getRelativeTimeString(session.updatedAt)}
                   </div>
                 </div>
@@ -1969,7 +1969,7 @@ const ProjectsPane: React.FC<ProjectsPaneProps> = memo(({
           {displayProjects.map((project, index) => (
             <li
               key={project.path}
-              className={`unified-quick-open-item flex items-center gap-3 py-2.5 px-4 cursor-pointer border-l-[3px] transition-all duration-100 ${
+              className={`unified-quick-open-item flex items-center gap-3 py-3 px-4 cursor-pointer border-l-[3px] transition-all duration-100 ${
                 index === selectedIndex
                   ? 'selected bg-nim-selected border-l-nim-primary'
                   : 'border-transparent hover:bg-nim-hover'
@@ -1996,7 +1996,7 @@ const ProjectsPane: React.FC<ProjectsPaneProps> = memo(({
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-nim-faint mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap direction-rtl text-left">
+                <div className="text-xs text-nim-faint mt-1 overflow-hidden text-ellipsis whitespace-nowrap direction-rtl text-left">
                   {project.path}
                 </div>
               </div>
@@ -2151,7 +2151,7 @@ const TrackersPane: React.FC<TrackersPaneProps> = memo(({
           {displayItems.map((it, index) => (
             <li
               key={it.id}
-              className={`unified-quick-open-item flex items-start gap-3 py-2.5 px-4 cursor-pointer border-l-[3px] transition-all duration-100 ${
+              className={`unified-quick-open-item flex items-start gap-3 py-3 px-4 cursor-pointer border-l-[3px] transition-all duration-100 ${
                 index === selectedIndex
                   ? 'selected bg-nim-selected border-l-nim-primary'
                   : 'border-transparent hover:bg-nim-hover'
@@ -2161,7 +2161,7 @@ const TrackersPane: React.FC<TrackersPaneProps> = memo(({
                 if (mouseHasMoved) setSelectedIndex(index);
               }}
             >
-              <div className="shrink-0 mt-0.5 text-nim-muted">
+              <div className="shrink-0 mt-1 text-nim-muted">
                 <MaterialSymbol icon={trackerTypeIcon(it.type)} size={16} />
               </div>
               <div className="flex-1 min-w-0">
@@ -2173,7 +2173,7 @@ const TrackersPane: React.FC<TrackersPaneProps> = memo(({
                   )}
                   <span className="truncate">{it.title}</span>
                 </div>
-                <div className="text-xs text-nim-faint mt-0.5 flex items-center gap-2">
+                <div className="text-xs text-nim-faint mt-1 flex items-center gap-2">
                   <span
                     className="inline-flex items-center gap-1"
                     style={{ color: TRACKER_STATUS_COLOR[it.status] ?? 'var(--nim-text-faint)' }}

@@ -107,7 +107,7 @@ const TaskRow: React.FC<TaskRowProps> = React.memo(({ task, openIds }) => {
       data-status={task.status}
       data-task-id={task.id}
     >
-      <div className="task-list-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-0.5">
+      <div className="task-list-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-1">
         {task.status === 'pending' && (
           <span className="text-[var(--nim-text-faint)] text-[10px]">○</span>
         )}
@@ -129,7 +129,7 @@ const TaskRow: React.FC<TaskRowProps> = React.memo(({ task, openIds }) => {
           {displayText}
         </div>
         {(isBlocked || task.owner) && (
-          <div className="task-list-item-meta flex items-center gap-2 mt-0.5 text-[10px] text-[var(--nim-text-muted)]">
+          <div className="task-list-item-meta flex items-center gap-2 mt-1 text-[10px] text-[var(--nim-text-muted)]">
             {isBlocked && (
               <span className="task-list-item-blocked inline-flex items-center gap-1">
                 <MaterialSymbol icon="lock" size={11} className="shrink-0" />

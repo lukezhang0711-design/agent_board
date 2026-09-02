@@ -203,7 +203,7 @@ export function OpenAICodexPanel({
             <>
               <div className="auth-method-row flex gap-2 mb-4">
                 <button
-                  className={`auth-method-button flex-1 py-2.5 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
+                  className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
                     selectedAuthMethod === 'chatgpt'
                       ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
                       : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
@@ -214,7 +214,7 @@ export function OpenAICodexPanel({
                   ChatGPT (Recommended)
                 </button>
                 <button
-                  className={`auth-method-button flex-1 py-2.5 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
+                  className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
                     selectedAuthMethod === 'api-key'
                       ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
                       : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'

@@ -102,7 +102,7 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({ todo }) => {
       } ${todo.status === 'completed' ? 'opacity-60' : ''}`}
       data-status={todo.status}
     >
-      <div className="todo-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-0.5">
+      <div className="todo-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-1">
         {todo.status === 'pending' && (
           <span className="text-[var(--nim-text-faint)] text-[10px]">○</span>
         )}

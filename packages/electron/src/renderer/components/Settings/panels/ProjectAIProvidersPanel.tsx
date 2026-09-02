@@ -331,7 +331,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                     {overriding && (
                       <span className="override-badge text-[11px] px-2 py-0.5 rounded-ui-base font-medium bg-[var(--nim-accent-muted)] text-[var(--nim-primary)]">Overridden</span>
                     )}
-                    <span className={`effective-status text-[11px] px-2.5 py-1 rounded-ui-lg font-semibold ${effectiveEnabled ? 'bg-[#22c55e] text-white' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]'}`}>
+                    <span className={`effective-status text-[11px] px-3 py-1 rounded-ui-lg font-semibold ${effectiveEnabled ? 'bg-[#22c55e] text-white' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]'}`}>
                       {effectiveEnabled ? 'Active' : 'Inactive'}
                     </span>
                     <span className={`expand-icon text-[var(--nim-text-faint)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
@@ -405,13 +405,13 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                               <h4 className="config-section-title nim-section-label m-0">Models</h4>
                               <div className="models-actions flex gap-2">
                                 <button
-                                  className="models-action-btn px-2.5 py-1 text-[11px] font-medium text-[var(--nim-text-muted)] bg-[var(--nim-bg-tertiary)] border-none rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                                  className="models-action-btn px-3 py-1 text-[11px] font-medium text-[var(--nim-text-muted)] bg-[var(--nim-bg-tertiary)] border-none rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                                   onClick={() => handleSelectAllModels(provider.id, true)}
                                 >
                                   All
                                 </button>
                                 <button
-                                  className="models-action-btn px-2.5 py-1 text-[11px] font-medium text-[var(--nim-text-muted)] bg-[var(--nim-bg-tertiary)] border-none rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                                  className="models-action-btn px-3 py-1 text-[11px] font-medium text-[var(--nim-text-muted)] bg-[var(--nim-bg-tertiary)] border-none rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                                   onClick={() => handleSelectAllModels(provider.id, false)}
                                 >
                                   None
@@ -424,7 +424,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                                 return (
                                   <label
                                     key={model.id}
-                                    className={`model-item flex items-center gap-2 px-3 py-2.5 rounded-ui-base cursor-pointer transition-all duration-150 border ${isSelected ? 'bg-[var(--nim-accent-subtle)] border-[var(--nim-primary)]' : 'bg-[var(--nim-bg-secondary)] border-[var(--nim-border)] hover:border-[var(--nim-border-secondary)]'}`}
+                                    className={`model-item flex items-center gap-2 px-3 py-3 rounded-ui-base cursor-pointer transition-all duration-150 border ${isSelected ? 'bg-[var(--nim-accent-subtle)] border-[var(--nim-primary)]' : 'bg-[var(--nim-bg-secondary)] border-[var(--nim-border)] hover:border-[var(--nim-border-secondary)]'}`}
                                   >
                                     <input
                                       type="checkbox"
@@ -483,7 +483,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
 
       <div className="panel-footer flex justify-end pt-4 border-t border-[var(--nim-border)]">
         <button
-          className="save-button nim-btn-primary px-6 py-2.5 text-[13px]"
+          className="save-button nim-btn-primary px-6 py-3 text-[13px]"
           onClick={handleSave}
           disabled={!hasChanges || saving}
         >

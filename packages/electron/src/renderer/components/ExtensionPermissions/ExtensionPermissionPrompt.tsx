@@ -199,7 +199,7 @@ export const ExtensionPermissionPrompt: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <div className="ext-permission-prompt-item-description mt-0.5 text-xs text-nim-muted leading-relaxed">
+                          <div className="ext-permission-prompt-item-description mt-1 text-xs text-nim-muted leading-relaxed">
                             {d.description}
                           </div>
                         </div>

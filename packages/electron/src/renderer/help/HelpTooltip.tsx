@@ -34,7 +34,7 @@ function parseMarkdownBody(text: string): React.ReactNode {
 
     if (isBulletList) {
       return (
-        <ul key={pIndex} className="help-tooltip-list list-disc pl-4 my-1.5 space-y-0.5">
+        <ul key={pIndex} className="help-tooltip-list list-disc pl-4 my-2 space-y-0.5">
           {lines.map((line, lIndex) => (
             <li key={lIndex}>{parseBoldText(line.replace(/^[-*]\s*/, '').trim())}</li>
           ))}
@@ -44,7 +44,7 @@ function parseMarkdownBody(text: string): React.ReactNode {
 
     // Regular paragraph - parse bold and render
     return (
-      <p key={pIndex} className="help-tooltip-paragraph my-1.5 first:mt-0 last:mb-0">
+      <p key={pIndex} className="help-tooltip-paragraph my-2 first:mt-0 last:mb-0">
         {parseBoldText(trimmed.replace(/\n/g, ' '))}
       </p>
     );
@@ -345,7 +345,7 @@ export function HelpTooltip({
         createPortal(
           <div
             ref={tooltipRef}
-            className={`help-tooltip help-tooltip--${position.placement} fixed z-[10002] max-w-[280px] px-3 py-2.5 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-[0_4px_16px_rgba(0,0,0,0.15),0_2px_4px_rgba(0,0,0,0.1)] pointer-events-none nim-animate-slide-up`}
+            className={`help-tooltip help-tooltip--${position.placement} fixed z-[10002] max-w-[280px] px-3 py-3 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-[0_4px_16px_rgba(0,0,0,0.15),0_2px_4px_rgba(0,0,0,0.1)] pointer-events-none nim-animate-slide-up`}
             style={{ top: position.top, left: position.left }}
             role="tooltip"
           >

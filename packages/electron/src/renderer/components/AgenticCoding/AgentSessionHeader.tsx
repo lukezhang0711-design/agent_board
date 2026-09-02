@@ -191,7 +191,7 @@ export const AgentSessionHeader: React.FC<AgentSessionHeaderProps> = ({
         <div className="agent-session-header-content flex-1 min-w-0">
           <h1 className="agent-session-header-title m-0 text-base font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight">{displayTitle}</h1>
 
-          <div className="agent-session-header-meta flex items-center gap-2 mt-0.5 text-xs text-[var(--nim-text-muted)]">
+          <div className="agent-session-header-meta flex items-center gap-2 mt-1 text-xs text-[var(--nim-text-muted)]">
             {/* Meta info: worktree details load async, but we show model immediately for non-worktree */}
             {isWorktreeSession ? (
               worktreeMetadata ? (

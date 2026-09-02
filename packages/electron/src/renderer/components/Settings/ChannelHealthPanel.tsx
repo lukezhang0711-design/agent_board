@@ -144,7 +144,7 @@ export function ChannelHealthRow({
           )}
           {result.failureKind === 'not_logged_in' && (
             <div
-              className="mt-2.5 flex flex-col gap-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-2.5 text-xs"
+              className="mt-3 flex flex-col gap-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-3 text-xs"
               data-testid={`channel-health-relogin-exit-${result.id}`}
             >
               {result.rawOutput && (
@@ -180,7 +180,7 @@ export function ChannelHealthRow({
         </div>
         <button
           type="button"
-          className="shrink-0 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] px-2.5 py-2 text-xs text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] px-3 py-2 text-xs text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onRerun(result.id)}
           disabled={running || !canRerun}
           data-testid={`channel-health-rerun-${result.id}`}

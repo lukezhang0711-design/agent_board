@@ -46,7 +46,7 @@ export function PlanFilters({
 
   return (
     <div className="plan-filters p-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg)]">
-      <div className="plan-search-container relative mb-2.5">
+      <div className="plan-search-container relative mb-3">
         <span className="plan-search-icon material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-lg text-[var(--nim-text-faint)] pointer-events-none">
           search
         </span>
@@ -68,7 +68,7 @@ export function PlanFilters({
         )}
       </div>
 
-      <div className="plan-filter-controls flex gap-2 mb-2.5">
+      <div className="plan-filter-controls flex gap-2 mb-3">
         <select
           className="plan-filter-select flex-1 py-2 px-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
           value={statusFilter}

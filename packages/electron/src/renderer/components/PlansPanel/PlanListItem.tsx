@@ -84,7 +84,7 @@ export function PlanListItem({ plan, isActive, onClick }: PlanListItemProps): JS
       className={`plan-list-item px-3 py-2 border-b border-nim cursor-pointer transition-colors duration-150 hover:bg-nim-hover ${isActive ? 'active bg-nim-secondary border-l-[3px] border-l-nim-accent pl-[9px]' : ''}`}
       onClick={() => onClick(plan)}
     >
-      <div className="plan-list-item-header flex items-start gap-2 mb-1.5">
+      <div className="plan-list-item-header flex items-start gap-2 mb-2">
         <span
           className="plan-priority-indicator text-[11px] font-bold tracking-tighter shrink-0 min-w-4"
           style={{ color: priorityColor }}
@@ -101,7 +101,7 @@ export function PlanListItem({ plan, isActive, onClick }: PlanListItemProps): JS
       </div>
 
       {plan.progress > 0 && (
-        <div className="plan-progress-bar h-[3px] bg-nim-secondary rounded-ui-base overflow-hidden mb-1.5">
+        <div className="plan-progress-bar h-[3px] bg-nim-secondary rounded-ui-base overflow-hidden mb-2">
           <div
             className="plan-progress-fill h-full transition-[width] duration-300 ease-in-out"
             style={{

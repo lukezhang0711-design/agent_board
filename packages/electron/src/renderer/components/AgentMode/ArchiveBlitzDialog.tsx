@@ -50,7 +50,7 @@ export function ArchiveBlitzDialog({
 
         <div className="archive-worktree-dialog-body px-6 pb-5">
           <div className="flex items-start gap-3 mb-4 p-3 rounded-ui-lg bg-[var(--nim-success)]/10 border border-[var(--nim-success)]/30">
-            <MaterialSymbol icon="check_circle" size={20} className="text-[var(--nim-success)] shrink-0 mt-0.5" />
+            <MaterialSymbol icon="check_circle" size={20} className="text-[var(--nim-success)] shrink-0 mt-1" />
             <p className="m-0 text-sm text-[var(--nim-text-muted)]">
               Changes from <strong className="font-medium text-[var(--nim-text)]">{worktreeName}</strong> have been merged successfully.
             </p>

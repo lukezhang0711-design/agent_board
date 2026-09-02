@@ -166,7 +166,7 @@ export const ComponentShowcase: React.FC = () => {
                     key={f}
                     type="button"
                     onClick={() => setSelectedFilter(f)}
-                    className={`px-2.5 py-1 text-ui-caption rounded-ui-base border transition-colors ${
+                    className={`px-3 py-1 text-ui-caption rounded-ui-base border transition-colors ${
                       selectedFilter === f
                         ? 'bg-[var(--nim-bg-selected)] border-[var(--nim-primary)] text-[var(--nim-primary)] font-medium'
                         : 'border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)]'
@@ -180,7 +180,7 @@ export const ComponentShowcase: React.FC = () => {
             sort={
               <button
                 type="button"
-                className="flex items-center gap-1 px-2.5 py-1 text-ui-caption rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
+                className="flex items-center gap-1 px-3 py-1 text-ui-caption rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
               >
                 <MaterialSymbol icon="sort" size={14} />
                 <span>更新时间</span>
@@ -189,7 +189,7 @@ export const ComponentShowcase: React.FC = () => {
             actions={
               <button
                 type="button"
-                className="flex items-center gap-1 px-2.5 py-1 text-ui-caption rounded-ui-base bg-[var(--nim-primary)] text-[var(--nim-on-primary)] font-medium"
+                className="flex items-center gap-1 px-3 py-1 text-ui-caption rounded-ui-base bg-[var(--nim-primary)] text-[var(--nim-on-primary)] font-medium"
               >
                 <MaterialSymbol icon="refresh" size={14} />
                 <span>刷新</span>

@@ -150,7 +150,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
           <span
             role="button"
             tabIndex={-1}
-            className="ml-0.5 flex items-center justify-center w-3.5 h-3.5 rounded-ui-full hover:bg-[rgba(0,122,255,0.25)]"
+            className="ml-1 flex items-center justify-center w-3.5 h-3.5 rounded-ui-full hover:bg-[rgba(0,122,255,0.25)]"
             onClick={(e) => {
               e.stopPropagation();
               handlePick(null);

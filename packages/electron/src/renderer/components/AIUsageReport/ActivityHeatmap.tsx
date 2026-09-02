@@ -112,7 +112,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
       <div className="heatmap-container overflow-x-auto">
         <div className="heatmap-grid inline-block min-w-[800px]">
           {/* Header row with hour labels */}
-          <div className="heatmap-header grid grid-cols-[40px_repeat(24,1fr)] gap-1 mb-0.5">
+          <div className="heatmap-header grid grid-cols-[40px_repeat(24,1fr)] gap-1 mb-1">
             <div className="day-label text-[10px] font-semibold text-[var(--nim-text)] text-right pr-2 flex items-center justify-end"></div>
             {hours.map((hour) => (
               <div
@@ -126,7 +126,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
 
           {/* Data rows - one per day */}
           {days.map((day, dayIndex) => (
-            <div key={dayIndex} className="heatmap-row grid grid-cols-[40px_repeat(24,1fr)] gap-1 mb-0.5">
+            <div key={dayIndex} className="heatmap-row grid grid-cols-[40px_repeat(24,1fr)] gap-1 mb-1">
               <div className="day-label text-[10px] font-semibold text-[var(--nim-text)] text-right pr-2 flex items-center justify-end">
                 {day}
               </div>

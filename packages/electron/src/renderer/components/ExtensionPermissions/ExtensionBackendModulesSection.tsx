@@ -136,7 +136,7 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
 
   return (
     <div className="ext-backend-modules-section mb-5">
-      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">
+      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">
         Privileged Capabilities
       </div>
 

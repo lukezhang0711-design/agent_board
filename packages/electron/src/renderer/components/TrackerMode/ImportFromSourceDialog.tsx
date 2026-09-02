@@ -286,7 +286,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
                 >
                   <input
                     type="checkbox"
-                    className="mt-0.5"
+                    className="mt-1"
                     checked={selected.has(item.externalId)}
                     onChange={() => toggle(item.externalId)}
                   />

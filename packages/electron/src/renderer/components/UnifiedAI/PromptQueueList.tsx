@@ -69,7 +69,7 @@ export function PromptQueueList({
 
   return (
     <div className="prompt-queue-list px-3 py-2 border-b border-nim bg-nim-secondary">
-      <div className="prompt-queue-header flex items-center mb-1.5">
+      <div className="prompt-queue-header flex items-center mb-2">
         <span className="prompt-queue-count text-[11px] font-medium text-nim-muted uppercase tracking-wide">{queue.length} queued</span>
       </div>
       <div className="prompt-queue-items flex flex-col gap-1">

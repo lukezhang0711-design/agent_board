@@ -161,7 +161,7 @@ const SuperIterationRow: React.FC<{
   onSelect: (e: Pick<React.MouseEvent, 'metaKey' | 'ctrlKey' | 'shiftKey'>) => void;
 }> = memo(({ iteration, learning, isActive, onSelect }) => (
   <div
-    className={`super-loop-iteration-item flex items-center gap-2 py-2 px-3 mr-2 mb-0.5 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
+    className={`super-loop-iteration-item flex items-center gap-2 py-2 px-3 mr-2 mb-1 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
       isActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
     } focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:outline-offset-[-2px]`}
     onClick={onSelect}

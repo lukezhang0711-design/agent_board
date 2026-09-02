@@ -110,7 +110,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
         <div className="flex flex-col divide-y divide-nim px-4 py-2">
           {/* Section 1: Claude */}
           <div className="py-3" data-testid="ai-usage-section-claude">
-            <div className="flex items-center gap-2 mb-2.5">
+            <div className="flex items-center gap-2 mb-3">
               <svg
                 width="16"
                 height="16"
@@ -135,7 +135,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                 {claudeUsage?.error && (
                   <div className="mb-2 text-ui-caption text-nim-warning">
                     <div>刷新失败：{claudeUsage.error}</div>
-                    {claudeAuthHint && <div className="mt-0.5">{claudeAuthHint}</div>}
+                    {claudeAuthHint && <div className="mt-1">{claudeAuthHint}</div>}
                   </div>
                 )}
                 <UsagePoolList
@@ -148,7 +148,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
 
           {/* Section 2: Codex */}
           <div className="py-3" data-testid="ai-usage-section-codex">
-            <div className="flex items-center gap-2 mb-2.5">
+            <div className="flex items-center gap-2 mb-3">
               <svg
                 width="16"
                 height="16"
@@ -175,7 +175,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                   emptyMessage="近期会话数据中未找到 Codex 额度池。"
                 />
                 {codexUsage?.credits && (
-                  <div className="mt-2.5 pt-2 border-t border-nim/50 text-ui-caption text-nim-muted flex justify-between">
+                  <div className="mt-3 pt-2 border-t border-nim/50 text-ui-caption text-nim-muted flex justify-between">
                     <span>积分</span>
                     <span>
                       {codexUsage.credits.unlimited
@@ -192,7 +192,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
 
           {/* Section 3: Gemini (Antigravity) */}
           <div className="py-3" data-testid="ai-usage-section-gemini">
-            <div className="flex items-center gap-2 mb-2.5">
+            <div className="flex items-center gap-2 mb-3">
               <MaterialSymbol icon="gemini" size={18} className="text-blue-500" />
               <span className="text-ui-body font-semibold text-nim">Gemini (Antigravity)</span>
             </div>
@@ -223,7 +223,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                                 {model.utilization}%
                               </div>
                             </div>
-                            <div className="mb-1.5 h-1.5 overflow-hidden rounded-ui-full bg-nim-tertiary">
+                            <div className="mb-2 h-1.5 overflow-hidden rounded-ui-full bg-nim-tertiary">
                               <div
                                 className={`h-full rounded-ui-full transition-all duration-300 ${colors.bar}`}
                                 style={{ width: `${barWidth}%` }}
@@ -251,7 +251,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                         {Math.round(geminiUsage?.fiveHour?.utilization ?? 0)}%
                       </div>
                     </div>
-                    <div className="mb-1.5 h-1.5 overflow-hidden rounded-ui-full bg-nim-tertiary">
+                    <div className="mb-2 h-1.5 overflow-hidden rounded-ui-full bg-nim-tertiary">
                       <div
                         className="h-full rounded-ui-full bg-green-500"
                         style={{ width: `${Math.min(geminiUsage?.fiveHour?.utilization ?? 0, 100)}%` }}
@@ -263,7 +263,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
             ) : (
               /* Branch B: Token Fallback without Progress Bar */
               <div
-                className="flex flex-col gap-2 p-2.5 rounded-ui-base bg-nim-tertiary/50 border border-nim/50 text-ui-compact"
+                className="flex flex-col gap-2 p-3 rounded-ui-base bg-nim-tertiary/50 border border-nim/50 text-ui-compact"
                 data-testid="gemini-token-fallback"
               >
                 <div className="flex items-center justify-between">
@@ -284,7 +284,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col gap-2 border-t border-nim px-4 py-2.5 shrink-0 bg-nim-secondary mt-auto">
+        <div className="flex flex-col gap-2 border-t border-nim px-4 py-3 shrink-0 bg-nim-secondary mt-auto">
           <div className="text-ui-micro text-nim-faint mb-1">
             {claudeUsage?.lastUpdated && (
               <span>上次更新于 {formatUsageLastUpdated(claudeUsage.lastUpdated)}</span>

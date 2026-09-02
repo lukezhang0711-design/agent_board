@@ -136,7 +136,7 @@ const BlitzSessionRow: React.FC<{
   onContextMenu: (e: React.MouseEvent) => void;
 }> = memo(({ session, sessionTitle, isActive, isRenaming, isAnalysis, renameInputRef, renameValue, onRenameChange, onRenameKeyDown, onRenameBlur, onSelect, onContextMenu }) => (
   <div
-    className={`blitz-session-item flex items-center gap-2 py-2 px-3 mr-2 mb-0.5 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
+    className={`blitz-session-item flex items-center gap-2 py-2 px-3 mr-2 mb-1 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
       isActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
     } focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:outline-offset-[-2px]`}
     onClick={onSelect}
@@ -601,7 +601,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
             const worktreeIsActive = sessions.some(s => s.id === activeSessionId);
 
             return (
-              <div key={worktreeId} className="blitz-worktree-subgroup mb-0.5">
+              <div key={worktreeId} className="blitz-worktree-subgroup mb-1">
                 {/* Worktree subgroup header */}
                 <div
                   className={`flex items-center gap-0 text-xs text-[var(--nim-text)] rounded-ui-base mr-2 ${

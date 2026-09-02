@@ -143,7 +143,7 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
                   key={i}
                   className="flex items-start gap-2 text-[10px] text-[var(--nim-warning)] leading-[1.4]"
                 >
-                  <MaterialSymbol icon="warning" size={12} className="shrink-0 mt-0.5" />
+                  <MaterialSymbol icon="warning" size={12} className="shrink-0 mt-1" />
                   <span>{blocker}</span>
                 </div>
               ))}

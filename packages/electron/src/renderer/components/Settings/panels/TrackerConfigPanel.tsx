@@ -232,7 +232,7 @@ function SyncModeToggle({ mode, onChange }: {
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className={`px-2.5 py-1 text-[11px] font-medium cursor-pointer border-none whitespace-nowrap transition-all duration-150 ${
+            className={`px-3 py-1 text-[11px] font-medium cursor-pointer border-none whitespace-nowrap transition-all duration-150 ${
               isActive
                 ? activeClass
                 : 'bg-transparent text-[var(--nim-text-disabled)]'
@@ -284,7 +284,7 @@ function TrackerStorageInfoBanner() {
   return (
     <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
       <div className="flex items-start gap-3 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-ui-lg">
-        <MaterialSymbol icon="storage" size={14} className="text-[var(--nim-primary)] shrink-0 mt-0.5" />
+        <MaterialSymbol icon="storage" size={14} className="text-[var(--nim-primary)] shrink-0 mt-1" />
         <div className="text-[12px] text-[var(--nim-text-muted)] leading-relaxed">
           {getTrackerStorageCopy()}
         </div>
@@ -354,12 +354,12 @@ function IssueKeyPrefixInput({ value, onChange }: {
           onKeyDown={handleKeyDown}
           maxLength={5}
           placeholder="NIM"
-          className="w-24 px-2.5 py-2 text-[13px] font-mono bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] transition-colors"
+          className="w-24 px-3 py-2 text-[13px] font-mono bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] transition-colors"
         />
         <span className="text-[13px] text-[var(--nim-text-faint)]">-123</span>
       </div>
       {error && (
-        <p className="text-[11px] text-[var(--nim-error)] mt-1.5">{error}</p>
+        <p className="text-[11px] text-[var(--nim-error)] mt-2">{error}</p>
       )}
       <p className="text-[11px] text-[var(--nim-text-faint)] mt-2">
         Changing the prefix only affects new items. Existing items keep their current keys.
@@ -403,7 +403,7 @@ function AdminView({
 
         {/* Info Banner */}
         <div className="flex items-start gap-3 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-ui-lg mb-3">
-          <MaterialSymbol icon="info" size={14} className="text-[var(--nim-primary)] shrink-0 mt-0.5" />
+          <MaterialSymbol icon="info" size={14} className="text-[var(--nim-primary)] shrink-0 mt-1" />
           <div className="text-[12px] text-[var(--nim-text-muted)] leading-relaxed">
             <strong className="text-[var(--nim-primary)] font-semibold">Shared</strong> items sync to all team members in real time.{' '}
             <strong className="text-[var(--nim-text-muted)] font-semibold">Local</strong> items stay on your machine only.{' '}
@@ -416,7 +416,7 @@ function AdminView({
           {trackers.map((tracker) => (
             <div
               key={tracker.model.type}
-              className="flex items-center gap-3 px-3 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
+              className="flex items-center gap-3 px-3 py-3 border-b border-[var(--nim-bg)] last:border-b-0"
             >
               <TrackerIcon color={tracker.model.color} icon={tracker.model.icon} />
               <div className="flex-1 min-w-0">
@@ -453,8 +453,8 @@ function AdminView({
 
       {/* Inline Note */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <div className="flex items-start gap-2 p-2.5 bg-[var(--nim-bg-secondary)] rounded-ui-base text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
-          <MaterialSymbol icon="info" size={14} className="shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-base text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
+          <MaterialSymbol icon="info" size={14} className="shrink-0 mt-1" />
           <span>
             Inline trackers (<code className="text-[11px] text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 py-[1px] rounded-ui-base">#bug[...]</code>) are always local, regardless of sync policy. Only tracked items created from the panel participate in sync.
           </span>
@@ -498,7 +498,7 @@ function MemberView({ trackers, workspacePath }: { trackers: TrackerTypeConfig[]
           {sharedTrackers.map((tracker) => (
             <div
               key={tracker.model.type}
-              className="flex items-center gap-3 px-3 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
+              className="flex items-center gap-3 px-3 py-3 border-b border-[var(--nim-bg)] last:border-b-0"
             >
               <TrackerIcon color={tracker.model.color} icon={tracker.model.icon} />
               <div className="flex-1 min-w-0">
@@ -532,7 +532,7 @@ function MemberView({ trackers, workspacePath }: { trackers: TrackerTypeConfig[]
             {localTrackers.map((tracker) => (
               <div
                 key={tracker.model.type}
-                className="flex items-center gap-3 px-3 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
+                className="flex items-center gap-3 px-3 py-3 border-b border-[var(--nim-bg)] last:border-b-0"
               >
                 <TrackerIcon color={tracker.model.color} icon={tracker.model.icon} />
                 <div className="flex-1 min-w-0">
@@ -554,7 +554,7 @@ function MemberView({ trackers, workspacePath }: { trackers: TrackerTypeConfig[]
           </div>
 
           <div className="mt-3">
-            <button className="inline-flex items-center gap-1 px-2.5 py-1 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-[11px] cursor-pointer hover:bg-[var(--nim-bg-hover)]">
+            <button className="inline-flex items-center gap-1 px-3 py-1 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-[11px] cursor-pointer hover:bg-[var(--nim-bg-hover)]">
               <MaterialSymbol icon="add" size={12} />
               Add Custom Tracker
             </button>
@@ -564,8 +564,8 @@ function MemberView({ trackers, workspacePath }: { trackers: TrackerTypeConfig[]
 
       {/* Inline Note */}
       <div className="provider-panel-section py-4">
-        <div className="flex items-start gap-2 p-2.5 bg-[var(--nim-bg-secondary)] rounded-ui-base text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
-          <MaterialSymbol icon="info" size={14} className="shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-base text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
+          <MaterialSymbol icon="info" size={14} className="shrink-0 mt-1" />
           <span>
             Inline trackers (<code className="text-[11px] text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 py-[1px] rounded-ui-base">#bug[...]</code>) in your documents are always local. Promote them to tracked items to share with the team.
           </span>
@@ -635,7 +635,7 @@ function SchemaDriftWarning({ workspacePath }: { workspacePath?: string }) {
         className="tracker-schema-drift-warning flex items-start gap-3 p-3 bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.25)] rounded-ui-lg"
         data-testid="tracker-schema-drift-warning"
       >
-        <MaterialSymbol icon="sync_problem" size={14} className="text-[#f59e0b] shrink-0 mt-0.5" />
+        <MaterialSymbol icon="sync_problem" size={14} className="text-[#f59e0b] shrink-0 mt-1" />
         <div className="flex-1 min-w-0">
           <div className="text-[13px] font-medium text-[var(--nim-text)] mb-1">
             Schema files are out of sync
@@ -654,7 +654,7 @@ function SchemaDriftWarning({ workspacePath }: { workspacePath?: string }) {
           <button
             onClick={handleResync}
             disabled={resyncing}
-            className="inline-flex items-center gap-1 px-2.5 py-1 bg-transparent border border-[rgba(245,158,11,0.4)] rounded-ui-base text-[#f59e0b] text-[11px] cursor-pointer hover:bg-[rgba(245,158,11,0.12)] disabled:opacity-50 disabled:cursor-default"
+            className="inline-flex items-center gap-1 px-3 py-1 bg-transparent border border-[rgba(245,158,11,0.4)] rounded-ui-base text-[#f59e0b] text-[11px] cursor-pointer hover:bg-[rgba(245,158,11,0.12)] disabled:opacity-50 disabled:cursor-default"
             data-testid="tracker-schema-resync-button"
           >
             <MaterialSymbol icon="sync" size={12} />
@@ -880,7 +880,7 @@ export function TrackerConfigPanel({ workspacePath }: TrackerConfigPanelProps) {
     <div className="tracker-config-panel provider-panel flex flex-col">
       {/* Header */}
       <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-1.5 text-[var(--nim-text)] flex items-center gap-2">
+        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
           Trackers
           <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
         </h3>
