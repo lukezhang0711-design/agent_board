@@ -97,20 +97,20 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
           </button>
         </div>
       ) : noAccounts ? (
-        <div className="flex items-start gap-3 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-ui-lg text-[13px] text-[var(--nim-text-muted)]">
+        <div className="flex items-start gap-3 p-3 bg-[color-mix(in_srgb,var(--nim-primary)_8%,transparent)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-ui-lg text-ui-body text-[var(--nim-text-muted)]">
           <MaterialSymbol icon="info" size={16} className="text-[var(--nim-primary)] shrink-0 mt-1" />
           <div>
-            No GitHub CLI accounts found. Run <code className="text-[11px] bg-[var(--nim-code-bg)] px-1 py-[1px] rounded-ui-base">gh auth login</code> in your terminal, then reload.
+            No GitHub CLI accounts found. Run <code className="text-ui-caption bg-[var(--nim-code-bg)] px-1 py-0.5 rounded-ui-base">gh auth login</code> in your terminal, then reload.
           </div>
         </div>
       ) : (
         <div className="provider-panel-section py-2">
-          <label className="block text-[13px] font-medium text-[var(--nim-text)] mb-2">
+          <label className="block text-ui-body font-medium text-[var(--nim-text)] mb-2">
             {isProject ? 'Account for this project' : 'Default account'}
           </label>
           <select
             data-testid="github-account-select"
-            className="w-full max-w-sm px-3 py-2 text-[13px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] transition-colors"
+            className="w-full max-w-sm px-3 py-2 text-ui-body bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] transition-colors"
             value={isProject ? override ?? '' : defaultAccount ?? ''}
             onChange={(e) => {
               const value = e.target.value || null;

@@ -117,7 +117,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-ui-base border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] p-3 text-sm text-[var(--nim-error)]">
+        <div className="mb-4 rounded-ui-base border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] p-3 text-sm text-[var(--nim-error)]">
           {error}
         </div>
       )}
@@ -155,7 +155,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
                     <span className="text-xs text-[var(--nim-text-faint)] font-mono">/{row.moduleId}</span>
                   </div>
                   {status && (
-                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                    <span className="text-ui-micro font-semibold uppercase tracking-wider px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                       {status}
                     </span>
                   )}
@@ -201,7 +201,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
                       return (
                         <span
                           key={s.permissionId}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-muted)]"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-ui-micro rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-muted)]"
                           title={`${s.allowed} allowed, ${s.denied} denied`}
                         >
                           <MaterialSymbol icon="shield" size={10} />

@@ -469,7 +469,7 @@ export function ExtensionMarketplacePanel({
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 p-6 border border-[var(--nim-warning)] rounded-ui-lg bg-[rgba(251,191,36,0.05)]">
+        <div className="flex flex-col gap-4 p-6 border border-[var(--nim-warning)] rounded-ui-lg bg-[color-mix(in_srgb,var(--nim-warning)_5%,transparent)]">
           <div className="flex items-start gap-3">
             <MaterialSymbol icon="warning" size={24} className="text-[var(--nim-warning)] shrink-0 mt-1" />
             <div>
@@ -547,9 +547,9 @@ export function ExtensionMarketplacePanel({
         key={ext.id}
         className={`flex flex-col p-4 border rounded-ui-lg cursor-pointer transition-all duration-150 ${
           update
-            ? 'border-[rgba(96,165,250,0.4)] bg-[rgba(96,165,250,0.05)]'
+            ? 'border-[color-mix(in_srgb,var(--nim-primary)_40%,transparent)] bg-[color-mix(in_srgb,var(--nim-primary)_5%,transparent)]'
             : installed
-              ? 'border-[rgba(39,174,96,0.3)] bg-[rgba(39,174,96,0.05)]'
+              ? 'border-[color-mix(in_srgb,var(--nim-success)_30%,transparent)] bg-[color-mix(in_srgb,var(--nim-success)_5%,transparent)]'
               : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]'
         } hover:border-[var(--nim-primary)] hover:bg-[var(--nim-bg-hover)]`}
         onClick={() => setSelectedExtension(ext)}
@@ -599,7 +599,7 @@ export function ExtensionMarketplacePanel({
             <span className={`inline-flex items-center px-2 py-1 rounded-ui-base text-[0.6875rem] font-semibold uppercase tracking-tight ${
               isBuiltinExtension(ext.id)
                 ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
-                : 'bg-[rgba(39,174,96,0.15)] text-[#27ae60]'
+                : 'bg-[color-mix(in_srgb,var(--nim-success)_15%,transparent)] text-[var(--nim-success)]'
             }`}>
               {isBuiltinExtension(ext.id) ? 'Built-in' : 'Installed'}
             </span>
@@ -835,7 +835,7 @@ export function ExtensionMarketplacePanel({
           )}
 
           {update && (
-            <div className="flex items-center gap-2 mb-4 py-2 px-3 rounded-ui-base bg-[rgba(96,165,250,0.1)] border border-[rgba(96,165,250,0.3)]">
+            <div className="flex items-center gap-2 mb-4 py-2 px-3 rounded-ui-base bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-primary)_30%,transparent)]">
               <MaterialSymbol icon="upgrade" size={18} className="text-[var(--nim-primary)]" />
               <span className="text-sm text-[var(--nim-text)]">
                 Update available: v{update.currentVersion} &rarr; v{update.availableVersion}
@@ -942,7 +942,7 @@ export function ExtensionMarketplacePanel({
                 <span className={`inline-flex items-center py-2 px-3 rounded-ui-base text-[0.8125rem] font-medium ${
                   isBuiltinExtension(selectedExtension.id)
                     ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
-                    : 'bg-[rgba(39,174,96,0.15)] text-[#27ae60]'
+                    : 'bg-[color-mix(in_srgb,var(--nim-success)_15%,transparent)] text-[var(--nim-success)]'
                 }`}>
                   {isBuiltinExtension(selectedExtension.id) ? 'Built-in' : 'Installed'}
                 </span>

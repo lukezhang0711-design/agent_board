@@ -868,13 +868,13 @@ export function SettingsView({
         return (
           <>
             {hasWorkspaceMcpServers && scope === 'user' && (
-              <div className="settings-project-indicator flex items-start gap-3 py-3 px-4 mb-6 bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)] rounded-ui-lg text-[var(--nim-text)] [&_.material-symbols-outlined]:text-[var(--nim-info)] [&_.material-symbols-outlined]:shrink-0 [&_.material-symbols-outlined]:mt-1">
+              <div className="settings-project-indicator flex items-start gap-3 py-3 px-4 mb-6 bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-primary)_30%,transparent)] rounded-ui-lg text-[var(--nim-text)] [&_.material-symbols-outlined]:text-[var(--nim-info)] [&_.material-symbols-outlined]:shrink-0 [&_.material-symbols-outlined]:mt-1">
                 <MaterialSymbol icon="info" size={20} />
                 <div className="settings-project-indicator-text flex flex-col gap-1">
                   <strong className="text-sm font-semibold text-[var(--nim-text)]">
                     There {workspaceMcpServerCount === 1 ? 'is' : 'are'} {workspaceMcpServerCount} additional MCP {workspaceMcpServerCount === 1 ? 'server' : 'servers'} configured just for this project.
                   </strong>
-                  <span className="text-[13px] text-[var(--nim-text-muted)] leading-[1.4]">Switch to the Project tab above to view or edit project-specific MCP servers.</span>
+                  <span className="text-ui-body text-[var(--nim-text-muted)] leading-[1.4]">Switch to the Project tab above to view or edit project-specific MCP servers.</span>
                 </div>
               </div>
             )}
@@ -1022,7 +1022,7 @@ export function SettingsView({
               Project
             </button>
           </div>
-          <span className="settings-scope-hint text-[13px] text-[var(--nim-text-muted)]">
+          <span className="settings-scope-hint text-ui-body text-[var(--nim-text-muted)]">
             {scope === 'user'
               ? 'These settings apply to all projects'
               : `Settings for ${workspaceName || 'this project'}`}
@@ -1055,7 +1055,7 @@ export function SettingsView({
           <div className="settings-panel-container max-w-[800px]">
             {selectedCatalogWarning && (
               <div
-                className="mb-4 rounded-ui-lg border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] px-3 py-2 text-xs leading-relaxed text-[var(--nim-error)]"
+                className="mb-4 rounded-ui-lg border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] px-3 py-2 text-xs leading-relaxed text-[var(--nim-error)]"
                 role="alert"
                 data-testid="settings-model-catalog-warning"
               >
