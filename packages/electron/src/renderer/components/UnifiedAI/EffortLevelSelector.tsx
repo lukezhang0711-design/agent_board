@@ -47,7 +47,7 @@ export function EffortLevelSelector({ level, onLevelChange, supportedLevels }: E
     <div className="relative inline-block" ref={dropdownRef}>
       <button
         data-testid="effort-level-selector"
-        className="flex items-center gap-1 px-2 py-[3px] rounded-ui-lg text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
+        className="flex items-center gap-1 px-2 py-[3px] rounded-ui-lg text-ui-caption font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
         onClick={() => setIsOpen(!isOpen)}
         aria-label={`Effort level: ${currentLevel.label}`}
       >
@@ -57,11 +57,11 @@ export function EffortLevelSelector({ level, onLevelChange, supportedLevels }: E
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-1 min-w-[120px] rounded-ui-lg p-1 z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+        <div className="absolute bottom-full left-0 mb-1 min-w-[120px] rounded-ui-lg p-1 z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-md">
           {supportedOptions.map(l => (
             <button
               key={l.key}
-              className={`flex items-center justify-between gap-2 px-2 py-2 w-full border-none rounded-ui-base text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${l.key === level ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : ''}`}
+              className={`flex items-center justify-between gap-2 px-2 py-2 w-full border-none rounded-ui-base text-ui-compact cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${l.key === level ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : ''}`}
               onClick={() => { onLevelChange(l.key); setIsOpen(false); }}
             >
               <span>{l.label}</span>

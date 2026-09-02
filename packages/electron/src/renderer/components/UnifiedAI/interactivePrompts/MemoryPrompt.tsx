@@ -88,12 +88,12 @@ export function MemoryPromptIndicator({
           <OpenFileIcon />
         </button>
       </div>
-      <div className="memory-prompt-shortcuts flex items-center gap-1 text-[11px] text-[var(--nim-text-faint)]">
-        <kbd className="inline-block px-2 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">Enter</kbd> to save
+      <div className="memory-prompt-shortcuts flex items-center gap-1 text-ui-caption text-[var(--nim-text-faint)]">
+        <kbd className="inline-block px-2 py-0.5 font-inherit text-ui-micro bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">Enter</kbd> to save
         <span className="memory-shortcut-separator mx-1 text-[var(--nim-text-faint)]">&middot;</span>
-        <kbd className="inline-block px-2 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">&uarr;</kbd><kbd className="inline-block px-2 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">&darr;</kbd> to switch target
+        <kbd className="inline-block px-2 py-0.5 font-inherit text-ui-micro bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">&uarr;</kbd><kbd className="inline-block px-2 py-0.5 font-inherit text-ui-micro bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">&darr;</kbd> to switch target
         <span className="memory-shortcut-separator mx-1 text-[var(--nim-text-faint)]">&middot;</span>
-        <kbd className="inline-block px-2 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">Esc</kbd> to cancel
+        <kbd className="inline-block px-2 py-0.5 font-inherit text-ui-micro bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">Esc</kbd> to cancel
       </div>
     </div>
   );

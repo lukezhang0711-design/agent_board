@@ -146,12 +146,11 @@ export const MockupAnnotationIndicator: React.FC<MockupAnnotationIndicatorProps>
         }`}
       </style>
       <div
-        className="mockup-annotation-indicator"
+        className="mockup-annotation-indicator text-ui-compact"
         data-tooltip="Annotations drawn on your mockup will be included with your prompt"
         style={{
           padding: '4px 8px',
           marginBottom: '4px',
-          fontSize: '12px',
           color: 'var(--nim-text-muted)',
           display: 'flex',
           alignItems: 'center',

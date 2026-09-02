@@ -8,6 +8,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAtom } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../common/PageHeader';
 import { pendingVoiceCommandAtom } from '../../store/atoms/voiceModeState';
 import { isImeCompositionActive } from '../../utils/imeEventTrace';
 
@@ -139,23 +140,21 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
       className="bg-nim-tertiary border border-nim-primary rounded-ui-lg mb-2 overflow-hidden shadow-[0_2px_8px_rgba(59,130,246,0.15)]"
     >
       {/* Header */}
-      <div
-        className="flex items-center justify-between py-2 px-3 bg-[rgba(59,130,246,0.1)] border-b border-[rgba(59,130,246,0.2)]"
-      >
-        <div
-          className="flex items-center gap-2 text-[13px] font-medium text-nim-primary"
-        >
-          <MaterialSymbol icon="mic" size={18} />
-          Voice Command
-        </div>
-        <button
-          onClick={handleCancel}
-          className="flex items-center justify-center w-6 h-6 border-none bg-transparent text-nim-muted cursor-pointer rounded-ui-base transition-all duration-150 hover:bg-red-500/10 hover:text-nim-error"
-          title="Cancel (Esc)"
-        >
-          <MaterialSymbol icon="close" size={18} />
-        </button>
-      </div>
+      <PageHeader
+        icon="mic"
+        title="Voice Command"
+        actions={
+          <button
+            onClick={handleCancel}
+            className="flex items-center justify-center w-6 h-6 border-none bg-transparent text-nim-muted cursor-pointer rounded-ui-base transition-all duration-150 hover:bg-red-500/10 hover:text-nim-error"
+            title="Cancel (Esc)"
+          >
+            <MaterialSymbol icon="close" size={18} />
+          </button>
+        }
+        className="py-2 px-3 bg-nim-primary-subtle border-b border-nim-primary/20"
+        testId="pending-voice-command-header"
+      />
 
       {/* Body - editable textarea */}
       <div className="p-3">
@@ -210,7 +209,7 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
               />
             </svg>
           </div>
-          <span className="text-[13px] font-medium text-nim-muted">
+          <span className="text-ui-body font-medium text-nim-muted">
             {isEditing ? (
               'Paused - editing'
             ) : (
@@ -225,14 +224,14 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
         >
           <button
             onClick={handleEditClick}
-            className="flex items-center gap-2 py-2 px-3 border border-nim rounded-ui-base bg-transparent text-nim-muted text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-secondary hover:border-nim-focus hover:text-nim"
+            className="flex items-center gap-2 py-2 px-3 border border-nim rounded-ui-base bg-transparent text-nim-muted text-ui-body font-medium cursor-pointer transition-all duration-150 hover:bg-nim-secondary hover:border-nim-focus hover:text-nim"
           >
             <MaterialSymbol icon="edit" size={16} />
             Edit
           </button>
           <button
             onClick={handleSubmit}
-            className="flex items-center gap-2 py-2 px-3 border-none rounded-ui-base bg-nim-primary text-nim-on-primary text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-primary-hover"
+            className="flex items-center gap-2 py-2 px-3 border-none rounded-ui-base bg-nim-primary text-nim-on-primary text-ui-body font-medium cursor-pointer transition-all duration-150 hover:bg-nim-primary-hover"
           >
             Send Now
             <MaterialSymbol icon="arrow_forward" size={16} />
