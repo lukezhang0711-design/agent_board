@@ -43,12 +43,11 @@ export const EditorContextIndicator: React.FC<EditorContextIndicatorProps> = ({
 
   return (
     <div
-      className="editor-context-indicator"
+      className="editor-context-indicator text-ui-compact"
       title={entry!.context.description}
       style={{
         padding: '4px 8px',
         marginBottom: '4px',
-        fontSize: '12px',
         color: 'var(--nim-text-muted)',
         display: 'flex',
         alignItems: 'center',

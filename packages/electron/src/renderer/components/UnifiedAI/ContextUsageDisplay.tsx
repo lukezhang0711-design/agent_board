@@ -1,4 +1,5 @@
 import React, { useId, useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useFloating, offset, flip, shift, autoUpdate, FloatingPortal } from '@floating-ui/react';
 import type { TokenUsageCategory } from '@nimbalyst/runtime/ai/server/types';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { getHelpContent } from '../../help';
@@ -159,6 +160,15 @@ export function ContextUsageDisplay({
     };
   }, [tooltipVisible]);
 
+  const { refs, floatingStyles } = useFloating({
+    open: shouldShowTooltip,
+    onOpenChange: setTooltipVisible,
+    placement: 'top-end',
+    strategy: 'fixed',
+    whileElementsMounted: autoUpdate,
+    middleware: [offset(8), flip({ padding: 8 }), shift({ padding: 8 })],
+  });
+
   const getUsageClass = (): string => {
     if (!hasTokenData) return 'usage-normal';
     if (hasContextWindow && percentage >= 90) return 'usage-critical';
@@ -185,19 +195,22 @@ export function ContextUsageDisplay({
   const usageClass = getUsageClass();
   const usageStyles = {
     'usage-normal': '',
-    'usage-warning': 'bg-[rgba(255,165,0,0.1)] border-[rgba(255,165,0,0.3)]',
-    'usage-critical': 'bg-[rgba(255,0,0,0.1)] border-[rgba(255,0,0,0.3)]'
+    'usage-warning': 'bg-nim-warning-subtle border-nim-warning/30',
+    'usage-critical': 'bg-nim-error-subtle border-nim-error/30'
   };
   const textStyles = {
     'usage-normal': 'text-[var(--nim-text-muted)]',
-    'usage-warning': 'text-orange-500',
-    'usage-critical': 'text-[#ff4444]'
+    'usage-warning': 'text-nim-warning',
+    'usage-critical': 'text-nim-error'
   };
 
   return (
     <div
-      ref={rootRef}
-      className={`context-usage-display ${usageClass} relative inline-flex items-center py-0.5 px-2 rounded-ui-base text-[11px] font-medium whitespace-nowrap bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] ml-auto ${enableTooltip ? 'cursor-pointer' : 'cursor-default'} gap-1 focus:outline-2 focus:outline-[var(--nim-primary)] focus:outline-offset-2 max-[400px]:hidden ${usageStyles[usageClass as keyof typeof usageStyles]}`}
+      ref={(el) => {
+        rootRef.current = el;
+        refs.setReference(el);
+      }}
+      className={`context-usage-display ${usageClass} relative inline-flex items-center py-0.5 px-2 rounded-ui-base text-ui-caption font-medium whitespace-nowrap bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] ml-auto ${enableTooltip ? 'cursor-pointer' : 'cursor-default'} gap-1 focus:outline-2 focus:outline-[var(--nim-primary)] focus:outline-offset-2 max-[400px]:hidden ${usageStyles[usageClass as keyof typeof usageStyles]}`}
       tabIndex={hasTokenData ? 0 : -1}
       aria-label={label}
       aria-describedby={shouldShowTooltip ? tooltipId : undefined}
@@ -210,102 +223,106 @@ export function ContextUsageDisplay({
       <span className={`usage-text ${textStyles[usageClass as keyof typeof textStyles]}`}>{getDisplayText()}</span>
 
       {shouldShowTooltip && (
-        <div
-          className="context-usage-tooltip absolute right-0 bottom-[calc(100%+8px)] w-[280px] max-w-[calc(100vw-32px)] p-3 rounded-ui-lg bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_12px_32px_rgba(0,0,0,0.35)] z-10 text-[var(--nim-text)] overflow-hidden box-border"
-          id={tooltipId}
-          role="tooltip"
-        >
-          <div className="tooltip-header flex justify-between items-center text-xs mb-2 text-[var(--nim-text-muted)]">
-            <div className="tooltip-header-left flex items-center gap-2">
-              <span>{hasContextWindow ? 'Context Breakdown' : 'Token Usage'}</span>
-              {helpContent && (
-                <button
-                  className="tooltip-help-button inline-flex items-center justify-center w-[18px] h-[18px] p-0 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setHelpExpanded(!helpExpanded);
-                  }}
-                  title={helpExpanded ? 'Hide help' : 'What is this?'}
-                  aria-expanded={helpExpanded}
-                >
-                  <MaterialSymbol icon={helpExpanded ? 'expand_less' : 'help'} size={14} />
-                </button>
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            style={floatingStyles}
+            className="context-usage-tooltip w-[280px] max-w-[calc(100vw-32px)] p-3 rounded-ui-lg bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-md z-[1000] text-[var(--nim-text)] overflow-hidden box-border"
+            id={tooltipId}
+            role="tooltip"
+          >
+            <div className="tooltip-header flex justify-between items-center text-ui-compact mb-2 text-[var(--nim-text-muted)]">
+              <div className="tooltip-header-left flex items-center gap-2">
+                <span>{hasContextWindow ? 'Context Breakdown' : 'Token Usage'}</span>
+                {helpContent && (
+                  <button
+                    className="tooltip-help-button inline-flex items-center justify-center w-[18px] h-[18px] p-0 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHelpExpanded(!helpExpanded);
+                    }}
+                    title={helpExpanded ? 'Hide help' : 'What is this?'}
+                    aria-expanded={helpExpanded}
+                  >
+                    <MaterialSymbol icon={helpExpanded ? 'expand_less' : 'help'} size={14} />
+                  </button>
+                )}
+              </div>
+              {hasContextWindow && (
+                <span className="tooltip-total font-semibold text-[var(--nim-text)]">
+                  {formatTokensShort(displayTokens)} / {formatTokensShort(displayContextWindow)}
+                </span>
               )}
             </div>
-            {hasContextWindow && (
-              <span className="tooltip-total font-semibold text-[var(--nim-text)]">
-                {formatTokensShort(displayTokens)} / {formatTokensShort(displayContextWindow)}
-              </span>
+
+            {/* Expandable help section */}
+            {helpExpanded && helpContent && (
+              <div className="tooltip-help-section bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-3 mb-3 overflow-hidden box-border whitespace-normal">
+                <div className="tooltip-help-title text-ui-compact font-semibold text-[var(--nim-text)] mb-1 whitespace-normal">{helpContent.title}</div>
+                <div className="tooltip-help-body text-ui-caption text-[var(--nim-text-muted)] leading-[1.4] whitespace-normal break-words">{helpContent.body}</div>
+              </div>
             )}
-          </div>
 
-          {/* Expandable help section */}
-          {helpExpanded && helpContent && (
-            <div className="tooltip-help-section bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-3 mb-3 overflow-hidden box-border whitespace-normal">
-              <div className="tooltip-help-title text-xs font-semibold text-[var(--nim-text)] mb-1 whitespace-normal">{helpContent.title}</div>
-              <div className="tooltip-help-body text-[11px] text-[var(--nim-text-muted)] leading-[1.4] whitespace-normal break-words">{helpContent.body}</div>
-            </div>
-          )}
+            {/* Show input/output breakdown if available */}
+            {(inputTokens > 0 || outputTokens > 0) && (
+              <div className="tooltip-io-breakdown flex flex-col gap-1 py-2 border-b border-[var(--nim-border)] mb-2">
+                <div className="tooltip-io-row flex justify-between text-ui-caption">
+                  <span className="tooltip-io-label text-[var(--nim-text-muted)]">Input:</span>
+                  <span className="tooltip-io-value text-[var(--nim-text)] tabular-nums">{inputTokens.toLocaleString()}</span>
+                </div>
+                <div className="tooltip-io-row flex justify-between text-ui-caption">
+                  <span className="tooltip-io-label text-[var(--nim-text-muted)]">Output:</span>
+                  <span className="tooltip-io-value text-[var(--nim-text)] tabular-nums">{outputTokens.toLocaleString()}</span>
+                </div>
+                <div className="tooltip-io-row tooltip-io-total flex justify-between text-ui-caption font-semibold pt-1 border-t border-[var(--nim-border)] mt-1">
+                  <span className="tooltip-io-label text-[var(--nim-text-muted)]">Total:</span>
+                  <span className="tooltip-io-value text-[var(--nim-text)] tabular-nums">{totalTokens.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
 
-          {/* Show input/output breakdown if available */}
-          {(inputTokens > 0 || outputTokens > 0) && (
-            <div className="tooltip-io-breakdown flex flex-col gap-1 py-2 border-b border-[var(--nim-border)] mb-2">
-              <div className="tooltip-io-row flex justify-between text-[11px]">
-                <span className="tooltip-io-label text-[var(--nim-text-muted)]">Input:</span>
-                <span className="tooltip-io-value text-[var(--nim-text)] tabular-nums">{inputTokens.toLocaleString()}</span>
-              </div>
-              <div className="tooltip-io-row flex justify-between text-[11px]">
-                <span className="tooltip-io-label text-[var(--nim-text-muted)]">Output:</span>
-                <span className="tooltip-io-value text-[var(--nim-text)] tabular-nums">{outputTokens.toLocaleString()}</span>
-              </div>
-              <div className="tooltip-io-row tooltip-io-total flex justify-between text-[11px] font-semibold pt-1 border-t border-[var(--nim-border)] mt-1">
-                <span className="tooltip-io-label text-[var(--nim-text-muted)]">Total:</span>
-                <span className="tooltip-io-value text-[var(--nim-text)] tabular-nums">{totalTokens.toLocaleString()}</span>
-              </div>
-            </div>
-          )}
+            {/* Category bar (only for Claude Code with context data) */}
+            {hasContextWindow && formattedCategories.length > 0 && (
+              <>
+                <div className="tooltip-bar relative h-2.5 rounded-ui-full overflow-hidden bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] mb-3">
+                  <div className="tooltip-bar-fill flex h-full rounded-ui-full" style={{ width: `${usedPercentage}%` }}>
+                    {usedCategories.map((cat, index) => {
+                      // Calculate width relative to the used portion
+                      const relativeWidth = usedPercentage > 0 ? (cat.width / usedPercentage) * 100 : 0;
+                      return (
+                        <span
+                          key={`${cat.name}-${index}`}
+                          className="tooltip-bar-segment h-full"
+                          style={{ width: `${relativeWidth}%`, backgroundColor: cat.color }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
 
-          {/* Category bar (only for Claude Code with context data) */}
-          {hasContextWindow && formattedCategories.length > 0 && (
-            <>
-              <div className="tooltip-bar relative h-2.5 rounded-ui-full overflow-hidden bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] mb-3">
-                <div className="tooltip-bar-fill flex h-full rounded-ui-full" style={{ width: `${usedPercentage}%` }}>
-                  {usedCategories.map((cat, index) => {
-                    // Calculate width relative to the used portion
-                    const relativeWidth = usedPercentage > 0 ? (cat.width / usedPercentage) * 100 : 0;
+                <div className="tooltip-categories flex flex-col gap-2">
+                  {formattedCategories.map((cat, index) => {
+                    const isFreeSpace = cat.name.toLowerCase().includes('free');
                     return (
-                      <span
+                      <div
+                        className="tooltip-category-row grid grid-cols-[10px_1fr_auto_auto] items-center gap-2 text-ui-caption"
                         key={`${cat.name}-${index}`}
-                        className="tooltip-bar-segment h-full"
-                        style={{ width: `${relativeWidth}%`, backgroundColor: cat.color }}
-                      />
+                      >
+                        <span
+                          className={`tooltip-dot w-2 h-2 rounded-ui-full inline-block ${isFreeSpace ? 'bg-transparent border border-[var(--nim-border)]' : ''}`}
+                          style={isFreeSpace ? undefined : { backgroundColor: cat.color }}
+                        />
+                        <span className="tooltip-category-name text-[var(--nim-text)]">{cat.name}</span>
+                        <span className="tooltip-category-tokens text-[var(--nim-text-muted)] tabular-nums">{cat.tokens.toLocaleString()} tokens</span>
+                        <span className="tooltip-category-percent text-[var(--nim-text)] font-semibold tabular-nums">{cat.percentText}%</span>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-
-              <div className="tooltip-categories flex flex-col gap-2">
-                {formattedCategories.map((cat, index) => {
-                  const isFreeSpace = cat.name.toLowerCase().includes('free');
-                  return (
-                    <div
-                      className="tooltip-category-row grid grid-cols-[10px_1fr_auto_auto] items-center gap-2 text-[11px]"
-                      key={`${cat.name}-${index}`}
-                    >
-                      <span
-                        className={`tooltip-dot w-2 h-2 rounded-ui-full inline-block ${isFreeSpace ? 'bg-transparent border border-[var(--nim-border)]' : ''}`}
-                        style={isFreeSpace ? undefined : { backgroundColor: cat.color }}
-                      />
-                      <span className="tooltip-category-name text-[var(--nim-text)]">{cat.name}</span>
-                      <span className="tooltip-category-tokens text-[var(--nim-text-muted)] tabular-nums">{cat.tokens.toLocaleString()} tokens</span>
-                      <span className="tooltip-category-percent text-[var(--nim-text)] font-semibold tabular-nums">{cat.percentText}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        </FloatingPortal>
       )}
     </div>
   );

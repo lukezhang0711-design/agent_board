@@ -52,11 +52,11 @@ const SuperStatusBadge: React.FC<{ status: SuperLoopStatus }> = memo(({ status }
   if (status === 'running') return null;
   const { label } = getSuperStatusInfo(status);
   const colorMap: Record<string, string> = {
-    paused: 'bg-[rgba(234,179,8,0.15)] text-[var(--nim-warning)]',
-    completed: 'bg-[rgba(59,130,246,0.15)] text-[var(--nim-primary)]',
-    failed: 'bg-[rgba(239,68,68,0.15)] text-[var(--nim-error)]',
-    blocked: 'bg-[rgba(249,115,22,0.15)] text-orange-500',
-    pending: 'bg-[rgba(156,163,175,0.15)] text-[var(--nim-text-faint)]',
+    paused: 'bg-nim-warning-subtle text-[var(--nim-warning)]',
+    completed: 'bg-nim-primary-subtle text-[var(--nim-primary)]',
+    failed: 'bg-nim-error-subtle text-[var(--nim-error)]',
+    blocked: 'bg-nim-warning-subtle text-orange-500',
+    pending: 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]',
   };
   return (
     <span className={`text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium ${colorMap[status] || ''}`}>
@@ -549,7 +549,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
                     <MaterialSymbol icon="push_pin" size={12} className="shrink-0 text-[var(--nim-text-faint)] opacity-70" />
                   )}
                   {loop.isArchived && (
-                    <span className="text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[rgba(156,163,175,0.15)] text-[var(--nim-text-faint)]">archived</span>
+                    <span className="text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">archived</span>
                   )}
                 </>
               )}
@@ -621,7 +621,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
                     className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base shadow-lg py-1"
                     onMouseLeave={() => setShowForceResumeMenu(false)}
                   >
-                    <div className="px-3 py-2 text-[10px] text-[var(--nim-text-muted)] font-semibold uppercase tracking-wide">Resume with</div>
+                    <div className="px-3 py-2 text-ui-micro text-[var(--nim-text-muted)] font-semibold uppercase tracking-wide">Resume with</div>
                     {[
                       { label: 'No extra iterations', bump: 0 },
                       { label: '+5 iterations', bump: 5 },
@@ -630,7 +630,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
                     ].map(opt => (
                       <button
                         key={opt.bump}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-[12px] text-[var(--nim-text)] bg-transparent border-none cursor-pointer hover:bg-[var(--nim-bg-hover)] text-left"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-ui-compact text-[var(--nim-text)] bg-transparent border-none cursor-pointer hover:bg-[var(--nim-bg-hover)] text-left"
                         onClick={(e) => { e.stopPropagation(); handleForceResume(opt.bump); }}
                       >
                         {opt.label}
@@ -710,7 +710,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
             <>
               <div className="h-px my-1 bg-[var(--nim-border)]" />
               <button
-                className="flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
+                className="flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
                 onClick={handleArchiveToggle}
               >
                 <MaterialSymbol icon={loop.isArchived ? "unarchive" : "archive"} size={14} />

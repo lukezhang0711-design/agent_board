@@ -8,6 +8,8 @@ import { getRecordTitle, getRecordStatus, getRecordPriority, getRecordSortOrder,
 import { generateKeyBetween } from '@nimbalyst/runtime/utils/fractionalIndex';
 import { UserAvatar } from '@nimbalyst/runtime/plugins/TrackerPlugin/components/UserAvatar';
 import { EmptyStateMessage } from '../common/EmptyStateMessage';
+import { ItemCard } from '../common/ItemCard';
+import { StatusBadge, type StatusBadgeType } from '../common/StatusBadge';
 
 // ── Module-level drag-and-drop handler ──────────────────────────────────
 // Registered once on `document`, survives HMR. The component sets the
@@ -107,6 +109,24 @@ const TYPE_COLORS: Record<string, string> = {
   decision: '#8b5cf6',
   feature: '#10b981',
 };
+
+/** Map tracker record status strings to StatusBadge canonical types (display only). */
+function mapKanbanStatusToBadge(status: string): StatusBadgeType {
+  switch (status) {
+    case 'in-progress':
+    case 'in-review':
+      return 'running';
+    case 'done':
+      return 'done';
+    case 'blocked':
+      return 'failed';
+    case "won't-fix":
+    case 'wont-fix':
+    case 'to-do':
+    default:
+      return 'idle';
+  }
+}
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   filterType,
@@ -562,11 +582,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     <div className="tracker-kanban-board h-full flex flex-col overflow-hidden relative" data-testid="tracker-kanban-board">
       {/* Sort controls */}
       <div className="flex items-center gap-2 px-3 pt-2 pb-0">
-        <span className="text-[11px] text-nim-faint">Sort:</span>
+        <span className="text-ui-caption text-nim-faint">Sort:</span>
         {(['manual', 'priority', 'created', 'updated'] as const).map(mode => (
           <button
             key={mode}
-            className={`text-[11px] px-2 py-0.5 rounded-ui-base cursor-pointer transition-colors ${
+            className={`text-ui-caption px-2 py-0.5 rounded-ui-base cursor-pointer transition-colors ${
               sortMode === mode
                 ? 'bg-[var(--nim-primary)] text-white'
                 : 'text-nim-muted hover:bg-nim-tertiary'
@@ -597,10 +617,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 className="w-2 h-2 rounded-ui-full shrink-0"
                 style={{ backgroundColor: color }}
               />
-              <span className="text-xs font-semibold text-nim truncate">
+              <span className="text-ui-caption font-semibold text-nim truncate">
                 {col.label}
               </span>
-              <span className="text-[10px] font-semibold text-nim-faint ml-auto">
+              <span className="text-ui-micro font-semibold text-nim-faint ml-auto">
                 {colItems.length}
               </span>
             </div>
@@ -624,47 +644,39 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       {dragOverColumn === col.value && dropIndex === cardIndex && dragItemId !== item.id && (
                         <div className="h-[2px] bg-[var(--nim-primary)] rounded-ui-full mx-1 my-1" />
                       )}
-                      <button
+                      <div
                         data-testid="tracker-kanban-card"
                         data-item-id={item.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, item)}
                         onDragEnd={handleDragEnd}
-                        className={`tracker-kanban-card w-full text-left p-3 rounded-ui-base bg-nim hover:bg-nim-tertiary border transition-colors cursor-grab active:cursor-grabbing mb-2 ${
+                        className={`tracker-kanban-card mb-2 cursor-grab active:cursor-grabbing transition-colors ${
                           dragItemId === item.id ? 'opacity-40' : ''
                         } ${
                           selectedIds.has(item.id) || (selectedItemId && item.id === selectedItemId)
-                            ? 'border-[var(--nim-primary)]'
-                            : 'border-nim'
+                            ? '[&>.item-card]:border-[var(--nim-primary)]'
+                            : ''
                         }`}
                         onClick={(e) => handleCardSelect(e, item)}
                         onContextMenu={(e) => handleCardContextMenu(e, item)}
                       >
-                        <div className="flex items-start gap-2">
-                          {/* Priority dot */}
-                          <span
-                            className="w-2 h-2 rounded-ui-full mt-2 shrink-0"
-                            style={{ backgroundColor: PRIORITY_COLORS[getRecordPriority(item) || 'medium'] || '#6b7280' }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            {item.issueKey && (
-                              <div className="text-[10px] font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-1">
-                                {item.issueKey}
-                              </div>
-                            )}
-                            <div className="text-sm font-medium text-nim leading-snug line-clamp-2">
-                              {getRecordTitle(item)}
-                            </div>
-                            {description && (
-                              <div className="text-[11px] text-nim-muted truncate mt-1 leading-normal">
-                                {description}
-                              </div>
-                            )}
-                            {/* Footer: Bottom row */}
-                            <div className="flex items-center gap-2 mt-2 pt-1 border-t border-nim/20 text-[10px]">
-                              {/* Type badge */}
+                        <ItemCard
+                          idNumber={
+                            <>
                               <span
-                                className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
+                                className="w-2 h-2 rounded-ui-full shrink-0 inline-block align-middle mr-1"
+                                style={{ backgroundColor: PRIORITY_COLORS[getRecordPriority(item) || 'medium'] || '#6b7280' }}
+                              />
+                              {item.issueKey}
+                            </>
+                          }
+                          statusBadge={<StatusBadge status={mapKanbanStatusToBadge(getRecordStatus(item) || 'to-do')} />}
+                          title={getRecordTitle(item)}
+                          description={description}
+                          assignee={
+                            <span className="flex items-center gap-1 min-w-0 flex-wrap">
+                              <span
+                                className="text-ui-micro font-medium px-2 py-0.5 rounded-ui-base"
                                 style={{
                                   color: TYPE_COLORS[item.primaryType] || '#6b7280',
                                   backgroundColor: `${TYPE_COLORS[item.primaryType] || '#6b7280'}20`,
@@ -672,13 +684,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               >
                                 {item.primaryType}
                               </span>
-                              {/* Secondary type tags */}
                               {item.typeTags
                                 .filter(tag => tag !== item.primaryType)
                                 .map(tag => (
                                   <span
                                     key={tag}
-                                    className="text-[9px] font-medium px-1 py-0.5 rounded-ui-base"
+                                    className="text-ui-micro font-medium px-1 py-0.5 rounded-ui-base"
                                     style={{
                                       color: TYPE_COLORS[tag] || '#6b7280',
                                       backgroundColor: `${TYPE_COLORS[tag] || '#6b7280'}12`,
@@ -688,10 +699,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                     {tag}
                                   </span>
                                 ))}
-                              {/* Priority label */}
                               {(() => { const p = getRecordPriority(item); return p && p !== 'medium' ? (
                                 <span
-                                  className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
+                                  className="text-ui-micro font-medium px-2 py-0.5 rounded-ui-base"
                                   style={{
                                     color: PRIORITY_COLORS[p] || '#6b7280',
                                     backgroundColor: `${PRIORITY_COLORS[p] || '#6b7280'}20`,
@@ -700,19 +710,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                   {p}
                                 </span>
                               ) : null; })()}
-                              {/* Owner avatar */}
-                              {(() => {
-                                const owner = getFieldByRole(item, 'assignee') as string | undefined;
-                                return owner ? (
-                                  <span className="ml-auto">
-                                    <UserAvatar identity={owner} size={18} />
-                                  </span>
-                                ) : null;
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
+                            </span>
+                          }
+                          time={
+                            (() => {
+                              const owner = getFieldByRole(item, 'assignee') as string | undefined;
+                              return owner ? <UserAvatar identity={owner} size={18} /> : undefined;
+                            })()
+                          }
+                        />
+                      </div>
                     </React.Fragment>
                   );
                 })
@@ -733,11 +740,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         <FloatingPortal>
         <div
           ref={contextRefs.setFloating}
-          className="z-50 min-w-[180px] bg-nim-secondary border border-nim rounded-ui-base shadow-lg py-1 text-[13px]"
+          className="z-50 min-w-[180px] bg-nim-secondary border border-nim rounded-ui-base shadow-lg py-1 text-ui-body"
           style={contextFloatingStyles}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="px-3 py-1 text-[11px] text-nim-faint font-medium">
+          <div className="px-3 py-1 text-ui-caption text-nim-faint font-medium">
             {selectedIds.size} item{selectedIds.size > 1 ? 's' : ''} selected
           </div>
           <div className="border-b border-nim my-1" />
@@ -808,7 +815,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
           {onDeleteItems && (
             <button
-              className="w-full flex items-center gap-2 px-3 py-2 text-left text-[#ef4444] hover:bg-nim-tertiary cursor-pointer"
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-[var(--nim-error)] hover:bg-nim-tertiary cursor-pointer"
               onClick={() => {
                 closeContextMenu();
                 const ids = Array.from(selectedIds);

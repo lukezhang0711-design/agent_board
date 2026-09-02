@@ -113,9 +113,9 @@ const TypeTagsEditor: React.FC<{
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-nim-faint font-medium uppercase tracking-wider">Type Tags</span>
+        <span className="text-ui-micro text-nim-faint font-medium uppercase tracking-wider">Type Tags</span>
         <button
-          className="text-[10px] text-nim-muted hover:text-nim px-1 py-0.5 rounded-ui-base hover:bg-nim-tertiary"
+          className="text-ui-micro text-nim-muted hover:text-nim px-1 py-0.5 rounded-ui-base hover:bg-nim-tertiary"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? 'Done' : '+ Add'}
@@ -129,13 +129,13 @@ const TypeTagsEditor: React.FC<{
             return (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-ui-base cursor-pointer group"
+                className="inline-flex items-center gap-1 text-ui-micro font-medium px-2 py-0.5 rounded-ui-base cursor-pointer group"
                 style={{ color: tagColor, backgroundColor: `${tagColor}15`, border: `1px solid ${tagColor}30` }}
                 onClick={() => onUpdate(typeTags.filter(t => t !== tag))}
                 title={`Remove ${tagModel?.displayName || tag} tag`}
               >
                 {tagModel?.displayName || tag}
-                <span className="opacity-0 group-hover:opacity-100 text-[9px]">&times;</span>
+                <span className="opacity-0 group-hover:opacity-100 text-ui-micro">&times;</span>
               </span>
             );
           })}
@@ -148,7 +148,7 @@ const TypeTagsEditor: React.FC<{
             return (
               <button
                 key={m.type}
-                className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base hover:opacity-80"
+                className="text-ui-micro font-medium px-2 py-0.5 rounded-ui-base hover:opacity-80"
                 style={{ color: tagColor, backgroundColor: `${tagColor}10`, border: `1px dashed ${tagColor}40` }}
                 onClick={() => {
                   onUpdate([...typeTags, m.type]);
@@ -980,7 +980,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
   if (!item) {
     return (
       <div
-        className="tracker-item-detail flex flex-col h-full bg-nim overflow-hidden items-center justify-center text-nim-faint text-sm"
+        className="tracker-item-detail flex flex-col h-full bg-nim overflow-hidden items-center justify-center text-nim-faint text-ui-compact"
         data-testid="tracker-item-detail"
       >
         Item no longer exists
@@ -1007,16 +1007,16 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               value={localTitle}
               onChange={(e) => handleTextFieldChange('title', e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
-              className="w-full bg-transparent border-none outline-none text-base font-semibold text-nim placeholder:text-nim-faint p-0"
+              className="w-full bg-transparent border-none outline-none text-ui-body font-semibold text-nim placeholder:text-nim-faint p-0"
               placeholder="Item title..."
               data-testid="tracker-detail-title"
             />
           ) : (
-            <h3 className="text-base font-semibold text-nim m-0 leading-snug">{getRecordTitle(item)}</h3>
+            <h3 className="text-ui-body font-semibold text-nim m-0 leading-snug">{getRecordTitle(item)}</h3>
           )}
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span
-              className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
+              className="text-ui-micro font-medium px-2 py-0.5 rounded-ui-base"
               style={{
                 color: typeColor,
                 backgroundColor: `${typeColor}20`,
@@ -1033,7 +1033,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 return (
                   <span
                     key={tag}
-                    className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
+                    className="text-ui-micro font-medium px-2 py-0.5 rounded-ui-base"
                     style={{
                       color: tagColor,
                       backgroundColor: `${tagColor}15`,
@@ -1046,7 +1046,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               })}
             {isNativeItem(item) && (
               <span
-                className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base flex items-center gap-1 bg-gray-500/[0.125] text-gray-400"
+                className="text-ui-micro font-medium px-2 py-0.5 rounded-ui-base flex items-center gap-1 bg-gray-500/[0.125] text-gray-400"
                 title="Stored in database — not backed by a file"
                 data-testid="tracker-source-db-badge"
               >
@@ -1055,10 +1055,10 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               </span>
             )}
             {(item.issueKey || item.id) && (
-              <span className="text-[10px] text-nim-faint font-mono">{item.issueKey || item.id}</span>
+              <span className="text-ui-micro text-nim-faint font-mono">{item.issueKey || item.id}</span>
             )}
             {item.archived && (
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base bg-[#6b728020] text-nim-faint">
+              <span className="text-ui-micro font-medium px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-nim-faint">
                 Archived
               </span>
             )}
@@ -1071,7 +1071,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               : externalOrigin.externalId;
             return (
               <div
-                className="flex items-center gap-2 mt-2 text-[11px]"
+                className="flex items-center gap-2 mt-2 text-ui-caption"
                 data-testid="tracker-source-chip"
                 title={installed ? undefined : 'Install the importer to refresh this item'}
               >
@@ -1153,7 +1153,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           )}
           {onDelete && (
             <button
-              className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted hover:text-[#ef4444]"
+              className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted hover:text-[var(--nim-error)]"
               onClick={() => {
                 if (window.confirm(`Delete "${getRecordTitle(item)}"? This cannot be undone.`)) {
                   onDelete(item.id);
@@ -1177,7 +1177,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
       {/* Upstream body-change banner (re-snapshot detected an upstream edit) */}
       {externalOrigin?.upstreamBodyChanged && (
         <div
-          className="flex items-center gap-2 px-4 py-2 border-b border-nim bg-[var(--nim-warning)]/10 text-xs text-nim shrink-0"
+          className="flex items-center gap-2 px-4 py-2 border-b border-nim bg-[var(--nim-warning)]/10 text-ui-caption text-nim shrink-0"
           data-testid="tracker-upstream-body-banner"
         >
           <MaterialSymbol icon="sync_problem" size={14} className="text-nim-warning" />
@@ -1271,7 +1271,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
 
         {/* Rich Content Editor / Description */}
         <div className="pt-1 border-t border-nim">
-          <label className="text-[11px] font-medium text-nim-muted uppercase tracking-[0.5px] block mb-1">
+          <label className="text-ui-caption font-medium text-nim-muted uppercase tracking-[0.5px] block mb-1">
             Content
           </label>
           {contentMode === 'local-pglite' && localEditorConfig ? (
@@ -1291,12 +1291,12 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                   className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none bg-nim"
                   data-testid="tracker-content-loading"
                 >
-                  <span className="text-sm text-nim-muted">Loading content...</span>
+                  <span className="text-ui-compact text-nim-muted">Loading content...</span>
                 </div>
               )}
               {reviewState?.hasUnreviewed && (
                 <div
-                  className="flex items-center gap-2 px-3 py-2 text-xs border-b border-nim bg-nim-tertiary"
+                  className="flex items-center gap-2 px-3 py-2 text-ui-caption border-b border-nim bg-nim-tertiary"
                   data-testid="tracker-content-review-banner"
                 >
                   <MaterialSymbol icon="rate_review" size={14} className="text-nim-warning" />
@@ -1307,13 +1307,13 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                       : 'collaborators'}
                   </span>
                   <button
-                    className="px-2 py-0.5 rounded-ui-base text-[11px] font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                    className="px-2 py-0.5 rounded-ui-base text-ui-caption font-medium bg-[var(--nim-success)] text-white hover:opacity-90 transition-colors"
                     onClick={acceptRemoteChanges}
                   >
                     Accept
                   </button>
                   <button
-                    className="px-2 py-0.5 rounded-ui-base text-[11px] font-medium text-nim-muted hover:text-nim hover:bg-nim-tertiary border border-nim transition-colors"
+                    className="px-2 py-0.5 rounded-ui-base text-ui-caption font-medium text-nim-muted hover:text-nim hover:bg-nim-tertiary border border-nim transition-colors"
                     onClick={rejectRemoteChanges}
                   >
                     Reject
@@ -1323,16 +1323,16 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               <NimbalystEditor key={`collab-${item.id}-${providerEpoch}`} config={collabEditorConfig} />
             </div>
           ) : (contentMode === 'local-pglite' || contentMode === 'collaborative') && !contentLoaded ? (
-            <div className="text-sm text-nim-faint py-4 text-center">Loading...</div>
+            <div className="text-ui-compact text-nim-faint py-4 text-center">Loading...</div>
           ) : contentMode === 'collaborative' && collabLoading ? (
-            <div className="text-sm text-nim-faint py-4 text-center">Connecting...</div>
+            <div className="text-ui-compact text-nim-faint py-4 text-center">Connecting...</div>
           ) : item.system.documentPath ? (
             <div className="flex items-center gap-2 py-2">
-              <span className="text-sm text-nim-muted flex-1 truncate font-mono">
+              <span className="text-ui-compact text-nim-muted flex-1 truncate font-mono">
                 {item.system.documentPath}
               </span>
               <button
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-ui-base border border-nim text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-ui-caption font-medium rounded-ui-base border border-nim text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
                 onClick={handleOpenDocument}
               >
                 <MaterialSymbol icon="open_in_new" size={14} />
@@ -1340,7 +1340,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               </button>
             </div>
           ) : (
-            <p className="text-sm text-nim-faint m-0">No content</p>
+            <p className="text-ui-compact text-nim-faint m-0">No content</p>
           )}
         </div>
 
@@ -1348,13 +1348,13 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
         {(linkedSessions.length > 0 || onLaunchSession || canLinkExistingSession || isLinkingExistingSession) && (
           <div className="pt-1 border-t border-nim">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-[11px] font-medium text-nim-muted uppercase tracking-[0.5px]">
+              <label className="text-ui-caption font-medium text-nim-muted uppercase tracking-[0.5px]">
                 Sessions{linkedSessions.length > 0 ? ` (${linkedSessions.length})` : ''}
               </label>
               <div className="flex items-center gap-1">
                 {canLinkExistingSession && (
                   <button
-                    className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-ui-base text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
+                    className="flex items-center gap-1 px-2 py-0.5 text-ui-caption font-medium rounded-ui-base text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
                     onClick={() => {
                       setLinkSessionError(null);
                       setSessionSearchQuery('');
@@ -1369,7 +1369,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 )}
                 {onLaunchSession && (
                   <button
-                    className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-ui-base text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
+                    className="flex items-center gap-1 px-2 py-0.5 text-ui-caption font-medium rounded-ui-base text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors"
                     onClick={() => onLaunchSession(item.id)}
                     title="Launch a new AI session for this item"
                   >
@@ -1382,7 +1382,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
             {isLinkingExistingSession && (
               <div className="tracker-session-linker mb-2 rounded-ui-base border border-nim bg-nim-tertiary p-2">
                 <input
-                  className="w-full rounded-ui-base border border-nim bg-nim px-2 py-2 text-xs text-nim outline-none focus:border-nim-focus"
+                  className="w-full rounded-ui-base border border-nim bg-nim px-2 py-2 text-ui-caption text-nim outline-none focus:border-nim-focus"
                   type="text"
                   value={sessionSearchQuery}
                   onChange={(e) => setSessionSearchQuery(e.target.value)}
@@ -1400,17 +1400,17 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                       >
                         <div className="flex items-center gap-2">
                           <ProviderIcon provider={session.provider || 'claude'} size={14} />
-                          <span className="flex-1 truncate text-xs text-nim">
+                          <span className="flex-1 truncate text-ui-caption text-nim">
                             {session.title || 'Untitled session'}
                           </span>
-                          <span className="shrink-0 text-[10px] text-nim-faint">
+                          <span className="shrink-0 text-ui-micro text-nim-faint">
                             {linkingSessionId === session.id ? 'Linking...' : getRelativeTimeString(session.updatedAt)}
                           </span>
                         </div>
                       </button>
                     ))
                   ) : (
-                    <p className="m-0 text-[11px] text-nim-faint">
+                    <p className="m-0 text-ui-caption text-nim-faint">
                       {availableSessions.length === 0
                         ? 'No unlinked sessions available.'
                         : 'No sessions match that search.'}
@@ -1418,7 +1418,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                   )}
                 </div>
                 {linkSessionError && (
-                  <p className="mt-2 mb-0 text-[11px] text-nim-error">{linkSessionError}</p>
+                  <p className="mt-2 mb-0 text-ui-caption text-nim-error">{linkSessionError}</p>
                 )}
               </div>
             )}
@@ -1432,17 +1432,17 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                     title={`Open session: ${session.title}`}
                   >
                     <ProviderIcon provider={session.provider || 'claude'} size={14} />
-                    <span className="flex-1 text-xs text-nim truncate">
+                    <span className="flex-1 text-ui-caption text-nim truncate">
                       {session.title || 'Untitled session'}
                     </span>
-                    <span className="text-[10px] text-nim-faint shrink-0">
+                    <span className="text-ui-micro text-nim-faint shrink-0">
                       {getRelativeTimeString(session.updatedAt)}
                     </span>
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="text-[11px] text-nim-faint m-0">No linked sessions</p>
+              <p className="text-ui-caption text-nim-faint m-0">No linked sessions</p>
             )}
           </div>
         )}
@@ -1450,7 +1450,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
         {/* Linked Commits */}
         {item.system.linkedCommits && item.system.linkedCommits.length > 0 && (
           <div className="pt-1 border-t border-nim">
-            <label className="text-[11px] font-medium text-nim-muted uppercase tracking-[0.5px] mb-2 block">
+            <label className="text-ui-caption font-medium text-nim-muted uppercase tracking-[0.5px] mb-2 block">
               Commits ({item.system.linkedCommits.length})
             </label>
             <div className="space-y-1">
@@ -1460,7 +1460,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                   className="flex items-center gap-2 px-2 py-2 rounded-ui-base hover:bg-nim-tertiary transition-colors group"
                 >
                   <button
-                    className="text-[11px] font-mono text-nim-primary hover:underline shrink-0"
+                    className="text-ui-caption font-mono text-nim-primary hover:underline shrink-0"
                     onClick={() => {
                       navigator.clipboard.writeText(commit.sha);
                     }}
@@ -1468,7 +1468,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                   >
                     {commit.sha.slice(0, 7)}
                   </button>
-                  <span className="flex-1 text-xs text-nim truncate" title={commit.message}>
+                  <span className="flex-1 text-ui-caption text-nim truncate" title={commit.message}>
                     {commit.message}
                   </span>
                   {commit.sessionId && (
@@ -1480,7 +1480,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                       <MaterialSymbol icon="smart_toy" size={14} className="text-nim-faint" />
                     </button>
                   )}
-                  <span className="text-[10px] text-nim-faint shrink-0">
+                  <span className="text-ui-micro text-nim-faint shrink-0">
                     {getRelativeTimeString(new Date(commit.timestamp).getTime())}
                   </span>
                 </div>
@@ -1496,7 +1496,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
         {item.source !== 'inline' && item.source !== 'frontmatter' && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-medium text-nim-muted uppercase tracking-wide">Comments</h4>
+              <h4 className="text-ui-caption font-medium text-nim-muted uppercase tracking-wide">Comments</h4>
             </div>
             <CommentsSection itemId={item.id} comments={item.system.comments} />
           </div>
@@ -1505,10 +1505,10 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
         {/* Activity log */}
         {item.system.activity && item.system.activity.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs font-medium text-nim-muted uppercase tracking-wide">Activity</h4>
+            <h4 className="text-ui-caption font-medium text-nim-muted uppercase tracking-wide">Activity</h4>
             <div className="space-y-1">
               {item.system.activity.slice(-10).reverse().map((entry: any) => (
-                <div key={entry.id} className="flex items-start gap-2 text-[11px]">
+                <div key={entry.id} className="flex items-start gap-2 text-ui-caption">
                   <span className="text-nim-muted shrink-0">{entry.authorIdentity?.displayName || 'Unknown'}</span>
                   <span className="text-nim-faint">
                     {entry.action === 'created' ? 'created this item' :
@@ -1526,14 +1526,14 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
 
         {/* Metadata footer */}
         <div className="pt-1 border-t border-nim">
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="grid grid-cols-2 gap-2 text-ui-caption">
             {/* Author identity */}
             {item.system.authorIdentity && (
               <div className="col-span-2 flex items-center gap-2">
                 <span className="text-nim-faint shrink-0">Created by</span>
                 <UserAvatar identity={item.system.authorIdentity} showName size={16} />
                 {item.system.createdByAgent && (
-                  <span className="text-[10px] text-nim-faint bg-nim-tertiary px-1 py-0.5 rounded-ui-base">via AI</span>
+                  <span className="text-ui-micro text-nim-faint bg-nim-tertiary px-1 py-0.5 rounded-ui-base">via AI</span>
                 )}
               </div>
             )}
@@ -1563,7 +1563,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 <span className="text-nim-faint">Sync</span>
                 <div className="text-nim-muted">
                   <span
-                    className="inline-block px-2 py-0.5 rounded-ui-base text-[10px] font-medium"
+                    className="inline-block px-2 py-0.5 rounded-ui-base text-ui-micro font-medium"
                     style={{
                       backgroundColor: item.syncStatus === 'synced' ? '#22c55e20' : item.syncStatus === 'pending' ? '#eab30820' : '#6b728020',
                       color: item.syncStatus === 'synced' ? '#22c55e' : item.syncStatus === 'pending' ? '#eab308' : '#6b7280',
@@ -1623,9 +1623,9 @@ const ReadOnlyField: React.FC<{ field: FieldDefinition; value: any }> = ({ field
       const color = option.color || STATUS_COLORS[value] || PRIORITY_COLORS[value] || '#6b7280';
       return (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-[var(--nim-text-muted)] uppercase tracking-[0.5px]">{label}</span>
+          <span className="text-ui-caption font-medium text-[var(--nim-text-muted)] uppercase tracking-[0.5px]">{label}</span>
           <span
-            className="inline-block self-start px-2 py-0.5 rounded-ui-lg text-[11px] font-medium border"
+            className="inline-block self-start px-2 py-0.5 rounded-ui-lg text-ui-caption font-medium border"
             style={{
               backgroundColor: `${color}20`,
               color,
@@ -1641,8 +1641,8 @@ const ReadOnlyField: React.FC<{ field: FieldDefinition; value: any }> = ({ field
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[11px] font-medium text-[var(--nim-text-muted)] uppercase tracking-[0.5px]">{label}</span>
-      <span className="text-[13px] text-[var(--nim-text)]">{displayValue}</span>
+      <span className="text-ui-caption font-medium text-[var(--nim-text-muted)] uppercase tracking-[0.5px]">{label}</span>
+      <span className="text-ui-body text-[var(--nim-text)]">{displayValue}</span>
     </div>
   );
 };
@@ -1674,7 +1674,7 @@ const BacklinksSection: React.FC<{ itemId: string }> = ({ itemId }) => {
 
   return (
     <div className="space-y-2 tracker-backlinks">
-      <h4 className="text-xs font-medium text-nim-muted uppercase tracking-wide">Linked from</h4>
+      <h4 className="text-ui-caption font-medium text-nim-muted uppercase tracking-wide">Linked from</h4>
       <div className="flex flex-wrap gap-1">
         {backlinks.map((b) => {
           const src = itemsMap.get(b.sourceItemId);
@@ -1684,7 +1684,7 @@ const BacklinksSection: React.FC<{ itemId: string }> = ({ itemId }) => {
           return (
             <span
               key={`${b.sourceItemId}:${b.sourceFieldId}`}
-              className="tracker-backlink-pill inline-flex items-center gap-1 rounded-ui-full bg-nim-tertiary px-2 py-0.5 text-[11px] text-nim"
+              className="tracker-backlink-pill inline-flex items-center gap-1 rounded-ui-full bg-nim-tertiary px-2 py-0.5 text-ui-caption text-nim"
               title={`${label} — ${relLabel}`}
             >
               <span className="text-nim-faint">{relLabel}:</span>
@@ -1800,7 +1800,7 @@ const CommentsSection: React.FC<{ itemId: string; comments?: any[] }> = ({ itemI
         const isEditing = editingId === comment.id;
         return (
           <div key={comment.id} className={`tracker-comment group rounded-ui-base bg-nim-tertiary p-2 space-y-1${comment._optimistic ? ' opacity-70' : ''}`}>
-            <div className="flex items-center gap-2 text-[11px]">
+            <div className="flex items-center gap-2 text-ui-caption">
               <span className="font-medium text-nim-muted">{comment.authorIdentity?.displayName || 'You'}</span>
               <span className="text-nim-faint">{getRelativeTimeString(comment.createdAt)}</span>
               {comment.updatedAt && <span className="text-nim-faint">(edited)</span>}
@@ -1834,24 +1834,24 @@ const CommentsSection: React.FC<{ itemId: string; comments?: any[] }> = ({ itemI
                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave(comment.id); }
                     if (e.key === 'Escape') { setEditingId(null); }
                   }}
-                  className="flex-1 bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-xs text-nim outline-none focus:border-nim-primary"
+                  className="flex-1 bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-ui-caption text-nim outline-none focus:border-nim-primary"
                 />
                 <button
                   onClick={() => handleEditSave(comment.id)}
                   disabled={!editBody.trim()}
-                  className="px-2 py-1 rounded-ui-base text-xs bg-nim-primary text-nim-on-primary disabled:opacity-40"
+                  className="px-2 py-1 rounded-ui-base text-ui-caption bg-nim-primary text-nim-on-primary disabled:opacity-40"
                 >
                   Save
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="px-2 py-1 rounded-ui-base text-xs text-nim-muted hover:text-nim"
+                  className="px-2 py-1 rounded-ui-base text-ui-caption text-nim-muted hover:text-nim"
                 >
                   Cancel
                 </button>
               </div>
             ) : (
-              <p className="text-xs text-nim m-0 whitespace-pre-wrap">{comment.body}</p>
+              <p className="text-ui-caption text-nim m-0 whitespace-pre-wrap">{comment.body}</p>
             )}
           </div>
         );
@@ -1863,12 +1863,12 @@ const CommentsSection: React.FC<{ itemId: string; comments?: any[] }> = ({ itemI
           onChange={e => setNewComment(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
           placeholder="Add a comment..."
-          className="flex-1 bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-xs text-nim placeholder:text-nim-faint outline-none focus:border-nim-primary"
+          className="flex-1 bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-ui-caption text-nim placeholder:text-nim-faint outline-none focus:border-nim-primary"
         />
         <button
           onClick={handleSubmit}
           disabled={!newComment.trim() || submitting}
-          className="px-2 py-1 rounded-ui-base text-xs bg-nim-primary text-nim-on-primary disabled:opacity-40 hover:opacity-90 transition-opacity"
+          className="px-2 py-1 rounded-ui-base text-ui-caption bg-nim-primary text-nim-on-primary disabled:opacity-40 hover:opacity-90 transition-opacity"
         >
           Post
         </button>

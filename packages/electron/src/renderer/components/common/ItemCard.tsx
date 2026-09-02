@@ -54,7 +54,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({
       {/* Tier 1: Top row (ID number + Status badge) */}
       {(idNumber !== undefined || statusBadge !== undefined) && (
         <div className="item-card-top flex items-center justify-between gap-2 min-w-0" data-testid="item-card-top">
-          <div className="item-card-id font-mono text-ui-caption text-[var(--nim-text-muted)] truncate" data-testid="item-card-id">
+          <div className="item-card-id font-mono text-ui-caption text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap" data-testid="item-card-id">
             {idNumber}
           </div>
           {statusBadge && (

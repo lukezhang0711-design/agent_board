@@ -543,7 +543,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
                 <MaterialSymbol icon="push_pin" size={12} className="shrink-0 text-[var(--nim-text-faint)] opacity-70" />
               )}
               {isArchived && !isRenaming && (
-                <span className="text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[rgba(156,163,175,0.15)] text-[var(--nim-text-faint)]">archived</span>
+                <span className="text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">archived</span>
               )}
               {!isRenaming && <BlitzGroupStatus sessionIds={allSessionIds} />}
             </div>
@@ -723,7 +723,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
             <>
               <div className="workstream-group-context-menu-divider h-px my-1 bg-[var(--nim-border)]" />
               <button
-                className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
+                className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
                 onClick={handleArchive}
               >
                 <MaterialSymbol icon="archive" size={14} />
@@ -798,7 +798,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
               <>
                 <div className="workstream-group-context-menu-divider h-px my-1 bg-[var(--nim-border)]" />
                 <button
-                  className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
+                  className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
                   onClick={handleSessionWorktreeArchive}
                 >
                   <MaterialSymbol icon="archive" size={14} />

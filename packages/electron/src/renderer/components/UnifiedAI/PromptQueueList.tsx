@@ -1,4 +1,5 @@
 import React from 'react';
+import { PageHeader } from '../common/PageHeader';
 
 interface QueuedPromptAttachment {
   id: string;
@@ -29,7 +30,7 @@ function AttachmentIndicator({ attachments }: { attachments: QueuedPromptAttachm
   const label = attachments.map(a => a.filename).join(', ');
 
   return (
-    <span className="prompt-queue-attachments shrink-0 flex items-center gap-1 text-[11px] text-nim-muted" title={label}>
+    <span className="prompt-queue-attachments shrink-0 flex items-center gap-1 text-ui-caption text-nim-muted" title={label}>
       {imageCount > 0 && (
         <span className="flex items-center gap-1">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -69,16 +70,19 @@ export function PromptQueueList({
 
   return (
     <div className="prompt-queue-list px-3 py-2 border-b border-nim bg-nim-secondary">
-      <div className="prompt-queue-header flex items-center mb-2">
-        <span className="prompt-queue-count text-[11px] font-medium text-nim-muted uppercase tracking-wide">{queue.length} queued</span>
-      </div>
+      <PageHeader
+        title="Prompt Queue"
+        count={queue.length}
+        className="prompt-queue-header mb-2 border-b-0 pb-1"
+        testId="prompt-queue-header"
+      />
       <div className="prompt-queue-items flex flex-col gap-1">
         {queue.map((item, index) => (
-          <div key={item.id} className="prompt-queue-item flex items-center gap-2 px-2 py-2 bg-nim-tertiary border border-nim rounded-ui-base text-[13px]">
-            <span className="prompt-queue-number shrink-0 w-[18px] h-[18px] flex items-center justify-center bg-nim-tertiary rounded-ui-full text-[11px] font-medium text-nim-muted">{index + 1}</span>
+          <div key={item.id} className="prompt-queue-item flex items-center gap-2 px-2 py-2 bg-nim-tertiary border border-nim rounded-ui-base text-ui-body">
+            <span className="prompt-queue-number shrink-0 w-[18px] h-[18px] flex items-center justify-center bg-nim-tertiary rounded-ui-full text-ui-caption font-medium text-nim-muted">{index + 1}</span>
             <span className="prompt-queue-text flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-nim-primary" title={item.prompt}>{item.prompt}</span>
             {item.prompt.includes('\n') && (
-              <span className="prompt-queue-lines shrink-0 text-[10px] text-nim-muted bg-nim-secondary rounded-ui-base px-1 py-0.5" title={`${item.prompt.split('\n\n').length} messages bundled`}>
+              <span className="prompt-queue-lines shrink-0 text-ui-micro text-nim-muted bg-nim-secondary rounded-ui-base px-1 py-0.5" title={`${item.prompt.split('\n\n').length} messages bundled`}>
                 +{item.prompt.split('\n\n').length - 1} more
               </span>
             )}

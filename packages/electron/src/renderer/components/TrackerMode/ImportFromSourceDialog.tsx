@@ -292,7 +292,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-nim truncate">{item.title}</div>
-                    <div className="text-[10px] text-nim-faint font-mono">
+                    <div className="text-ui-micro text-nim-faint font-mono">
                       {item.externalId} · {item.state}
                     </div>
                   </div>

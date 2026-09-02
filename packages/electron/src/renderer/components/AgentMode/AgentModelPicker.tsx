@@ -103,7 +103,7 @@ export function AgentModelPicker({
 
   return (
     <div className="merge-conflict-dialog-model flex flex-col gap-2 p-3 mb-4 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-      <div className="flex items-center gap-2 text-[13px] font-medium text-[var(--nim-text)]">
+      <div className="flex items-center gap-2 text-ui-body font-medium text-[var(--nim-text)]">
         <MaterialSymbol icon="memory" size={16} />
         <span>Model</span>
       </div>
@@ -130,7 +130,7 @@ export function AgentModelPicker({
         ))}
       </select>
       {catalogWarning && (
-        <p className="m-0 text-[11px] leading-relaxed text-[var(--nim-error)]" role="alert">
+        <p className="m-0 text-ui-caption leading-relaxed text-[var(--nim-error)]" role="alert">
           模型目录不可用：{catalogWarning}
         </p>
       )}

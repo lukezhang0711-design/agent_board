@@ -123,11 +123,11 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
           size={14}
           className="text-[var(--nim-text-muted)] shrink-0"
         />
-        <span className="text-[11px] font-semibold text-[var(--nim-text)]">
+        <span className="text-ui-caption font-semibold text-[var(--nim-text)]">
           Loop Progress
         </span>
         <PhaseBadge phase={phase} />
-        <span className="ml-auto text-[10px] text-[var(--nim-text-muted)] font-mono">
+        <span className="ml-auto text-ui-micro text-[var(--nim-text-muted)] font-mono">
           {currentIteration}/{loop.maxIterations}
         </span>
       </button>
@@ -141,7 +141,7 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
               {blockers.map((blocker, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-2 text-[10px] text-[var(--nim-warning)] leading-[1.4]"
+                  className="flex items-start gap-2 text-ui-micro text-[var(--nim-warning)] leading-[1.4]"
                 >
                   <MaterialSymbol icon="warning" size={12} className="shrink-0 mt-1" />
                   <span>{blocker}</span>
@@ -153,11 +153,11 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
           {/* Recent learnings */}
           {recentLearnings.length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-medium text-[var(--nim-text-muted)]">Recent</span>
+              <span className="text-ui-micro font-medium text-[var(--nim-text-muted)]">Recent</span>
               {recentLearnings.map((learning, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-2 text-[10px] text-[var(--nim-text)] leading-[1.4]"
+                  className="flex items-start gap-2 text-ui-micro text-[var(--nim-text)] leading-[1.4]"
                 >
                   <span className="text-[var(--nim-text-faint)] font-mono shrink-0">
                     #{learning.iteration}
@@ -173,7 +173,7 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
             {SUPER_LOOP_FILES.map((file) => (
               <button
                 key={file.name}
-                className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-[var(--nim-primary)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 text-ui-micro text-[var(--nim-primary)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
                 onClick={() => handleFileClick(file.name)}
                 title={`.superloop/${file.name}`}
               >
@@ -185,12 +185,12 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
 
           {/* Raw JSON view */}
           {progress && (
-            <details className="text-[10px] pt-1">
+            <details className="text-ui-micro pt-1">
               <summary className="text-[var(--nim-text-muted)] cursor-pointer py-1 hover:text-[var(--nim-text)] list-none flex items-center gap-1">
                 <MaterialSymbol icon="data_object" size={12} className="shrink-0" />
                 <span>Raw JSON</span>
               </summary>
-              <pre className="mt-1 p-2 bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base text-[10px] leading-relaxed text-[var(--nim-text-muted)] overflow-auto max-h-[200px] whitespace-pre-wrap break-words m-0">
+              <pre className="mt-1 p-2 bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base text-ui-micro leading-relaxed text-[var(--nim-text-muted)] overflow-auto max-h-[200px] whitespace-pre-wrap break-words m-0">
                 {JSON.stringify(progress, null, 2)}
               </pre>
             </details>
@@ -205,18 +205,18 @@ SuperFilesPanel.displayName = 'SuperFilesPanel';
 
 const PhaseBadge: React.FC<{ phase: string }> = React.memo(({ phase }) => {
   const colorMap: Record<string, string> = {
-    planning: 'bg-[rgba(168,85,247,0.15)] text-purple-400',
-    building: 'bg-[rgba(59,130,246,0.15)] text-[var(--nim-primary)]',
-    running: 'bg-[rgba(59,130,246,0.15)] text-[var(--nim-primary)]',
-    completed: 'bg-[rgba(74,222,128,0.15)] text-[#4ade80]',
-    blocked: 'bg-[rgba(249,115,22,0.15)] text-orange-500',
-    failed: 'bg-[rgba(239,68,68,0.15)] text-[var(--nim-error)]',
-    paused: 'bg-[rgba(234,179,8,0.15)] text-[var(--nim-warning)]',
+    planning: 'bg-nim-primary-subtle text-purple-400',
+    building: 'bg-nim-primary-subtle text-[var(--nim-primary)]',
+    running: 'bg-nim-primary-subtle text-[var(--nim-primary)]',
+    completed: 'bg-nim-success-subtle text-[var(--nim-success)]',
+    blocked: 'bg-nim-warning-subtle text-orange-500',
+    failed: 'bg-nim-error-subtle text-[var(--nim-error)]',
+    paused: 'bg-nim-warning-subtle text-[var(--nim-warning)]',
   };
-  const classes = colorMap[phase] ?? 'bg-[rgba(156,163,175,0.15)] text-[var(--nim-text-faint)]';
+  const classes = colorMap[phase] ?? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]';
 
   return (
-    <span className={`text-[9px] px-2 py-[0.0625rem] rounded-ui-lg font-medium ${classes}`}>
+    <span className={`text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg font-medium ${classes}`}>
       {phase}
     </span>
   );

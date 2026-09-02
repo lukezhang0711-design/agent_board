@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { PageHeader } from '../common/PageHeader';
 import { getRelativeTimeString } from '../../utils/dateFormatting';
 import { getFileName } from '../../utils/pathUtils';
 import type { TokenUsageCategory } from '@nimbalyst/runtime/ai/server/types';
@@ -212,18 +213,22 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
         className="session-import-dialog flex flex-col w-[90%] max-w-[900px] max-h-[85vh] rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="session-import-dialog-header flex items-center justify-between px-5 py-4 border-b border-[var(--nim-border)]">
-          <h2 className="m-0 text-base font-semibold text-[var(--nim-text)]">Import Claude Agent Sessions</h2>
-          <button
-            className="session-import-dialog-close bg-transparent border-none text-[var(--nim-text-muted)] cursor-pointer p-1 flex items-center justify-center rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
-            onClick={onClose}
-            aria-label="Close dialog"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
-        </div>
+        <PageHeader
+          title="Import Claude Agent Sessions"
+          actions={
+            <button
+              className="session-import-dialog-close bg-transparent border-none text-[var(--nim-text-muted)] cursor-pointer p-1 flex items-center justify-center rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+              onClick={onClose}
+              aria-label="Close dialog"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          }
+          className="px-5 py-4"
+          testId="session-import-dialog-header"
+        />
 
         {loading ? (
           <div className="session-import-dialog-loading py-10 px-5 text-center text-[var(--nim-text-muted)]">
@@ -244,19 +249,19 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
             <div className="session-import-dialog-stats flex gap-4 px-5 py-4 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]">
               <div className="session-import-stat flex flex-col items-center gap-1">
                 <span className="session-import-stat-value text-lg font-semibold text-[var(--nim-text)]">{totalSessions}</span>
-                <span className="session-import-stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">Total</span>
+                <span className="session-import-stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">Total</span>
               </div>
               <div className="session-import-stat flex flex-col items-center gap-1">
                 <span className="session-import-stat-value text-lg font-semibold text-[var(--nim-text)]">{newSessions}</span>
-                <span className="session-import-stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">New</span>
+                <span className="session-import-stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">New</span>
               </div>
               <div className="session-import-stat flex flex-col items-center gap-1">
                 <span className="session-import-stat-value text-lg font-semibold text-[var(--nim-text)]">{needsUpdate}</span>
-                <span className="session-import-stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">Updates</span>
+                <span className="session-import-stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">Updates</span>
               </div>
               <div className="session-import-stat flex flex-col items-center gap-1">
                 <span className="session-import-stat-value text-lg font-semibold text-[var(--nim-text)]">{inSync}</span>
-                <span className="session-import-stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">In Sync</span>
+                <span className="session-import-stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">In Sync</span>
               </div>
             </div>
 
@@ -271,7 +276,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
             </div>
 
             {scopeNotice && (
-              <div className="session-import-scope-notice px-5 py-3 border-b border-[var(--nim-border)] bg-[rgba(59,130,246,0.08)] text-[13px] text-[var(--nim-text-muted)]">
+              <div className="session-import-scope-notice px-5 py-3 border-b border-[var(--nim-border)] bg-nim-primary-subtle text-ui-body text-[var(--nim-text-muted)]">
                 {scopeNotice}
               </div>
             )}
@@ -279,13 +284,13 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
             <div className="session-import-dialog-actions flex gap-2 px-5 py-3 border-b border-[var(--nim-border)]">
               <button
                 onClick={selectAll}
-                className="session-import-action-button px-3 py-2 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="session-import-action-button px-3 py-2 text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               >
                 Select All
               </button>
               <button
                 onClick={deselectAll}
-                className="session-import-action-button px-3 py-2 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="session-import-action-button px-3 py-2 text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               >
                 Deselect All
               </button>
@@ -295,7 +300,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
               {workspacePaths.length === 0 ? (
                 <div className="session-import-empty py-10 px-5 text-center text-[var(--nim-text-muted)]">
                   <p>No Claude Agent sessions found</p>
-                  <p className="session-import-empty-hint text-[13px] mt-2 text-[var(--nim-text-faint)]">
+                  <p className="session-import-empty-hint text-ui-body mt-2 text-[var(--nim-text-faint)]">
                     Sessions from the CLI will appear here
                   </p>
                 </div>
@@ -348,7 +353,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
                             <div
                               key={session.sessionId}
                               data-id={session.sessionId}
-                              className="session-import-session-item flex items-start gap-3 py-3 pr-5 pl-[50px] border-t border-[var(--nim-border)] transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                              className="session-import-session-item flex items-start gap-3 py-3 pr-5 pl-12 border-t border-[var(--nim-border)] transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                             >
                               <input
                                 type="checkbox"
@@ -367,12 +372,12 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
                                   <span>{session.tokenUsage.totalTokens.toLocaleString()} tokens</span>
                                   <span>•</span>
                                   <span
-                                    className={`session-import-status-badge px-2 py-0.5 rounded-ui-base text-[11px] font-medium ${
+                                    className={`session-import-status-badge px-2 py-0.5 rounded-ui-base text-ui-caption font-medium ${
                                       session.syncStatus === 'new'
-                                        ? 'bg-[rgba(76,175,80,0.15)] text-[rgb(76,175,80)]'
+                                        ? 'bg-nim-success-subtle text-[var(--nim-success)]'
                                         : session.syncStatus === 'needs-update'
-                                          ? 'bg-[rgba(255,152,0,0.15)] text-[rgb(255,152,0)]'
-                                          : 'bg-[rgba(158,158,158,0.15)] text-[rgb(158,158,158)]'
+                                          ? 'bg-nim-warning-subtle text-[var(--nim-warning)]'
+                                          : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
                                     }`}
                                   >
                                     {session.syncStatus === 'new' && 'New'}

@@ -488,7 +488,7 @@ export function VoiceModeButton({ workspacePath }: VoiceModeButtonProps) {
           data-testid="voice-mode-toggle"
           className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${
             isVoiceActive && isSleeping
-              ? 'bg-[#92400e] text-[#fbbf24] hover:bg-[#78350f]'
+              ? 'bg-amber-800 text-amber-300 hover:bg-amber-900'
               : isVoiceActive
                 ? 'active bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover'
                 : error
@@ -541,11 +541,11 @@ export function VoiceModeButton({ workspacePath }: VoiceModeButtonProps) {
         </button>
         {error && (
           <div
-            className="voice-mode-error-popover absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 bg-nim border border-nim-error rounded-ui-lg p-3 min-w-[200px] max-w-[300px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1000]"
+            className="voice-mode-error-popover absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 bg-nim border border-nim-error rounded-ui-lg p-3 min-w-[200px] max-w-[300px] shadow-md z-[1000]"
           >
             <div className="flex items-start gap-2 text-nim">
               <MaterialSymbol icon="error" size={18} className="text-nim-error shrink-0" />
-              <div className="text-[13px] leading-[1.4]">
+              <div className="text-ui-body leading-[1.4]">
                 <div className="font-semibold mb-1">Voice Mode Error</div>
                 <div className="text-nim-muted">{getErrorMessage(error)}</div>
                 {shouldShowVoiceModeSettingsLink(error) && (

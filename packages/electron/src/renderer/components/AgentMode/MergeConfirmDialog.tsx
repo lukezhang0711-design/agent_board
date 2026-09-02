@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../common/PageHeader';
 import { getWorktreeNameFromPath } from '../../utils/pathUtils';
 
 interface MergeConfirmDialogProps {
@@ -54,10 +55,12 @@ export function MergeConfirmDialog({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="merge-confirm-dialog-header flex items-center gap-3 px-6 pt-5 pb-4 text-[var(--nim-text)]">
-          <MaterialSymbol icon="merge" size={24} />
-          <h2 className="m-0 text-lg font-semibold">Merge to Main</h2>
-        </div>
+        <PageHeader
+          icon="merge"
+          title="Merge to Main"
+          className="px-6 pt-5 pb-4"
+          testId="merge-confirm-dialog-header"
+        />
 
         <div className="merge-confirm-dialog-body px-6 pb-5">
           <p className="m-0 mb-4 text-sm leading-relaxed text-[var(--nim-text-muted)]">
@@ -65,7 +68,7 @@ export function MergeConfirmDialog({
           </p>
 
           {hasUncommittedChanges && (
-            <div className="merge-confirm-dialog-info-banner flex items-start gap-3 p-3 mb-4 rounded-ui-lg text-[0.8125rem] leading-snug bg-[var(--nim-info)]/10 text-[var(--nim-text-muted)]">
+            <div className="merge-confirm-dialog-info-banner flex items-start gap-3 p-3 mb-4 rounded-ui-lg text-ui-body leading-snug bg-[var(--nim-info)]/10 text-[var(--nim-text-muted)]">
               <MaterialSymbol icon="info" size={18} className="text-[var(--nim-info)]" />
               <span>
                 Your uncommitted changes will be preserved. Only committed work will be merged.
