@@ -151,7 +151,7 @@ export const SlashCommandSuggestions: React.FC<SlashCommandSuggestionsProps> = (
         {displayCommands.map((cmd) => (
           <div key={cmd.name} className="slash-command-pill-wrapper group relative inline-flex">
             <button
-              className="slash-command-pill inline-flex items-center gap-1 px-3 py-2 text-[13px] font-medium cursor-pointer rounded-ui-lg border transition-all duration-150 bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] active:scale-[0.97]"
+              className="slash-command-pill inline-flex items-center gap-1 px-3 py-2 text-ui-body font-medium cursor-pointer rounded-ui-lg border transition-all duration-150 bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] active:scale-[0.97]"
               onClick={() => handleCommandClick(cmd)}
             >
               <span className="slash-command-pill-icon font-semibold opacity-80 text-[var(--nim-primary)] group-hover:opacity-100">/</span>
@@ -169,7 +169,7 @@ export const SlashCommandSuggestions: React.FC<SlashCommandSuggestionsProps> = (
         ))}
         {!isExpanded && hiddenCount > 0 && (
           <button
-            className="slash-command-pill slash-command-expand-pill inline-flex items-center gap-1 px-3 py-2 text-[13px] font-semibold cursor-pointer rounded-ui-lg border transition-all duration-150 bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-faint)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] active:scale-[0.97]"
+            className="slash-command-pill slash-command-expand-pill inline-flex items-center gap-1 px-3 py-2 text-ui-body font-semibold cursor-pointer rounded-ui-lg border transition-all duration-150 bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-faint)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] active:scale-[0.97]"
             onClick={handleExpandClick}
           >
             <span className="slash-command-pill-name whitespace-nowrap">+{hiddenCount}</span>

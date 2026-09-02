@@ -377,13 +377,6 @@
     "halfGap": 0,
     "fileCount": 3
   },
-  "components/UnifiedAI": {
-    "pxFonts": 62,
-    "rawColors": 16,
-    "nonStdRounded": 0,
-    "halfGap": 0,
-    "fileCount": 28
-  },
   "components/UnifiedDiffHeader": {
     "pxFonts": 13,
     "rawColors": 0,

@@ -150,12 +150,11 @@ export const TextSelectionIndicator: React.FC<TextSelectionIndicatorProps> = ({
 
   return (
     <div
-      className="text-selection-indicator"
+      className="text-selection-indicator text-ui-compact"
       title={tooltipText}
       style={{
         padding: '4px 8px',
         marginBottom: '4px',
-        fontSize: '12px',
         color: 'var(--nim-text-muted)',
         display: 'flex',
         alignItems: 'center',

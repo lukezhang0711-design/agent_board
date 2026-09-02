@@ -1,4 +1,5 @@
 import React from 'react';
+import { PageHeader } from '../common/PageHeader';
 
 export interface Todo {
   status: 'pending' | 'in_progress' | 'completed';
@@ -26,14 +27,12 @@ export function TodoList({ todos, sessionId }: TodoListProps) {
       className="todo-list fixed bottom-4 right-4 w-80 max-w-[calc(100vw-32px)] rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1000] animate-[fadeIn_0.2s_ease-in]"
       data-session-id={sessionId}
     >
-      <div className="todo-list-header flex items-center justify-between px-3 py-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] rounded-ui-lg-t">
-        <span className="todo-list-title text-xs font-semibold text-[var(--nim-text)] uppercase tracking-[0.5px]">
-          Tasks
-        </span>
-        <span className="todo-list-count text-[11px] text-[var(--nim-text-muted)] font-mono">
-          {todos.filter(t => t.status === 'completed').length}/{todos.length}
-        </span>
-      </div>
+      <PageHeader
+        title="Tasks"
+        count={`${todos.filter(t => t.status === 'completed').length}/${todos.length}`}
+        className="todo-list-header px-3 py-2 bg-[var(--nim-bg-tertiary)] rounded-ui-lg-t border-b border-[var(--nim-border)]"
+        testId="todo-list-header"
+      />
       <div className="todo-list-items nim-scrollbar p-2 max-h-[300px] overflow-y-auto">
         {todos.map((todo, index) => (
           <TodoItem key={index} todo={todo} />
@@ -71,11 +70,11 @@ function TodoItem({ todo }: TodoItemProps) {
           </span>
         )}
         {todo.status === 'completed' && (
-          <span className="todo-icon-completed text-[#4ade80] text-sm">●</span>
+          <span className="todo-icon-completed text-[var(--nim-success)] text-sm">●</span>
         )}
       </div>
       <div
-        className={`todo-item-text flex-1 text-[13px] leading-[1.4] break-words ${
+        className={`todo-item-text flex-1 text-ui-body leading-[1.4] break-words ${
           todo.status === 'completed'
             ? 'line-through text-[var(--nim-text-muted)]'
             : 'text-[var(--nim-text)]'

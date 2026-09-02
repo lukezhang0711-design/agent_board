@@ -3045,7 +3045,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
           )}
           <button
             type="button"
-            className="claude-cli-terminal-drawer-toggle"
+            className="claude-cli-terminal-drawer-toggle text-ui-caption"
             onClick={handleToggleCliTerminal}
             style={{
               display: 'flex',
@@ -3056,7 +3056,6 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
               border: 'none',
               borderBottom: cliTerminalExpanded ? '1px solid var(--nim-border)' : 'none',
               color: 'var(--nim-text-muted)',
-              fontSize: 11,
               cursor: 'pointer',
               textAlign: 'left',
               flex: '0 0 auto',
@@ -3123,7 +3122,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
 
       {(isLoading || showStopAndClearQueue || cancelFeedback.phase !== 'idle') && (
         <div
-          className="session-stop-status"
+          className="session-stop-status text-ui-compact"
           data-testid="session-stop-status"
           role={cancelFeedback.phase === 'failed' || cancelFeedback.queueError ? 'alert' : 'status'}
           aria-live="polite"
@@ -3139,7 +3138,6 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             color: cancelFeedback.phase === 'failed' || cancelFeedback.queueError
               ? 'var(--nim-error)'
               : 'var(--nim-text-muted)',
-            fontSize: 12,
           }}
         >
           <span>{cancelStatusMessage}</span>
@@ -3243,7 +3241,7 @@ export const SessionTranscript = forwardRef<SessionTranscriptRef, SessionTranscr
             {fastModeRequesting ? 'Fast: waiting…' : `Fast: ${fastModeEnabled ? 'On' : 'Off'}`}
           </button>
           {fastModeRejection && (
-            <span data-testid="claude-cli-fast-mode-rejection" role="alert" style={{ color: 'var(--nim-error)', fontSize: 12 }}>
+            <span data-testid="claude-cli-fast-mode-rejection" role="alert" className="text-ui-compact" style={{ color: 'var(--nim-error)' }}>
               {fastModeRejection}
             </span>
           )}

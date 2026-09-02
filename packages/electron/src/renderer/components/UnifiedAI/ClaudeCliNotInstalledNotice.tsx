@@ -28,7 +28,7 @@ export const ClaudeCliNotInstalledNotice: React.FC<ClaudeCliNotInstalledNoticePr
   const installButton = (
     <button
       type="button"
-      className="claude-cli-not-installed-notice-install"
+      className="claude-cli-not-installed-notice-install text-ui-compact"
       onClick={openInstallDocs}
       style={{
         flexShrink: 0,
@@ -37,7 +37,6 @@ export const ClaudeCliNotInstalledNotice: React.FC<ClaudeCliNotInstalledNoticePr
         border: 'none',
         borderRadius: '4px',
         color: 'var(--nim-on-primary, #fff)',
-        fontSize: '12px',
         fontWeight: 500,
         cursor: 'pointer',
       }}
@@ -49,7 +48,7 @@ export const ClaudeCliNotInstalledNotice: React.FC<ClaudeCliNotInstalledNoticePr
   if (variant === 'banner') {
     return (
       <div
-        className="claude-cli-not-installed-notice claude-cli-not-installed-notice--banner"
+        className="claude-cli-not-installed-notice claude-cli-not-installed-notice--banner text-ui-body"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -61,7 +60,6 @@ export const ClaudeCliNotInstalledNotice: React.FC<ClaudeCliNotInstalledNoticePr
           border: '1px solid var(--nim-border)',
           borderRadius: '6px',
           color: 'var(--nim-text)',
-          fontSize: '13px',
         }}
       >
         <span>
@@ -91,10 +89,10 @@ export const ClaudeCliNotInstalledNotice: React.FC<ClaudeCliNotInstalledNoticePr
         color: 'var(--nim-text)',
       }}
     >
-      <div style={{ fontSize: '14px', fontWeight: 600 }}>
+      <div className="text-ui-subhead font-semibold">
         Claude Code CLI isn&apos;t installed
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--nim-text-muted)', maxWidth: 360 }}>
+      <div className="text-ui-compact" style={{ color: 'var(--nim-text-muted)', maxWidth: 360 }}>
         This session runs the genuine <code>claude</code> command-line tool, which
         wasn&apos;t found on your system. Install it, then reopen this session.
       </div>

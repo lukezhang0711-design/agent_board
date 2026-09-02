@@ -55,7 +55,7 @@ export function LayoutControls({ mode, hasTabs, onModeChange }: LayoutControlsPr
           disabled={!hasTabs}
           data-testid="layout-maximize-editor"
         >
-          <span className="layout-label text-[11px] font-medium uppercase tracking-[0.02em]">Files</span>
+          <span className="layout-label text-ui-caption font-medium uppercase tracking-[0.02em]">Files</span>
           <EditorMaxIcon />
         </button>
         <button
@@ -74,7 +74,7 @@ export function LayoutControls({ mode, hasTabs, onModeChange }: LayoutControlsPr
           data-testid="layout-maximize-transcript"
         >
           <TranscriptMaxIcon />
-          <span className="layout-label text-[11px] font-medium uppercase tracking-[0.02em]">Agent</span>
+          <span className="layout-label text-ui-caption font-medium uppercase tracking-[0.02em]">Agent</span>
         </button>
       </div>
     </HelpTooltip>

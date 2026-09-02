@@ -185,7 +185,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
         {...menu.getReferenceProps()}
         type="button"
         data-testid="action-prompts-dropdown"
-        className="action-prompts-dropdown-button flex items-center gap-1 px-2 py-[3px] rounded-ui-lg text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
+        className="action-prompts-dropdown-button flex items-center gap-1 px-2 py-[3px] rounded-ui-lg text-ui-caption font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
         onClick={() => menu.setIsOpen(!menu.isOpen)}
         aria-label={`${buttonLabel} (${actions.length})`}
       >
@@ -207,12 +207,12 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
             onKeyDown={handleKeyDown}
             tabIndex={-1}
             data-testid="action-prompts-dropdown-panel"
-            className="action-prompts-dropdown-panel z-[1000] min-w-[260px] max-w-[360px] rounded-ui-lg p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+            className="action-prompts-dropdown-panel z-[1000] min-w-[260px] max-w-[360px] rounded-ui-lg p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-md"
           >
-            <div className="action-prompts-dropdown-header px-2 py-2 text-[10px] uppercase tracking-wider text-[var(--nim-text-faint)] flex items-center justify-between">
+            <div className="action-prompts-dropdown-header px-2 py-2 text-ui-micro uppercase tracking-wider text-[var(--nim-text-faint)] flex items-center justify-between">
               <span>{state.fileExists ? 'From ai-actions.md' : 'Action prompts'}</span>
               {state.fileExists && (
-                <span className="text-[10px] text-[var(--nim-text-disabled)]">
+                <span className="text-ui-micro text-[var(--nim-text-disabled)]">
                   {actions.length}
                 </span>
               )}
@@ -220,13 +220,13 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
 
             {showSeedCta && (
               <div className="px-2 py-2 flex flex-col gap-2">
-                <p className="text-xs text-[var(--nim-text-muted)] leading-snug">
+                <p className="text-ui-compact text-[var(--nim-text-muted)] leading-snug">
                   No <code>ai-actions.md</code> in this workspace yet. Seed it with a few example
                   prompts you can edit.
                 </p>
                 <button
                   type="button"
-                  className="text-[11px] font-medium text-left px-2 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] text-[var(--nim-text)] cursor-pointer"
+                  className="text-ui-caption font-medium text-left px-2 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] text-[var(--nim-text)] cursor-pointer"
                   onClick={handleSeed}
                   data-testid="action-prompts-seed-button"
                 >
@@ -236,7 +236,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
             )}
 
             {state.fileExists && !hasActions && (
-              <div className="px-2 py-3 text-xs text-[var(--nim-text-muted)] leading-snug">
+              <div className="px-2 py-3 text-ui-compact text-[var(--nim-text-muted)] leading-snug">
                 <code>ai-actions.md</code> has no <code>## Heading</code> sections yet. Open the file
                 and add one to get started.
               </div>
@@ -261,12 +261,12 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
                       data-testid={`action-prompt-item-${action.id}`}
                       data-action-launch={isLauncher ? 'new-session' : 'same-session'}
                       className={`action-prompts-dropdown-item flex items-start gap-2 w-full text-left px-2 py-2 rounded-ui-base border-none cursor-pointer text-[var(--nim-text)] ${
-                        idx === highlightedIndex ? 'bg-[var(--nim-bg-hover)]' : 'bg-transparent'
+                        idx === highlightedIndex ? 'selected bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : 'bg-transparent hover:bg-[var(--nim-bg-hover)]'
                       }`}
                     >
                       <span className="flex flex-col items-start gap-1 min-w-0 flex-1">
-                        <span className="text-[12px] font-medium leading-tight">{action.label}</span>
-                        <span className="text-[11px] text-[var(--nim-text-muted)] leading-tight truncate w-full">
+                        <span className="text-ui-compact font-medium leading-tight">{action.label}</span>
+                        <span className="text-ui-caption text-[var(--nim-text-muted)] leading-tight truncate w-full">
                           {launcherSubtitle ?? firstLinePreview(action.body)}
                         </span>
                       </span>
@@ -286,7 +286,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
             <div className="action-prompts-dropdown-footer mt-1 border-t border-[var(--nim-border)] pt-1">
               <button
                 type="button"
-                className="w-full text-left px-2 py-2 text-[11px] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] rounded-ui-base cursor-pointer flex items-center gap-2 border-none bg-transparent"
+                className="w-full text-left px-2 py-2 text-ui-caption text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] rounded-ui-base cursor-pointer flex items-center gap-2 border-none bg-transparent"
                 onClick={handleEditFile}
                 data-testid="action-prompts-edit-link"
               >

@@ -14,7 +14,7 @@ export function ClaudeIdentityBadge({
 
   return (
     <span
-      className="claude-identity-badge rounded-ui-base px-2 py-0.5 text-[10px] font-normal text-[var(--nim-text-faint)] border border-[var(--nim-border)]"
+      className="claude-identity-badge rounded-ui-base px-2 py-0.5 text-ui-micro font-normal text-[var(--nim-text-faint)] border border-[var(--nim-border)]"
       data-testid="claude-identity-badge"
       aria-label={ariaLabel}
       title={badge.guidance}
