@@ -44,7 +44,7 @@ export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessag
   const rows = Object.values(pools).sort((left, right) => left.name.localeCompare(right.name));
 
   if (rows.length === 0) {
-    return <div className="usage-pool-list-empty text-[12px] text-nim-muted">{emptyMessage}</div>;
+    return <div className="usage-pool-list-empty text-ui-compact text-nim-muted">{emptyMessage}</div>;
   }
 
   return (
@@ -60,12 +60,12 @@ export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessag
           >
             <div className="mb-1 flex items-baseline justify-between gap-3">
               <div className="min-w-0">
-                <div className="truncate text-[13px] font-semibold text-nim" title={pool.name}>
+                <div className="truncate text-ui-body font-semibold text-nim" title={pool.name}>
                   {pool.name}
                 </div>
-                <div className="text-[11px] text-nim-muted">{formatWindow(pool.windowMinutes)}</div>
+                <div className="text-ui-caption text-nim-muted">{formatWindow(pool.windowMinutes)}</div>
               </div>
-              <div className={`shrink-0 text-[16px] font-semibold ${colors.text}`}>
+              <div className={`shrink-0 text-ui-subhead font-semibold ${colors.text}`}>
                 {pool.utilization}%
               </div>
             </div>
@@ -75,7 +75,7 @@ export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessag
                 style={{ width: `${barWidth}%` }}
               />
             </div>
-            <div className="flex flex-col gap-0.5 text-[11px] text-nim-muted">
+            <div className="flex flex-col gap-0.5 text-ui-caption text-nim-muted">
               <div className="flex items-center gap-1">
                 <MaterialSymbol icon="schedule" size={12} className="opacity-70" />
                 <span>{pool.resetsAt ? `Resets in ${formatResetTime(pool.resetsAt)}` : 'Reset time unavailable'}</span>

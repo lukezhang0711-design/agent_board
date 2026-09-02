@@ -52,18 +52,23 @@ async function clearTestDatabase(preserveTestDatabase?: boolean): Promise<void> 
   }
 }
 
-async function findDevServerUrl(): Promise<string> {
+async function findDevServerUrl(maxRetries = 20, retryDelayMs = 500): Promise<string> {
   const devServerUrls = ['http://127.0.0.1:5273', 'http://[::1]:5273'];
   let lastError: Error | null = null;
 
-  for (const url of devServerUrls) {
-    try {
-      const response = await fetch(url, { method: 'HEAD' });
-      if (response.ok) {
-        return url;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (const url of devServerUrls) {
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        if (response.ok) {
+          return url;
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
       }
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+    if (attempt < maxRetries - 1) {
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs));
     }
   }
 

@@ -88,7 +88,7 @@ describe('SessionKanbanBoard interrupted and Inbox states', () => {
     renderBoard([makeMeta({ dispatchQueued: true })]);
 
     const queuedBadge = within(getInboxColumn()).getByText('1 queued');
-    expect(queuedBadge.className).toContain('text-[var(--nim-warning)]');
+    expect(queuedBadge.className).toMatch(/text-(?:\[var\(--nim-warning\)\]|nim-warning)/);
     expect(within(getInboxColumn()).getByText('schedule')).toBeTruthy();
 
     fireEvent.click(getInboxColumn());
