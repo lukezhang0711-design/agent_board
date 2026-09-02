@@ -176,7 +176,7 @@ export function TipCard({
         </div>
         {isFloating && onDismiss && (
           <button
-            className="nim-btn-icon w-6 h-6 flex items-center justify-center shrink-0 -mt-0.5 -mr-1 text-[var(--nim-text-faint)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] rounded-ui-base transition-all duration-150"
+            className="nim-btn-icon w-6 h-6 flex items-center justify-center shrink-0 -mt-1 -mr-1 text-[var(--nim-text-faint)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)] rounded-ui-base transition-all duration-150"
             onClick={onDismiss}
             aria-label="Dismiss tip"
           >

@@ -107,7 +107,7 @@ export const UnifiedDiffHeader: React.FC<UnifiedDiffHeaderProps> = ({
 
       const sessionLink = (
         <button
-          className={`unified-diff-header-session-link flex items-center gap-2 py-0.5 px-1 -my-0.5 -mx-1 bg-transparent border-none rounded-ui-base font-inherit text-[13px] text-[var(--nim-text)] transition-colors duration-150 min-w-0 overflow-hidden shrink ${canNavigate ? 'unified-diff-header-session-link--clickable cursor-pointer hover:bg-[var(--nim-bg-hover)]' : 'cursor-default'}`}
+          className={`unified-diff-header-session-link flex items-center gap-2 py-0.5 px-1 -my-1 -mx-1 bg-transparent border-none rounded-ui-base font-inherit text-[13px] text-[var(--nim-text)] transition-colors duration-150 min-w-0 overflow-hidden shrink ${canNavigate ? 'unified-diff-header-session-link--clickable cursor-pointer hover:bg-[var(--nim-bg-hover)]' : 'cursor-default'}`}
           onClick={canNavigate ? handleGoToSession : undefined}
           type="button"
           disabled={!canNavigate}

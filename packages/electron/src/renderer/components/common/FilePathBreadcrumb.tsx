@@ -99,7 +99,7 @@ export const FilePathBreadcrumb: React.FC<FilePathBreadcrumbProps> = ({
                   : 'text-[var(--nim-text-muted)]'
               } ${
                 isClickable
-                  ? 'breadcrumb-clickable cursor-pointer rounded py-0.5 px-1 -my-0.5 -mx-1 transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
+                  ? 'breadcrumb-clickable cursor-pointer rounded py-0.5 px-1 -my-1 -mx-1 transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
                   : ''
               }`}
               onClick={isClickable ? () => handleBreadcrumbClick(segment.folderPath, isLast ? filePath : undefined) : undefined}

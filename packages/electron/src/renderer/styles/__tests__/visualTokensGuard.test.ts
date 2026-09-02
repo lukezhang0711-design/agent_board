@@ -40,7 +40,7 @@ export function scanFileViolations(content: string, isExempt = false) {
     nonStdRounded = rawRoundeds.filter(cls => !ALLOWED_ROUNDED.test(cls));
 
     // 施工单 GH (甲案): 放行 p*-0.5 (微内衬 2px，用于徽章/药丸/小标签上下内衬)，其余 15 类间距/外边距/内边距前缀的任意 .5 档一律违例
-    const halfSpacingRegex = /(?<![a-zA-Z0-9_\-])(?:gap(?:-[xy])?-\d*\.5|m[xytblr]?-\d*\.5|p[xytblr]?-(?!0\.5\b)\d*\.5)(?![a-zA-Z0-9_\-])/g;
+    const halfSpacingRegex = /(?<![a-zA-Z0-9_])-?(?:gap(?:-[xy])?-\d*\.5|m[xytblr]?-\d*\.5|p[xytblr]?-(?!0\.5\b)\d*\.5)(?![a-zA-Z0-9_\-])/g;
     halfGap = content.match(halfSpacingRegex) ?? [];
   }
 

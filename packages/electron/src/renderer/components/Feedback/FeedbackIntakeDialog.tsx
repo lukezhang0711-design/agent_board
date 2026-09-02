@@ -248,7 +248,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <li>
               <button
                 type="button"
-                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(ISSUES_URL, 'issues')}
                 data-testid="feedback-intake-issues-link"
               >
@@ -263,7 +263,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <li>
               <button
                 type="button"
-                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(DISCUSSIONS_URL, 'discussions')}
                 data-testid="feedback-intake-discussions-link"
               >
@@ -278,7 +278,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <li>
               <button
                 type="button"
-                className="group -ml-1.5 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(SUPPORT_EMAIL_URL, 'email')}
                 data-testid="feedback-intake-email-link"
               >
