@@ -249,7 +249,7 @@ function SyncModeToggle({ mode, onChange }: {
 function SyncBadge({ mode }: { mode: TrackerSyncMode }) {
   if (mode === 'shared') {
     return (
-      <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-[10px] text-[10px] font-semibold bg-[rgba(96,165,250,0.15)] text-[var(--nim-primary)]">
+      <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-ui-lg text-[10px] font-semibold bg-[rgba(96,165,250,0.15)] text-[var(--nim-primary)]">
         <MaterialSymbol icon="share" size={8} />
         Shared
       </span>
@@ -257,13 +257,13 @@ function SyncBadge({ mode }: { mode: TrackerSyncMode }) {
   }
   if (mode === 'hybrid') {
     return (
-      <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-[10px] text-[10px] font-semibold bg-[rgba(167,139,250,0.15)] text-[#a78bfa]">
+      <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-ui-lg text-[10px] font-semibold bg-[rgba(167,139,250,0.15)] text-[#a78bfa]">
         Hybrid
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-[10px] text-[10px] font-semibold bg-[rgba(180,180,180,0.1)] text-[var(--nim-text-faint)]">
+    <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-ui-lg text-[10px] font-semibold bg-[rgba(180,180,180,0.1)] text-[var(--nim-text-faint)]">
       Local
     </span>
   );
@@ -283,7 +283,7 @@ function TrackerIcon({ color, icon }: { color: string; icon: string }) {
 function TrackerStorageInfoBanner() {
   return (
     <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-      <div className="flex items-start gap-2.5 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-lg">
+      <div className="flex items-start gap-3 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-lg">
         <MaterialSymbol icon="storage" size={14} className="text-[var(--nim-primary)] shrink-0 mt-0.5" />
         <div className="text-[12px] text-[var(--nim-text-muted)] leading-relaxed">
           {getTrackerStorageCopy()}
@@ -393,7 +393,7 @@ function AdminView({
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <h4 className="provider-panel-section-title text-[15px] font-semibold mb-2 text-[var(--nim-text)] flex items-center gap-2">
           Team Sync Policy
-          <span className="px-[7px] py-[2px] rounded-[10px] text-[10px] font-semibold bg-[rgba(96,165,250,0.15)] text-[var(--nim-primary)]">
+          <span className="px-[7px] py-[2px] rounded-ui-lg text-[10px] font-semibold bg-[rgba(96,165,250,0.15)] text-[var(--nim-primary)]">
             Admin
           </span>
         </h4>
@@ -402,7 +402,7 @@ function AdminView({
         </p>
 
         {/* Info Banner */}
-        <div className="flex items-start gap-2.5 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-lg mb-3">
+        <div className="flex items-start gap-3 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-lg mb-3">
           <MaterialSymbol icon="info" size={14} className="text-[var(--nim-primary)] shrink-0 mt-0.5" />
           <div className="text-[12px] text-[var(--nim-text-muted)] leading-relaxed">
             <strong className="text-[var(--nim-primary)] font-semibold">Shared</strong> items sync to all team members in real time.{' '}
@@ -416,11 +416,11 @@ function AdminView({
           {trackers.map((tracker) => (
             <div
               key={tracker.model.type}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
+              className="flex items-center gap-3 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
             >
               <TrackerIcon color={tracker.model.color} icon={tracker.model.icon} />
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-[var(--nim-text)] flex items-center gap-1.5">
+                <div className="text-[13px] font-medium text-[var(--nim-text)] flex items-center gap-2">
                   {tracker.model.displayNamePlural}
                   <span className="px-1.5 py-[1px] rounded bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-[10px] font-semibold">
                     <TrackerTypeCount type={tracker.model.type} />
@@ -453,7 +453,7 @@ function AdminView({
 
       {/* Inline Note */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <div className="flex items-start gap-1.5 p-2.5 bg-[var(--nim-bg-secondary)] rounded-md text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
+        <div className="flex items-start gap-2 p-2.5 bg-[var(--nim-bg-secondary)] rounded-md text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
           <MaterialSymbol icon="info" size={14} className="shrink-0 mt-0.5" />
           <span>
             Inline trackers (<code className="text-[11px] text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 py-[1px] rounded">#bug[...]</code>) are always local, regardless of sync policy. Only tracked items created from the panel participate in sync.
@@ -498,7 +498,7 @@ function MemberView({ trackers, workspacePath }: { trackers: TrackerTypeConfig[]
           {sharedTrackers.map((tracker) => (
             <div
               key={tracker.model.type}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
+              className="flex items-center gap-3 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
             >
               <TrackerIcon color={tracker.model.color} icon={tracker.model.icon} />
               <div className="flex-1 min-w-0">
@@ -532,7 +532,7 @@ function MemberView({ trackers, workspacePath }: { trackers: TrackerTypeConfig[]
             {localTrackers.map((tracker) => (
               <div
                 key={tracker.model.type}
-                className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
+                className="flex items-center gap-3 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0"
               >
                 <TrackerIcon color={tracker.model.color} icon={tracker.model.icon} />
                 <div className="flex-1 min-w-0">
@@ -564,7 +564,7 @@ function MemberView({ trackers, workspacePath }: { trackers: TrackerTypeConfig[]
 
       {/* Inline Note */}
       <div className="provider-panel-section py-4">
-        <div className="flex items-start gap-1.5 p-2.5 bg-[var(--nim-bg-secondary)] rounded-md text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
+        <div className="flex items-start gap-2 p-2.5 bg-[var(--nim-bg-secondary)] rounded-md text-[11px] text-[var(--nim-text-faint)] leading-relaxed">
           <MaterialSymbol icon="info" size={14} className="shrink-0 mt-0.5" />
           <span>
             Inline trackers (<code className="text-[11px] text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 py-[1px] rounded">#bug[...]</code>) in your documents are always local. Promote them to tracked items to share with the team.
@@ -632,7 +632,7 @@ function SchemaDriftWarning({ workspacePath }: { workspacePath?: string }) {
   return (
     <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
       <div
-        className="tracker-schema-drift-warning flex items-start gap-2.5 p-3 bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.25)] rounded-lg"
+        className="tracker-schema-drift-warning flex items-start gap-3 p-3 bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.25)] rounded-lg"
         data-testid="tracker-schema-drift-warning"
       >
         <MaterialSymbol icon="sync_problem" size={14} className="text-[#f59e0b] shrink-0 mt-0.5" />
@@ -645,7 +645,7 @@ function SchemaDriftWarning({ workspacePath }: { workspacePath?: string }) {
           </p>
           <ul className="text-[12px] text-[var(--nim-text-muted)] leading-relaxed mb-3 space-y-0.5">
             {warnings.map((e) => (
-              <li key={e.type} className="flex items-center gap-1.5">
+              <li key={e.type} className="flex items-center gap-2">
                 <span className="font-mono text-[11px] text-[var(--nim-text)]">{e.type}</span>
                 <span className="text-[var(--nim-text-faint)]">- {describeDriftStatus(e.status)}</span>
               </li>

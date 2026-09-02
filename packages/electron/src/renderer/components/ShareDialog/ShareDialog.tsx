@@ -237,7 +237,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative p-0 w-[420px] max-w-[90vw] rounded-2xl overflow-hidden border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.4)] animate-[nim-slide-up_0.3s_ease-out]"
+        className="relative p-0 w-[420px] max-w-[90vw] rounded-ui-lg overflow-hidden border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.4)] animate-[nim-slide-up_0.3s_ease-out]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -252,7 +252,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         <div className="px-8 pt-8 pb-6">
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--nim-primary)]/15 text-[var(--nim-primary)]">
+            <div className="w-10 h-10 rounded-ui-lg flex items-center justify-center bg-[var(--nim-primary)]/15 text-[var(--nim-primary)]">
               <MaterialSymbol icon="share" size={22} />
             </div>
             <h2 className="m-0 text-lg font-semibold text-[var(--nim-text)]">
@@ -292,7 +292,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                   <button
                     onClick={handleGoogleSignIn}
                     disabled={authLoading || !isStytchAvailable}
-                    className="w-full px-4 py-2.5 flex items-center justify-center gap-2.5 bg-white border border-[var(--nim-border)] rounded-lg text-[#333] font-medium text-[0.8125rem] cursor-pointer disabled:opacity-70 disabled:cursor-wait"
+                    className="w-full px-4 py-2.5 flex items-center justify-center gap-3 bg-white border border-[var(--nim-border)] rounded-lg text-[#333] font-medium text-[0.8125rem] cursor-pointer disabled:opacity-70 disabled:cursor-wait"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -404,7 +404,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                       onClick={() => urlInputRef.current?.select()}
                     />
                     <button
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-[0.8125rem] rounded-lg border border-[var(--nim-border)] bg-transparent text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                      className="shrink-0 flex items-center gap-2 px-3 py-2 text-[0.8125rem] rounded-lg border border-[var(--nim-border)] bg-transparent text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                       onClick={handleCopyUrl}
                     >
                       <MaterialSymbol icon={urlCopied ? 'check' : 'content_copy'} size={14} />

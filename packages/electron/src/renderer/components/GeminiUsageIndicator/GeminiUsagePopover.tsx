@@ -211,7 +211,7 @@ export const GeminiUsagePopover: React.FC<GeminiUsagePopoverProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-nim flex flex-col gap-1.5">
+        <div className="px-4 py-2 border-t border-nim flex flex-col gap-2">
           <div className="flex items-center justify-between">
             {usage.lastUpdated && (
               <span className="text-[10px] text-nim-faint">

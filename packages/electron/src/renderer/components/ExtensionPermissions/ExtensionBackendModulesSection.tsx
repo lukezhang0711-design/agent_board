@@ -158,7 +158,7 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
               className="ext-backend-module bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md p-3"
             >
               <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--nim-text)]">
+                <div className="flex items-center gap-2 text-sm font-medium text-[var(--nim-text)]">
                   <MaterialSymbol icon="memory" size={16} />
                   {mod.id}
                   <span className="text-xs text-[var(--nim-text-faint)] font-mono">
@@ -178,7 +178,7 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
                 {mod.enablement.purpose}
               </p>
 
-              <div className="ext-backend-module-permissions mb-3 flex flex-col gap-1.5">
+              <div className="ext-backend-module-permissions mb-3 flex flex-col gap-2">
                 {mod.permissions.map((permId) => {
                   const d = descriptorById.get(permId);
                   if (!d) {

@@ -95,7 +95,7 @@ export function PlanFilters({
       </div>
 
       <div className="plan-filter-options flex items-center">
-        <label className="plan-filter-checkbox flex items-center gap-1.5 text-xs text-[var(--nim-text-muted)] cursor-pointer select-none hover:text-[var(--nim-text)] [&_input]:cursor-pointer">
+        <label className="plan-filter-checkbox flex items-center gap-2 text-xs text-[var(--nim-text-muted)] cursor-pointer select-none hover:text-[var(--nim-text)] [&_input]:cursor-pointer">
           <input
             type="checkbox"
             checked={hideCompleted}

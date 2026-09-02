@@ -135,7 +135,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
         ref={refs.setReference}
         {...getReferenceProps()}
         type="button"
-        className={`unified-quick-open-filter-chip inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded border cursor-pointer transition-colors duration-100 ${
+        className={`unified-quick-open-filter-chip inline-flex items-center gap-2 px-2 py-1 text-xs rounded border cursor-pointer transition-colors duration-100 ${
           value
             ? 'bg-[rgba(0,122,255,0.12)] border-[var(--nim-primary)] text-[var(--nim-primary)]'
             : 'bg-nim-secondary border-nim text-nim-muted hover:text-nim hover:bg-nim-hover'

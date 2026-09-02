@@ -79,7 +79,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
       data-testid="feedback-intake-overlay"
     >
       <div
-        className="feedback-intake-dialog nim-animate-slide-up relative max-h-[90vh] w-[520px] max-w-[90vw] overflow-y-auto rounded-2xl border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+        className="feedback-intake-dialog nim-animate-slide-up relative max-h-[90vh] w-[520px] max-w-[90vw] overflow-y-auto rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-labelledby="feedback-intake-title"
@@ -113,7 +113,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <div className="feedback-intake-kind-grid grid grid-cols-2 gap-3">
               <button
                 type="button"
-                className={`feedback-intake-kind-card rounded-[18px] border px-4 py-3 text-left transition-all duration-150 ${
+                className={`feedback-intake-kind-card rounded-ui-lg border px-4 py-3 text-left transition-all duration-150 ${
                   selectedKind === 'bug'
                     ? 'border-[var(--nim-primary)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)]'
                     : 'border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text-muted)] hover:border-[var(--nim-primary)] hover:bg-[var(--nim-bg-secondary)] hover:text-[var(--nim-text)]'
@@ -122,7 +122,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                 data-testid="feedback-intake-select-bug"
               >
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(239,68,68,0.12)] text-[var(--nim-error)]">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-ui-lg bg-[rgba(239,68,68,0.12)] text-[var(--nim-error)]">
                     <MaterialSymbol icon="bug_report" size={20} />
                   </span>
                   <span className="text-[14px] font-semibold leading-none">Bug report</span>
@@ -134,7 +134,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
 
               <button
                 type="button"
-                className={`feedback-intake-kind-card rounded-[18px] border px-4 py-3 text-left transition-all duration-150 ${
+                className={`feedback-intake-kind-card rounded-ui-lg border px-4 py-3 text-left transition-all duration-150 ${
                   selectedKind === 'feature'
                     ? 'border-[var(--nim-primary)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)]'
                     : 'border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text-muted)] hover:border-[var(--nim-primary)] hover:bg-[var(--nim-bg-secondary)] hover:text-[var(--nim-text)]'
@@ -143,7 +143,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                 data-testid="feedback-intake-select-feature"
               >
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(245,158,11,0.14)] text-[var(--nim-warning)]">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-ui-lg bg-[rgba(245,158,11,0.14)] text-[var(--nim-warning)]">
                     <MaterialSymbol icon="lightbulb" size={20} />
                   </span>
                   <span className="text-[14px] font-semibold leading-none">Feature request</span>
@@ -155,11 +155,11 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             </div>
 
             {selectedKind ? (
-              <div className="feedback-intake-detail rounded-[20px] border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-4 py-4">
+              <div className="feedback-intake-detail rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-4 py-4">
                 {selectedKind === 'bug' ? (
                   <label
                     htmlFor="feedback-may-gather-logs"
-                    className="block cursor-pointer rounded-2xl border border-[var(--nim-border)] bg-[var(--nim-bg)] px-4 py-3 transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)]"
+                    className="block cursor-pointer rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] px-4 py-3 transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)]"
                   >
                     <div className="flex items-start gap-3">
                       <input
@@ -187,7 +187,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                 {selectedKind === 'feature' ? (
                   <label
                     htmlFor="feedback-should-create-mockup"
-                    className="block cursor-pointer rounded-2xl border border-[var(--nim-border)] bg-[var(--nim-bg)] px-4 py-3 transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)]"
+                    className="block cursor-pointer rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] px-4 py-3 transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)]"
                   >
                     <div className="flex items-start gap-3">
                       <input
@@ -215,7 +215,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
 
             <button
               type="button"
-              className={`feedback-intake-start-button flex w-full items-center justify-between rounded-[18px] px-4 py-3 text-left text-[13px] font-semibold transition-all duration-150 ${
+              className={`feedback-intake-start-button flex w-full items-center justify-between rounded-ui-lg px-4 py-3 text-left text-[13px] font-semibold transition-all duration-150 ${
                 selectedKind
                   ? 'border border-[var(--nim-primary)] bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)]'
                   : 'border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text-disabled)]'

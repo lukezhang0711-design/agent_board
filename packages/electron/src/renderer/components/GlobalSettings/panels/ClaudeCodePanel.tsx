@@ -538,7 +538,7 @@ export function ClaudeCodePanel({
                           </button>
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-[var(--nim-border)] flex items-center justify-between gap-2 text-xs">
-                          <div className="flex items-center gap-1.5 text-[var(--nim-text)]">
+                          <div className="flex items-center gap-2 text-[var(--nim-text)]">
                             <span className="text-[var(--nim-text-muted)]">终端重登命令：</span>
                             <code className="rounded bg-[var(--nim-bg-tertiary)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--nim-text)] border border-[var(--nim-border)]" data-testid="claude-code-relogin-command">
                               claude /login

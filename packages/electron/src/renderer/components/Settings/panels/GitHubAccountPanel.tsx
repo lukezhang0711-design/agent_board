@@ -97,7 +97,7 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
           </button>
         </div>
       ) : noAccounts ? (
-        <div className="flex items-start gap-2.5 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-lg text-[13px] text-[var(--nim-text-muted)]">
+        <div className="flex items-start gap-3 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-lg text-[13px] text-[var(--nim-text-muted)]">
           <MaterialSymbol icon="info" size={16} className="text-[var(--nim-primary)] shrink-0 mt-0.5" />
           <div>
             No GitHub CLI accounts found. Run <code className="text-[11px] bg-[var(--nim-code-bg)] px-1 py-[1px] rounded">gh auth login</code> in your terminal, then reload.

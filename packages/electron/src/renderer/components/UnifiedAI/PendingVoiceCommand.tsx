@@ -183,7 +183,7 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
       >
         {/* Countdown section */}
         <div
-          className="flex items-center gap-2.5"
+          className="flex items-center gap-3"
         >
           {/* Circular countdown */}
           <div className="relative w-8 h-8">
@@ -225,14 +225,14 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
         >
           <button
             onClick={handleEditClick}
-            className="flex items-center gap-1.5 py-1.5 px-3 border border-nim rounded-md bg-transparent text-nim-muted text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-secondary hover:border-nim-focus hover:text-nim"
+            className="flex items-center gap-2 py-1.5 px-3 border border-nim rounded-md bg-transparent text-nim-muted text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-secondary hover:border-nim-focus hover:text-nim"
           >
             <MaterialSymbol icon="edit" size={16} />
             Edit
           </button>
           <button
             onClick={handleSubmit}
-            className="flex items-center gap-1.5 py-1.5 px-3.5 border-none rounded-md bg-nim-primary text-nim-on-primary text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-primary-hover"
+            className="flex items-center gap-2 py-1.5 px-3.5 border-none rounded-md bg-nim-primary text-nim-on-primary text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-primary-hover"
           >
             Send Now
             <MaterialSymbol icon="arrow_forward" size={16} />

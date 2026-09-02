@@ -550,7 +550,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
 
     return (
       <div className="plugin-details-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => setSelectedPlugin(null)}>
-        <div className="plugin-details-modal bg-[var(--nim-bg)] rounded-xl p-6 max-w-[500px] w-full max-h-[80vh] overflow-y-auto relative shadow-[0_20px_40px_rgba(0,0,0,0.3)]" onClick={(e) => e.stopPropagation()}>
+        <div className="plugin-details-modal bg-[var(--nim-bg)] rounded-ui-lg p-6 max-w-[500px] w-full max-h-[80vh] overflow-y-auto relative shadow-[0_20px_40px_rgba(0,0,0,0.3)]" onClick={(e) => e.stopPropagation()}>
           <button
             className="plugin-details-close absolute top-4 right-4 w-7 h-7 border-none rounded-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-base cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
             onClick={() => setSelectedPlugin(null)}
@@ -560,7 +560,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
           </button>
 
           <div className="plugin-details-header flex items-center gap-4 mb-4">
-            <div className="plugin-details-icon w-12 h-12 rounded-[10px] bg-[var(--nim-bg-tertiary)] flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="plugin-details-icon w-12 h-12 rounded-ui-lg bg-[var(--nim-bg-tertiary)] flex items-center justify-center shrink-0 overflow-hidden">
               <PluginIcon pluginName={selectedPlugin.name} category={selectedPlugin.category} isDark={isDark} />
             </div>
             <div className="plugin-details-title">

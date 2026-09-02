@@ -84,7 +84,7 @@ export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessag
                 style={{ width: `${barWidth}%` }}
               />
             </div>
-            <div className="flex flex-col gap-0.5 text-ui-caption text-nim-muted">
+            <div className="flex flex-col gap-1 text-ui-caption text-nim-muted">
               <div className="flex items-center gap-1">
                 <MaterialSymbol icon="schedule" size={12} className="opacity-70" />
                 <span>{pool.resetsAt ? `${formatResetTime(pool.resetsAt)}后重置` : '重置时间不可用'}</span>

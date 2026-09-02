@@ -141,7 +141,7 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
               {blockers.map((blocker, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-1.5 text-[10px] text-[var(--nim-warning)] leading-[1.4]"
+                  className="flex items-start gap-2 text-[10px] text-[var(--nim-warning)] leading-[1.4]"
                 >
                   <MaterialSymbol icon="warning" size={12} className="shrink-0 mt-0.5" />
                   <span>{blocker}</span>
@@ -157,7 +157,7 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
               {recentLearnings.map((learning, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-1.5 text-[10px] text-[var(--nim-text)] leading-[1.4]"
+                  className="flex items-start gap-2 text-[10px] text-[var(--nim-text)] leading-[1.4]"
                 >
                   <span className="text-[var(--nim-text-faint)] font-mono shrink-0">
                     #{learning.iteration}

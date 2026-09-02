@@ -77,7 +77,7 @@ export function NotificationsPanel() {
 
         {completionSoundEnabled && (
             <div className="setting-item py-3 mt-4">
-              <div className="setting-text flex flex-col gap-0.5">
+              <div className="setting-text flex flex-col gap-1">
                 <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Sound Type</span>
               </div>
             <div className="mt-3 flex flex-col gap-2">

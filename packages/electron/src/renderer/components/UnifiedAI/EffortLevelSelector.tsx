@@ -47,7 +47,7 @@ export function EffortLevelSelector({ level, onLevelChange, supportedLevels }: E
     <div className="relative inline-block" ref={dropdownRef}>
       <button
         data-testid="effort-level-selector"
-        className="flex items-center gap-1 px-2 py-[3px] rounded-xl text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
+        className="flex items-center gap-1 px-2 py-[3px] rounded-ui-lg text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
         onClick={() => setIsOpen(!isOpen)}
         aria-label={`Effort level: ${currentLevel.label}`}
       >

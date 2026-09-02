@@ -52,9 +52,9 @@ export function TerminalTabContextMenu({
   };
 
   const menuItemClasses =
-    'flex items-center gap-2.5 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]';
+    'flex items-center gap-3 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]';
   const disabledMenuItemClasses =
-    'flex items-center gap-2.5 px-3 py-1.5 rounded text-[var(--nim-text-disabled)] cursor-not-allowed';
+    'flex items-center gap-3 px-3 py-1.5 rounded text-[var(--nim-text-disabled)] cursor-not-allowed';
 
   return (
     <FloatingPortal>

@@ -126,12 +126,12 @@ export function TipCard({
   const renderedBody = useMemo(() => parseMarkdownBody(tip.content.body), [tip.content.body]);
 
   const floatingClasses =
-    'tip-card fixed bottom-5 left-[50px] w-[340px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-[10px] z-[10000] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.35),0_2px_8px_rgba(0,0,0,0.2)] motion-safe:animate-[tip-slide-in_0.3s_ease-out_forwards]';
+    'tip-card fixed bottom-5 left-[50px] w-[340px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg z-[10000] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.35),0_2px_8px_rgba(0,0,0,0.2)] motion-safe:animate-[tip-slide-in_0.3s_ease-out_forwards]';
   const inlineClasses =
-    'tip-card tip-card--inline w-full max-w-[560px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]';
+    'tip-card tip-card--inline w-full max-w-[560px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]';
 
   // Inline cards use larger spacing and typography than the compact floating card.
-  const headerPadding = isFloating ? 'gap-2.5 px-3.5 pt-3.5' : 'gap-3.5 px-5 pt-5';
+  const headerPadding = isFloating ? 'gap-3 px-3.5 pt-3.5' : 'gap-3.5 px-5 pt-5';
   const iconSize = isFloating
     ? 'w-8 h-8 rounded-[7px]'
     : 'w-11 h-11 rounded-lg';
@@ -148,8 +148,8 @@ export function TipCard({
     ? 'flex items-center gap-3 px-3.5 pb-3.5'
     : 'flex items-center gap-3 px-5 pb-5';
   const primaryButtonClasses = isFloating
-    ? 'inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--nim-primary)] text-white border-none rounded-md text-[12.5px] font-medium cursor-pointer transition-all duration-150 hover:brightness-110 font-[inherit]'
-    : 'inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_18%,transparent)] font-[inherit]';
+    ? 'inline-flex items-center gap-2 px-3.5 py-1.5 bg-[var(--nim-primary)] text-white border-none rounded-md text-[12.5px] font-medium cursor-pointer transition-all duration-150 hover:brightness-110 font-[inherit]'
+    : 'inline-flex items-center gap-2 px-3.5 py-1.5 bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_18%,transparent)] font-[inherit]';
   const secondaryButtonClasses = isFloating
     ? 'text-[12.5px] text-[var(--nim-text-faint)] bg-transparent border-none cursor-pointer font-[inherit] transition-colors duration-150 hover:text-[var(--nim-text-muted)] hover:underline'
     : 'text-[13px] text-[var(--nim-text-faint)] bg-transparent border-none cursor-pointer font-[inherit] transition-colors duration-150 hover:text-[var(--nim-text-muted)] hover:underline';
@@ -219,7 +219,7 @@ export function TipCard({
             </button>
           )}
           {!isFloating && inlineFooterExtras && (
-            <div className="ml-auto flex items-center gap-1.5">{inlineFooterExtras}</div>
+            <div className="ml-auto flex items-center gap-2">{inlineFooterExtras}</div>
           )}
         </div>
       )}

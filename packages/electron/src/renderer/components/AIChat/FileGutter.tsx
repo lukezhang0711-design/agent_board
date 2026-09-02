@@ -405,7 +405,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
                   className={`file-gutter__file w-full text-left px-2 py-0.5 rounded border border-transparent transition-all duration-200 bg-transparent hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border)] ${hasPendingReview ? 'file-gutter__file--pending bg-[rgba(251,191,36,0.08)] border-[rgba(251,191,36,0.2)] hover:bg-[rgba(251,191,36,0.15)] hover:border-[rgba(251,191,36,0.3)]' : ''}`}
                   title={getRelativePath(file.filePath)}
                 >
-                  <div className="file-gutter__file-content flex items-center gap-1.5">
+                  <div className="file-gutter__file-content flex items-center gap-2">
                     {hasPendingReview && (
                       <MaterialSymbol
                         icon="rate_review"
@@ -454,7 +454,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
           onClick={toggleExpanded}
           className="file-gutter__header w-full flex items-center justify-between py-1 px-2 text-base font-semibold text-[var(--nim-text-muted)] bg-transparent border-none rounded cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
         >
-          <div className="file-gutter__header-content flex items-center gap-1.5">
+          <div className="file-gutter__header-content flex items-center gap-2">
             {getSectionIcon()}
             <span>{label}</span>
             <span className="file-gutter__count py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded text-[9px]">{groupedFiles.length}</span>
@@ -512,7 +512,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
                   className={`file-gutter__file w-full text-left px-2 py-0.5 rounded border border-transparent transition-all duration-200 bg-transparent hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border)] ${hasPendingReview ? 'file-gutter__file--pending bg-[rgba(251,191,36,0.08)] border-[rgba(251,191,36,0.2)] hover:bg-[rgba(251,191,36,0.15)] hover:border-[rgba(251,191,36,0.3)]' : ''}`}
                   title={getRelativePath(file.filePath)}
                 >
-                  <div className="file-gutter__file-content flex items-center gap-1.5">
+                  <div className="file-gutter__file-content flex items-center gap-2">
                     {hasPendingReview && (
                       <MaterialSymbol
                         icon="rate_review"

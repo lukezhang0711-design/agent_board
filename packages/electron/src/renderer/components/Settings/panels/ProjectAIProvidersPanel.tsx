@@ -318,20 +318,20 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                     <span className="provider-icon flex items-center justify-center w-10 h-10 bg-[var(--nim-bg-tertiary)] rounded-lg">
                       {getProviderIcon(provider.id as any, { size: 24 })}
                     </span>
-                    <div className="provider-details flex flex-col gap-0.5">
+                    <div className="provider-details flex flex-col gap-1">
                       <span className="provider-name text-sm font-medium text-[var(--nim-text)]">{provider.name}</span>
                       <span className="provider-subtitle text-xs text-[var(--nim-text-faint)]">{provider.subtitle}</span>
                     </div>
                   </div>
 
-                  <div className="provider-status flex items-center gap-2.5">
+                  <div className="provider-status flex items-center gap-3">
                     <span className={`global-status text-[11px] px-2 py-0.5 rounded font-medium ${globalEnabled ? 'bg-[rgba(34,197,94,0.12)] text-[#22c55e]' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]'}`}>
                       Global: {globalEnabled ? 'On' : 'Off'}
                     </span>
                     {overriding && (
                       <span className="override-badge text-[11px] px-2 py-0.5 rounded font-medium bg-[var(--nim-accent-muted)] text-[var(--nim-primary)]">Overridden</span>
                     )}
-                    <span className={`effective-status text-[11px] px-2.5 py-1 rounded-xl font-semibold ${effectiveEnabled ? 'bg-[#22c55e] text-white' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]'}`}>
+                    <span className={`effective-status text-[11px] px-2.5 py-1 rounded-ui-lg font-semibold ${effectiveEnabled ? 'bg-[#22c55e] text-white' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]'}`}>
                       {effectiveEnabled ? 'Active' : 'Inactive'}
                     </span>
                     <span className={`expand-icon text-[var(--nim-text-faint)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
@@ -352,7 +352,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                           onChange={(e) => handleOverrideToggle(provider.id, e.target.checked)}
                           className="hidden"
                         />
-                        <span className={`toggle-slider relative w-11 h-6 rounded-xl shrink-0 transition-colors duration-200 before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:w-5 before:h-5 before:bg-white before:rounded-full before:transition-transform before:duration-200 before:shadow-[0_1px_3px_rgba(0,0,0,0.2)] ${overriding ? 'bg-[var(--nim-primary)] before:translate-x-5' : 'bg-[var(--nim-bg-tertiary)]'}`}></span>
+                        <span className={`toggle-slider relative w-11 h-6 rounded-ui-lg shrink-0 transition-colors duration-200 before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:w-5 before:h-5 before:bg-white before:rounded-full before:transition-transform before:duration-200 before:shadow-[0_1px_3px_rgba(0,0,0,0.2)] ${overriding ? 'bg-[var(--nim-primary)] before:translate-x-5' : 'bg-[var(--nim-bg-tertiary)]'}`}></span>
                         <span className="toggle-label text-[13px] text-[var(--nim-text-muted)]">
                           {overriding ? 'Override enabled - using project settings' : 'Using global settings'}
                         </span>
@@ -372,7 +372,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                                 onChange={(e) => handleEnabledChange(provider.id, e.target.checked)}
                                 className="hidden"
                               />
-                              <span className={`toggle-slider relative block w-9 h-5 rounded-xl transition-colors duration-200 before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:w-4 before:h-4 before:bg-white before:rounded-full before:transition-transform before:duration-200 before:shadow-[0_1px_3px_rgba(0,0,0,0.2)] ${override?.enabled ? 'bg-[var(--nim-primary)] before:translate-x-4' : 'bg-[var(--nim-bg-tertiary)]'}`}></span>
+                              <span className={`toggle-slider relative block w-9 h-5 rounded-ui-lg transition-colors duration-200 before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:w-4 before:h-4 before:bg-white before:rounded-full before:transition-transform before:duration-200 before:shadow-[0_1px_3px_rgba(0,0,0,0.2)] ${override?.enabled ? 'bg-[var(--nim-primary)] before:translate-x-4' : 'bg-[var(--nim-bg-tertiary)]'}`}></span>
                             </label>
                           </div>
                         </div>
@@ -403,7 +403,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                           <div className="config-section py-4 border-b border-[var(--nim-border)] last:border-b-0">
                             <div className="config-section-header flex items-center justify-between mb-3">
                               <h4 className="config-section-title nim-section-label m-0">Models</h4>
-                              <div className="models-actions flex gap-1.5">
+                              <div className="models-actions flex gap-2">
                                 <button
                                   className="models-action-btn px-2.5 py-1 text-[11px] font-medium text-[var(--nim-text-muted)] bg-[var(--nim-bg-tertiary)] border-none rounded cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                                   onClick={() => handleSelectAllModels(provider.id, true)}

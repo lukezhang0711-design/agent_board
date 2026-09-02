@@ -539,7 +539,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
           <strong>{totalInstances}</strong> live instances across <strong>{nonEmptyCount}</strong> families
         </span>
         <div className="flex-1" />
-        <label className="flex items-center gap-1.5 cursor-pointer text-[var(--nim-text-muted)]">
+        <label className="flex items-center gap-2 cursor-pointer text-[var(--nim-text-muted)]">
           <input
             type="checkbox"
             checked={filterEmpty}
@@ -594,7 +594,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
                         <div className="text-xs text-[var(--nim-text-muted)] mb-1">
                           Live params ({s.params.length}):
                         </div>
-                        <div className="flex flex-wrap gap-1.5 max-h-40 overflow-auto">
+                        <div className="flex flex-wrap gap-2 max-h-40 overflow-auto">
                           {s.params.map((p, i) => (
                             <span
                               key={i}

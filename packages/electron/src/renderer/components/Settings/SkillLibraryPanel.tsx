@@ -308,7 +308,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
             : 'border-[var(--nim-border)] hover:border-[var(--nim-border-strong)] shadow-xs'
         }`}
       >
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {/* Card Top: Name (with bundle checkbox in editing mode) & Switch */}
           <div className="flex items-start justify-between gap-2">
             {editingBundle ? (
@@ -330,7 +330,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               </span>
             )}
 
-            <label className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--nim-text-muted)] cursor-pointer select-none">
+            <label className="flex shrink-0 items-center gap-2 text-xs text-[var(--nim-text-muted)] cursor-pointer select-none">
               启用
               <input
                 type="checkbox"
@@ -341,7 +341,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           </div>
 
           {/* Engine Badges & Content Comparison Badge */}
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className={`px-1.5 py-0.5 rounded text-ui-caption font-mono border ${
                 card.engines.claude
@@ -406,7 +406,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         </div>
 
         {/* Card Footer: Metadata & Expand button */}
-        <div className="pt-2 border-t border-[var(--nim-border-subtle)] flex flex-col gap-1.5 text-ui-caption text-[var(--nim-text-muted)]">
+        <div className="pt-2 border-t border-[var(--nim-border-subtle)] flex flex-col gap-2 text-ui-caption text-[var(--nim-text-muted)]">
           <div className="flex items-center justify-between gap-2">
             <span>约 {card.estimatedTokens} token (估算)</span>
             {card.hasDescription && (
@@ -419,7 +419,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               </button>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>
               {card.scopes.map((s) => SCOPE_LABELS[s] ?? s).join('/')} · {card.sources.map((s) => SOURCE_LABELS[s] ?? s).join('/')}
             </span>
@@ -457,7 +457,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
       {/* Verbatim Scan Errors */}
       {scanErrors.length > 0 && (
         <div className="rounded-md border border-[var(--nim-danger)] bg-[var(--nim-danger-subtle)] p-3 text-sm text-[var(--nim-danger)] flex flex-col gap-1">
-          <div className="font-semibold flex items-center gap-1.5">
+          <div className="font-semibold flex items-center gap-2">
             <MaterialSymbol icon="warning" size={16} />
             <span>扫描发现异常：</span>
           </div>
@@ -582,7 +582,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="text-sm font-medium text-[var(--nim-text)] truncate">
                     正在编辑「{editingBundle.name}」· 已选 {editingBundle.skillIds.length}
                   </span>

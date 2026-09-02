@@ -36,23 +36,23 @@ export const WorktreeOnboardingModal: React.FC<WorktreeOnboardingModalProps> = (
           </p>
 
           <div className="worktree-onboarding-benefits flex flex-col gap-4">
-            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-[10px] border border-nim">
+            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
               <span className="material-symbols-outlined benefit-icon text-2xl text-nim-primary shrink-0">shield</span>
-              <div className="benefit-text flex flex-col gap-0.5">
+              <div className="benefit-text flex flex-col gap-1">
                 <strong className="text-sm font-semibold text-nim">Safe experimentation</strong>
                 <span className="text-[13px] text-nim-muted">AI changes stay in a separate branch</span>
               </div>
             </div>
-            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-[10px] border border-nim">
+            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
               <span className="material-symbols-outlined benefit-icon text-2xl text-nim-primary shrink-0">rate_review</span>
-              <div className="benefit-text flex flex-col gap-0.5">
+              <div className="benefit-text flex flex-col gap-1">
                 <strong className="text-sm font-semibold text-nim">Easy review</strong>
                 <span className="text-[13px] text-nim-muted">Review and merge changes when ready</span>
               </div>
             </div>
-            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-[10px] border border-nim">
+            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
               <span className="material-symbols-outlined benefit-icon text-2xl text-nim-primary shrink-0">stacks</span>
-              <div className="benefit-text flex flex-col gap-0.5">
+              <div className="benefit-text flex flex-col gap-1">
                 <strong className="text-sm font-semibold text-nim">Parallel work</strong>
                 <span className="text-[13px] text-nim-muted">Run multiple experiments simultaneously</span>
               </div>

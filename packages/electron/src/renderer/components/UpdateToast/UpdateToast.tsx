@@ -94,7 +94,7 @@ export function UpdateToast(): React.ReactElement | null {
         >
           {state === 'checking' && (
             <div
-              className="update-toast update-toast-checking flex items-center gap-3 w-auto min-w-[220px] relative rounded-xl p-4 px-5 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
+              className="update-toast update-toast-checking flex items-center gap-3 w-auto min-w-[220px] relative rounded-ui-lg p-4 px-5 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
               data-testid="update-checking-toast"
             >
               <div className="update-toast-spinner w-5 h-5 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-full animate-spin shrink-0" />
@@ -104,7 +104,7 @@ export function UpdateToast(): React.ReactElement | null {
 
           {state === 'up-to-date' && (
             <div
-              className="update-toast update-toast-up-to-date flex flex-col items-start w-auto min-w-[280px] relative rounded-xl p-4 px-5 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
+              className="update-toast update-toast-up-to-date flex flex-col items-start w-auto min-w-[280px] relative rounded-ui-lg p-4 px-5 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
               data-testid="update-up-to-date-toast"
             >
               <button
@@ -158,7 +158,7 @@ export function UpdateToast(): React.ReactElement | null {
 
           {state === 'error' && (
             <div
-              className="update-toast update-toast-error relative w-[380px] rounded-xl p-4 px-5 border border-[var(--nim-error)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
+              className="update-toast update-toast-error relative w-[380px] rounded-ui-lg p-4 px-5 border border-[var(--nim-error)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
               data-testid="update-error-toast"
             >
               <button

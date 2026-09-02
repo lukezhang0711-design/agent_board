@@ -137,7 +137,7 @@ export const FloatingEditorMenuItem: React.FC<FloatingEditorMenuItemProps> = ({
 }) => {
   return (
     <button
-      className={`floating-editor-menu-item w-full px-4 py-2.5 border-none bg-transparent text-[var(--nim-text)] text-sm text-left cursor-pointer transition-colors duration-150 flex items-center gap-2.5 hover:bg-[var(--nim-bg-hover)] active:bg-[var(--nim-bg-secondary)] ${isActive ? 'active text-[var(--nim-primary)]' : ''}`}
+      className={`floating-editor-menu-item w-full px-4 py-2.5 border-none bg-transparent text-[var(--nim-text)] text-sm text-left cursor-pointer transition-colors duration-150 flex items-center gap-3 hover:bg-[var(--nim-bg-hover)] active:bg-[var(--nim-bg-secondary)] ${isActive ? 'active text-[var(--nim-primary)]' : ''}`}
       onClick={onClick}
     >
       {icon && <span className="material-symbols-outlined text-lg opacity-80">{icon}</span>}

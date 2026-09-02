@@ -521,7 +521,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
             <div className="flex items-center gap-1">
               {isRenaming ? (
                 <input
@@ -547,7 +547,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
               )}
               {!isRenaming && <BlitzGroupStatus sessionIds={allSessionIds} />}
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)]">
                 {worktreeCount} worktree{worktreeCount !== 1 ? 's' : ''}
               </span>
@@ -627,7 +627,7 @@ export const BlitzGroup: React.FC<BlitzGroupProps> = memo(({
                     />
                   </button>
                   <div
-                    className="flex items-center gap-1.5 flex-1 min-w-0 py-1 pr-2 pl-0.5 cursor-pointer"
+                    className="flex items-center gap-2 flex-1 min-w-0 py-1 pr-2 pl-0.5 cursor-pointer"
                     onClick={(e) => { e.stopPropagation(); onSessionSelect(sessions[0].id, e); }}
                     role="button"
                     tabIndex={0}

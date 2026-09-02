@@ -57,7 +57,7 @@ export function NewFileMenu({
         className="new-file-menu bg-nim-secondary border border-nim rounded-md shadow-lg p-1 min-w-[180px] z-[10000] text-[13px] backdrop-blur-[10px]"
       >
         <div
-          className="new-file-menu-item flex items-center gap-2.5 py-2 px-3 rounded cursor-pointer transition-colors text-nim hover:bg-nim-hover"
+          className="new-file-menu-item flex items-center gap-3 py-2 px-3 rounded cursor-pointer transition-colors text-nim hover:bg-nim-hover"
           onClick={() => handleSelect('markdown')}
         >
           <MaterialSymbol icon="description" size={18} />
@@ -65,7 +65,7 @@ export function NewFileMenu({
         </div>
 
         <div
-          className="new-file-menu-item flex items-center gap-2.5 py-2 px-3 rounded cursor-pointer transition-colors text-nim hover:bg-nim-hover"
+          className="new-file-menu-item flex items-center gap-3 py-2 px-3 rounded cursor-pointer transition-colors text-nim hover:bg-nim-hover"
           onClick={() => handleSelect('mockup')}
         >
           <MaterialSymbol icon="web" size={18} />
@@ -76,7 +76,7 @@ export function NewFileMenu({
         {extensionFileTypes.map((extType) => (
           <div
             key={extType.extension}
-            className="new-file-menu-item flex items-center gap-2.5 py-2 px-3 rounded cursor-pointer transition-colors text-nim hover:bg-nim-hover"
+            className="new-file-menu-item flex items-center gap-3 py-2 px-3 rounded cursor-pointer transition-colors text-nim hover:bg-nim-hover"
             onClick={() => handleSelect(`ext:${extType.extension}`)}
           >
             <MaterialSymbol icon={extType.icon} size={18} />
@@ -87,7 +87,7 @@ export function NewFileMenu({
         <div className="new-file-menu-separator h-px bg-[var(--nim-border)] mx-2 my-1" />
 
         <div
-          className="new-file-menu-item flex items-center gap-2.5 py-2 px-3 rounded cursor-pointer transition-colors text-nim hover:bg-nim-hover"
+          className="new-file-menu-item flex items-center gap-3 py-2 px-3 rounded cursor-pointer transition-colors text-nim hover:bg-nim-hover"
           onClick={() => handleSelect('any')}
         >
           <MaterialSymbol icon="note_add" size={18} />

@@ -45,7 +45,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       className={`page-header flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[var(--nim-border)] ${className}`.trim()}
       data-testid={testId}
     >
-      <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0 flex-wrap">
         {icon && (
           <div className="page-header-icon shrink-0 flex items-center justify-center text-[var(--nim-primary)]">
             {typeof icon === 'string' ? (

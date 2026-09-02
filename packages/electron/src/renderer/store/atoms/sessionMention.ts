@@ -101,7 +101,7 @@ function buildDescription(updatedAt: number, phase?: string): React.ReactElement
 
   return React.createElement(
     'span',
-    { className: 'flex items-center gap-1.5' },
+    { className: 'flex items-center gap-2' },
     time,
     badge
   );

@@ -416,7 +416,7 @@ export function ModelSelector({
     return (
       <div className="model-selector inline-block">
         <span
-          className={`model-selector-button model-selector-readonly flex items-center gap-1 px-2 py-[3px] rounded-xl text-[11px] font-medium whitespace-nowrap max-w-[200px] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border cursor-default ${currentModelUnavailable ? 'border-[var(--nim-error)]' : 'border-[var(--nim-border)]'}`}
+          className={`model-selector-button model-selector-readonly flex items-center gap-1 px-2 py-[3px] rounded-ui-lg text-[11px] font-medium whitespace-nowrap max-w-[200px] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border cursor-default ${currentModelUnavailable ? 'border-[var(--nim-error)]' : 'border-[var(--nim-border)]'}`}
           aria-label={`Current model: ${getCurrentModelName()}`}
           aria-invalid={currentModelUnavailable || undefined}
           aria-describedby={currentModelUnavailable ? 'model-current-unavailable' : undefined}
@@ -434,7 +434,7 @@ export function ModelSelector({
     <div className="model-selector inline-block">
       <button
         ref={refs.setReference}
-        className={`model-selector-button flex items-center gap-1 px-2 py-[3px] rounded-xl text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap max-w-[200px] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border hover:bg-[var(--nim-bg-hover)] ${currentModelUnavailable ? 'border-[var(--nim-error)]' : 'border-[var(--nim-border)] hover:border-[var(--nim-primary)]'}`}
+        className={`model-selector-button flex items-center gap-1 px-2 py-[3px] rounded-ui-lg text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap max-w-[200px] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border hover:bg-[var(--nim-bg-hover)] ${currentModelUnavailable ? 'border-[var(--nim-error)]' : 'border-[var(--nim-border)] hover:border-[var(--nim-primary)]'}`}
         aria-label={`Current model: ${getCurrentModelName()}`}
         aria-invalid={currentModelUnavailable || undefined}
         aria-describedby={currentModelUnavailable ? 'model-current-unavailable' : undefined}
@@ -494,7 +494,7 @@ export function ModelSelector({
                           unchanged. */}
                       <HelpTooltip testId={`model-picker-provider-${provider}`} placement="right">
                         <div
-                          className="model-selector-provider-header flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-[var(--nim-text-muted)]"
+                          className="model-selector-provider-header flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-[var(--nim-text-muted)]"
                           data-testid={`model-picker-provider-${provider}`}
                         >
                           {renderProviderIcon(provider, 12)}
@@ -543,7 +543,7 @@ export function ModelSelector({
                     <div key={`missing-dynamic-extension-${provider}`} className="model-selector-provider-group mb-1">
                       <HelpTooltip testId={`model-picker-provider-${provider}`} placement="right">
                         <div
-                          className="model-selector-provider-header flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-[var(--nim-text-muted)]"
+                          className="model-selector-provider-header flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-[var(--nim-text-muted)]"
                           data-testid={`model-picker-provider-${provider}`}
                         >
                           {renderProviderIcon(provider, 12)}
@@ -570,7 +570,7 @@ export function ModelSelector({
                   )}
                   {Object.entries(groupedProviders.models).map(([provider, providerModels]) => (
                     <div key={provider} className="model-selector-provider-group mb-1">
-                      <div className="model-selector-provider-header flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-[var(--nim-text-muted)]">
+                      <div className="model-selector-provider-header flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-[var(--nim-text-muted)]">
                         {renderProviderIcon(provider, 12)}
                         {getProviderLabel(provider)}
                       </div>

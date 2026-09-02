@@ -185,7 +185,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
         {...menu.getReferenceProps()}
         type="button"
         data-testid="action-prompts-dropdown"
-        className="action-prompts-dropdown-button flex items-center gap-1 px-2 py-[3px] rounded-xl text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
+        className="action-prompts-dropdown-button flex items-center gap-1 px-2 py-[3px] rounded-ui-lg text-[11px] font-medium cursor-pointer transition-all duration-200 outline-none whitespace-nowrap bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)]"
         onClick={() => menu.setIsOpen(!menu.isOpen)}
         aria-label={`${buttonLabel} (${actions.length})`}
       >
@@ -264,7 +264,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
                         idx === highlightedIndex ? 'bg-[var(--nim-bg-hover)]' : 'bg-transparent'
                       }`}
                     >
-                      <span className="flex flex-col items-start gap-0.5 min-w-0 flex-1">
+                      <span className="flex flex-col items-start gap-1 min-w-0 flex-1">
                         <span className="text-[12px] font-medium leading-tight">{action.label}</span>
                         <span className="text-[11px] text-[var(--nim-text-muted)] leading-tight truncate w-full">
                           {launcherSubtitle ?? firstLinePreview(action.body)}
@@ -286,7 +286,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
             <div className="action-prompts-dropdown-footer mt-1 border-t border-[var(--nim-border)] pt-1">
               <button
                 type="button"
-                className="w-full text-left px-2 py-1.5 text-[11px] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] rounded cursor-pointer flex items-center gap-1.5 border-none bg-transparent"
+                className="w-full text-left px-2 py-1.5 text-[11px] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] rounded cursor-pointer flex items-center gap-2 border-none bg-transparent"
                 onClick={handleEditFile}
                 data-testid="action-prompts-edit-link"
               >

@@ -211,7 +211,7 @@ export function AdvancedPanel() {
 
           <div className="mode-selection flex flex-row gap-4 mt-3">
             <label
-              className={`mode-option flex flex-1 items-start p-0 rounded-xl cursor-pointer transition-all relative border-2 ${
+              className={`mode-option flex flex-1 items-start p-0 rounded-ui-lg cursor-pointer transition-all relative border-2 ${
                 !developerMode
                   ? 'selected bg-nim-hover border-nim-primary shadow-[0_0_0_3px_rgba(88,166,255,0.15)]'
                   : 'bg-nim-secondary border-nim'
@@ -239,7 +239,7 @@ export function AdvancedPanel() {
             </label>
 
             <label
-              className={`mode-option flex flex-1 items-start p-0 rounded-xl cursor-pointer transition-all relative border-2 ${
+              className={`mode-option flex flex-1 items-start p-0 rounded-ui-lg cursor-pointer transition-all relative border-2 ${
                 developerMode
                   ? 'selected bg-nim-hover border-nim-primary shadow-[0_0_0_3px_rgba(88,166,255,0.15)]'
                   : 'bg-nim-secondary border-nim'
@@ -360,7 +360,7 @@ export function AdvancedPanel() {
         </p>
 
         <div className="setting-item py-3">
-          <div className="setting-text flex flex-col gap-0.5">
+          <div className="setting-text flex flex-col gap-1">
             <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Update Channel</span>
           </div>
           <select

@@ -622,7 +622,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           </div>
 
           {/* Content */}
-          <div className="workstream-group-content flex-1 min-w-0 flex flex-col gap-0.5">
+          <div className="workstream-group-content flex-1 min-w-0 flex flex-col gap-1">
             <div className="workstream-group-row-primary flex items-center gap-1">
               {isRenamingWorktree && type === 'worktree' ? (
                 <input
@@ -660,7 +660,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
                 <WorkstreamGroupStatusIndicator sessionIds={sessions.map(s => s.id)} />
               )}
             </div>
-            <div className="workstream-group-row-secondary flex items-center gap-1.5 flex-wrap">
+            <div className="workstream-group-row-secondary flex items-center gap-2 flex-wrap">
               {/* Git status badges for worktrees */}
               {type === 'worktree' && gitStatus && (
                 <>
@@ -699,7 +699,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
 
         {/* Action buttons for worktrees */}
         {type === 'worktree' && (onFilesMode || onChangesMode) && (
-          <div className="workstream-group-actions flex items-center gap-0.5 pr-2 shrink-0">
+          <div className="workstream-group-actions flex items-center gap-1 pr-2 shrink-0">
             {onFilesMode && (
               <button
                 className="workstream-group-action-button flex items-center justify-center w-6 h-6 p-0 bg-transparent border-none rounded cursor-pointer text-[var(--nim-text-faint)] transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] focus:outline-none focus-visible:outline-2 focus-visible:outline-[var(--nim-border-focus)] focus-visible:outline-offset-[-2px]"

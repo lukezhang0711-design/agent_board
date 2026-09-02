@@ -182,7 +182,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
               Saved Views
             </span>
             <button
-              className="flex items-center gap-0.5 text-[10px] text-nim-faint hover:text-nim transition-colors"
+              className="flex items-center gap-1 text-[10px] text-nim-faint hover:text-nim transition-colors"
               onClick={() => setSavingView((v) => !v)}
               title="Save current view"
               data-testid="tracker-saved-view-add"
@@ -225,7 +225,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
               </div>
             )
           ) : (
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               {savedViews.map((view) => (
                 <div
                   key={view.id}

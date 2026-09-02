@@ -305,7 +305,7 @@ function SectionHeader({
   note?: string;
 }): JSX.Element {
   return (
-    <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-nim-faint mt-1 first:mt-0">
+    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-nim-faint mt-1 first:mt-0">
       <MaterialSymbol icon={icon} size={14} />
       <span>{label}</span>
       {count !== undefined && (

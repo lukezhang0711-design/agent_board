@@ -70,7 +70,7 @@ export function FileTreeFilterMenu({
         <div className="filter-menu-section-label nim-section-label px-3 pt-2 pb-1">Show Files</div>
 
         <div
-          className={`filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${currentFilter === 'all' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
+          className={`filter-menu-item flex items-center gap-3 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${currentFilter === 'all' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
           onClick={() => handleFilterSelect('all')}
         >
           <MaterialSymbol icon="folder_open" size={18} />
@@ -81,7 +81,7 @@ export function FileTreeFilterMenu({
         </div>
 
         <div
-          className={`filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${currentFilter === 'markdown' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
+          className={`filter-menu-item flex items-center gap-3 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${currentFilter === 'markdown' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
           onClick={() => handleFilterSelect('markdown')}
         >
           <MaterialSymbol icon="description" size={18} />
@@ -92,7 +92,7 @@ export function FileTreeFilterMenu({
         </div>
 
         <div
-          className={`filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${currentFilter === 'known' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
+          className={`filter-menu-item flex items-center gap-3 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${currentFilter === 'known' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
           onClick={() => handleFilterSelect('known')}
         >
           <MaterialSymbol icon="filter_list" size={18} />
@@ -105,7 +105,7 @@ export function FileTreeFilterMenu({
         <div className="filter-menu-section-label nim-section-label px-3 pt-2 pb-1">Git</div>
 
         <div
-          className={`filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded relative transition-colors text-[var(--nim-text)] ${!isGitRepo ? 'disabled opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--nim-bg-hover)]'} ${currentFilter === 'git-uncommitted' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
+          className={`filter-menu-item flex items-center gap-3 px-3 py-2 rounded relative transition-colors text-[var(--nim-text)] ${!isGitRepo ? 'disabled opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--nim-bg-hover)]'} ${currentFilter === 'git-uncommitted' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
           onClick={() => handleFilterSelect('git-uncommitted', !isGitRepo)}
         >
           <MaterialSymbol icon="difference" size={18} />
@@ -120,7 +120,7 @@ export function FileTreeFilterMenu({
 
         {isGitWorktree && (
           <div
-            className={`filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${currentFilter === 'git-worktree' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
+            className={`filter-menu-item flex items-center gap-3 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${currentFilter === 'git-worktree' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
             onClick={() => handleFilterSelect('git-worktree')}
           >
             <MaterialSymbol icon="account_tree" size={18} />
@@ -143,7 +143,7 @@ export function FileTreeFilterMenu({
         <div className="filter-menu-section-label nim-section-label px-3 pt-2 pb-1">Claude Agent Session</div>
 
         <div
-          className={`filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded relative transition-colors text-[var(--nim-text)] ${!hasActiveClaudeSession ? 'disabled opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--nim-bg-hover)]'} ${currentFilter === 'ai-read' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
+          className={`filter-menu-item flex items-center gap-3 px-3 py-2 rounded relative transition-colors text-[var(--nim-text)] ${!hasActiveClaudeSession ? 'disabled opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--nim-bg-hover)]'} ${currentFilter === 'ai-read' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
           onClick={() => handleFilterSelect('ai-read', !hasActiveClaudeSession)}
         >
           <MaterialSymbol icon="visibility" size={18} />
@@ -157,7 +157,7 @@ export function FileTreeFilterMenu({
         </div>
 
         <div
-          className={`filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded relative transition-colors text-[var(--nim-text)] ${!hasActiveClaudeSession ? 'disabled opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--nim-bg-hover)]'} ${currentFilter === 'ai-written' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
+          className={`filter-menu-item flex items-center gap-3 px-3 py-2 rounded relative transition-colors text-[var(--nim-text)] ${!hasActiveClaudeSession ? 'disabled opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--nim-bg-hover)]'} ${currentFilter === 'ai-written' ? 'active bg-[var(--nim-bg-selected)]' : ''}`}
           onClick={() => handleFilterSelect('ai-written', !hasActiveClaudeSession)}
         >
           <MaterialSymbol icon="edit_note" size={18} />
@@ -179,7 +179,7 @@ export function FileTreeFilterMenu({
         <div className="filter-menu-separator h-px mx-2 my-1 bg-[var(--nim-border)]" />
 
         <div
-          className="filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="filter-menu-item flex items-center gap-3 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           onClick={() => onShowIconsChange(!showIcons)}
         >
           <MaterialSymbol icon={showIcons ? 'check_box' : 'check_box_outline_blank'} size={18} />
@@ -187,7 +187,7 @@ export function FileTreeFilterMenu({
         </div>
 
         <div
-          className="filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="filter-menu-item flex items-center gap-3 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           onClick={() => onShowGitStatusChange(!showGitStatus)}
         >
           <MaterialSymbol icon={showGitStatus ? 'check_box' : 'check_box_outline_blank'} size={18} />
@@ -195,7 +195,7 @@ export function FileTreeFilterMenu({
         </div>
 
         <div
-          className="filter-menu-item flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="filter-menu-item flex items-center gap-3 px-3 py-2 rounded cursor-pointer relative transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           onClick={() => onEnableAutoScrollChange(!enableAutoScroll)}
         >
           <MaterialSymbol icon={enableAutoScroll ? 'check_box' : 'check_box_outline_blank'} size={18} />

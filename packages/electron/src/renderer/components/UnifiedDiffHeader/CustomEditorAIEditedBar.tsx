@@ -58,9 +58,9 @@ export const CustomEditorAIEditedBar: React.FC<CustomEditorAIEditedBarProps> = (
         {/* Left section: AI edited info */}
         <div className="unified-diff-header-info flex items-center gap-3 shrink min-w-0 overflow-hidden">
           {sessionInfo?.sessionTitle ? (
-            <div className="unified-diff-header-session flex items-center gap-1.5 text-[13px] text-[var(--nim-text)] min-w-0 overflow-hidden">
+            <div className="unified-diff-header-session flex items-center gap-2 text-[13px] text-[var(--nim-text)] min-w-0 overflow-hidden">
               <MaterialSymbol icon="smart_toy" size={18} className="unified-diff-header-session-icon shrink-0" />
-              <div className="unified-diff-header-session-details flex items-center gap-1.5 min-w-0">
+              <div className="unified-diff-header-session-details flex items-center gap-2 min-w-0">
                 <span className="unified-diff-header-label flex items-center gap-2 text-[13px] font-medium text-[var(--nim-text)]">
                   <span className="unified-diff-header-session-name font-semibold text-[var(--nim-primary)] overflow-hidden text-ellipsis whitespace-nowrap">{sessionInfo.sessionTitle}</span>
                   {' '}edited {fileName || 'file'}
@@ -97,7 +97,7 @@ export const CustomEditorAIEditedBar: React.FC<CustomEditorAIEditedBarProps> = (
         <div className="unified-diff-header-actions flex items-center gap-2 ml-auto shrink-0">
           {onViewHistory && (
             <button
-              className="unified-diff-header-button unified-diff-header-button-accept py-1.5 px-3 rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 border border-[var(--nim-primary)] flex items-center gap-1.5 whitespace-nowrap bg-[var(--nim-primary)] text-white hover:enabled:opacity-90 active:enabled:scale-[0.98]"
+              className="unified-diff-header-button unified-diff-header-button-accept py-1.5 px-3 rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 border border-[var(--nim-primary)] flex items-center gap-2 whitespace-nowrap bg-[var(--nim-primary)] text-white hover:enabled:opacity-90 active:enabled:scale-[0.98]"
               onClick={onViewHistory}
               type="button"
               title="View changes in history"

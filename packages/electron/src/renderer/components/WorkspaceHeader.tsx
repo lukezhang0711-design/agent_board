@@ -34,7 +34,7 @@ export function WorkspaceHeader({
       className="workspace-header-container min-h-14 bg-[var(--nim-bg-secondary)] [-webkit-app-region:drag]"
     >
       <div className="workspace-header-top flex items-start gap-3">
-        <div className="workspace-name-row flex items-baseline gap-2.5 min-w-0 flex-1">
+        <div className="workspace-name-row flex items-baseline gap-3 min-w-0 flex-1">
           <h1
             className="workspace-name m-0 text-base font-bold text-[var(--nim-text)] overflow-hidden text-ellipsis whitespace-nowrap tracking-tight leading-tight"
           >

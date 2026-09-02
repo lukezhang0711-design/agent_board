@@ -76,7 +76,7 @@ export function BetaFeaturesPanel() {
                   className="setting-checkbox w-4 h-4 mt-0.5 cursor-pointer shrink-0 accent-[var(--nim-primary)]"
                   disabled={enableAllBetaFeatures}
                 />
-                <div className="setting-text flex flex-col gap-0.5">
+                <div className="setting-text flex flex-col gap-1">
                   <span className="setting-name text-sm font-medium text-[var(--nim-text)] flex items-center gap-2">
                     {feature.icon && (
                       <span className="material-symbols-outlined text-sm">{feature.icon}</span>

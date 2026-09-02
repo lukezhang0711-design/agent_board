@@ -1353,7 +1353,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   </option>
                 ))}
               </select>
-              <div data-testid="redispatch-skill-tags" className="mt-2 flex min-w-0 flex-wrap gap-1.5">
+              <div data-testid="redispatch-skill-tags" className="mt-2 flex min-w-0 flex-wrap gap-2">
                 {selectedSkills.length > 0 ? selectedSkills.map((skill) => (
                   <span
                     key={skill.id}
@@ -2556,7 +2556,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                   <div
                     data-testid="plan-module-status-dots"
                     aria-label="模块审批状态"
-                    className="flex items-center gap-1.5"
+                    className="flex items-center gap-2"
                   >
                     {moduleApprovalStates.map((approval, moduleIndex) => {
                       const isCurrentModule = moduleIndex === activeModuleIndex;
@@ -3075,7 +3075,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         </select>
                         <div
                           data-testid={`plan-module-skill-tags-${stableModuleIndex}`}
-                          className="mt-2 flex min-w-0 flex-wrap gap-1.5"
+                          className="mt-2 flex min-w-0 flex-wrap gap-2"
                         >
                           {selectedSkills.length > 0 ? (
                             selectedSkills.map((skill) => (

@@ -252,7 +252,7 @@ export function HistoryWindow() {
             <h2 className="m-0 text-sm font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Preview</h2>
             {selectedSnapshot && (
               <div className="preview-actions flex gap-2">
-                <button className="btn-restore nim-btn-primary flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md" onClick={handleRestore}>
+                <button className="btn-restore nim-btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md" onClick={handleRestore}>
                   <MaterialSymbol icon="restore" size={18} />
                   Restore This Version
                 </button>

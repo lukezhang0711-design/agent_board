@@ -363,7 +363,7 @@ Best for quick edits and tasks that do not require multi-file operations.`,
       <div className="settings-sidebar-content p-3">
         {filteredGroups.map((group) => (
           <div key={group.title} className="settings-sidebar-group mb-4">
-            <div className="settings-sidebar-group-title flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-muted)]">
+            <div className="settings-sidebar-group-title flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-muted)]">
               {group.title}
               {group.infoTooltip && (
                 <span

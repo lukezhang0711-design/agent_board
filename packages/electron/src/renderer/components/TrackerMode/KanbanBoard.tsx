@@ -661,7 +661,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               </div>
                             )}
                             {/* Footer: Bottom row */}
-                            <div className="flex items-center gap-1.5 mt-2 pt-1 border-t border-nim/20 text-[10px]">
+                            <div className="flex items-center gap-2 mt-2 pt-1 border-t border-nim/20 text-[10px]">
                               {/* Type badge */}
                               <span
                                 className="text-[10px] font-medium px-1.5 py-0.5 rounded"

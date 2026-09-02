@@ -164,13 +164,13 @@ export function SessionDropdown({
                         />
                       ) : (
                         <div
-                          className="session-info flex-1 flex flex-col gap-0.5 min-w-0"
+                          className="session-info flex-1 flex flex-col gap-1 min-w-0"
                           onClick={() => {
                             onSessionSelect(session.id);
                             menu.setIsOpen(false);
                           }}
                         >
-                          <div className="session-name-row flex items-center gap-1.5">
+                          <div className="session-name-row flex items-center gap-2">
                             <SessionStatusIndicator sessionId={session.id} />
                             <span className="session-name overflow-hidden text-ellipsis whitespace-nowrap">{formatSessionName(session)}</span>
                             {session.provider && session.provider !== 'claude-code' && (

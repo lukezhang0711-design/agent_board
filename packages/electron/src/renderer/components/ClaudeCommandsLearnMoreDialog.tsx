@@ -75,7 +75,7 @@ export function ClaudeCommandsLearnMoreDialog({
       onClick={onClose}
     >
       <div
-        className="claude-commands-learn-more-dialog nim-modal w-[90%] max-w-[640px] max-h-[85vh] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+        className="claude-commands-learn-more-dialog nim-modal w-[90%] max-w-[640px] max-h-[85vh] rounded-ui-lg shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="claude-commands-learn-more-header flex items-center justify-between px-6 py-5 border-b border-[var(--nim-border)]">

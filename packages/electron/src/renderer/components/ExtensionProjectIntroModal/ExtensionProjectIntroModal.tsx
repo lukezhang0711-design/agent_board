@@ -32,7 +32,7 @@ export const ExtensionProjectIntroModal: React.FC<ExtensionProjectIntroModalProp
         onClick={(event) => event.stopPropagation()}
       >
         <div className="px-7 pt-7 pb-5">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-[color:color-mix(in_srgb,var(--nim-primary)_32%,var(--nim-border))] bg-[color:color-mix(in_srgb,var(--nim-primary)_14%,transparent)] text-[var(--nim-primary)]">
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-ui-lg border border-[color:color-mix(in_srgb,var(--nim-primary)_32%,var(--nim-border))] bg-[color:color-mix(in_srgb,var(--nim-primary)_14%,transparent)] text-[var(--nim-primary)]">
             <span className="material-symbols-outlined text-[26px]">extension</span>
           </div>
           <h2 className="m-0 text-xl font-semibold tracking-[-0.02em] text-nim">
@@ -44,7 +44,7 @@ export const ExtensionProjectIntroModal: React.FC<ExtensionProjectIntroModalProp
           </p>
         </div>
 
-        <div className="flex flex-col gap-2.5 px-7 pb-5">
+        <div className="flex flex-col gap-3 px-7 pb-5">
           {capabilities.map((cap) => (
             <div key={cap.icon} className="flex items-start gap-3">
               <span className="material-symbols-outlined mt-0.5 text-[18px] text-[var(--nim-primary)]">

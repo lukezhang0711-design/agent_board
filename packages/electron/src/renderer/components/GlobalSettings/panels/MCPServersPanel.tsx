@@ -1673,7 +1673,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
       <div className="mcp-template-selection p-6 h-full overflow-y-auto" role="main" aria-label="Template selection">
         <button
           onClick={handleBackToList}
-          className="mcp-back-button inline-flex items-center gap-1.5 px-3 py-2 border border-[var(--nim-border)] rounded-md bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.8125rem] cursor-pointer transition-all duration-150 mb-4 hover:bg-[var(--nim-bg-hover)]"
+          className="mcp-back-button inline-flex items-center gap-2 px-3 py-2 border border-[var(--nim-border)] rounded-md bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.8125rem] cursor-pointer transition-all duration-150 mb-4 hover:bg-[var(--nim-bg-hover)]"
           aria-label="Back to server list"
         >
           ← Back to servers
@@ -1805,7 +1805,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {isNewConfig && (
           <button
             onClick={handleBackToTemplates}
-            className="mcp-back-button inline-flex items-center gap-1.5 px-3 py-2 border border-[var(--nim-border)] rounded-md bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.8125rem] cursor-pointer transition-all duration-150 mb-4 hover:bg-[var(--nim-bg-hover)]"
+            className="mcp-back-button inline-flex items-center gap-2 px-3 py-2 border border-[var(--nim-border)] rounded-md bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.8125rem] cursor-pointer transition-all duration-150 mb-4 hover:bg-[var(--nim-bg-hover)]"
             aria-label="Back to template selection"
           >
             ← Back to templates
@@ -1859,24 +1859,24 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
             <div className="mcp-oauth-status flex items-center gap-3 mb-3">
               <span className="mcp-oauth-label text-sm font-medium text-[var(--nim-text)]">Authorization:</span>
               {isNativeOAuthConfig && (
-                <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]" role="status">
+                <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]" role="status">
                   Managed by Claude/Codex
                 </span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'checking' && (
-                <span className="mcp-oauth-badge checking inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(52,152,219,0.15)] text-[#3498db]" role="status" aria-live="polite">Checking...</span>
+                <span className="mcp-oauth-badge checking inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(52,152,219,0.15)] text-[#3498db]" role="status" aria-live="polite">Checking...</span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'authorized' && (
-                <span className="mcp-oauth-badge authorized inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(39,174,96,0.15)] text-[#27ae60]" role="status" aria-live="polite">Authorized</span>
+                <span className="mcp-oauth-badge authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(39,174,96,0.15)] text-[#27ae60]" role="status" aria-live="polite">Authorized</span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'not-authorized' && (
-                <span className="mcp-oauth-badge not-authorized inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(243,156,18,0.15)] text-[#f39c12]" role="status" aria-live="polite">Not authorized</span>
+                <span className="mcp-oauth-badge not-authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(243,156,18,0.15)] text-[#f39c12]" role="status" aria-live="polite">Not authorized</span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'not-required' && (
-                <span className="mcp-oauth-badge not-required inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]" role="status" aria-live="polite">Not required</span>
+                <span className="mcp-oauth-badge not-required inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]" role="status" aria-live="polite">Not required</span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'unknown' && (
-                <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]" role="status">Unknown</span>
+                <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]" role="status">Unknown</span>
               )}
             </div>
             {isMcpRemoteOAuthConfig && oauthStatus !== 'not-required' && (
@@ -2283,22 +2283,22 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
               <div className="mcp-oauth-status flex items-center gap-3 mb-3">
                 <span className="mcp-oauth-label text-sm font-medium text-[var(--nim-text)]">Status:</span>
                 {isNativeOAuthConfig && (
-                  <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]">Managed by Claude/Codex</span>
+                  <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]">Managed by Claude/Codex</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'checking' && (
-                  <span className="mcp-oauth-badge checking inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(52,152,219,0.15)] text-[#3498db]">Checking...</span>
+                  <span className="mcp-oauth-badge checking inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(52,152,219,0.15)] text-[#3498db]">Checking...</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'authorized' && (
-                  <span className="mcp-oauth-badge authorized inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(39,174,96,0.15)] text-[#27ae60]">Authorized</span>
+                  <span className="mcp-oauth-badge authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(39,174,96,0.15)] text-[#27ae60]">Authorized</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'not-authorized' && (
-                  <span className="mcp-oauth-badge not-authorized inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(243,156,18,0.15)] text-[#f39c12]">Not authorized</span>
+                  <span className="mcp-oauth-badge not-authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(243,156,18,0.15)] text-[#f39c12]">Not authorized</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'not-required' && (
-                  <span className="mcp-oauth-badge not-required inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]">Not required</span>
+                  <span className="mcp-oauth-badge not-required inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]">Not required</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'unknown' && (
-                  <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]">Unknown</span>
+                  <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[rgba(149,165,166,0.15)] text-[#95a5a6]">Unknown</span>
                 )}
               </div>
               {isMcpRemoteOAuthConfig && oauthStatus !== 'not-required' && (
@@ -2360,7 +2360,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
               <h4 className="m-0 text-sm font-semibold text-[var(--nim-text)]">Servers</h4>
               <button
                 onClick={handleNewServer}
-                className="mcp-add-server-button flex items-center gap-1.5 px-3 py-1.5 rounded-md border-none bg-[var(--nim-primary)] text-white text-[0.8125rem] font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
+                className="mcp-add-server-button flex items-center gap-2 px-3 py-1.5 rounded-md border-none bg-[var(--nim-primary)] text-white text-[0.8125rem] font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
                 aria-label="Add new MCP server"
               >
                 <span className="mcp-add-icon text-base leading-none" aria-hidden="true">+</span>

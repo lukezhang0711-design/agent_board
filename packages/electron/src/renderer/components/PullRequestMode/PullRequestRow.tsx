@@ -61,7 +61,7 @@ export function PullRequestRow({ pr, selected, onSelect }: PullRequestRowProps):
       }`}
     >
       <span className="flex-1 min-w-0 overflow-hidden">
-        <span className="flex items-center gap-1.5 min-w-0">
+        <span className="flex items-center gap-2 min-w-0">
           <span className="truncate text-sm text-nim">{pr.title}</span>
           {conflicting && (
             <MaterialSymbol
@@ -78,7 +78,7 @@ export function PullRequestRow({ pr, selected, onSelect }: PullRequestRowProps):
             {pr.headRef}
           </span>
           {pr.reviewers.length > 0 && (
-            <span className="flex items-center gap-0.5">
+            <span className="flex items-center gap-1">
               <MaterialSymbol icon="group" size={12} />
               {pr.reviewers.length}
             </span>

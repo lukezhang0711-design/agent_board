@@ -255,7 +255,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 ml-auto">
+        <div className="flex items-center gap-2 ml-auto">
           {/* Filter Buttons */}
           <div className="flex items-center rounded border border-nim bg-nim-secondary p-0.5 text-[10px]" data-testid="work-order-attempts-filter">
             <button

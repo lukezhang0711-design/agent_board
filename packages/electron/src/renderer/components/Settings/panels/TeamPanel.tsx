@@ -123,7 +123,7 @@ function RoleBadge({ role, editable, onChange }: { role: 'admin' | 'member'; edi
       <select
         value={role}
         onChange={(e) => onChange(e.target.value as 'admin' | 'member')}
-        className={`${colorClass} px-[5px] py-[2px] rounded-[10px] text-[10px] font-semibold border-none cursor-pointer outline-none hover:ring-1 hover:ring-[var(--nim-primary)]`}
+        className={`${colorClass} px-[5px] py-[2px] rounded-ui-lg text-[10px] font-semibold border-none cursor-pointer outline-none hover:ring-1 hover:ring-[var(--nim-primary)]`}
       >
         <option value="admin">Admin</option>
         <option value="member">Member</option>
@@ -132,7 +132,7 @@ function RoleBadge({ role, editable, onChange }: { role: 'admin' | 'member'; edi
   }
 
   return (
-    <span className={`${colorClass} px-[7px] py-[2px] rounded-[10px] text-[10px] font-semibold`}>
+    <span className={`${colorClass} px-[7px] py-[2px] rounded-ui-lg text-[10px] font-semibold`}>
       {role === 'admin' ? 'Admin' : 'Member'}
     </span>
   );
@@ -140,7 +140,7 @@ function RoleBadge({ role, editable, onChange }: { role: 'admin' | 'member'; edi
 
 function PendingBadge() {
   return (
-    <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-[10px] text-[10px] font-semibold bg-[rgba(251,191,36,0.15)] text-[var(--nim-warning)]">
+    <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-ui-lg text-[10px] font-semibold bg-[rgba(251,191,36,0.15)] text-[var(--nim-warning)]">
       <MaterialSymbol icon="schedule" size={8} />
       Pending
     </span>
@@ -149,7 +149,7 @@ function PendingBadge() {
 
 function TeamPricingNotice() {
   return (
-    <div className="mt-2.5 flex items-start gap-1.5 text-[12px] leading-relaxed text-[var(--nim-text-faint)]">
+    <div className="mt-2.5 flex items-start gap-2 text-[12px] leading-relaxed text-[var(--nim-text-faint)]">
       <MaterialSymbol icon="info" size={13} className="mt-[2px] shrink-0" />
       <span>
         Nimbalyst Teams is <span className="text-[var(--nim-text-muted)]">free during alpha</span>. We plan to introduce a paid subscription tier for teams in the future; existing teams will get advance notice before any pricing change.
@@ -284,7 +284,7 @@ function NoTeamState({ gitRemote, onCreateTeam, loading }: {
       {/* CTA Card */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-lg text-center">
-          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(96,165,250,0.15)] rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(96,165,250,0.15)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="group" size={24} className="text-[var(--nim-primary)]" />
           </div>
           <p className="text-[13px] text-[var(--nim-text-muted)] mb-4 leading-relaxed">
@@ -293,7 +293,7 @@ function NoTeamState({ gitRemote, onCreateTeam, loading }: {
           <button
             onClick={onCreateTeam}
             disabled={loading}
-            className={`inline-flex items-center gap-1.5 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-md text-white text-[13px] font-medium ${
+            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-md text-white text-[13px] font-medium ${
               loading ? 'cursor-wait opacity-70' : 'cursor-pointer'
             }`}
           >
@@ -449,7 +449,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
             return (
               <div key={member.id}>
                 <div
-                  className={`flex items-center gap-2.5 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0 ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 border-b border-[var(--nim-bg)] last:border-b-0 ${
                     member.trustStatus === 'pending' ? 'opacity-70' : ''
                   }`}
                 >
@@ -460,7 +460,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
                     isPending={member.trustStatus === 'pending'}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium text-[var(--nim-text)] flex items-center gap-1.5">
+                    <div className="text-[13px] font-medium text-[var(--nim-text)] flex items-center gap-2">
                       {member.trustStatus === 'pending' ? member.email : (member.name || member.email)}
                       {member.isYou && (
                         <span className="text-[10px] text-[var(--nim-text-faint)] font-normal">(you)</span>
@@ -474,7 +474,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
                       <div className="text-[11px] text-[var(--nim-text-faint)]">{member.email}</div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     {member.trustStatus === 'pending' ? (
                       <PendingBadge />
                     ) : (
@@ -603,7 +603,7 @@ function InvitePendingState({ invite, onAccept, loading, gitRemote }: {
       {/* Invite Card */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-lg text-center">
-          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(251,191,36,0.15)] rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(251,191,36,0.15)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="mail" size={24} className="text-[var(--nim-warning)]" />
           </div>
           <div className="text-[15px] font-semibold text-[var(--nim-text)] mb-1">
@@ -615,7 +615,7 @@ function InvitePendingState({ invite, onAccept, loading, gitRemote }: {
           <button
             onClick={onAccept}
             disabled={loading}
-            className={`inline-flex items-center gap-1.5 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-md text-white text-[13px] font-medium ${
+            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-md text-white text-[13px] font-medium ${
               loading ? 'cursor-wait opacity-70' : 'cursor-pointer'
             }`}
           >
@@ -1108,7 +1108,7 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
           <TeamPricingNotice />
         </div>
         <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-lg text-center">
-          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(96,165,250,0.15)] rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(96,165,250,0.15)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="account_circle" size={24} className="text-[var(--nim-primary)]" />
           </div>
           <p className="text-[13px] text-[var(--nim-text-muted)] mb-2 leading-relaxed">
@@ -1140,7 +1140,7 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
         </p>
         <TeamPricingNotice />
         {userEmail && team && (
-          <div className="flex items-center gap-1.5 mt-2 text-[12px] text-[var(--nim-text-faint)]">
+          <div className="flex items-center gap-2 mt-2 text-[12px] text-[var(--nim-text-faint)]">
             <MaterialSymbol icon="person" size={13} />
             <span>Signed in as <span className="text-[var(--nim-text-muted)]">{userName || userEmail}</span></span>
           </div>

@@ -52,7 +52,7 @@ export const RosettaWarning: React.FC<RosettaWarningProps> = ({
       onClick={handleRemindLater}
     >
       <div
-        className="relative overflow-hidden rounded-2xl p-0 w-[460px] max-w-[90vw] nim-animate-slide-up bg-nim border border-nim shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+        className="relative overflow-hidden rounded-ui-lg p-0 w-[460px] max-w-[90vw] nim-animate-slide-up bg-nim border border-nim shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -64,7 +64,7 @@ export const RosettaWarning: React.FC<RosettaWarningProps> = ({
         </button>
 
         <div className="px-8 pt-12 pb-8 text-center">
-          <div className="mx-auto mb-6 w-20 h-20 rounded-[20px] flex items-center justify-center bg-gradient-to-br from-amber-500 to-amber-600 shadow-[0_4px_16px_rgba(245,158,11,0.3)]">
+          <div className="mx-auto mb-6 w-20 h-20 rounded-ui-lg flex items-center justify-center bg-gradient-to-br from-amber-500 to-amber-600 shadow-[0_4px_16px_rgba(245,158,11,0.3)]">
             <WarningIcon />
           </div>
 
@@ -79,7 +79,7 @@ export const RosettaWarning: React.FC<RosettaWarningProps> = ({
 
           <div className="flex justify-center mb-6">
             <button
-              className="py-3.5 px-8 rounded-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center gap-2.5 text-white transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 bg-gradient-to-br from-amber-500 to-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.4)] hover:shadow-[0_6px_16px_rgba(245,158,11,0.5)]"
+              className="py-3.5 px-8 rounded-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center gap-3 text-white transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 bg-gradient-to-br from-amber-500 to-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.4)] hover:shadow-[0_6px_16px_rgba(245,158,11,0.5)]"
               onClick={handleDownload}
             >
               Download Apple Silicon Build

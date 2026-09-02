@@ -16,7 +16,7 @@ export function ProcessingAttachmentPreview({ filename }: ProcessingAttachmentPr
       <div className="attachment-preview-thumbnail shrink-0 w-10 h-10 flex items-center justify-center rounded bg-[var(--nim-bg-tertiary)] overflow-hidden">
         <div className="attachment-preview-spinner w-5 h-5 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
       </div>
-      <div className="attachment-preview-info flex-1 min-w-0 flex flex-col gap-0.5">
+      <div className="attachment-preview-info flex-1 min-w-0 flex flex-col gap-1">
         <div className="attachment-preview-filename text-[13px] font-medium text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis" title={filename}>
           {filename}
         </div>
@@ -128,7 +128,7 @@ export function AttachmentPreview({ attachment, onRemove, onConvertToText }: Att
           )}
         </div>
 
-      <div className="attachment-preview-info flex-1 min-w-0 flex flex-col gap-0.5">
+      <div className="attachment-preview-info flex-1 min-w-0 flex flex-col gap-1">
         <div className="attachment-preview-filename text-[13px] font-medium text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis" title={attachment.filename}>
           {attachment.filename}
         </div>

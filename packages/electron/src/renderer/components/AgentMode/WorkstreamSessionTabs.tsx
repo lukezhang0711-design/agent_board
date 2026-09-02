@@ -110,7 +110,7 @@ const SessionTab: React.FC<{
   return (
     <div className="relative">
       <button
-        className={`session-tab flex items-center gap-1.5 px-2.5 py-[5px] border-none rounded text-xs font-medium cursor-pointer whitespace-nowrap transition-colors duration-150 ${
+        className={`session-tab flex items-center gap-2 px-2.5 py-[5px] border-none rounded text-xs font-medium cursor-pointer whitespace-nowrap transition-colors duration-150 ${
           isActive
             ? 'active bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]'
             : 'bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]'
@@ -183,7 +183,7 @@ const SessionTabBar: React.FC<{
 }> = React.memo(({ sessions, activeSessionId, onSessionSelect, onNewSession, onSessionArchive, onSessionUnarchive, onSessionRename }) => {
   // Always show the tab bar - even for single sessions, the user should see their session tab
   return (
-    <div className="session-tab-bar flex flex-wrap items-center gap-0.5 px-3 pt-1 pb-1.5 bg-[var(--nim-bg-secondary)] border-t-[3px] border-b border-[var(--nim-border)] shrink-0">
+    <div className="session-tab-bar flex flex-wrap items-center gap-1 px-3 pt-1 pb-1.5 bg-[var(--nim-bg-secondary)] border-t-[3px] border-b border-[var(--nim-border)] shrink-0">
       {sessions.map((sessionId) => (
         <SessionTab
           key={sessionId}

@@ -263,7 +263,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
             ) : (
               /* Branch B: Token Fallback without Progress Bar */
               <div
-                className="flex flex-col gap-1.5 p-2.5 rounded-md bg-nim-tertiary/50 border border-nim/50 text-ui-compact"
+                className="flex flex-col gap-2 p-2.5 rounded-md bg-nim-tertiary/50 border border-nim/50 text-ui-compact"
                 data-testid="gemini-token-fallback"
               >
                 <div className="flex items-center justify-between">
@@ -284,7 +284,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col gap-1.5 border-t border-nim px-4 py-2.5 shrink-0 bg-nim-secondary mt-auto">
+        <div className="flex flex-col gap-2 border-t border-nim px-4 py-2.5 shrink-0 bg-nim-secondary mt-auto">
           <div className="text-ui-micro text-nim-faint mb-1">
             {claudeUsage?.lastUpdated && (
               <span>上次更新于 {formatUsageLastUpdated(claudeUsage.lastUpdated)}</span>

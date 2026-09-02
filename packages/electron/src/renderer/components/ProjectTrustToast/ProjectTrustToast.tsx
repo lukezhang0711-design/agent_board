@@ -254,13 +254,13 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
   return (
     <div className="project-trust-toast-overlay nim-overlay">
       <div
-        className="project-trust-toast p-6 rounded-xl max-w-[540px] w-[calc(100%-32px)] bg-nim border border-nim shadow-[0_16px_48px_rgba(0,0,0,0.3)]"
+        className="project-trust-toast p-6 rounded-ui-lg max-w-[540px] w-[calc(100%-32px)] bg-nim border border-nim shadow-[0_16px_48px_rgba(0,0,0,0.3)]"
         ref={toastRef}
       >
         {/* Header with Don't Trust button */}
         <div className="project-trust-toast-header flex items-start gap-4 mb-4">
           <span
-            className="project-trust-toast-icon flex items-center justify-center w-12 h-12 rounded-xl shrink-0 bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] text-nim-primary"
+            className="project-trust-toast-icon flex items-center justify-center w-12 h-12 rounded-ui-lg shrink-0 bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] text-nim-primary"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -289,7 +289,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
 
         {/* Warning */}
         <div
-          className="project-trust-toast-warning flex items-start gap-2.5 p-3 rounded-lg mb-4 text-[13px] leading-relaxed bg-[color-mix(in_srgb,#f59e0b_10%,transparent)] border border-[color-mix(in_srgb,#f59e0b_30%,transparent)] text-nim-muted"
+          className="project-trust-toast-warning flex items-start gap-3 p-3 rounded-lg mb-4 text-[13px] leading-relaxed bg-[color-mix(in_srgb,#f59e0b_10%,transparent)] border border-[color-mix(in_srgb,#f59e0b_30%,transparent)] text-nim-muted"
         >
           <svg
             width="16"
