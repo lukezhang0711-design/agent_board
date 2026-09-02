@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { PageHeader } from '../../common/PageHeader';
 import { ProviderConfig, Model } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
 import { useSetting, useSetSetting } from '../../../hooks/useSetting';
@@ -128,13 +129,11 @@ export function OpenAICodexPanel({
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">OpenAI Codex</h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Advanced code generation and completion powered by OpenAI Codex models.
-          Provides intelligent code suggestions and automated programming assistance.
-        </p>
-      </div>
+      <PageHeader
+        icon="code"
+        title="OpenAI Codex"
+        subtitle={config.enabled ? (isLoggedIn ? 'Signed In' : 'Not Signed In') : 'Disabled'}
+      />
 
       <SettingsToggle
         variant="enable"
@@ -156,7 +155,7 @@ export function OpenAICodexPanel({
           <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">
             ACP Transport <span className="text-xs font-normal text-[var(--nim-text-muted)]">(deprecated)</span>
           </h4>
-          <p className="text-[13px] text-[var(--nim-text-muted)] leading-relaxed">
+          <p className="text-ui-body text-[var(--nim-text-muted)] leading-relaxed">
             OpenAI Codex (ACP) is deprecated; existing sessions remain viewable, and we recommend using OpenAI Codex.
           </p>
         </div>
@@ -167,7 +166,7 @@ export function OpenAICodexPanel({
           <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Sign In</h4>
 
           {isLoggedIn ? (
-            <div className="status-box-success mb-4 py-3 px-4 rounded-ui-lg text-[13px] flex items-center gap-3 justify-between bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)]">
+            <div className="status-box-success mb-4 py-3 px-4 rounded-ui-lg text-ui-body flex items-center gap-3 justify-between bg-nim-success-subtle border border-nim-success-subtle">
               <div className="flex items-center gap-3 flex-1">
                 <span className="status-box-icon text-xl leading-none shrink-0 text-[var(--nim-success)]">✓</span>
                 <div className="status-box-content flex flex-col gap-1 flex-1">
@@ -203,9 +202,9 @@ export function OpenAICodexPanel({
             <>
               <div className="auth-method-row flex gap-2 mb-4">
                 <button
-                  className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
+                  className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all border ${
                     selectedAuthMethod === 'chatgpt'
-                      ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
+                      ? 'border-2 border-[var(--nim-primary)] bg-nim-primary-subtle text-[var(--nim-primary)]'
                       : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
                   }`}
                   onClick={() => setSelectedAuthMethod('chatgpt')}
@@ -214,9 +213,9 @@ export function OpenAICodexPanel({
                   ChatGPT (Recommended)
                 </button>
                 <button
-                  className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
+                  className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all border ${
                     selectedAuthMethod === 'api-key'
-                      ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
+                      ? 'border-2 border-[var(--nim-primary)] bg-nim-primary-subtle text-[var(--nim-primary)]'
                       : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
                   }`}
                   onClick={() => setSelectedAuthMethod('api-key')}
@@ -248,7 +247,7 @@ export function OpenAICodexPanel({
                       Refresh
                     </button>
                   </div>
-                  <p className="text-[11px] leading-relaxed text-[var(--nim-text-faint)] mt-2">
+                  <p className="text-ui-caption leading-relaxed text-[var(--nim-text-faint)] mt-2">
                     Opens your default browser. Complete the OpenAI sign-in flow; Nimbalyst updates automatically when you return.
                   </p>
                 </div>
@@ -278,7 +277,7 @@ export function OpenAICodexPanel({
                       {authBusy === 'apikey' ? 'Saving…' : 'Save'}
                     </button>
                   </div>
-                  <p className="text-[11px] leading-relaxed text-[var(--nim-text-faint)] mt-2">
+                  <p className="text-ui-caption leading-relaxed text-[var(--nim-text-faint)] mt-2">
                     Stored by Codex in <code>~/.codex/auth.json</code>, not in Nimbalyst settings.
                   </p>
                 </div>

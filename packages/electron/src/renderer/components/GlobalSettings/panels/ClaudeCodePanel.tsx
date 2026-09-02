@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAtomValue } from 'jotai';
+import { PageHeader } from '../../common/PageHeader';
 import { ProviderConfig, Model } from '../../Settings/SettingsView';
 import {ClaudeForWindowsInstallation} from "../../../../main/services/CLIManager.ts";
 import {usePostHog} from "posthog-js/react";
@@ -313,9 +314,11 @@ export function ClaudeCodePanel({
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">Claude Agent</h3>
-      </div>
+      <PageHeader
+        icon="smart_toy"
+        title="Claude Agent"
+        subtitle={config.enabled ? 'Enabled' : 'Disabled'}
+      />
 
       <SettingsToggle
         variant="enable"
@@ -391,7 +394,7 @@ export function ClaudeCodePanel({
       />
 
       { isWindowsPlatform && isCheckingClaudeWindowsStatus && (
-        <div className="installation-status p-4 rounded-ui-lg bg-[rgba(245,158,11,0.05)] border border-[rgba(245,158,11,0.2)]">
+        <div className="installation-status p-4 rounded-ui-lg bg-nim-warning-subtle border border-nim-warning-subtle">
           <div className="installation-status-row flex items-center gap-3 py-1">
             <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">Checking Claude Code Installation...</span>
           </div>
@@ -406,14 +409,14 @@ export function ClaudeCodePanel({
                 Nimbalyst requires Claude Code for Windows to be installed to use the Claude Code provider.
               </p>
               { Boolean(claudeCodeWindowsStatus?.claudeCodeVersion) ? (
-                <div className="installation-status mt-3 p-4 rounded-ui-lg bg-[rgba(16,185,129,0.05)] border border-[rgba(16,185,129,0.2)]">
+                <div className="installation-status mt-3 p-4 rounded-ui-lg bg-nim-success-subtle border border-nim-success-subtle">
                   <div className="installation-status-row flex items-center gap-3 py-1">
                     <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">Claude Code Version:</span>
                     <span className="installation-status-value text-sm text-[var(--nim-text)]">{claudeCodeWindowsStatus?.claudeCodeVersion}</span>
                   </div>
                 </div>
               ): (
-                <div className="installation-status mt-3 p-4 rounded-ui-lg bg-[rgba(239,68,68,0.05)] border border-[rgba(239,68,68,0.2)]">
+                <div className="installation-status mt-3 p-4 rounded-ui-lg bg-nim-error-subtle border border-nim-error-subtle">
                   <div className="text-xs text-[var(--nim-text-muted)] mt-3 leading-relaxed">
                     <p className="mb-2">Install Claude Code for Windows by following the instructions below:</p>
                     <ol className="list-decimal list-inside space-y-1 mb-4">
@@ -429,7 +432,7 @@ export function ClaudeCodePanel({
           ): (
             <>
               <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Claude Agent SDK</h4>
-              <div className="installation-status p-4 rounded-ui-lg bg-[rgba(16,185,129,0.05)] border border-[rgba(16,185,129,0.2)]">
+              <div className="installation-status p-4 rounded-ui-lg bg-nim-success-subtle border border-nim-success-subtle">
                 <div className="installation-status-row flex items-center gap-3 py-1">
                   <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">SDK package:</span>
                   <span className="installation-status-value text-sm text-[var(--nim-text)]">{BUNDLED_SDK_VERSION}</span>
@@ -452,12 +455,12 @@ export function ClaudeCodePanel({
             <div className="api-key-section mt-4">
               {/* Authentication Method Selector */}
               <div className="auth-method-selector mb-4">
-                <label className="auth-method-label block text-[13px] font-semibold mb-2 text-[var(--nim-text)]">Authentication Method</label>
+                <label className="auth-method-label block text-ui-body font-semibold mb-2 text-[var(--nim-text)]">Authentication Method</label>
                 <div className="auth-method-buttons flex gap-2">
                   <button
-                    className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
+                    className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all border ${
                       selectedAuthMethod === 'login'
-                        ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
+                        ? 'border-2 border-[var(--nim-primary)] bg-nim-primary-subtle text-[var(--nim-primary)]'
                         : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
                     }`}
                     onClick={() => {
@@ -468,9 +471,9 @@ export function ClaudeCodePanel({
                     Claude Plan (Recommended)
                   </button>
                   <button
-                    className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all border ${
+                    className={`auth-method-button flex-1 py-3 px-4 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all border ${
                       selectedAuthMethod === 'api-key'
-                        ? 'border-2 border-[var(--nim-primary)] bg-[rgba(59,130,246,0.1)] text-[var(--nim-primary)]'
+                        ? 'border-2 border-[var(--nim-primary)] bg-nim-primary-subtle text-[var(--nim-primary)]'
                         : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]'
                     }`}
                     onClick={() => {
@@ -489,7 +492,7 @@ export function ClaudeCodePanel({
                   {loginStatus.status === 'logged-in' ? (
                     <>
                       {/* Logged In State */}
-                      <div className="status-box-success mb-4 py-3 px-4 rounded-ui-lg text-[13px] flex items-center gap-3 justify-between bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)]">
+                      <div className="status-box-success mb-4 py-3 px-4 rounded-ui-lg text-ui-body flex items-center gap-3 justify-between bg-nim-success-subtle border border-nim-success-subtle">
                         <div className="flex items-center gap-3 flex-1">
                           <span className="status-box-icon text-xl leading-none shrink-0 text-[var(--nim-success)]">✓</span>
                           <div className="status-box-content flex flex-col gap-1 flex-1">
@@ -521,7 +524,7 @@ export function ClaudeCodePanel({
                           Your Claude login is no longer active. Log in again with your Claude Pro or Team subscription.
                         </p>
                         {(loginStatus.rawOutput || loginStatus.error) && (
-                          <div className="mb-3 p-2 rounded-ui-base bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] font-mono text-[11px] text-[var(--nim-text-muted)] break-all" data-testid="claude-code-raw-output">
+                          <div className="mb-3 p-2 rounded-ui-base bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] font-mono text-ui-caption text-[var(--nim-text-muted)] break-all" data-testid="claude-code-raw-output">
                             <span className="font-sans text-[var(--nim-text-faint)]">引擎原话：</span>{loginStatus.rawOutput || loginStatus.error}
                           </div>
                         )}
@@ -540,13 +543,13 @@ export function ClaudeCodePanel({
                         <div className="mt-3 pt-3 border-t border-[var(--nim-border)] flex items-center justify-between gap-2 text-xs">
                           <div className="flex items-center gap-2 text-[var(--nim-text)]">
                             <span className="text-[var(--nim-text-muted)]">终端重登命令：</span>
-                            <code className="rounded-ui-base bg-[var(--nim-bg-tertiary)] px-2 py-0.5 font-mono text-[11px] text-[var(--nim-text)] border border-[var(--nim-border)]" data-testid="claude-code-relogin-command">
+                            <code className="rounded-ui-base bg-[var(--nim-bg-tertiary)] px-2 py-0.5 font-mono text-ui-caption text-[var(--nim-text)] border border-[var(--nim-border)]" data-testid="claude-code-relogin-command">
                               claude /login
                             </code>
                           </div>
                           <button
                             type="button"
-                            className="shrink-0 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] px-2 py-1 text-[11px] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors cursor-pointer"
+                            className="shrink-0 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] px-2 py-1 text-ui-caption text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors cursor-pointer"
                             onClick={() => {
                               void navigator.clipboard.writeText('claude /login');
                               setCopiedLoginCmd(true);
@@ -557,7 +560,7 @@ export function ClaudeCodePanel({
                             {copiedLoginCmd ? '已复制' : '复制命令'}
                           </button>
                         </div>
-                        <p className="text-[11px] leading-relaxed text-[var(--nim-text-faint)] mt-2">
+                        <p className="text-ui-caption leading-relaxed text-[var(--nim-text-faint)] mt-2">
                           Opens Terminal for OAuth authentication. You may have to type /login to complete the process.
                         </p>
                       </div>
@@ -702,7 +705,7 @@ export function ClaudeCodePanel({
                                 delete newEnvVars[key];
                                 saveEnvVars(newEnvVars);
                               }}
-                              className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-error)] hover:bg-[rgba(239,68,68,0.1)] transition-colors"
+                              className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-error)] hover:bg-nim-error-subtle transition-colors"
                             >
                               Delete
                             </button>

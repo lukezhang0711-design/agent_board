@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { usePostHog } from 'posthog-js/react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../../common/PageHeader';
 import { SettingsToggle } from '../SettingsToggle';
 import { ClaudeCliChannelToggle } from './ClaudeCliChannelToggle';
 import { HelpTooltip } from '../../../help';
@@ -193,14 +194,11 @@ export function AdvancedPanel() {
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-          Advanced Settings
-        </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Advanced configuration options for AI features.
-        </p>
-      </div>
+      <PageHeader
+        icon="tune"
+        title="Advanced Settings"
+        subtitle={developerMode ? 'Developer Mode' : 'Standard Mode'}
+      />
 
       {/* Application Mode - Always shown at the top */}
       <div className="provider-panel-section">
@@ -227,12 +225,12 @@ export function AdvancedPanel() {
               />
               <div className="p-4 w-full flex flex-col items-center text-center">
                 <div className="flex flex-col items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-nim-primary text-[32px]">
+                  <span className="material-symbols-outlined text-nim-primary text-ui-display">
                     edit_note
                   </span>
                   <span className="text-base font-semibold text-nim">Standard Mode</span>
                 </div>
-                <p className="m-0 text-[13px] leading-snug text-nim-muted">
+                <p className="m-0 text-ui-body leading-snug text-nim-muted">
                   Simplified interface focused on writing, editing, and AI assistance
                 </p>
               </div>
@@ -255,12 +253,12 @@ export function AdvancedPanel() {
               />
               <div className="p-4 w-full flex flex-col items-center text-center">
                 <div className="flex flex-col items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-nim-primary text-[32px]">
+                  <span className="material-symbols-outlined text-nim-primary text-ui-display">
                     terminal
                   </span>
                   <span className="text-base font-semibold text-nim">Developer Mode</span>
                 </div>
-                <p className="m-0 text-[13px] leading-snug text-nim-muted">
+                <p className="m-0 text-ui-body leading-snug text-nim-muted">
                   Full development environment with git worktrees, terminal access, development specific features
                 </p>
               </div>
@@ -382,7 +380,7 @@ export function AdvancedPanel() {
         {releaseChannel === 'alpha' && (
           <div className="mt-3 flex items-start gap-2 p-3 rounded-ui-base border border-[var(--nim-warning)]/30 bg-[var(--nim-warning)]/10">
             <MaterialSymbol icon="warning" size={16} className="text-[var(--nim-warning)] shrink-0 mt-1" />
-            <p className="m-0 text-[13px] text-[var(--nim-text)] leading-snug">
+            <p className="m-0 text-ui-body text-[var(--nim-text)] leading-snug">
               The alpha channel ships rough developer releases that may be unstable or contain unfinished work. Switch back to Stable if you encounter problems.
             </p>
           </div>
