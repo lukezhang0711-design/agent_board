@@ -249,15 +249,15 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
       {/* Header with Title, Filter, and Copy All */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium text-nim-muted uppercase tracking-[0.5px]">Attempts</span>
-          <span className="text-[10px] px-2 py-0.2 rounded-ui-full bg-[var(--nim-bg-subtle)] text-nim-faint font-medium">
+          <span className="text-ui-caption font-medium text-nim-muted uppercase tracking-[0.5px]">Attempts</span>
+          <span className="text-ui-micro px-2 py-0.2 rounded-ui-full bg-[var(--nim-bg-subtle)] text-nim-faint font-medium">
             {attempts.length}
           </span>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
           {/* Filter Buttons */}
-          <div className="flex items-center rounded-ui-base border border-nim bg-nim-secondary p-0.5 text-[10px]" data-testid="work-order-attempts-filter">
+          <div className="flex items-center rounded-ui-base border border-nim bg-nim-secondary p-0.5 text-ui-micro" data-testid="work-order-attempts-filter">
             <button
               type="button"
               className={`px-2 py-0.5 rounded-ui-base cursor-pointer transition-colors ${filter === 'all' ? 'bg-[var(--nim-primary)] text-white font-medium' : 'text-nim-muted hover:text-nim'}`}
@@ -287,12 +287,12 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
           {/* Copy All Button */}
           <button
             type="button"
-            className="flex items-center gap-1 px-2 py-0.5 rounded-ui-base border border-nim bg-nim-secondary hover:bg-nim-tertiary text-nim-muted hover:text-nim text-[10px] cursor-pointer transition-colors"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-ui-base border border-nim bg-nim-secondary hover:bg-nim-tertiary text-nim-muted hover:text-nim text-ui-micro cursor-pointer transition-colors"
             onClick={handleCopyAll}
             data-testid="work-order-attempts-copy-all"
             title="复制全部执行记录"
           >
-            <MaterialSymbol icon={copied ? 'check' : 'content_copy'} size={12} className={copied ? 'text-green-500' : ''} />
+            <MaterialSymbol icon={copied ? 'check' : 'content_copy'} size={12} className={copied ? 'text-[var(--nim-success)]' : ''} />
             <span>{copied ? '已复制' : '复制全部'}</span>
           </button>
         </div>
@@ -305,7 +305,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
             <div
               key={index}
               className={`flex-1 h-full transition-opacity ${
-                attempt.outcome === 'success' ? 'bg-green-500' : 'bg-red-500'
+                attempt.outcome === 'success' ? 'bg-green-500' : 'bg-[var(--nim-error)]'
               } ${filter !== 'all' && attempt.outcome !== filter ? 'opacity-20' : 'opacity-100'}`}
               title={`第 ${attempt.attempt} 次尝试 · ${attempt.outcome}`}
             />
@@ -315,7 +315,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
 
       {/* Attempts List */}
       {filteredAttempts.length === 0 ? (
-        <div className="text-[11px] text-nim-faint italic py-2 text-center" data-testid="work-order-attempts-empty-filter">
+        <div className="text-ui-caption text-nim-faint italic py-2 text-center" data-testid="work-order-attempts-empty-filter">
           无匹配的尝试记录
         </div>
       ) : (
@@ -327,30 +327,30 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
               data-testid="work-order-attempt"
               data-outcome={attempt.outcome}
             >
-              <div className="flex items-center justify-between gap-2 text-[11px]">
+              <div className="flex items-center justify-between gap-2 text-ui-caption">
                 <span className="font-medium text-nim">第 {attempt.attempt} 次尝试</span>
-                <span className={attempt.outcome === 'success' ? 'text-green-400 font-medium' : 'text-red-400 font-medium'}>
+                <span className={attempt.outcome === 'success' ? 'text-[var(--nim-success)] font-medium' : 'text-[var(--nim-error)] font-medium'}>
                   {attempt.outcome}
                 </span>
               </div>
-              <div className="text-[10px] text-nim-muted">
+              <div className="text-ui-micro text-nim-muted">
                 {attempt.engine} · {attempt.model || '(no model)'}
               </div>
-              <div className="text-[10px] text-nim-faint">
+              <div className="text-ui-micro text-nim-faint">
                 {formatTimestamp(attempt.startedAt)} → {formatTimestamp(attempt.endedAt)}
               </div>
               {attempt.failureReason && (
-                <div className="text-[10px] text-red-300 whitespace-pre-wrap break-words" data-testid="work-order-attempt-failure">
+                <div className="text-ui-micro text-[var(--nim-error)] whitespace-pre-wrap break-words" data-testid="work-order-attempt-failure">
                   {attempt.failureReason}
                 </div>
               )}
               {attempt.retryReason && (
-                <div className="text-[10px] text-nim-accent" data-testid="work-order-attempt-retry-reason">
+                <div className="text-ui-micro text-nim-accent" data-testid="work-order-attempt-retry-reason">
                   {attempt.retryReason}
                 </div>
               )}
               {attempt.retryParameterChange && (
-                <div className="space-y-1 text-[10px] text-nim-muted" data-testid="work-order-attempt-retry-params">
+                <div className="space-y-1 text-ui-micro text-nim-muted" data-testid="work-order-attempt-retry-params">
                   <div>
                     参数变更：{formatRetryParameters(attempt.retryParameterChange.original)}
                     {' → '}
