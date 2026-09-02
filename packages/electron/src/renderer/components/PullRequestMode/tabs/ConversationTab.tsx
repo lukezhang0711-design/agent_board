@@ -114,7 +114,7 @@ export function ConversationTab({
     <div className="pr-conversation-tab block p-4 space-y-3 overflow-y-auto flex-1 min-h-0" data-testid="pr-conversation-tab">
       {/* ---- Description (the PR body) ---- */}
       <SectionHeader label="Description" icon="description" />
-      <div className="border border-nim rounded-md overflow-hidden">
+      <div className="border border-nim rounded-ui-base overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 bg-nim-secondary border-b border-nim text-xs text-nim-muted">
           {pr.authorLogin && <span className="font-medium text-nim">{pr.authorLogin}</span>}
           <span>opened this pull request</span>
@@ -156,7 +156,7 @@ export function ConversationTab({
         count={timeline.length > 0 ? timeline.length : undefined}
       />
 
-      <div className="border border-nim rounded-md bg-nim-secondary">
+      <div className="border border-nim rounded-ui-base bg-nim-secondary">
         <div className="flex items-center gap-2 px-3 py-2 border-b border-nim text-xs text-nim-muted">
           <MaterialSymbol icon="add_comment" size={14} />
           Add comment
@@ -181,11 +181,11 @@ export function ConversationTab({
               type="button"
               onClick={() => void handleSubmitComment()}
               disabled={submitting || draftComment.trim().length === 0}
-              className="flex items-center gap-1 px-3 py-1.5 rounded bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="flex items-center gap-1 px-3 py-2 rounded-ui-base bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               data-testid="pr-comment-submit"
             >
               {submitting ? (
-                <div className="spinner w-4 h-4 border-[2px] border-white/25 border-t-white rounded-full animate-spin" />
+                <div className="spinner w-4 h-4 border-[2px] border-white/25 border-t-white rounded-ui-full animate-spin" />
               ) : (
                 <MaterialSymbol icon="send" size={14} />
               )}
@@ -204,12 +204,12 @@ export function ConversationTab({
 
       {loading && timeline.length === 0 ? (
         <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-sm">
-          <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-full animate-spin" />
+          <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin" />
           Loading conversation…
         </div>
       ) : (
         timeline.map((entry) => (
-          <div key={entry.id} className="border border-nim rounded-md overflow-hidden">
+          <div key={entry.id} className="border border-nim rounded-ui-base overflow-hidden">
             <div className="flex items-center gap-2 px-3 py-2 bg-nim-secondary border-b border-nim text-xs text-nim-muted">
               {entry.authorLogin && <span className="font-medium text-nim">{entry.authorLogin}</span>}
               <span>
@@ -247,7 +247,7 @@ function ReviewThreadCard({ thread }: { thread: ReviewThread }): JSX.Element {
     : 'general';
 
   return (
-    <div className="border border-nim rounded-md overflow-hidden">
+    <div className="border border-nim rounded-ui-base overflow-hidden">
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}

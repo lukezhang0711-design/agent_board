@@ -101,7 +101,7 @@ const TabItem: React.FC<TabItemProps> = ({
   return (
     <div
       ref={(el) => onTabRef(tab.id, el)}
-      className={`tab group flex items-center h-[30px] px-3 mr-px cursor-pointer relative min-w-[120px] max-w-[200px] shrink-0 rounded-t-md border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] transition-all duration-200 hover:bg-[var(--nim-bg-tertiary)] ${tab.id === activeTabId ? 'active z-[1] border-b-0 bg-[var(--nim-bg)]' : ''} ${isDirty || hasCollabUnsyncedChanges ? 'dirty' : ''} ${tab.isPinned ? 'pinned min-w-[40px] max-w-[150px]' : ''} ${draggedIndex === index ? 'dragging opacity-50 cursor-grabbing' : ''} ${dragOverIndex === index ? 'drag-over border-l-2 border-l-[var(--nim-primary)]' : ''}`}
+      className={`tab group flex items-center h-[30px] px-3 mr-px cursor-pointer relative min-w-[120px] max-w-[200px] shrink-0 rounded-ui-base-t border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] transition-all duration-200 hover:bg-[var(--nim-bg-tertiary)] ${tab.id === activeTabId ? 'active z-[1] border-b-0 bg-[var(--nim-bg)]' : ''} ${isDirty || hasCollabUnsyncedChanges ? 'dirty' : ''} ${tab.isPinned ? 'pinned min-w-[40px] max-w-[150px]' : ''} ${draggedIndex === index ? 'dragging opacity-50 cursor-grabbing' : ''} ${dragOverIndex === index ? 'drag-over border-l-2 border-l-[var(--nim-primary)]' : ''}`}
       data-tab-type={tab.isVirtual ? 'session' : 'document'}
       data-tab-id={tab.id}
       data-filename={tab.fileName}
@@ -126,7 +126,7 @@ const TabItem: React.FC<TabItemProps> = ({
     >
       {/* Active tab indicator line */}
       {tab.id === activeTabId && (
-        <span className="absolute top-0 left-px right-px h-0.5 rounded-sm bg-[var(--nim-primary)]" />
+        <span className="absolute top-0 left-px right-px h-0.5 rounded-ui-base bg-[var(--nim-primary)]" />
       )}
       {tab.isPinned && <span className="tab-pin-icon text-[10px] mr-1 opacity-70">📌</span>}
       {tab.isProcessing && (
@@ -146,7 +146,7 @@ const TabItem: React.FC<TabItemProps> = ({
         </span>
       )}
       {tab.hasUnread && !tab.isProcessing && (
-        <span className="tab-unread-indicator inline-block w-2 h-2 rounded-full bg-[var(--nim-primary)] mr-1.5 shrink-0" title="Unread response"></span>
+        <span className="tab-unread-indicator inline-block w-2 h-2 rounded-ui-full bg-[var(--nim-primary)] mr-1.5 shrink-0" title="Unread response"></span>
       )}
       {editingTabId === tab.id ? (
         <input
@@ -157,7 +157,7 @@ const TabItem: React.FC<TabItemProps> = ({
           onKeyDown={onRenameKeyDown}
           onBlur={onRenameBlur}
           onClick={(e) => e.stopPropagation()}
-          className="tab-rename-input flex-1 text-[13px] px-1 py-0.5 border border-[var(--nim-primary)] rounded-sm bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
+          className="tab-rename-input flex-1 text-[13px] px-1 py-0.5 border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
         />
       ) : (
         <>
@@ -169,7 +169,7 @@ const TabItem: React.FC<TabItemProps> = ({
       )}
       {!tab.isPinned && (
         <button
-          className="tab-close-button flex items-center justify-center w-[18px] h-[18px] ml-2 border-none bg-transparent text-[var(--nim-text-faint)] cursor-pointer rounded text-lg leading-none p-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:bg-[var(--nim-error)] hover:text-white"
+          className="tab-close-button flex items-center justify-center w-[18px] h-[18px] ml-2 border-none bg-transparent text-[var(--nim-text-faint)] cursor-pointer rounded-ui-base text-lg leading-none p-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:bg-[var(--nim-error)] hover:text-white"
           data-testid={`tab-close-button-${tab.id}`}
           data-filename={tab.fileName}
           onClick={(e) => onCloseClick(e, tab.id)}
@@ -667,7 +667,7 @@ export const TabBar: React.FC<TabBarProps> = ({
         <div className="tab-bar-actions flex items-center px-2 gap-1 shrink-0">
           <div className="tab-menu-container relative" ref={tabMenuRef}>
             <button
-              className="tab-menu-button flex items-center justify-center w-7 h-7 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] cursor-pointer rounded p-0 transition-all duration-200 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+              className="tab-menu-button flex items-center justify-center w-7 h-7 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] cursor-pointer rounded-ui-base p-0 transition-all duration-200 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
               onClick={toggleTabMenu}
               title="Tab menu"
             >
@@ -677,7 +677,7 @@ export const TabBar: React.FC<TabBarProps> = ({
             </button>
 
             {showTabMenu && (
-              <div className="tab-menu-dropdown absolute top-[calc(100%+4px)] right-0 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md shadow-lg min-w-[200px] max-w-[300px] max-h-[400px] overflow-y-auto z-[1000]" role="menu" aria-label="Tab menu">
+              <div className="tab-menu-dropdown absolute top-[calc(100%+4px)] right-0 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base shadow-lg min-w-[200px] max-w-[300px] max-h-[400px] overflow-y-auto z-[1000]" role="menu" aria-label="Tab menu">
                 <div className="tab-menu-section py-1">
                   <div
                     className={`tab-menu-item tab-menu-action flex items-center justify-between px-3 py-2 text-[13px] text-[var(--nim-text-muted)] cursor-pointer transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis outline-none font-medium hover:bg-[var(--nim-bg-tertiary)] ${menuSelectedIndex === 0 ? 'selected bg-[var(--nim-bg-tertiary)] shadow-[inset_0_0_0_1px_var(--nim-primary)]' : ''}`}
@@ -716,7 +716,7 @@ export const TabBar: React.FC<TabBarProps> = ({
           </div>
           {onToggleAIChat && (
             <button
-              className="ai-chat-toggle-button flex items-center justify-center w-7 h-7 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)] cursor-pointer rounded p-0 transition-all duration-200 hover:bg-[var(--nim-bg-tertiary)] hover:scale-105 active:scale-95"
+              className="ai-chat-toggle-button flex items-center justify-center w-7 h-7 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)] cursor-pointer rounded-ui-base p-0 transition-all duration-200 hover:bg-[var(--nim-bg-tertiary)] hover:scale-105 active:scale-95"
               data-testid="ai-sidebar-toggle"
               onClick={onToggleAIChat}
               title={`${isAIChatCollapsed ? 'Open' : 'Close'} AI Assistant (${getShortcutDisplay(KeyboardShortcuts.view.toggleAIChat)})`}
@@ -736,7 +736,7 @@ export const TabBar: React.FC<TabBarProps> = ({
       {contextMenuTab && (
         <div
           ref={contextMenuRef}
-          className="tab-context-menu bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md shadow-lg py-1 z-[1000] min-w-[150px]"
+          className="tab-context-menu bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base shadow-lg py-1 z-[1000] min-w-[150px]"
           style={{
             position: 'fixed',
             left: (adjustedContextMenuPosition || contextMenuPosition).x,

@@ -148,7 +148,7 @@ export function PullRequestListView({
           ref={sortMenu.refs.setReference}
           {...sortMenu.getReferenceProps()}
           onClick={() => sortMenu.setIsOpen(!sortMenu.isOpen)}
-          className="flex items-center gap-1 h-8 px-2 text-xs text-nim-muted hover:text-nim border border-nim rounded transition-colors shrink-0"
+          className="flex items-center gap-1 h-8 px-2 text-xs text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors shrink-0"
           data-testid="pr-sort-button"
         >
           <MaterialSymbol icon="sort" size={15} />
@@ -160,12 +160,12 @@ export function PullRequestListView({
               ref={sortMenu.refs.setFloating}
               style={sortMenu.floatingStyles}
               {...sortMenu.getFloatingProps()}
-              className="z-50 min-w-[140px] bg-nim-secondary border border-nim rounded-md shadow-lg py-1"
+              className="z-50 min-w-[140px] bg-nim-secondary border border-nim rounded-ui-base shadow-lg py-1"
             >
               {SORT_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
                     sortKey === opt.id ? 'text-nim bg-nim-active' : 'text-nim-muted hover:bg-nim-tertiary hover:text-nim'
                   }`}
                   onClick={() => {
@@ -184,7 +184,7 @@ export function PullRequestListView({
         <button
           onClick={() => void runFetch()}
           disabled={loading}
-          className="flex items-center justify-center w-8 h-8 text-nim-muted hover:text-nim border border-nim rounded transition-colors shrink-0 disabled:opacity-50"
+          className="flex items-center justify-center w-8 h-8 text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors shrink-0 disabled:opacity-50"
           title="Refresh"
           data-testid="pr-refresh-button"
         >
@@ -207,7 +207,7 @@ export function PullRequestListView({
           </div>
         ) : loading && prList.length === 0 ? (
           <div className="flex items-center justify-center gap-2 py-10 text-nim-muted text-sm">
-            <div className="spinner w-5 h-5 border-[3px] border-nim-secondary border-t-nim-accent rounded-full animate-spin" />
+            <div className="spinner w-5 h-5 border-[3px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin" />
             Loading pull requests…
           </div>
         ) : visibleRows.length === 0 ? (

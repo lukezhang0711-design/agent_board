@@ -172,7 +172,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
         </div>
         <button
           onClick={handleRefresh}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-nim-muted hover:text-nim hover:bg-nim-hover rounded transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-nim-muted hover:text-nim hover:bg-nim-hover rounded-ui-base transition-colors"
           title="Refresh theme list"
         >
           <MaterialSymbol icon="refresh" size={18} />
@@ -182,14 +182,14 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
 
       {/* Error message */}
       {error && (
-        <div className="mb-4 p-3 bg-nim-error/10 border border-nim-error/30 rounded-md text-nim-error text-sm">
+        <div className="mb-4 p-3 bg-nim-error/10 border border-nim-error/30 rounded-ui-base text-nim-error text-sm">
           {error}
         </div>
       )}
 
       {/* Pending fallback banner */}
       {pendingFallback && (
-        <div className="theme-fallback-banner mb-4 p-3 bg-nim-warning/10 border border-nim-warning/30 rounded-md flex items-start gap-2">
+        <div className="theme-fallback-banner mb-4 p-3 bg-nim-warning/10 border border-nim-warning/30 rounded-ui-base flex items-start gap-2">
           <MaterialSymbol icon="info" size={18} className="text-nim-warning shrink-0 mt-0.5" />
           <div className="flex-1 text-sm text-nim">
             The theme <span className="font-semibold">{pendingFallback.missingId}</span> is no longer available. Switched to <span className="font-semibold">{pendingFallback.appliedId}</span>.
@@ -197,7 +197,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
           <button
             data-testid="dismiss-theme-fallback"
             onClick={handleDismissFallback}
-            className="p-1 text-nim-muted hover:text-nim hover:bg-nim-hover rounded transition-colors"
+            className="p-1 text-nim-muted hover:text-nim hover:bg-nim-hover rounded-ui-base transition-colors"
             title="Dismiss"
           >
             <MaterialSymbol icon="close" size={16} />
@@ -208,21 +208,21 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
       {/* Active theme section */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-nim mb-3">Active Theme</h3>
-        <div className="flex items-center gap-3 p-3 bg-nim-secondary border border-nim rounded-md">
+        <div className="flex items-center gap-3 p-3 bg-nim-secondary border border-nim rounded-ui-base">
           {(() => {
             const activeTheme = themes.find(t => t.isActive);
             if (!activeTheme) return <div className="text-nim-muted text-sm">No theme selected</div>;
 
             return (
               <>
-                <div className="flex items-center justify-center w-10 h-10 bg-nim-tertiary rounded-md">
+                <div className="flex items-center justify-center w-10 h-10 bg-nim-tertiary rounded-ui-base">
                   <MaterialSymbol icon={getThemeIcon(activeTheme)} size={20} />
                 </div>
                 <div className="flex-1">
                   <div className="text-sm font-medium text-nim">{activeTheme.name}</div>
                   <div className="text-xs text-nim-muted">{activeTheme.description || 'No description'}</div>
                 </div>
-                <div className="flex items-center gap-1 px-2 py-1 bg-nim-primary/20 text-nim-primary text-xs rounded">
+                <div className="flex items-center gap-1 px-2 py-1 bg-nim-primary/20 text-nim-primary text-xs rounded-ui-base">
                   <MaterialSymbol icon="check" size={14} />
                   <span>Active</span>
                 </div>
@@ -241,14 +241,14 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
             {builtInThemes.map((theme) => (
               <div
                 key={theme.id}
-                className={`flex items-center gap-3 p-3 border rounded-md cursor-pointer transition-all ${
+                className={`flex items-center gap-3 p-3 border rounded-ui-base cursor-pointer transition-all ${
                   selectedThemeId === theme.id
                     ? 'border-nim-primary bg-nim-primary/5'
                     : 'border-nim bg-nim-secondary hover:bg-nim-tertiary'
                 }`}
                 onClick={() => setSelectedThemeId(theme.id)}
               >
-                <div className="flex items-center justify-center w-10 h-10 bg-nim-tertiary rounded-md">
+                <div className="flex items-center justify-center w-10 h-10 bg-nim-tertiary rounded-ui-base">
                   <MaterialSymbol icon={getThemeIcon(theme)} size={20} />
                 </div>
                 <div className="flex-1">
@@ -266,7 +266,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
                       e.stopPropagation();
                       handleThemeSelect(theme.id);
                     }}
-                    className="px-3 py-1 text-xs text-nim-muted hover:text-nim hover:bg-nim-hover rounded transition-colors"
+                    className="px-3 py-1 text-xs text-nim-muted hover:text-nim hover:bg-nim-hover rounded-ui-base transition-colors"
                   >
                     Apply
                   </button>
@@ -284,14 +284,14 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
               {userThemes.map((theme) => (
                 <div
                   key={theme.id}
-                  className={`flex items-center gap-3 p-3 border rounded-md cursor-pointer transition-all ${
+                  className={`flex items-center gap-3 p-3 border rounded-ui-base cursor-pointer transition-all ${
                     selectedThemeId === theme.id
                       ? 'border-nim-primary bg-nim-primary/5'
                       : 'border-nim bg-nim-secondary hover:bg-nim-tertiary'
                   }`}
                   onClick={() => setSelectedThemeId(theme.id)}
                 >
-                  <div className="flex items-center justify-center w-10 h-10 bg-nim-tertiary rounded-md">
+                  <div className="flex items-center justify-center w-10 h-10 bg-nim-tertiary rounded-ui-base">
                     <MaterialSymbol icon={getThemeIcon(theme)} size={20} />
                   </div>
                   <div className="flex-1">
@@ -310,7 +310,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
                           e.stopPropagation();
                           handleThemeSelect(theme.id);
                         }}
-                        className="px-3 py-1 text-xs text-nim-muted hover:text-nim hover:bg-nim-hover rounded transition-colors"
+                        className="px-3 py-1 text-xs text-nim-muted hover:text-nim hover:bg-nim-hover rounded-ui-base transition-colors"
                       >
                         Apply
                       </button>
@@ -320,7 +320,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
                         e.stopPropagation();
                         handleUninstall(theme.id);
                       }}
-                      className="p-1.5 text-nim-muted hover:text-nim-error hover:bg-nim-error/10 rounded transition-colors"
+                      className="p-2 text-nim-muted hover:text-nim-error hover:bg-nim-error/10 rounded-ui-base transition-colors"
                       title="Uninstall theme"
                     >
                       <MaterialSymbol icon="delete" size={16} />
@@ -341,14 +341,14 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
                 <div
                   key={theme.id}
                   data-testid="extension-theme-item"
-                  className={`flex items-center gap-3 p-3 border rounded-md cursor-pointer transition-all ${
+                  className={`flex items-center gap-3 p-3 border rounded-ui-base cursor-pointer transition-all ${
                     selectedThemeId === theme.id
                       ? 'border-nim-primary bg-nim-primary/5'
                       : 'border-nim bg-nim-secondary hover:bg-nim-tertiary'
                   }`}
                   onClick={() => setSelectedThemeId(theme.id)}
                 >
-                  <div className="flex items-center justify-center w-10 h-10 bg-nim-tertiary rounded-md">
+                  <div className="flex items-center justify-center w-10 h-10 bg-nim-tertiary rounded-ui-base">
                     <MaterialSymbol icon={getThemeIcon(theme)} size={20} />
                   </div>
                   <div className="flex-1">
@@ -368,7 +368,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
                         e.stopPropagation();
                         handleThemeSelect(theme.id);
                       }}
-                      className="px-3 py-1 text-xs text-nim-muted hover:text-nim hover:bg-nim-hover rounded transition-colors"
+                      className="px-3 py-1 text-xs text-nim-muted hover:text-nim hover:bg-nim-hover rounded-ui-base transition-colors"
                     >
                       Apply
                     </button>
@@ -383,7 +383,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
         {userThemes.length === 0 && extensionThemes.length === 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-medium text-nim mb-3">Installed Themes</h3>
-            <div className="flex flex-col items-center justify-center p-8 bg-nim-secondary border border-nim border-dashed rounded-md">
+            <div className="flex flex-col items-center justify-center p-8 bg-nim-secondary border border-nim border-dashed rounded-ui-base">
               <MaterialSymbol icon="palette" size={32} className="text-nim-muted mb-2" />
               <p className="text-sm text-nim-muted text-center">
                 No user or extension themes installed yet
@@ -406,7 +406,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
             </div>
             <button
               onClick={() => setSelectedThemeId(null)}
-              className="p-1 text-nim-muted hover:text-nim rounded transition-colors"
+              className="p-1 text-nim-muted hover:text-nim rounded-ui-base transition-colors"
             >
               <MaterialSymbol icon="close" size={16} />
             </button>
@@ -433,7 +433,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
                 <span className="text-nim-muted">Tags:</span>
                 <div className="flex flex-wrap gap-1 justify-end">
                   {selectedTheme.tags.map(tag => (
-                    <span key={tag} className="px-1.5 py-0.5 bg-nim-tertiary text-nim-muted rounded text-xs">
+                    <span key={tag} className="px-2 py-0.5 bg-nim-tertiary text-nim-muted rounded-ui-base text-xs">
                       {tag}
                     </span>
                   ))}
@@ -459,7 +459,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
               {Object.entries(selectedTheme.colors).slice(0, 8).map(([key, value]) => (
                 <div key={key} className="flex flex-col items-center gap-1">
                   <div
-                    className="w-full h-8 rounded border border-nim"
+                    className="w-full h-8 rounded-ui-base border border-nim"
                     style={{ backgroundColor: value }}
                     title={`${key}: ${value}`}
                   />

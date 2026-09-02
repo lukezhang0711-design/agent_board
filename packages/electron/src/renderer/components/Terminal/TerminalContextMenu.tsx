@@ -29,7 +29,7 @@ export function TerminalContextMenu({
   };
 
   const menuItemClasses =
-    'flex items-center gap-3 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]';
+    'flex items-center gap-3 px-3 py-2 rounded-ui-base cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]';
 
   return (
     <FloatingPortal>
@@ -41,7 +41,7 @@ export function TerminalContextMenu({
           border: '1px solid var(--nim-border)',
         }}
         {...menu.getFloatingProps()}
-        className="p-1 min-w-[140px] rounded-md z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+        className="p-1 min-w-[140px] rounded-ui-base z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
         data-testid="terminal-context-menu"
       >
         <div className={menuItemClasses} onClick={handleClear}>

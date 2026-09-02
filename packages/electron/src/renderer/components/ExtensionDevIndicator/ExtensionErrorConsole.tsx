@@ -175,7 +175,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="extension-error-console-header flex items-center gap-4 px-5 py-4 rounded-t-xl border-b border-nim bg-nim-secondary"
+          className="extension-error-console-header flex items-center gap-4 px-5 py-4 rounded-ui-lg-t border-b border-nim bg-nim-secondary"
         >
           <h2 className="m-0 text-base font-semibold text-nim">
             Extension Logs
@@ -199,7 +199,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
             )}
           </div>
           <button
-            className="extension-error-console-close flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-all duration-100 hover:bg-nim-hover hover:text-nim text-nim-muted"
+            className="extension-error-console-close flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-ui-base cursor-pointer transition-all duration-100 hover:bg-nim-hover hover:text-nim text-nim-muted"
             onClick={onClose}
             aria-label="Close"
           >
@@ -212,7 +212,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
         >
           <div className="extension-error-console-filters flex gap-2">
             <select
-              className="px-2 py-1.5 text-xs rounded-md cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
+              className="px-2 py-2 text-xs rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
               value={filter.logLevel}
               onChange={(e) =>
                 setFilter((f) => ({
@@ -230,7 +230,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
             </select>
 
             <select
-              className="px-2 py-1.5 text-xs rounded-md cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
+              className="px-2 py-2 text-xs rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
               value={filter.source}
               onChange={(e) =>
                 setFilter((f) => ({
@@ -247,7 +247,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
             </select>
 
             <select
-              className="px-2 py-1.5 text-xs rounded-md cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
+              className="px-2 py-2 text-xs rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
               value={filter.extensionId}
               onChange={(e) =>
                 setFilter((f) => ({ ...f, extensionId: e.target.value }))
@@ -307,7 +307,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
             logs.map((log, index) => (
               <div
                 key={`${log.timestamp}-${index}`}
-                className={`log-entry log-${log.level} px-2 py-1.5 rounded mb-0.5 transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] ${
+                className={`log-entry log-${log.level} px-2 py-2 rounded-ui-base mb-0.5 transition-colors duration-100 hover:bg-[var(--nim-bg-hover)] ${
                   expandedLogs.has(index) ? 'expanded bg-[var(--nim-bg-secondary)]' : ''
                 } ${log.stack ? 'cursor-pointer' : 'cursor-default'}`}
                 onClick={() => log.stack && toggleExpand(index)}
@@ -337,7 +337,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
                   </span>
                   {log.extensionId && (
                     <button
-                      className="log-extension shrink-0 px-1 border-none rounded font-inherit cursor-pointer transition-all duration-100 text-[#a855f7] bg-[rgba(168,85,247,0.1)] hover:bg-[rgba(168,85,247,0.25)] hover:text-[#c084fc]"
+                      className="log-extension shrink-0 px-1 border-none rounded-ui-base font-inherit cursor-pointer transition-all duration-100 text-[#a855f7] bg-[rgba(168,85,247,0.1)] hover:bg-[rgba(168,85,247,0.25)] hover:text-[#c084fc]"
                       onClick={(e) => {
                         e.stopPropagation();
                         setFilter((f) => ({ ...f, extensionId: log.extensionId! }));
@@ -367,7 +367,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
                   )}
                 </div>
                 {expandedLogs.has(index) && log.stack && (
-                  <pre className="log-stack mt-2 ml-6 p-2 rounded overflow-x-auto text-[11px] whitespace-pre-wrap break-words bg-nim border border-nim text-nim-muted">
+                  <pre className="log-stack mt-2 ml-6 p-2 rounded-ui-base overflow-x-auto text-[11px] whitespace-pre-wrap break-words bg-nim border border-nim text-nim-muted">
                     {log.stack}
                   </pre>
                 )}

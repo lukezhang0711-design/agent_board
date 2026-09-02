@@ -250,17 +250,17 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-medium text-nim-muted uppercase tracking-[0.5px]">Attempts</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--nim-bg-subtle)] text-nim-faint font-medium">
+          <span className="text-[10px] px-2 py-0.2 rounded-ui-full bg-[var(--nim-bg-subtle)] text-nim-faint font-medium">
             {attempts.length}
           </span>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
           {/* Filter Buttons */}
-          <div className="flex items-center rounded border border-nim bg-nim-secondary p-0.5 text-[10px]" data-testid="work-order-attempts-filter">
+          <div className="flex items-center rounded-ui-base border border-nim bg-nim-secondary p-0.5 text-[10px]" data-testid="work-order-attempts-filter">
             <button
               type="button"
-              className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${filter === 'all' ? 'bg-[var(--nim-primary)] text-white font-medium' : 'text-nim-muted hover:text-nim'}`}
+              className={`px-2 py-0.5 rounded-ui-base cursor-pointer transition-colors ${filter === 'all' ? 'bg-[var(--nim-primary)] text-white font-medium' : 'text-nim-muted hover:text-nim'}`}
               onClick={() => setFilter('all')}
               data-testid="filter-all"
             >
@@ -268,7 +268,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
             </button>
             <button
               type="button"
-              className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${filter === 'success' ? 'bg-[var(--nim-primary)] text-white font-medium' : 'text-nim-muted hover:text-nim'}`}
+              className={`px-2 py-0.5 rounded-ui-base cursor-pointer transition-colors ${filter === 'success' ? 'bg-[var(--nim-primary)] text-white font-medium' : 'text-nim-muted hover:text-nim'}`}
               onClick={() => setFilter('success')}
               data-testid="filter-success"
             >
@@ -276,7 +276,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
             </button>
             <button
               type="button"
-              className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${filter === 'failure' ? 'bg-[var(--nim-primary)] text-white font-medium' : 'text-nim-muted hover:text-nim'}`}
+              className={`px-2 py-0.5 rounded-ui-base cursor-pointer transition-colors ${filter === 'failure' ? 'bg-[var(--nim-primary)] text-white font-medium' : 'text-nim-muted hover:text-nim'}`}
               onClick={() => setFilter('failure')}
               data-testid="filter-failure"
             >
@@ -287,7 +287,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
           {/* Copy All Button */}
           <button
             type="button"
-            className="flex items-center gap-1 px-2 py-0.5 rounded border border-nim bg-nim-secondary hover:bg-nim-tertiary text-nim-muted hover:text-nim text-[10px] cursor-pointer transition-colors"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-ui-base border border-nim bg-nim-secondary hover:bg-nim-tertiary text-nim-muted hover:text-nim text-[10px] cursor-pointer transition-colors"
             onClick={handleCopyAll}
             data-testid="work-order-attempts-copy-all"
             title="复制全部执行记录"
@@ -300,7 +300,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
 
       {/* Mini Density Overview Bar */}
       {attempts.length > 1 && (
-        <div className="flex items-center gap-1 w-full h-1.5 rounded-full overflow-hidden bg-nim-tertiary/40" data-testid="work-order-attempts-density-bar">
+        <div className="flex items-center gap-1 w-full h-1.5 rounded-ui-full overflow-hidden bg-nim-tertiary/40" data-testid="work-order-attempts-density-bar">
           {attempts.map((attempt, index) => (
             <div
               key={index}
@@ -323,7 +323,7 @@ export const WorkOrderAttempts: React.FC<{ fields: unknown }> = ({ fields }) => 
           {filteredAttempts.map((attempt, index) => (
             <div
               key={`${attempt.attempt}-${attempt.startedAt}-${index}`}
-              className="rounded border border-nim bg-nim-tertiary/30 px-2.5 py-2 space-y-1"
+              className="rounded-ui-base border border-nim bg-nim-tertiary/30 px-2.5 py-2 space-y-1"
               data-testid="work-order-attempt"
               data-outcome={attempt.outcome}
             >

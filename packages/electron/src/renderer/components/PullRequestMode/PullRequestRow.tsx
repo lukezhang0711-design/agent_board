@@ -89,7 +89,7 @@ export function PullRequestRow({ pr, selected, onSelect }: PullRequestRowProps):
             )}
             {badge && (
               <span
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${badge.className}`}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-ui-base text-[10px] font-semibold ${badge.className}`}
               >
                 <MaterialSymbol icon={badge.icon} size={12} />
                 {badge.label}

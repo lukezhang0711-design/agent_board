@@ -259,7 +259,7 @@ export function AgentFeaturesPanel() {
             value={preferredAgentLanguage}
             onChange={(e) => handlePreferredAgentLanguageChange(e.target.value)}
             placeholder="e.g. ja"
-            className="w-40 py-1.5 px-3 rounded-md text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
+            className="w-40 py-2 px-3 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
             data-testid="preferred-agent-language-input"
           />
         </div>
@@ -271,7 +271,7 @@ export function AgentFeaturesPanel() {
           <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
         </div>
 
-        <div className="mb-4 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] p-3">
+        <div className="mb-4 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] p-3">
           <h5 className="text-sm font-semibold mb-1.5 text-[var(--nim-text)]">
             Agent skills and commands compatibility
           </h5>
@@ -357,7 +357,7 @@ export function AgentFeaturesPanel() {
                     if (event.key === 'Enter') event.currentTarget.blur();
                   }}
                   aria-describedby="meta-agent-max-parallel-help"
-                  className="w-24 py-1.5 px-3 rounded-md text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
+                  className="w-24 py-2 px-3 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
                 />
               </div>
               <div className="pl-4 pb-3">

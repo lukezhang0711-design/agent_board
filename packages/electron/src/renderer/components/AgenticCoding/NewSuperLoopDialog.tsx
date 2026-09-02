@@ -183,7 +183,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={handleClose}>
       <div
-        className="bg-nim rounded-lg shadow-xl w-[600px] max-h-[80vh] overflow-hidden flex flex-col"
+        className="bg-nim rounded-ui-lg shadow-xl w-[600px] max-h-[80vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -194,7 +194,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
           </div>
           <button
             onClick={handleClose}
-            className="p-1 rounded hover:bg-nim-hover text-nim-muted hover:text-nim transition-colors"
+            className="p-1 rounded-ui-base hover:bg-nim-hover text-nim-muted hover:text-nim transition-colors"
             disabled={isCreating}
           >
             <MaterialSymbol icon="close" size={20} />
@@ -220,7 +220,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
               value={taskDescription}
               onChange={(e) => setTaskDescription(e.target.value)}
               placeholder="Describe the task you want the AI to complete..."
-              className="w-full h-40 px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-md text-nim placeholder:text-nim-muted focus:outline-none focus:ring-2 focus:ring-nim-primary resize-none"
+              className="w-full h-40 px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-ui-base text-nim placeholder:text-nim-muted focus:outline-none focus:ring-2 focus:ring-nim-primary resize-none"
               disabled={isCreating}
               autoFocus
             />
@@ -240,7 +240,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-md text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary appearance-none pr-8"
+                  className="w-full px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-ui-base text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary appearance-none pr-8"
                   disabled={isCreating || loadingModels || agentModels.length === 0}
                 >
                   {loadingModels ? (
@@ -278,7 +278,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
                   onChange={(e) => setMaxIterations(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
                   min={1}
                   max={100}
-                  className="w-24 px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-md text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary"
+                  className="w-24 px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-ui-base text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary"
                   disabled={isCreating}
                 />
                 <span className="text-sm text-nim-muted">
@@ -293,7 +293,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 text-sm text-nim-error bg-nim-error/10 border border-nim-error/30 rounded-md">
+            <div className="p-3 text-sm text-nim-error bg-nim-error/10 border border-nim-error/30 rounded-ui-base">
               {error}
             </div>
           )}
@@ -303,7 +303,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-nim">
           <button
             onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-nim bg-nim-secondary hover:bg-nim-hover border border-nim rounded-md transition-colors"
+            className="px-4 py-2 text-sm font-medium text-nim bg-nim-secondary hover:bg-nim-hover border border-nim rounded-ui-base transition-colors"
             disabled={isCreating}
           >
             Cancel
@@ -311,7 +311,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
           <button
             onClick={handleCreate}
             disabled={isCreating || !taskDescription.trim() || !selectedModel}
-            className="px-4 py-2 text-sm font-medium text-nim-on-primary bg-nim-primary hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium text-nim-on-primary bg-nim-primary hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-ui-base transition-colors flex items-center gap-2"
           >
             {isCreating ? (
               <>

@@ -58,7 +58,7 @@ export function MemoryPromptIndicator({
   }, [target, workspacePath]);
 
   return (
-    <div className="memory-prompt-indicator flex items-center justify-between gap-2 px-2.5 py-1.5 mb-2 rounded-md border border-[var(--nim-primary)] bg-[var(--nim-bg-secondary)]">
+    <div className="memory-prompt-indicator flex items-center justify-between gap-2 px-2.5 py-2 mb-2 rounded-ui-base border border-[var(--nim-primary)] bg-[var(--nim-bg-secondary)]">
       <div className="memory-prompt-left flex items-center gap-2">
         <div className="memory-prompt-icon flex items-center justify-center text-[var(--nim-primary)]">
           <MemoryIcon />
@@ -80,7 +80,7 @@ export function MemoryPromptIndicator({
           </span>
         </button>
         <button
-          className="memory-prompt-open-button flex items-center justify-center p-1 rounded text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-tertiary)] transition-colors"
+          className="memory-prompt-open-button flex items-center justify-center p-1 rounded-ui-base text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-tertiary)] transition-colors"
           onClick={openMemoryFile}
           title="Open memory file in editor"
           aria-label="Open memory file"
@@ -89,11 +89,11 @@ export function MemoryPromptIndicator({
         </button>
       </div>
       <div className="memory-prompt-shortcuts flex items-center gap-1 text-[11px] text-[var(--nim-text-faint)]">
-        <kbd className="inline-block px-1.5 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded">Enter</kbd> to save
+        <kbd className="inline-block px-2 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">Enter</kbd> to save
         <span className="memory-shortcut-separator mx-1 text-[var(--nim-text-faint)]">&middot;</span>
-        <kbd className="inline-block px-1.5 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded">&uarr;</kbd><kbd className="inline-block px-1.5 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded">&darr;</kbd> to switch target
+        <kbd className="inline-block px-2 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">&uarr;</kbd><kbd className="inline-block px-2 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">&darr;</kbd> to switch target
         <span className="memory-shortcut-separator mx-1 text-[var(--nim-text-faint)]">&middot;</span>
-        <kbd className="inline-block px-1.5 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded">Esc</kbd> to cancel
+        <kbd className="inline-block px-2 py-0.5 font-inherit text-[10px] bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base">Esc</kbd> to cancel
       </div>
     </div>
   );
@@ -113,7 +113,7 @@ export function MemorySaveButton({
 }) {
   return (
     <button
-      className="memory-save-button flex items-center justify-center w-9 h-9 p-0 rounded-md border-none cursor-pointer text-white shrink-0 transition-all duration-150 bg-[var(--nim-primary)] hover:enabled:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="memory-save-button flex items-center justify-center w-9 h-9 p-0 rounded-ui-base border-none cursor-pointer text-white shrink-0 transition-all duration-150 bg-[var(--nim-primary)] hover:enabled:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
       onClick={onSave}
       disabled={disabled || isSaving}
       title="Save to memory (Enter)"

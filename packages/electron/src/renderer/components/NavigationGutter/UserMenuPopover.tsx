@@ -81,7 +81,7 @@ export function UserMenuPopover({ onNavigateSettings, onClose, isProjectConnecte
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="w-56 bg-nim-secondary border border-nim rounded-lg shadow-lg z-50 overflow-hidden"
+        className="w-56 bg-nim-secondary border border-nim rounded-ui-lg shadow-lg z-50 overflow-hidden"
         data-testid="user-menu-popover"
       >
         {/* Navigation links */}
@@ -110,7 +110,7 @@ export function UserMenuPopover({ onNavigateSettings, onClose, isProjectConnecte
           }}
           data-testid="user-menu-identity"
         >
-          <div className="w-7 h-7 rounded-full bg-nim-primary flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-ui-full bg-nim-primary flex items-center justify-center shrink-0">
             <span className="text-xs font-semibold text-white leading-none">
               {email ? email[0].toUpperCase() : '?'}
             </span>

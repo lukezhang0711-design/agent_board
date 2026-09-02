@@ -207,9 +207,9 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
             onKeyDown={handleKeyDown}
             tabIndex={-1}
             data-testid="action-prompts-dropdown-panel"
-            className="action-prompts-dropdown-panel z-[1000] min-w-[260px] max-w-[360px] rounded-lg p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+            className="action-prompts-dropdown-panel z-[1000] min-w-[260px] max-w-[360px] rounded-ui-lg p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
           >
-            <div className="action-prompts-dropdown-header px-2 py-1.5 text-[10px] uppercase tracking-wider text-[var(--nim-text-faint)] flex items-center justify-between">
+            <div className="action-prompts-dropdown-header px-2 py-2 text-[10px] uppercase tracking-wider text-[var(--nim-text-faint)] flex items-center justify-between">
               <span>{state.fileExists ? 'From ai-actions.md' : 'Action prompts'}</span>
               {state.fileExists && (
                 <span className="text-[10px] text-[var(--nim-text-disabled)]">
@@ -226,7 +226,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
                 </p>
                 <button
                   type="button"
-                  className="text-[11px] font-medium text-left px-2 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] text-[var(--nim-text)] cursor-pointer"
+                  className="text-[11px] font-medium text-left px-2 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] text-[var(--nim-text)] cursor-pointer"
                   onClick={handleSeed}
                   data-testid="action-prompts-seed-button"
                 >
@@ -260,7 +260,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       data-testid={`action-prompt-item-${action.id}`}
                       data-action-launch={isLauncher ? 'new-session' : 'same-session'}
-                      className={`action-prompts-dropdown-item flex items-start gap-2 w-full text-left px-2 py-1.5 rounded border-none cursor-pointer text-[var(--nim-text)] ${
+                      className={`action-prompts-dropdown-item flex items-start gap-2 w-full text-left px-2 py-2 rounded-ui-base border-none cursor-pointer text-[var(--nim-text)] ${
                         idx === highlightedIndex ? 'bg-[var(--nim-bg-hover)]' : 'bg-transparent'
                       }`}
                     >
@@ -286,7 +286,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
             <div className="action-prompts-dropdown-footer mt-1 border-t border-[var(--nim-border)] pt-1">
               <button
                 type="button"
-                className="w-full text-left px-2 py-1.5 text-[11px] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] rounded cursor-pointer flex items-center gap-2 border-none bg-transparent"
+                className="w-full text-left px-2 py-2 text-[11px] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] rounded-ui-base cursor-pointer flex items-center gap-2 border-none bg-transparent"
                 onClick={handleEditFile}
                 data-testid="action-prompts-edit-link"
               >

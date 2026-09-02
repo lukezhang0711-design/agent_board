@@ -136,7 +136,7 @@ const CollabAvatars: React.FC<{ filePath: string }> = ({ filePath }) => {
         return (
           <div
             key={userId}
-            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium"
+            className="w-5 h-5 rounded-ui-full flex items-center justify-center text-[9px] font-medium"
             style={{
               backgroundColor: user.color,
               color: '#fff',
@@ -197,7 +197,7 @@ const CollabStatusBar: React.FC<{
         backgroundColor: 'var(--nim-bg-secondary)',
       }}
     >
-      <div className={`w-2 h-2 rounded-full ${statusDot}`} />
+      <div className={`w-2 h-2 rounded-ui-full ${statusDot}`} />
       <span>{statusLabel}</span>
       <CollabAvatars filePath={filePath} />
       <span className="mx-1">|</span>

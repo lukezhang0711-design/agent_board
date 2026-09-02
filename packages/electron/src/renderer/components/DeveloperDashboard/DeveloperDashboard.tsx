@@ -311,14 +311,14 @@ function OverviewPanel({
             <table className="w-full text-xs font-mono border-collapse">
               <thead>
                 <tr className="text-left text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
-                  <th className="px-2 py-1.5">Table</th>
-                  <th className="px-2 py-1.5 text-right">Op</th>
-                  <th className="px-2 py-1.5 text-right">Count</th>
-                  <th className="px-2 py-1.5 text-right">p50</th>
-                  <th className="px-2 py-1.5 text-right">p95</th>
-                  <th className="px-2 py-1.5 text-right">p99</th>
-                  <th className="px-2 py-1.5 text-right">Max</th>
-                  <th className="px-2 py-1.5 text-right">Blocked p95</th>
+                  <th className="px-2 py-2">Table</th>
+                  <th className="px-2 py-2 text-right">Op</th>
+                  <th className="px-2 py-2 text-right">Count</th>
+                  <th className="px-2 py-2 text-right">p50</th>
+                  <th className="px-2 py-2 text-right">p95</th>
+                  <th className="px-2 py-2 text-right">p99</th>
+                  <th className="px-2 py-2 text-right">Max</th>
+                  <th className="px-2 py-2 text-right">Blocked p95</th>
                 </tr>
               </thead>
               <tbody>
@@ -375,11 +375,11 @@ function OverviewPanel({
             <table className="w-full text-xs font-mono border-collapse">
               <thead>
                 <tr className="text-left text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
-                  <th className="px-2 py-1.5">Table</th>
-                  <th className="px-2 py-1.5 text-right">Reads</th>
-                  <th className="px-2 py-1.5 text-right">Writes</th>
-                  <th className="px-2 py-1.5 text-right">Total ms</th>
-                  <th className="px-2 py-1.5 text-right">p99</th>
+                  <th className="px-2 py-2">Table</th>
+                  <th className="px-2 py-2 text-right">Reads</th>
+                  <th className="px-2 py-2 text-right">Writes</th>
+                  <th className="px-2 py-2 text-right">Total ms</th>
+                  <th className="px-2 py-2 text-right">p99</th>
                 </tr>
               </thead>
               <tbody>
@@ -407,14 +407,14 @@ function OverviewPanel({
             <table className="w-full text-xs font-mono border-collapse">
               <thead>
                 <tr className="text-left text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
-                  <th className="px-2 py-1.5">Channel</th>
-                  <th className="px-2 py-1.5 text-right">Calls</th>
-                  <th className="px-2 py-1.5 text-right">Errors</th>
-                  <th className="px-2 py-1.5 text-right">Slow</th>
-                  <th className="px-2 py-1.5 text-right">Avg</th>
-                  <th className="px-2 py-1.5 text-right">p95</th>
-                  <th className="px-2 py-1.5 text-right">Max</th>
-                  <th className="px-2 py-1.5 text-right">Inflight</th>
+                  <th className="px-2 py-2">Channel</th>
+                  <th className="px-2 py-2 text-right">Calls</th>
+                  <th className="px-2 py-2 text-right">Errors</th>
+                  <th className="px-2 py-2 text-right">Slow</th>
+                  <th className="px-2 py-2 text-right">Avg</th>
+                  <th className="px-2 py-2 text-right">p95</th>
+                  <th className="px-2 py-2 text-right">Max</th>
+                  <th className="px-2 py-2 text-right">Inflight</th>
                 </tr>
               </thead>
               <tbody>
@@ -453,7 +453,7 @@ function OverviewPanel({
             {fileWatchers.workspaces.map(ws => (
               <div
                 key={ws.workspacePath}
-                className="text-xs font-mono px-3 py-2 rounded bg-[var(--nim-surface-hover)]"
+                className="text-xs font-mono px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)]"
               >
                 <div className="text-[var(--nim-text)]">{ws.workspacePath}</div>
                 <div className="text-[var(--nim-text-muted)] mt-0.5">
@@ -473,7 +473,7 @@ function OverviewPanel({
             {systemStats.windows.map(win => (
               <div
                 key={win.id}
-                className="text-xs font-mono px-3 py-2 rounded bg-[var(--nim-surface-hover)] flex items-center gap-3"
+                className="text-xs font-mono px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)] flex items-center gap-3"
               >
                 <span className="text-[var(--nim-text-muted)]">#{win.id}</span>
                 <span className="text-[var(--nim-text)]">{win.mode}</span>
@@ -499,7 +499,7 @@ function OverviewPanel({
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-3 py-2 rounded bg-[var(--nim-surface-hover)] border border-[var(--nim-border)]">
+    <div className="px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)] border border-[var(--nim-border)]">
       <div className="text-[10px] uppercase tracking-wider text-[var(--nim-text-muted)] mb-0.5">{label}</div>
       <div className="text-sm font-mono text-[var(--nim-text)]">{value}</div>
     </div>
@@ -551,7 +551,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
         <button
           onClick={refresh}
           disabled={loading}
-          className="px-3 py-1 rounded text-xs bg-[var(--nim-surface-hover)] text-[var(--nim-text)] hover:bg-[var(--nim-surface-active)] transition-colors disabled:opacity-50"
+          className="px-3 py-1 rounded-ui-base text-xs bg-[var(--nim-surface-hover)] text-[var(--nim-text)] hover:bg-[var(--nim-surface-active)] transition-colors disabled:opacity-50"
         >
           {loading ? 'Loading...' : 'Refresh'}
         </button>
@@ -598,7 +598,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
                           {s.params.map((p, i) => (
                             <span
                               key={i}
-                              className="px-2 py-0.5 rounded text-xs font-mono bg-[var(--nim-surface-hover)] text-[var(--nim-text)]"
+                              className="px-2 py-0.5 rounded-ui-base text-xs font-mono bg-[var(--nim-surface-hover)] text-[var(--nim-text)]"
                               title={p}
                             >
                               {p.length > 40 ? p.slice(0, 37) + '...' : p}

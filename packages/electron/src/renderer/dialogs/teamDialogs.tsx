@@ -103,7 +103,7 @@ function CreateTeamDialogWrapper({
               <select
                 value={selectedAccountOrgId}
                 onChange={(e) => setSelectedAccountOrgId(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-md bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-[13px] outline-none focus:border-[var(--nim-primary)] cursor-pointer"
+                className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-[13px] outline-none focus:border-[var(--nim-primary)] cursor-pointer"
               >
                 {data.accounts.map((account) => (
                   <option key={account.personalOrgId} value={account.personalOrgId}>
@@ -127,7 +127,7 @@ function CreateTeamDialogWrapper({
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-md bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-[13px] outline-none focus:border-[var(--nim-primary)]"
+              className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-[13px] outline-none focus:border-[var(--nim-primary)]"
               autoFocus
             />
             <div className="text-[11px] text-[var(--nim-text-disabled)] mt-1">
@@ -140,11 +140,11 @@ function CreateTeamDialogWrapper({
             <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-1.5">
               Git Remote
             </label>
-            <div className="w-full px-3 py-2 border border-[var(--nim-bg-tertiary)] rounded-md bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] text-[12px] font-mono">
+            <div className="w-full px-3 py-2 border border-[var(--nim-bg-tertiary)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] text-[12px] font-mono">
               {data.gitRemote}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-[var(--nim-success)]" />
+              <div className="w-1.5 h-1.5 rounded-ui-full bg-[var(--nim-success)]" />
               <span className="text-[11px] text-[var(--nim-success)]">
                 Detected from git remote origin
               </span>
@@ -159,7 +159,7 @@ function CreateTeamDialogWrapper({
             <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-1.5">
               Encryption
             </label>
-            <div className="flex items-start gap-2 p-3 bg-[var(--nim-bg-secondary)] rounded-md border border-[var(--nim-bg-tertiary)]">
+            <div className="flex items-start gap-2 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-base border border-[var(--nim-bg-tertiary)]">
               <MaterialSymbol icon="lock" size={16} className="text-[var(--nim-success)] shrink-0 mt-0.5" />
               <div>
                 <div className="text-[12px] font-medium text-[var(--nim-text)] mb-0.5">E2E Encrypted</div>
@@ -175,14 +175,14 @@ function CreateTeamDialogWrapper({
         <div className="flex justify-end gap-2 px-6 py-5 border-t border-[var(--nim-border)] mt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-transparent border border-[var(--nim-border)] rounded-md text-[var(--nim-text-muted)] text-[13px] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+            className="px-4 py-2 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-[13px] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={!teamName.trim()}
-            className={`px-5 py-2 bg-[var(--nim-primary)] border-none rounded-md text-white text-[13px] font-medium ${
+            className={`px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-[13px] font-medium ${
               teamName.trim()
                 ? 'cursor-pointer opacity-100'
                 : 'cursor-not-allowed opacity-50'

@@ -17,21 +17,32 @@ const RENDERER_ROOT = path.resolve(__dirname, '../..');
 const REPO_ROOT = path.resolve(RENDERER_ROOT, '../../../../');
 const BASELINE_PATH = path.resolve(__dirname, '../visualTokensBaseline.json');
 
-export function scanFileViolations(content: string) {
+const ALLOWED_ROUNDED = /^rounded-ui-(?:base|lg|full|none)(?:-[tblr])?$/;
+
+export function scanFileViolations(content: string, isExempt = false) {
   const pxFontRegex = /text-\[\d+(?:\.\d+)?px\]/g;
   const pxSpacingRegex = /(?:p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|gap-x|gap-y)-\[\d+(?:\.\d+)?px\]/g;
   const rawColorRegex = /(?:bg|text|border|ring)-\[#(?:[0-9a-fA-F]+)\]|(?:bg|text|border|ring)-\[rgb[a]?\([^)]+\)\]/g;
   const inlineFontSizeRegex = /fontSize:\s*['"]?\d+(?:\.\d+)?(?:px)?['"]?/g;
-  const nonStdRoundedRegex = /\brounded-(?:xl|2xl|\[10px\]|\[18px\]|\[20px\])\b/g;
-  const halfGapRegex = /\bgap(?:-[xy])?-(?:0\.5|1\.5|2\.5)\b/g;
+
+  let nonStdRounded: string[] = [];
+  let halfGap: string[] = [];
+
+  if (!isExempt) {
+    const rawRoundeds = content.match(/(?<![a-zA-Z0-9_\-])rounded[^\s"'`>]+/g) ?? [];
+    nonStdRounded = rawRoundeds.filter(cls => !ALLOWED_ROUNDED.test(cls));
+
+    const halfSpacingRegex = /(?<![a-zA-Z0-9_\-])(?:gap(?:-[xy])?-(?:0\.5|1\.5|2\.5|3\.5)|(?:p|px|py|pt|pb|pl|pr)-(?:1\.5|3\.5))(?![a-zA-Z0-9_\-])/g;
+    halfGap = content.match(halfSpacingRegex) ?? [];
+  }
 
   return {
     pxFonts: [...(content.match(pxFontRegex) ?? []), ...(content.match(inlineFontSizeRegex) ?? [])],
     pxSpacings: content.match(pxSpacingRegex) ?? [],
     rawColors: content.match(rawColorRegex) ?? [],
     inlineFontSizes: content.match(inlineFontSizeRegex) ?? [],
-    nonStdRounded: content.match(nonStdRoundedRegex) ?? [],
-    halfGap: content.match(halfGapRegex) ?? [],
+    nonStdRounded,
+    halfGap,
   };
 }
 
@@ -195,28 +206,25 @@ describe('Visual Token Guard & Single Truth Table (施工单 FX & GA)', () => {
     });
   });
 
-  describe('绿③: 圆角令牌表只剩 3 个正式档 + 2 个标注过渡的档；全渲染层零表外圆角', () => {
-    it('has 3 formal tiers and 2 transitional tiers in visualTokens.radius', () => {
-      const radiusTiers = Object.keys(visualTokens.radius);
-      expect(radiusTiers).toEqual(['none', 'sm', 'base', 'lg', 'full']);
-      expect(visualTokens.radius.base.status).toBe('formal');
-      expect(visualTokens.radius.lg.status).toBe('formal');
-      expect(visualTokens.radius.full.status).toBe('formal');
-      expect(visualTokens.radius.none.status).toBe('transitional');
-      expect(visualTokens.radius.sm.status).toBe('transitional');
-    });
+  describe('绿①: 全渲染层只剩三档圆角与过渡接缝及其方向变体（反向断言）', () => {
+    it('has zero rounded-md, rounded-lg, rounded-sm, 裸 rounded, rounded-[Npx] across renderer (excluding common)', () => {
+      const allFiles = walkRendererFiles(RENDERER_ROOT).filter(
+        f => !path.relative(RENDERER_ROOT, f).startsWith('components/common/') &&
+             !path.relative(RENDERER_ROOT, f).startsWith('styles/')
+      );
 
-    it('has zero rounded-xl, rounded-2xl, rounded-[10px], rounded-[18px], rounded-[20px] across entire renderer', () => {
-      const allFiles = walkRendererFiles(RENDERER_ROOT);
-      const forbiddenRounded = [
-        'rounded-xl',
-        'rounded-2xl',
-        'rounded-[10px]',
-        'rounded-[18px]',
-        'rounded-[20px]',
+      const forbiddenNamed = [
+        'rounded-md',
+        'rounded-lg',
+        'rounded-sm',
+        'rounded-[3px]',
+        'rounded-[5px]',
+        'rounded-[7px]',
+        'rounded-[0.625rem]',
+        'rounded-[24px]',
       ];
 
-      for (const pattern of forbiddenRounded) {
+      for (const pattern of forbiddenNamed) {
         const matchingFiles: string[] = [];
         allFiles.forEach(f => {
           const content = fs.readFileSync(f, 'utf8');
@@ -229,31 +237,162 @@ describe('Visual Token Guard & Single Truth Table (施工单 FX & GA)', () => {
           `Found forbidden rounded class ${pattern} in: ${matchingFiles.join(', ')}`
         ).toEqual([]);
       }
+
+      // Check bare rounded
+      const bareMatchingFiles: string[] = [];
+      const bareRegex = /(?<![a-zA-Z0-9_\-])rounded(?![a-zA-Z0-9_\-])/g;
+      allFiles.forEach(f => {
+        const content = fs.readFileSync(f, 'utf8');
+        if (bareRegex.test(content)) {
+          bareMatchingFiles.push(path.relative(RENDERER_ROOT, f));
+        }
+      });
+      expect(
+        bareMatchingFiles,
+        `Found bare rounded in: ${bareMatchingFiles.join(', ')}`
+      ).toEqual([]);
     });
   });
 
-  describe('绿④: 全渲染层不再出现 gap-0.5 / gap-1.5 / gap-2.5', () => {
-    it('has zero gap-0.5, gap-1.5, gap-2.5 across entire renderer', () => {
-      const allFiles = walkRendererFiles(RENDERER_ROOT);
-      const forbiddenGaps = ['gap-0.5', 'gap-1.5', 'gap-2.5'];
+  describe('绿②: rounded-ui-sm 已从令牌表移除，全渲染层零引用', () => {
+    it('has removed rounded-ui-sm from visualTokens.radius', () => {
+      expect((visualTokens.radius as Record<string, unknown>).sm).toBeUndefined();
+      expect(Object.keys(visualTokens.radius)).toEqual(['none', 'base', 'lg', 'full']);
+      expect(visualTokens.radius.base.status).toBe('formal');
+      expect(visualTokens.radius.lg.status).toBe('formal');
+      expect(visualTokens.radius.full.status).toBe('formal');
+      expect(visualTokens.radius.none.status).toBe('transitional');
+    });
 
-      for (const pattern of forbiddenGaps) {
+    it('has zero references to rounded-ui-sm across entire renderer', () => {
+      const allFiles = walkRendererFiles(RENDERER_ROOT);
+      const matchingFiles: string[] = [];
+      allFiles.forEach(f => {
+        const content = fs.readFileSync(f, 'utf8');
+        if (content.includes('rounded-ui-sm')) {
+          matchingFiles.push(path.relative(RENDERER_ROOT, f));
+        }
+      });
+      expect(
+        matchingFiles,
+        `Found rounded-ui-sm in: ${matchingFiles.join(', ')}`
+      ).toEqual([]);
+    });
+  });
+
+  describe('绿③: 半档内边距九类全部为 0（逐类断言）', () => {
+    it('asserts each of the 9 half-step padding/gap classes has zero occurrences', () => {
+      const allFiles = walkRendererFiles(RENDERER_ROOT).filter(
+        f => !path.relative(RENDERER_ROOT, f).startsWith('components/common/') &&
+             !path.relative(RENDERER_ROOT, f).startsWith('styles/')
+      );
+
+      const nineClasses = [
+        'py-1.5',
+        'px-1.5',
+        'p-1.5',
+        'pt-1.5',
+        'pb-1.5',
+        'pl-1.5',
+        'pr-1.5',
+        'px-3.5',
+        'gap-3.5',
+      ];
+
+      for (const cls of nineClasses) {
+        const regex = new RegExp(`(?<![a-zA-Z0-9_\\-])${cls.replace('.', '\\.')}(?![a-zA-Z0-9_\\-])`, 'g');
         const matchingFiles: string[] = [];
         allFiles.forEach(f => {
           const content = fs.readFileSync(f, 'utf8');
-          if (content.includes(pattern)) {
+          if (regex.test(content)) {
             matchingFiles.push(path.relative(RENDERER_ROOT, f));
           }
         });
         expect(
           matchingFiles,
-          `Found half-step gap class ${pattern} in: ${matchingFiles.join(', ')}`
+          `Found half-step class ${cls} in: ${matchingFiles.join(', ')}`
         ).toEqual([]);
       }
     });
   });
 
-  describe('绿⑤: 防倒退检查（已迁移名单零违规 + 其余目录欠账天花板）', () => {
+  describe('绿④: 守门圆角判定为白名单式——注入夹具被拦截', () => {
+    it('catches rounded-t-xl fixture', () => {
+      const result = scanFileViolations('<div className="rounded-t-xl" />');
+      expect(result.nonStdRounded).toContain('rounded-t-xl');
+    });
+
+    it('catches rounded-3xl fixture', () => {
+      const result = scanFileViolations('<div className="rounded-3xl" />');
+      expect(result.nonStdRounded).toContain('rounded-3xl');
+    });
+
+    it('catches rounded-[7px] fixture', () => {
+      const result = scanFileViolations('<div className="rounded-[7px]" />');
+      expect(result.nonStdRounded).toContain('rounded-[7px]');
+    });
+  });
+
+  describe('绿⑤: 守门半档判定覆盖内边距——注入 py-1.5 夹具被拦截', () => {
+    it('catches py-1.5 fixture', () => {
+      const result = scanFileViolations('<div className="py-1.5" />');
+      expect(result.halfGap).toContain('py-1.5');
+    });
+  });
+
+  describe('绿⑥: 基线文件由脚本重新产出，且全产品圆角与半档间距基线均为 0', () => {
+    it('asserts nonStdRounded and halfGap are 0 across all directories in visualTokensBaseline.json', () => {
+      expect(fs.existsSync(BASELINE_PATH), `Baseline JSON must exist at ${BASELINE_PATH}`).toBe(true);
+      const baselineData = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8')) as Record<
+        string,
+        { pxFonts: number; rawColors: number; nonStdRounded: number; halfGap: number; fileCount: number }
+      >;
+
+      let totalRounded = 0;
+      let totalGaps = 0;
+      for (const [group, data] of Object.entries(baselineData)) {
+        totalRounded += data.nonStdRounded;
+        totalGaps += data.halfGap;
+        expect(data.nonStdRounded, `Directory [${group}] nonStdRounded must be 0`).toBe(0);
+        expect(data.halfGap, `Directory [${group}] halfGap must be 0`).toBe(0);
+      }
+      expect(totalRounded).toBe(0);
+      expect(totalGaps).toBe(0);
+    });
+  });
+
+  describe('绿⑦: DESIGN.md 十条反例逐条核过且当前全部成立', () => {
+    const designMdPath = path.resolve(REPO_ROOT, 'DESIGN.md');
+
+    it('verifies all 10 counter-examples in DESIGN.md reference real, existing violations', () => {
+      const content = fs.readFileSync(designMdPath, 'utf8');
+      const counterExampleLines: [string, RegExp][] = [
+        ['SessionDropdown.tsx', /packages\/electron\/src\/renderer\/components\/AIChat\/SessionDropdown\.tsx:111/],
+        ['PageHeader.tsx:60', /packages\/electron\/src\/renderer\/components\/common\/PageHeader\.tsx:60/],
+        ['TaskListPanel.tsx', /packages\/electron\/src\/renderer\/components\/AgentMode\/TaskListPanel\.tsx:118/],
+        ['ColorPicker.tsx', /packages\/runtime\/src\/editor\/ui\/ColorPicker\.tsx:152/],
+        ['RequestUserInputWidget.tsx', /packages\/runtime\/src\/ui\/AgentTranscript\/components\/CustomToolWidgets\/RequestUserInputWidget\.tsx:631/],
+        ['WakeupBanner.tsx', /packages\/electron\/src\/renderer\/components\/AIChat\/WakeupBanner\.tsx:106/],
+        ['ClaudeCodePluginsPanel.tsx', /packages\/electron\/src\/renderer\/components\/GlobalSettings\/panels\/ClaudeCodePluginsPanel\.tsx/],
+        ['WindowsClaudeCodeWarning.tsx', /packages\/electron\/src\/renderer\/components\/WindowsClaudeCodeWarning\/WindowsClaudeCodeWarning\.tsx:88/],
+        ['DeveloperDashboard.tsx', /packages\/electron\/src\/renderer\/components\/DeveloperDashboard\/DeveloperDashboard\.tsx:217/],
+        ['PageHeader.tsx:75', /packages\/electron\/src\/renderer\/components\/common\/PageHeader\.tsx:75/],
+      ];
+
+      for (const [name, regex] of counterExampleLines) {
+        expect(content, `DESIGN.md must cite counter-example for ${name}`).toMatch(regex);
+      }
+
+      // Check that the referenced runtime files actually contain the violations
+      const colorPickerContent = fs.readFileSync(path.resolve(REPO_ROOT, 'packages/runtime/src/editor/ui/ColorPicker.tsx'), 'utf8');
+      expect(colorPickerContent).toContain('rounded-xl');
+
+      const userInputWidgetContent = fs.readFileSync(path.resolve(REPO_ROOT, 'packages/runtime/src/ui/AgentTranscript/components/CustomToolWidgets/RequestUserInputWidget.tsx'), 'utf8');
+      expect(userInputWidgetContent).toContain('gap-2.5');
+    });
+  });
+
+  describe('防倒退检查（已迁移名单零违规 + 其余目录欠账天花板）', () => {
     describe('段 1: 已迁移名单零违规（硬字号、硬颜色、表外圆角、半档间距全部为 0）', () => {
       for (const relativePath of TARGET_FILES) {
         it(`enforces 100% token purity on ${relativePath}`, () => {
@@ -316,7 +455,8 @@ describe('Visual Token Guard & Single Truth Table (施工单 FX & GA)', () => {
             actualByDir[group] = { pxFonts: 0, rawColors: 0, nonStdRounded: 0, halfGap: 0 };
           }
           const content = fs.readFileSync(f, 'utf8');
-          const res = scanFileViolations(content);
+          const isExempt = rel.startsWith('components/common/') || rel.startsWith('styles/');
+          const res = scanFileViolations(content, isExempt);
           actualByDir[group].pxFonts += res.pxFonts.length;
           actualByDir[group].rawColors += res.rawColors.length;
           actualByDir[group].nonStdRounded += res.nonStdRounded.length;

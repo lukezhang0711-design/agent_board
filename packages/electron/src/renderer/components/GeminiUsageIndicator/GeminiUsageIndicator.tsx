@@ -81,7 +81,7 @@ export const GeminiUsageIndicator: React.FC<GeminiUsageIndicatorProps> = ({ clas
         ref={buttonRef}
         onClick={handleClick}
         title={tooltipContent}
-        className="relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
+        className="relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
         aria-label="Gemini Usage"
         data-testid="gemini-usage-indicator"
       >

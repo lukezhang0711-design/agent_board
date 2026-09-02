@@ -136,7 +136,7 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
 
   return (
     <div
-      className="bg-nim-tertiary border border-nim-primary rounded-lg mb-2 overflow-hidden shadow-[0_2px_8px_rgba(59,130,246,0.15)]"
+      className="bg-nim-tertiary border border-nim-primary rounded-ui-lg mb-2 overflow-hidden shadow-[0_2px_8px_rgba(59,130,246,0.15)]"
     >
       {/* Header */}
       <div
@@ -150,7 +150,7 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
         </div>
         <button
           onClick={handleCancel}
-          className="flex items-center justify-center w-6 h-6 border-none bg-transparent text-nim-muted cursor-pointer rounded transition-all duration-150 hover:bg-red-500/10 hover:text-nim-error"
+          className="flex items-center justify-center w-6 h-6 border-none bg-transparent text-nim-muted cursor-pointer rounded-ui-base transition-all duration-150 hover:bg-red-500/10 hover:text-nim-error"
           title="Cancel (Esc)"
         >
           <MaterialSymbol icon="close" size={18} />
@@ -172,7 +172,7 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
             isComposingRef.current = false;
           }}
           onKeyDown={handleKeyDown}
-          className="w-full min-h-[60px] py-2.5 px-3 border border-nim rounded-md bg-nim-secondary text-nim font-inherit text-sm leading-normal resize-none transition-[border-color] duration-150"
+          className="w-full min-h-[60px] py-2.5 px-3 border border-nim rounded-ui-base bg-nim-secondary text-nim font-inherit text-sm leading-normal resize-none transition-[border-color] duration-150"
           placeholder="Voice command..."
         />
       </div>
@@ -225,14 +225,14 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
         >
           <button
             onClick={handleEditClick}
-            className="flex items-center gap-2 py-1.5 px-3 border border-nim rounded-md bg-transparent text-nim-muted text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-secondary hover:border-nim-focus hover:text-nim"
+            className="flex items-center gap-2 py-2 px-3 border border-nim rounded-ui-base bg-transparent text-nim-muted text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-secondary hover:border-nim-focus hover:text-nim"
           >
             <MaterialSymbol icon="edit" size={16} />
             Edit
           </button>
           <button
             onClick={handleSubmit}
-            className="flex items-center gap-2 py-1.5 px-3.5 border-none rounded-md bg-nim-primary text-nim-on-primary text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-primary-hover"
+            className="flex items-center gap-2 py-2 px-3 border-none rounded-ui-base bg-nim-primary text-nim-on-primary text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-nim-primary-hover"
           >
             Send Now
             <MaterialSymbol icon="arrow_forward" size={16} />

@@ -259,14 +259,14 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ task }) => {
 
   return (
     <div
-      className={`task-item flex items-start gap-2 py-1 px-1 rounded text-xs ${
+      className={`task-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-xs ${
         isRunning ? 'bg-[var(--nim-bg-hover)]' : ''
       } ${isDone ? 'opacity-60' : ''}`}
       data-status={task.status}
     >
       <div className="shrink-0 w-4 h-4 flex items-center justify-center mt-0.5">
         {isRunning && (
-          <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+          <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
         {task.status === 'completed' && (
           <span className="text-[#4ade80] text-[10px]">&#x25CF;</span>
@@ -330,7 +330,7 @@ const TeammateItem: React.FC<TeammateItemProps> = React.memo(({ teammate, onClic
 
   return (
     <div
-      className={`teammate-item flex items-start gap-2 py-1 px-1 rounded text-xs cursor-pointer hover:bg-[var(--nim-bg-hover)] ${
+      className={`teammate-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-xs cursor-pointer hover:bg-[var(--nim-bg-hover)] ${
         teammate.status === 'running' ? 'bg-[var(--nim-bg-hover)]' : ''
       } ${teammate.status === 'completed' || teammate.status === 'errored' ? 'opacity-60' : ''}`}
       data-status={teammate.status}
@@ -341,7 +341,7 @@ const TeammateItem: React.FC<TeammateItemProps> = React.memo(({ teammate, onClic
     >
       <div className="teammate-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-0.5">
         {teammate.status === 'running' && (
-          <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+          <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
         {teammate.status === 'idle' && (
           <span className="text-[var(--nim-primary)] text-[10px]">&#x25CB;</span>

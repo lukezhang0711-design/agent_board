@@ -86,7 +86,7 @@ function OpenWithSystemButton({
   return (
     <button
       type="button"
-      className="nim-btn-secondary rounded px-2.5 py-1 text-xs"
+      className="nim-btn-secondary rounded-ui-base px-2.5 py-1 text-xs"
       onClick={() => onOpenWithSystem(filePath)}
       data-testid="file-preview-open-system-fallback"
     >
@@ -148,7 +148,7 @@ function highlightSearchMatches(root: HTMLElement, query: string): HTMLElement[]
       }
       const end = nextMatch + normalizedQuery.length;
       const mark = document.createElement('mark');
-      mark.className = 'file-preview-search-hit rounded-sm bg-[rgba(250,204,21,0.45)] text-[var(--nim-text)]';
+      mark.className = 'file-preview-search-hit rounded-ui-base bg-[rgba(250,204,21,0.45)] text-[var(--nim-text)]';
       mark.dataset.testid = 'file-preview-search-hit';
       mark.textContent = text.slice(nextMatch, end);
       fragment.appendChild(mark);
@@ -252,7 +252,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
   if (state.phase === 'missing') {
     return (
       <div
-        className="file-preview-body file-preview-missing select-text m-3 rounded-lg border border-dashed border-[var(--nim-warning)] px-4 py-4 text-sm text-[var(--nim-warning)]"
+        className="file-preview-body file-preview-missing select-text m-3 rounded-ui-lg border border-dashed border-[var(--nim-warning)] px-4 py-4 text-sm text-[var(--nim-warning)]"
         data-testid="file-preview-missing"
       >
         <div className="font-medium">文件不存在或已移动：</div>
@@ -264,7 +264,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
   if (state.phase === 'error') {
     return (
       <div
-        className="file-preview-body file-preview-error select-text m-3 rounded-lg border border-[var(--nim-error)] px-4 py-4 text-sm text-[var(--nim-error)]"
+        className="file-preview-body file-preview-error select-text m-3 rounded-ui-lg border border-[var(--nim-error)] px-4 py-4 text-sm text-[var(--nim-error)]"
         data-testid="file-preview-error"
       >
         <div className="font-medium">无法读取这个文件：</div>
@@ -303,7 +303,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
   if (classification.kind === 'pdf') {
     if (!binaryUrl) {
       return (
-        <div className="file-preview-body select-text m-3 rounded-lg border border-nim px-4 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-pdf-fallback">
+        <div className="file-preview-body select-text m-3 rounded-ui-lg border border-nim px-4 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-pdf-fallback">
           <div>这份 PDF 没法在面板里渲染。</div>
           <div className="mt-1 break-all font-mono text-xs">{filePath}</div>
           <div className="mt-3">
@@ -360,7 +360,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
   }
 
   return (
-    <div className="file-preview-body file-preview-unsupported select-text m-3 rounded-lg border border-nim px-4 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-unsupported">
+    <div className="file-preview-body file-preview-unsupported select-text m-3 rounded-ui-lg border border-nim px-4 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-unsupported">
       <div>这个格式没法在面板里预览。</div>
       <div className="mt-1 break-all font-mono text-xs">{filePath}</div>
       <div className="mt-3">

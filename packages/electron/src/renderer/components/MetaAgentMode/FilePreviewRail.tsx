@@ -84,7 +84,7 @@ function PreviewIconButton({
   return (
     <button
       type="button"
-      className={`file-preview-toolbar-button inline-flex h-7 w-7 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`file-preview-toolbar-button inline-flex h-7 w-7 items-center justify-center rounded-ui-base transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         active
           ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]'
           : 'text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]'
@@ -286,7 +286,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
     return (
       <button
         type="button"
-        className="file-preview-rail-toggle absolute right-0 top-1/2 z-20 -translate-y-1/2 rounded-l-md border border-r-0 border-nim bg-[var(--nim-bg-secondary)] px-1 py-3 text-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
+        className="file-preview-rail-toggle absolute right-0 top-1/2 z-20 -translate-y-1/2 rounded-ui-base-l border border-r-0 border-nim bg-[var(--nim-bg-secondary)] px-1 py-3 text-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
         onClick={onOpen}
         title="打开文件预览"
         aria-label="打开文件预览"
@@ -342,7 +342,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
                 <>
                   <button
                     type="button"
-                    className="file-preview-show-shelf-link shrink-0 rounded-sm hover:text-[var(--nim-text)]"
+                    className="file-preview-show-shelf-link shrink-0 rounded-ui-base hover:text-[var(--nim-text)]"
                     onClick={onShowShelf}
                     title="回到本会话产物架"
                     aria-label="回到本会话产物架"
@@ -395,7 +395,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
             )}
             {copyState !== 'idle' && (
               <span
-                className="pointer-events-none absolute right-14 top-9 z-10 rounded border border-nim bg-[var(--nim-bg)] px-2 py-0.5 text-[11px] text-[var(--nim-text)] shadow"
+                className="pointer-events-none absolute right-14 top-9 z-10 rounded-ui-base border border-nim bg-[var(--nim-bg)] px-2 py-0.5 text-[11px] text-[var(--nim-text)] shadow"
                 data-testid="file-preview-copy-feedback"
               >
                 {copyState === 'copied' ? '已复制' : '复制失败'}
@@ -422,7 +422,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
             <input
               ref={findInputRef}
               type="search"
-              className="min-w-0 flex-1 rounded border border-nim bg-[var(--nim-bg)] px-2 py-1 text-xs text-[var(--nim-text)] outline-none focus:border-[var(--nim-border-focus)]"
+              className="min-w-0 flex-1 rounded-ui-base border border-nim bg-[var(--nim-bg)] px-2 py-1 text-xs text-[var(--nim-text)] outline-none focus:border-[var(--nim-border-focus)]"
               placeholder="查找文件内容"
               value={findQuery}
               onChange={(event) => setFindQuery(event.currentTarget.value)}
@@ -484,7 +484,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
               />
             ) : (
               <>
-                <div className="file-preview-shelf-search mb-2 flex items-center gap-1 rounded border border-nim bg-[var(--nim-bg)] px-2 py-1">
+                <div className="file-preview-shelf-search mb-2 flex items-center gap-1 rounded-ui-base border border-nim bg-[var(--nim-bg)] px-2 py-1">
                   <MaterialSymbol icon="search" size={15} className="shrink-0 text-[var(--nim-text-faint)]" />
                   <input
                     type="search"
@@ -508,7 +508,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
                       <li key={item.relativePath}>
                         <button
                           type="button"
-                          className="w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--nim-bg-tertiary)]"
+                          className="w-full rounded-ui-base px-2 py-2 text-left hover:bg-[var(--nim-bg-tertiary)]"
                           onClick={() => onSelectShelfItem(item)}
                           data-testid="file-preview-shelf-item"
                           data-file-path={item.relativePath}

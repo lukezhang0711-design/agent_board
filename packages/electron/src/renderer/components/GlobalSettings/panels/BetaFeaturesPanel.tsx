@@ -35,7 +35,7 @@ export function BetaFeaturesPanel() {
       </div>
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <div className="p-3 bg-nim-secondary rounded-md border border-nim">
+        <div className="p-3 bg-nim-secondary rounded-ui-base border border-nim">
           {/* "Enable All Beta Features" master toggle */}
           <div className="mb-3 pb-3 border-b border-nim">
             <SettingsToggle
@@ -91,7 +91,7 @@ export function BetaFeaturesPanel() {
             </div>
           ))}
         </div>
-        <p className="mt-3 p-2 text-[13px] text-[var(--nim-text-muted)] bg-nim-secondary rounded border border-nim">
+        <p className="mt-3 p-2 text-[13px] text-[var(--nim-text-muted)] bg-nim-secondary rounded-ui-base border border-nim">
           Some beta features may require restarting Nimbalyst to take effect.
         </p>
       </div>

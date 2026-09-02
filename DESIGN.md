@@ -83,9 +83,8 @@ rounded:
     value: 9999px
     cssClass: rounded-ui-full
     use: "徽章、头像、药丸"
-  # 过渡档（新代码不许用，存量逐步迁走）：
+  # 过渡档（直角接缝）：
   # none: 0px (.rounded-ui-none) 直角接缝
-  # sm: 4px (.rounded-ui-sm) 紧凑微标
 
 spacing:
   tight:
@@ -207,7 +206,7 @@ Nimbalyst 是一款面向工程开发与智能代理协作的专业工作台软�
 - `rounded-ui-full` (9999px): 徽章、头像、胶囊形药丸状态灯。
 
 ### 2. 过渡档约束
-FX 遗留的 `rounded-ui-none` (0px) 与 `rounded-ui-sm` (4px) 仅作为存量过渡档保留，DESIGN.md 明令：**新代码不许用，存量逐步迁走**。
+FX 遗留的 `rounded-ui-none` (0px) 仅作为直角接缝过渡档保留。原 `rounded-ui-sm` (4px) 已在施工单 GA2 中完全废除并并入 base (6px)。
 
 ---
 
@@ -226,10 +225,10 @@ FX 遗留的 `rounded-ui-none` (0px) 与 `rounded-ui-sm` (4px) 仅作为存量�
    *反例*: `packages/electron/src/renderer/components/AgentMode/TaskListPanel.tsx:118` (绕过主题变量直接写死绿色)
 4. **Do**: 圆角严格限制在 3 档正式令牌（`rounded-ui-base` / `rounded-ui-lg` / `rounded-ui-full`）。
    **Don't**: 使用表外或任意自定义圆角（如 `rounded-xl`、`rounded-[10px]`、`rounded-[20px]`）。
-   *反例*: `packages/electron/src/renderer/components/AgentMode/ArchiveWorktreeDialog.tsx:65` (`rounded-xl`)
+   *反例*: `packages/runtime/src/editor/ui/ColorPicker.tsx:152` (`rounded-xl`)
 5. **Do**: 间距严格走 4px 栅格整档（`gap-1`、`gap-2`、`gap-3`、`gap-4`、`gap-6`）。
    **Don't**: 使用半档微调（`gap-0.5`、`gap-1.5`、`gap-2.5`）。
-   *反例*: `packages/electron/src/renderer/components/common/PageHeader.tsx:48` (`gap-2.5`)
+   *反例*: `packages/runtime/src/ui/AgentTranscript/components/CustomToolWidgets/RequestUserInputWidget.tsx:631` (`gap-2.5`)
 6. **Do**: 淡文字使用专门的颜色档位 `var(--nim-text-muted)`。
    **Don't**: 使用透明度（如 `opacity-80` 或 `opacity-60`）调淡文字。
    *反例*: `packages/electron/src/renderer/components/AIChat/WakeupBanner.tsx:106` (`opacity-80`)
@@ -244,7 +243,7 @@ FX 遗留的 `rounded-ui-none` (0px) 与 `rounded-ui-sm` (4px) 仅作为存量�
    *反例*: `packages/electron/src/renderer/components/DeveloperDashboard/DeveloperDashboard.tsx:217` (`tick={{ fontSize: 11 }}`)
 10. **Do**: 极淡色 `var(--nim-text-subtle)` 仅用于分隔线、折叠箭头、大空态图标。
     **Don't**: 将极淡非文字记号色赋给可读正文或副标题，导致暗色模式对比度彻底失效。
-    *反例*: `packages/electron/src/renderer/components/common/PageHeader.tsx:73`（副标题极度调淡导致几乎不可读）
+    *反例*: `packages/electron/src/renderer/components/common/PageHeader.tsx:75`（副标题极度调淡导致几乎不可读）
 
 ---
 

@@ -23,7 +23,7 @@ export const IndexBuildDialog: React.FC<IndexBuildDialogProps> = ({
       onClick={isBuilding ? undefined : onSkip}
     >
       <div
-        className="index-build-dialog min-w-[400px] max-w-[500px] rounded-lg p-6 shadow-lg border border-[var(--nim-border)] bg-[var(--nim-bg)]"
+        className="index-build-dialog min-w-[400px] max-w-[500px] rounded-ui-lg p-6 shadow-lg border border-[var(--nim-border)] bg-[var(--nim-bg)]"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="index-build-dialog-title m-0 mb-3 text-lg font-semibold text-[var(--nim-text)]">
@@ -34,8 +34,8 @@ export const IndexBuildDialog: React.FC<IndexBuildDialogProps> = ({
           Building a search index will make searches much faster, but may take a few minutes.
         </p>
         {isBuilding ? (
-          <div className="index-build-dialog-progress flex items-center gap-3 p-3 rounded bg-[var(--nim-bg-secondary)] text-sm text-[var(--nim-text-muted)]">
-            <div className="index-build-dialog-spinner w-5 h-5 rounded-full border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] animate-spin" />
+          <div className="index-build-dialog-progress flex items-center gap-3 p-3 rounded-ui-base bg-[var(--nim-bg-secondary)] text-sm text-[var(--nim-text-muted)]">
+            <div className="index-build-dialog-spinner w-5 h-5 rounded-ui-full border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] animate-spin" />
             <span>Building index... This may take a few minutes.</span>
           </div>
         ) : (

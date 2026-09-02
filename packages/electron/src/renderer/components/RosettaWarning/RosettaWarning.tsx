@@ -56,7 +56,7 @@ export const RosettaWarning: React.FC<RosettaWarningProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          className="absolute top-4 right-4 bg-transparent border-none text-[28px] cursor-pointer p-0 w-8 h-8 flex items-center justify-center leading-none z-[1] rounded-md transition-all duration-200 hover:scale-110 text-nim-muted hover:text-nim hover:bg-nim-hover"
+          className="absolute top-4 right-4 bg-transparent border-none text-[28px] cursor-pointer p-0 w-8 h-8 flex items-center justify-center leading-none z-[1] rounded-ui-base transition-all duration-200 hover:scale-110 text-nim-muted hover:text-nim hover:bg-nim-hover"
           onClick={handleRemindLater}
           aria-label="Close"
         >
@@ -79,7 +79,7 @@ export const RosettaWarning: React.FC<RosettaWarningProps> = ({
 
           <div className="flex justify-center mb-6">
             <button
-              className="py-3.5 px-8 rounded-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center gap-3 text-white transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 bg-gradient-to-br from-amber-500 to-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.4)] hover:shadow-[0_6px_16px_rgba(245,158,11,0.5)]"
+              className="py-3 px-8 rounded-ui-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center gap-3 text-white transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 bg-gradient-to-br from-amber-500 to-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.4)] hover:shadow-[0_6px_16px_rgba(245,158,11,0.5)]"
               onClick={handleDownload}
             >
               Download Apple Silicon Build

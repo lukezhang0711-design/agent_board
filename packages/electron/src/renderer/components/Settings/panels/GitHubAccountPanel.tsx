@@ -86,7 +86,7 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
 
       {loading ? (
         <div className="flex items-center gap-2 py-6 text-[var(--nim-text-muted)] text-sm">
-          <div className="spinner w-4 h-4 border-[2px] border-[var(--nim-bg-secondary)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+          <div className="spinner w-4 h-4 border-[2px] border-[var(--nim-bg-secondary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
           Loading accounts…
         </div>
       ) : error ? (
@@ -97,10 +97,10 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
           </button>
         </div>
       ) : noAccounts ? (
-        <div className="flex items-start gap-3 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-lg text-[13px] text-[var(--nim-text-muted)]">
+        <div className="flex items-start gap-3 p-3 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-ui-lg text-[13px] text-[var(--nim-text-muted)]">
           <MaterialSymbol icon="info" size={16} className="text-[var(--nim-primary)] shrink-0 mt-0.5" />
           <div>
-            No GitHub CLI accounts found. Run <code className="text-[11px] bg-[var(--nim-code-bg)] px-1 py-[1px] rounded">gh auth login</code> in your terminal, then reload.
+            No GitHub CLI accounts found. Run <code className="text-[11px] bg-[var(--nim-code-bg)] px-1 py-[1px] rounded-ui-base">gh auth login</code> in your terminal, then reload.
           </div>
         </div>
       ) : (
@@ -110,7 +110,7 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
           </label>
           <select
             data-testid="github-account-select"
-            className="w-full max-w-sm px-2.5 py-2 text-[13px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] transition-colors"
+            className="w-full max-w-sm px-2.5 py-2 text-[13px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] transition-colors"
             value={isProject ? override ?? '' : defaultAccount ?? ''}
             onChange={(e) => {
               const value = e.target.value || null;

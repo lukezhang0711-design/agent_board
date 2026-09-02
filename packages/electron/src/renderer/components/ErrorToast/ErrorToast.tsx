@@ -112,7 +112,7 @@ ${JSON.stringify(notification.context, null, 2)}
       {notifications.map(notification => (
         <div
           key={notification.id}
-          className={`error-toast error-toast--${notification.severity} rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-4 pointer-events-auto animate-[slideIn_0.3s_ease-out] border-l-4 ${severityStyles[notification.severity]}`}
+          className={`error-toast error-toast--${notification.severity} rounded-ui-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-4 pointer-events-auto animate-[slideIn_0.3s_ease-out] border-l-4 ${severityStyles[notification.severity]}`}
           role="alert"
           onMouseEnter={() => pauseDismissTimer(notification.id)}
           onMouseLeave={() => resumeDismissTimer(notification)}
@@ -126,7 +126,7 @@ ${JSON.stringify(notification.context, null, 2)}
             <div className="error-toast-title flex-1 font-semibold text-sm text-[var(--nim-text)]">{notification.title}</div>
             {notification.dismissible && (
               <button
-                className="error-toast-close bg-transparent border-none text-2xl leading-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center text-[var(--nim-text-muted)] rounded transition-colors duration-200 hover:bg-black/5"
+                className="error-toast-close bg-transparent border-none text-2xl leading-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center text-[var(--nim-text-muted)] rounded-ui-base transition-colors duration-200 hover:bg-black/5"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDismiss(notification.id);
@@ -145,7 +145,7 @@ ${JSON.stringify(notification.context, null, 2)}
             <div className="error-toast-actions flex gap-2 mt-3">
               {notification.action && (
                 <button
-                  className="error-toast-action-btn bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors duration-200 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]"
+                  className="error-toast-action-btn bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] px-3 py-2 rounded-ui-base text-xs font-medium cursor-pointer transition-colors duration-200 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]"
                   onClick={() => handleActionClick(notification)}
                 >
                   {notification.action.label}
@@ -153,7 +153,7 @@ ${JSON.stringify(notification.context, null, 2)}
               )}
               {(notification.details || notification.stack || notification.context) && (
                 <button
-                  className="error-toast-copy-btn bg-[var(--nim-primary)] text-white border-none px-3 py-1.5 rounded text-xs cursor-pointer transition-colors duration-200 hover:bg-[var(--nim-primary-hover)]"
+                  className="error-toast-copy-btn bg-[var(--nim-primary)] text-white border-none px-3 py-2 rounded-ui-base text-xs cursor-pointer transition-colors duration-200 hover:bg-[var(--nim-primary-hover)]"
                   onClick={() => handleCopyDetails(notification)}
                 >
                   Copy Details

@@ -279,7 +279,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
             </p>
           </div>
           <button
-            className="project-trust-toast-dont-trust text-[13px] font-medium px-3 py-1.5 rounded-md cursor-pointer shrink-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-nim text-nim-muted"
+            className="project-trust-toast-dont-trust text-[13px] font-medium px-3 py-2 rounded-ui-base cursor-pointer shrink-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-nim text-nim-muted"
             onClick={handleDontTrust}
             disabled={isSubmitting}
           >
@@ -289,7 +289,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
 
         {/* Warning */}
         <div
-          className="project-trust-toast-warning flex items-start gap-3 p-3 rounded-lg mb-4 text-[13px] leading-relaxed bg-[color-mix(in_srgb,#f59e0b_10%,transparent)] border border-[color-mix(in_srgb,#f59e0b_30%,transparent)] text-nim-muted"
+          className="project-trust-toast-warning flex items-start gap-3 p-3 rounded-ui-lg mb-4 text-[13px] leading-relaxed bg-[color-mix(in_srgb,#f59e0b_10%,transparent)] border border-[color-mix(in_srgb,#f59e0b_30%,transparent)] text-nim-muted"
         >
           <svg
             width="16"
@@ -318,7 +318,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
         {/* Mode Toggle Buttons */}
         <div className="project-trust-toast-mode-toggle flex gap-2 mb-4">
           <button
-            className={`project-trust-toast-mode-btn flex-1 grid grid-rows-[1fr_auto] items-center justify-items-center px-4 pt-3 pb-2 min-h-16 rounded-lg cursor-pointer transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
+            className={`project-trust-toast-mode-btn flex-1 grid grid-rows-[1fr_auto] items-center justify-items-center px-4 pt-3 pb-2 min-h-16 rounded-ui-lg cursor-pointer transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
               selectedMode === 'ask'
                 ? 'project-trust-toast-mode-btn--selected border-nim-primary bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)]'
                 : 'border border-nim bg-nim-secondary'
@@ -333,7 +333,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
             </span>
           </button>
           <button
-            className={`project-trust-toast-mode-btn flex-1 grid grid-rows-[1fr_auto] items-center justify-items-center px-4 pt-3 pb-2 min-h-16 rounded-lg cursor-pointer transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
+            className={`project-trust-toast-mode-btn flex-1 grid grid-rows-[1fr_auto] items-center justify-items-center px-4 pt-3 pb-2 min-h-16 rounded-ui-lg cursor-pointer transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
               selectedMode === 'allow-all'
                 ? 'project-trust-toast-mode-btn--selected border-nim-primary bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)]'
                 : 'border border-nim bg-nim-secondary'
@@ -347,13 +347,13 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
               Allow Edits
             </span>
             <span
-              className="project-trust-toast-mode-badge text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap row-start-2 bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] text-nim-primary"
+              className="project-trust-toast-mode-badge text-[11px] font-medium px-2 py-0.5 rounded-ui-base whitespace-nowrap row-start-2 bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] text-nim-primary"
             >
               Recommended
             </span>
           </button>
           <button
-            className={`project-trust-toast-mode-btn flex-1 grid grid-rows-[1fr_auto] items-center justify-items-center px-4 pt-3 pb-2 min-h-16 rounded-lg cursor-pointer transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
+            className={`project-trust-toast-mode-btn flex-1 grid grid-rows-[1fr_auto] items-center justify-items-center px-4 pt-3 pb-2 min-h-16 rounded-ui-lg cursor-pointer transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
               selectedMode === 'bypass-all'
                 ? 'project-trust-toast-mode-btn--selected border-nim-primary bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)]'
                 : 'border border-nim bg-nim-secondary'
@@ -371,7 +371,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
 
         {/* Mode Details */}
         <div
-          className="project-trust-toast-mode-details rounded-lg p-4 mb-4 bg-nim-secondary"
+          className="project-trust-toast-mode-details rounded-ui-lg p-4 mb-4 bg-nim-secondary"
         >
           {selectedMode === 'ask' ? (
             <>
@@ -553,21 +553,21 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
         {/* Footer with Save/Cancel buttons */}
         <div className="project-trust-toast-footer flex items-center justify-between">
           <button
-            className="project-trust-toast-settings-link text-[13px] p-1 px-2 rounded cursor-pointer transition-colors duration-150 hover:underline bg-transparent border-none text-nim-faint"
+            className="project-trust-toast-settings-link text-[13px] p-1 px-2 rounded-ui-base cursor-pointer transition-colors duration-150 hover:underline bg-transparent border-none text-nim-faint"
             onClick={handleOpenSettings}
           >
             Advanced settings
           </button>
           <div className="project-trust-toast-actions flex gap-2">
             <button
-              className="project-trust-toast-cancel text-sm font-medium px-4 py-2 rounded-md cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-nim text-nim-muted"
+              className="project-trust-toast-cancel text-sm font-medium px-4 py-2 rounded-ui-base cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-nim text-nim-muted"
               onClick={handleDismiss}
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
-              className="project-trust-toast-save text-sm font-medium px-4 py-2 rounded-md cursor-pointer transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed hover:brightness-110 bg-nim-primary border-none text-nim-on-primary"
+              className="project-trust-toast-save text-sm font-medium px-4 py-2 rounded-ui-base cursor-pointer transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed hover:brightness-110 bg-nim-primary border-none text-nim-on-primary"
               onClick={handleSave}
               disabled={isSubmitting}
             >

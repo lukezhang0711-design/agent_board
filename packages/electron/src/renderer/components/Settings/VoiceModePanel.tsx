@@ -375,7 +375,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
             onChange={(e) => setApiKey({ keyName: 'openai', value: e.target.value })}
             onFocus={(e) => e.target.select()}
             placeholder="sk-..."
-            className="mt-2 w-full py-2 px-3 rounded-md bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
+            className="mt-2 w-full py-2 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
           />
         </div>
 
@@ -385,7 +385,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
               type="checkbox"
               checked={enabled}
               onChange={(e) => handleEnabledChange(e.target.checked)}
-              className="setting-checkbox mt-1 w-4 h-4 rounded border-[var(--nim-border)] accent-[var(--nim-primary)]"
+              className="setting-checkbox mt-1 w-4 h-4 rounded-ui-base border-[var(--nim-border)] accent-[var(--nim-primary)]"
               disabled={!hasOpenAIKey}
             />
             <div className="setting-text flex flex-col gap-1">
@@ -400,7 +400,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
 
       {enabled && hasOpenAIKey && micStatus && micStatus !== 'granted' && (
         <div
-          className="voice-mode-mic-permission-warning provider-panel-section mb-6 p-4 rounded border border-[var(--nim-warning)] bg-[var(--nim-bg-secondary)]"
+          className="voice-mode-mic-permission-warning provider-panel-section mb-6 p-4 rounded-ui-base border border-[var(--nim-warning)] bg-[var(--nim-bg-secondary)]"
           data-testid="voice-mode-mic-permission-warning"
         >
           <div className="flex items-start gap-3">
@@ -418,7 +418,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 {micPlatform === 'darwin' && (
                   <button
                     onClick={handleOpenMicSettings}
-                    className="px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-primary)] text-white cursor-pointer text-sm flex items-center gap-2"
+                    className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-primary)] text-white cursor-pointer text-sm flex items-center gap-2"
                     data-testid="voice-mode-open-mic-settings"
                   >
                     <MaterialSymbol icon="open_in_new" size={14} />
@@ -427,7 +427,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 )}
                 <button
                   onClick={checkMicStatus}
-                  className="px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-sm flex items-center gap-2"
+                  className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-sm flex items-center gap-2"
                   data-testid="voice-mode-recheck-mic"
                 >
                   <MaterialSymbol icon="refresh" size={14} />
@@ -452,7 +452,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 <select
                   value={voice}
                   onChange={(e) => handleSettingChange({ voice: e.target.value as VoiceId })}
-                  className="flex-1 px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)]"
+                  className="flex-1 px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)]"
                 >
                   {VOICE_GROUPS.map((group) => (
                     <optgroup key={group.label} label={group.label}>
@@ -467,7 +467,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 <button
                   onClick={handlePreviewVoice}
                   disabled={isPreviewPlaying && !audioRef.current}
-                  className={`px-3 py-1.5 rounded border border-[var(--nim-border)] cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 py-2 rounded-ui-base border border-[var(--nim-border)] cursor-pointer flex items-center gap-1 ${
                     isPreviewPlaying
                       ? 'bg-[var(--nim-primary)] text-white'
                       : 'bg-[var(--nim-bg-secondary)] text-[var(--nim-text)]'
@@ -497,7 +497,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
               <select
                 value={currentTurnDetection.mode}
                 onChange={(e) => handleTurnDetectionChange({ mode: e.target.value as 'server_vad' | 'push_to_talk' })}
-                className="mt-2 px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)]"
+                className="mt-2 px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)]"
               >
                 <option value="server_vad">Voice Activity Detection (automatic)</option>
                 <option value="push_to_talk">Push to Talk (hold button)</option>
@@ -561,7 +561,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   type="checkbox"
                   checked={currentTurnDetection.interruptible !== false}
                   onChange={(e) => handleTurnDetectionChange({ interruptible: e.target.checked })}
-                  className="setting-checkbox mt-1 w-4 h-4 rounded border-[var(--nim-border)] accent-[var(--nim-primary)]"
+                  className="setting-checkbox mt-1 w-4 h-4 rounded-ui-base border-[var(--nim-border)] accent-[var(--nim-primary)]"
                 />
                 <div className="setting-text flex flex-col gap-1">
                   <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Allow Interruptions</span>
@@ -637,7 +637,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   <span className="text-[var(--nim-text-muted)]">Summary exists</span>
                   <button
                     onClick={handleOpenSummary}
-                    className="px-2 py-1 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-xs flex items-center gap-1"
+                    className="px-2 py-1 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-xs flex items-center gap-1"
                     title="Open summary file"
                     data-testid="voice-mode-summary-view"
                   >
@@ -647,7 +647,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   <button
                     onClick={handleGenerateSummary}
                     disabled={!hasAgentConfigured}
-                    className="px-2 py-1 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-xs flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 py-1 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-xs flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     title={hasAgentConfigured ? 'Regenerate summary' : 'Configure an agent to enable regeneration'}
                     data-testid="voice-mode-summary-regenerate"
                   >
@@ -660,7 +660,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   <button
                     onClick={handleGenerateSummary}
                     disabled={!hasAgentConfigured}
-                    className="px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-primary)] text-white cursor-pointer text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-primary)] text-white cursor-pointer text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid="voice-mode-summary-generate"
                   >
                     <MaterialSymbol icon="auto_awesome" size={16} />
@@ -736,7 +736,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       },
                     })}
                     placeholder="e.g., Always respond in a formal tone..."
-                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
+                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
                   />
                 </div>
 
@@ -756,7 +756,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       },
                     })}
                     placeholder="e.g., When discussing code, always mention file names..."
-                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
+                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
                   />
                 </div>
               </div>
@@ -793,7 +793,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       },
                     })}
                     placeholder="e.g., When responding to voice requests, prioritize brevity..."
-                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
+                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
                   />
                 </div>
 
@@ -813,7 +813,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       },
                     })}
                     placeholder="e.g., Always summarize what you did in 1-2 sentences at the end..."
-                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
+                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
                   />
                 </div>
               </div>

@@ -161,7 +161,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
             {tasks.map((task) => (
               <div
                 key={task.worktreeId}
-                className={`archive-task flex items-start gap-3 px-3 py-2.5 bg-[var(--nim-bg)] rounded border border-[var(--nim-border)] ${task.status === 'completed' ? 'opacity-60' : ''}`}
+                className={`archive-task flex items-start gap-3 px-3 py-2.5 bg-[var(--nim-bg)] rounded-ui-base border border-[var(--nim-border)] ${task.status === 'completed' ? 'opacity-60' : ''}`}
               >
                 {getStatusIcon(task.status)}
                 <div className="archive-task-content flex-1 min-w-0 flex flex-col gap-1">

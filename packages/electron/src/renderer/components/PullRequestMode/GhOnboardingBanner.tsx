@@ -95,7 +95,7 @@ export function GhOnboardingBanner({
             <div className="font-medium text-nim text-sm">Sign in to GitHub</div>
             <div className="text-nim-muted text-xs mt-1 flex items-center gap-2 flex-wrap">
               Run
-              <code className="font-mono bg-nim-bg-primary px-1.5 py-0.5 rounded text-nim">
+              <code className="font-mono bg-nim-bg-primary px-2 py-0.5 rounded-ui-base text-nim">
                 {GH_LOGIN_COMMAND}
               </code>
               <button
@@ -116,7 +116,7 @@ export function GhOnboardingBanner({
         {notInstalled && (
           <button
             type="button"
-            className="nim-button text-xs px-3 py-1.5"
+            className="nim-button text-xs px-3 py-2"
             onClick={handleInstallClick}
           >
             Install gh
@@ -124,7 +124,7 @@ export function GhOnboardingBanner({
         )}
         <button
           type="button"
-          className="nim-button-secondary text-xs px-3 py-1.5"
+          className="nim-button-secondary text-xs px-3 py-2"
           onClick={handleRecheck}
           disabled={isRechecking}
         >

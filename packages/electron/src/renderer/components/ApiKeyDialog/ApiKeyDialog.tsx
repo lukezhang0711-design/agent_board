@@ -39,7 +39,7 @@ export function ApiKeyDialog({ isOpen, onClose, onOpenPreferences }: ApiKeyDialo
             To use the AI chat features, you need to configure your AI provider.
           </p>
 
-          <div className="api-key-dialog-steps rounded-lg p-4 mb-2 bg-[var(--nim-bg-secondary)]">
+          <div className="api-key-dialog-steps rounded-ui-lg p-4 mb-2 bg-[var(--nim-bg-secondary)]">
             <h3 className="text-sm font-semibold text-[var(--nim-text)] m-0 mb-3">
               How to get started:
             </h3>

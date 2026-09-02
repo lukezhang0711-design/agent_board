@@ -107,7 +107,7 @@ export const ProjectSelectionDialog: React.FC<ProjectSelectionDialogProps> = ({
         </p>
 
         {suggestedWorkspace && (
-          <div className="project-selection-suggested mb-6 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md">
+          <div className="project-selection-suggested mb-6 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base">
             <h3 className="project-selection-section-title m-0 mb-3 text-sm font-semibold text-[var(--nim-text)] uppercase tracking-wide">
               Suggested Project
             </h3>
@@ -133,7 +133,7 @@ export const ProjectSelectionDialog: React.FC<ProjectSelectionDialogProps> = ({
             <h3 className="project-selection-section-title m-0 mb-3 text-sm font-semibold text-[var(--nim-text)] uppercase tracking-wide">
               Recent Projects
             </h3>
-            <div className="project-selection-list mb-3 border border-[var(--nim-border)] rounded-md overflow-hidden max-h-[300px] overflow-y-auto">
+            <div className="project-selection-list mb-3 border border-[var(--nim-border)] rounded-ui-base overflow-hidden max-h-[300px] overflow-y-auto">
               {recentProjects.map((project) => (
                 <div
                   key={project.path}

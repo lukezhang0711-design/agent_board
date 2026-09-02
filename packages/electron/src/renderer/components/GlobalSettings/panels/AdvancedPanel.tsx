@@ -60,7 +60,7 @@ function DropdownRow({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="setting-select shrink-0 py-1.5 px-2 pr-7 rounded-md text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M3%204.5L6%207.5L9%204.5%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] focus:border-[var(--nim-primary)]"
+          className="setting-select shrink-0 py-2 px-2 pr-7 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M3%204.5L6%207.5L9%204.5%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] focus:border-[var(--nim-primary)]"
         >
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -279,7 +279,7 @@ export function AdvancedPanel() {
           </p>
 
           {/* Developer Features */}
-          <div className="mt-4 p-3 bg-nim-secondary rounded-md border border-nim">
+          <div className="mt-4 p-3 bg-nim-secondary rounded-ui-base border border-nim">
             {/* "All Developer Features" master toggle */}
             <div className="setting-item mb-3 pb-3 border-b border-nim">
               <label className="setting-label">
@@ -329,7 +329,7 @@ export function AdvancedPanel() {
                         )}
                         {feature.name}
                         <span
-                          className={`text-xs px-2 py-0.5 rounded ${
+                          className={`text-xs px-2 py-0.5 rounded-ui-base ${
                             isAvailable
                               ? 'bg-green-500/20 text-green-400'
                               : 'bg-red-500/20 text-red-400'
@@ -372,7 +372,7 @@ export function AdvancedPanel() {
                 channel: newChannel,
               });
             }}
-            className="setting-select mt-2 w-full py-2 px-3 pr-9 rounded-md text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M3%204.5L6%207.5L9%204.5%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_12px_center] focus:border-[var(--nim-primary)]"
+            className="setting-select mt-2 w-full py-2 px-3 pr-9 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M3%204.5L6%207.5L9%204.5%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_12px_center] focus:border-[var(--nim-primary)]"
           >
             <option value="stable">Stable</option>
             <option value="alpha">Alpha (Developer Releases)</option>
@@ -380,7 +380,7 @@ export function AdvancedPanel() {
         </div>
 
         {releaseChannel === 'alpha' && (
-          <div className="mt-3 flex items-start gap-2 p-3 rounded border border-[var(--nim-warning)]/30 bg-[var(--nim-warning)]/10">
+          <div className="mt-3 flex items-start gap-2 p-3 rounded-ui-base border border-[var(--nim-warning)]/30 bg-[var(--nim-warning)]/10">
             <MaterialSymbol icon="warning" size={16} className="text-[var(--nim-warning)] shrink-0 mt-0.5" />
             <p className="m-0 text-[13px] text-[var(--nim-text)] leading-snug">
               The alpha channel ships rough developer releases that may be unstable or contain unfinished work. Switch back to Stable if you encounter problems.
@@ -480,7 +480,7 @@ export function AdvancedPanel() {
               value={externalEditorCustomPath || ''}
               onChange={(e) => updateExternalEditorSettings({ customPath: e.target.value })}
               placeholder={process.platform === 'win32' ? 'C:\\Program Files\\Editor\\editor.exe' : '/usr/local/bin/myeditor'}
-              className="w-full py-1.5 px-3 rounded-md text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] font-mono"
+              className="w-full py-2 px-3 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] font-mono"
             />
           </div>
         )}
@@ -522,7 +522,7 @@ export function AdvancedPanel() {
                 <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Detected Terminal Shells</span>
               </div>
 
-              <div className="select-text p-2 rounded-md text-xs bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono">
+              <div className="select-text p-2 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono">
                 {availableTerminalShells.length === 0 ? (
                   <div>No supported terminal shells detected.</div>
                 ) : (
@@ -582,7 +582,7 @@ export function AdvancedPanel() {
               ? 'C:\\MyTools;C:\\Programs\\bin'
               : '/opt/mytools/bin:/usr/local/custom/bin'}
             rows={2}
-            className="w-full py-1.5 px-3 rounded-md text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] font-mono resize-none"
+            className="w-full py-2 px-3 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] font-mono resize-none"
           />
           <div className="mt-1">
             <button
@@ -595,7 +595,7 @@ export function AdvancedPanel() {
             {showEnhancedPath && enhancedPath && (
               <div className="mt-2">
                 <div
-                  className="p-2 rounded-md text-xs bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono overflow-x-auto"
+                  className="p-2 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono overflow-x-auto"
                   style={{
                     maxHeight: '200px',
                     overflowY: 'auto',

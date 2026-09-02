@@ -133,7 +133,7 @@ export function PullRequestActions({
   if (perms.state === 'merged') {
     return (
       <span
-        className="flex items-center gap-1 px-2 py-1 text-xs text-nim-on-primary bg-[var(--nim-primary)] rounded"
+        className="flex items-center gap-1 px-2 py-1 text-xs text-nim-on-primary bg-[var(--nim-primary)] rounded-ui-base"
         data-testid="pr-merged-badge"
       >
         <MaterialSymbol icon="merge" size={14} />
@@ -170,7 +170,7 @@ export function PullRequestActions({
 
       {showApprove && (
         <button
-          className="flex items-center gap-1 px-2 py-1 text-xs text-nim-muted hover:text-nim border border-nim rounded transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors disabled:opacity-50"
           onClick={handleApprove}
           disabled={busy !== null}
           data-testid="pr-approve-button"
@@ -185,7 +185,7 @@ export function PullRequestActions({
         <div className="flex items-stretch">
           <button
             ref={editMenu.refs.setReference}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded-l rounded-r-none transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded-ui-base-l rounded-ui-none-r transition-colors disabled:opacity-50"
             onClick={() => setPendingMethod(defaultMethod)}
             disabled={busy !== null || mergeBlocked}
             data-testid="pr-merge-button"
@@ -199,7 +199,7 @@ export function PullRequestActions({
             {...methodMenu.getReferenceProps()}
             onClick={() => methodMenu.setIsOpen(!methodMenu.isOpen)}
             disabled={busy !== null || mergeBlocked}
-            className="flex items-center px-1 bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded-r border-l border-[var(--nim-on-primary)]/20 transition-colors disabled:opacity-50"
+            className="flex items-center px-1 bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded-ui-base-r border-l border-[var(--nim-on-primary)]/20 transition-colors disabled:opacity-50"
             data-testid="pr-merge-method-button"
             title="More merge options"
           >
@@ -211,13 +211,13 @@ export function PullRequestActions({
                 ref={methodMenu.refs.setFloating}
                 style={methodMenu.floatingStyles}
                 {...methodMenu.getFloatingProps()}
-                className="z-50 min-w-[200px] bg-nim-secondary border border-nim rounded-md shadow-lg py-1"
+                className="z-50 min-w-[200px] bg-nim-secondary border border-nim rounded-ui-base shadow-lg py-1"
               >
                 {allowedMethods.length > 1 &&
                   allowedMethods.map((m) => (
                     <button
                       key={m}
-                      className="w-full text-left px-3 py-1.5 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim transition-colors"
                       onClick={() => {
                         methodMenu.setIsOpen(false);
                         setPendingMethod(m);
@@ -230,7 +230,7 @@ export function PullRequestActions({
                   <>
                     {allowedMethods.length > 1 && <div className="my-1 border-t border-nim" />}
                     <button
-                      className="w-full text-left px-3 py-1.5 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim transition-colors flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 text-xs text-nim-muted hover:bg-nim-tertiary hover:text-nim transition-colors flex items-center gap-2"
                       onClick={openEditor}
                       data-testid="pr-merge-edit-message"
                     >
@@ -248,7 +248,7 @@ export function PullRequestActions({
                 ref={editMenu.refs.setFloating}
                 style={editMenu.floatingStyles}
                 {...editMenu.getFloatingProps()}
-                className="z-50 w-[440px] max-w-[90vw] bg-nim-secondary border border-nim rounded-md shadow-lg p-3 flex flex-col gap-2"
+                className="z-50 w-[440px] max-w-[90vw] bg-nim-secondary border border-nim rounded-ui-base shadow-lg p-3 flex flex-col gap-2"
                 data-testid="pr-merge-edit-popover"
               >
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-nim-faint">
@@ -260,7 +260,7 @@ export function PullRequestActions({
                       <button
                         key={m}
                         onClick={() => setEditMethod(m)}
-                        className={`px-2 py-1 text-[11px] rounded border transition-colors ${
+                        className={`px-2 py-1 text-[11px] rounded-ui-base border transition-colors ${
                           editMethod === m
                             ? 'border-[var(--nim-primary)] text-nim'
                             : 'border-nim text-nim-muted hover:text-nim'
@@ -287,13 +287,13 @@ export function PullRequestActions({
                 />
                 <div className="flex items-center justify-end gap-2">
                   <button
-                    className="px-2 py-1 text-xs text-nim-muted hover:text-nim border border-nim rounded transition-colors"
+                    className="px-2 py-1 text-xs text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors"
                     onClick={() => editMenu.setIsOpen(false)}
                   >
                     Cancel
                   </button>
                   <button
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded-ui-base transition-colors disabled:opacity-50"
                     disabled={busy !== null}
                     onClick={() => {
                       editMenu.setIsOpen(false);
@@ -317,7 +317,7 @@ export function PullRequestActions({
             {METHOD_LABEL[pendingMethod]} into <span className="font-mono text-nim">{pr.baseRef}</span>?
           </span>
           <button
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded-ui-base transition-colors disabled:opacity-50"
             onClick={() => handleMerge(pendingMethod)}
             disabled={busy !== null}
             data-testid="pr-merge-confirm-button"
@@ -326,7 +326,7 @@ export function PullRequestActions({
             Confirm
           </button>
           <button
-            className="px-2 py-1 text-xs text-nim-muted hover:text-nim border border-nim rounded transition-colors"
+            className="px-2 py-1 text-xs text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors"
             onClick={() => setPendingMethod(null)}
             disabled={busy !== null}
             data-testid="pr-merge-cancel-button"

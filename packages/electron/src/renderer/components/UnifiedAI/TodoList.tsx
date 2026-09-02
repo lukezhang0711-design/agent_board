@@ -23,10 +23,10 @@ export function TodoList({ todos, sessionId }: TodoListProps) {
 
   return (
     <div
-      className="todo-list fixed bottom-4 right-4 w-80 max-w-[calc(100vw-32px)] rounded-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1000] animate-[fadeIn_0.2s_ease-in]"
+      className="todo-list fixed bottom-4 right-4 w-80 max-w-[calc(100vw-32px)] rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[1000] animate-[fadeIn_0.2s_ease-in]"
       data-session-id={sessionId}
     >
-      <div className="todo-list-header flex items-center justify-between px-3 py-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] rounded-t-lg">
+      <div className="todo-list-header flex items-center justify-between px-3 py-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] rounded-ui-lg-t">
         <span className="todo-list-title text-xs font-semibold text-[var(--nim-text)] uppercase tracking-[0.5px]">
           Tasks
         </span>
@@ -58,7 +58,7 @@ function TodoItem({ todo }: TodoItemProps) {
 
   return (
     <div
-      className={`todo-item flex items-start gap-2 p-2 mb-1 last:mb-0 rounded transition-all duration-200 ${statusClasses[todo.status]}`}
+      className={`todo-item flex items-start gap-2 p-2 mb-1 last:mb-0 rounded-ui-base transition-all duration-200 ${statusClasses[todo.status]}`}
       data-status={todo.status}
     >
       <div className="todo-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-0.5">
@@ -67,7 +67,7 @@ function TodoItem({ todo }: TodoItemProps) {
         )}
         {todo.status === 'in_progress' && (
           <span className="todo-icon-in-progress text-[var(--nim-primary)] text-sm relative">
-            <span className="spinner inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+            <span className="spinner inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
           </span>
         )}
         {todo.status === 'completed' && (

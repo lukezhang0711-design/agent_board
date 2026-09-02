@@ -103,8 +103,8 @@ const TaskRow: React.FC<{
   const canOpenSession = Boolean(task.sessionId && onOpenSession);
 
   return (
-    <div className="flex items-start gap-3 rounded-md border border-nim bg-nim-tertiary px-3 py-2">
-      <div className={`mt-0.5 flex h-7 w-7 items-center justify-center rounded-md bg-nim-tertiary text-nim-muted ${task.status === 'running' ? 'text-[#3b82f6]' : ''} ${task.status === 'error' ? 'text-[#ef4444]' : ''}`}>
+    <div className="flex items-start gap-3 rounded-ui-base border border-nim bg-nim-tertiary px-3 py-2">
+      <div className={`mt-0.5 flex h-7 w-7 items-center justify-center rounded-ui-base bg-nim-tertiary text-nim-muted ${task.status === 'running' ? 'text-[#3b82f6]' : ''} ${task.status === 'error' ? 'text-[#ef4444]' : ''}`}>
         {task.category === 'ai-session' ? (
           <ProviderIcon provider={task.provider || 'claude-code'} size={16} />
         ) : (
@@ -120,7 +120,7 @@ const TaskRow: React.FC<{
           {task.category === 'ai-session' && task.status === 'running' ? (
             <SessionRunningIndicator />
           ) : (
-            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${getTaskStatusClasses(task)}`}>
+            <span className={`shrink-0 rounded-ui-full px-2 py-0.5 text-[10px] font-medium ${getTaskStatusClasses(task)}`}>
               {getTaskStatusLabel(task)}
             </span>
           )}
@@ -149,7 +149,7 @@ const TaskRow: React.FC<{
 };
 
 const EmptyState: React.FC<{ label: string }> = ({ label }) => (
-  <div className="rounded-md border border-dashed border-nim px-3 py-2 text-[12px] text-nim-muted">
+  <div className="rounded-ui-base border border-dashed border-nim px-3 py-2 text-[12px] text-nim-muted">
     {label}
   </div>
 );
@@ -246,7 +246,7 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
           ref={menu.refs.setReference}
           {...menu.getReferenceProps()}
           type="button"
-          className={`nav-button relative flex h-9 w-9 items-center justify-center rounded-md border-none bg-transparent p-0 text-nim-muted transition-all duration-150 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${hasError ? 'text-[#ef4444]' : ''}`}
+          className={`nav-button relative flex h-9 w-9 items-center justify-center rounded-ui-base border-none bg-transparent p-0 text-nim-muted transition-all duration-150 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${hasError ? 'text-[#ef4444]' : ''}`}
           onClick={() => menu.setIsOpen(!menu.isOpen)}
           aria-label={buttonLabel}
           aria-expanded={menu.isOpen}
@@ -258,12 +258,12 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
             size={20}
           />
           {activeTaskCount > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--nim-primary)] px-1 text-[10px] font-semibold text-white">
+            <span className="absolute -right-0.5 -top-0.5 flex min-h-[16px] min-w-[16px] items-center justify-center rounded-ui-full bg-[var(--nim-primary)] px-1 text-[10px] font-semibold text-white">
               {activeTaskCount > 9 ? '9+' : activeTaskCount}
             </span>
           ) : null}
           {hasError ? (
-            <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-[#ef4444]" />
+            <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-ui-full bg-[#ef4444]" />
           ) : null}
         </button>
       </HelpTooltip>
@@ -274,7 +274,7 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
             ref={menu.refs.setFloating}
             style={menu.floatingStyles}
             {...menu.getFloatingProps()}
-            className="z-50 w-80 overflow-y-auto rounded-lg border border-nim bg-nim-secondary shadow-lg"
+            className="z-50 w-80 overflow-y-auto rounded-ui-lg border border-nim bg-nim-secondary shadow-lg"
             data-testid="background-tasks-popover"
           >
             <div className="flex items-center justify-between border-b border-nim px-4 py-3">
@@ -286,7 +286,7 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
               </div>
               <button
                 type="button"
-                className="rounded p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim"
+                className="rounded-ui-base p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim"
                 onClick={() => menu.setIsOpen(false)}
                 aria-label="Close background tasks"
               >

@@ -63,7 +63,7 @@ export function DownloadProgressToast({
       {/* Progress section */}
       <div className="update-toast-progress-section flex items-center gap-3 mb-2">
         {/* App icon placeholder */}
-        <div className="update-toast-app-icon w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--nim-primary)] to-[#6366f1] flex items-center justify-center shrink-0 [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white">
+        <div className="update-toast-app-icon w-10 h-10 rounded-ui-lg bg-gradient-to-br from-[var(--nim-primary)] to-[#6366f1] flex items-center justify-center shrink-0 [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
@@ -74,9 +74,9 @@ export function DownloadProgressToast({
           <div className="update-toast-progress-text text-xs text-[var(--nim-text)] mb-1.5" data-testid="download-progress-text">
             {progress ? `${formatBytes(progress.transferred)} of ${formatBytes(progress.total)}` : 'Preparing...'}
           </div>
-          <div className="update-toast-progress-bar h-1.5 bg-[var(--nim-bg-tertiary)] rounded-sm overflow-hidden">
+          <div className="update-toast-progress-bar h-1.5 bg-[var(--nim-bg-tertiary)] rounded-ui-base overflow-hidden">
             <div
-              className="update-toast-progress-fill h-full bg-[var(--nim-primary)] rounded-sm transition-[width] duration-300 ease-out"
+              className="update-toast-progress-fill h-full bg-[var(--nim-primary)] rounded-ui-base transition-[width] duration-300 ease-out"
               style={{ width: `${percent}%` }}
               data-testid="download-progress-fill"
               data-percent={percent}
@@ -93,7 +93,7 @@ export function DownloadProgressToast({
       {/* Action buttons */}
       <div className="update-toast-actions flex gap-2 flex-wrap">
         <button
-          className="update-toast-btn update-toast-btn-secondary py-2 px-3.5 border border-[var(--nim-border)] rounded-md text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           onClick={onCancel}
           data-testid="download-cancel-btn"
         >

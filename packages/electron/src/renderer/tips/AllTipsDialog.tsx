@@ -44,7 +44,7 @@ export function AllTipsDialog({ isOpen, onClose }: AllTipsDialogProps): React.Re
         <div className="all-tips-header flex items-center justify-between px-6 py-5 border-b border-[var(--nim-border)]">
           <h2 className="m-0 text-lg font-semibold text-[var(--nim-text)]">All Tips</h2>
           <button
-            className="all-tips-close nim-btn-icon w-8 h-8 text-[28px] leading-none rounded transition-all duration-200"
+            className="all-tips-close nim-btn-icon w-8 h-8 text-[28px] leading-none rounded-ui-base transition-all duration-200"
             onClick={onClose}
             aria-label="Close"
           >
@@ -56,10 +56,10 @@ export function AllTipsDialog({ isOpen, onClose }: AllTipsDialogProps): React.Re
           {sorted.map((tip) => (
             <div
               key={tip.id}
-              className="all-tips-item flex items-start gap-3 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg px-4 py-3"
+              className="all-tips-item flex items-start gap-3 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg px-4 py-3"
             >
               {tip.content.icon && (
-                <div className="w-9 h-9 rounded-lg bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] flex items-center justify-center shrink-0 text-[var(--nim-primary)]">
+                <div className="w-9 h-9 rounded-ui-lg bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] flex items-center justify-center shrink-0 text-[var(--nim-primary)]">
                   {tip.content.icon}
                 </div>
               )}
@@ -72,7 +72,7 @@ export function AllTipsDialog({ isOpen, onClose }: AllTipsDialogProps): React.Re
                 </div>
               </div>
               <button
-                className="shrink-0 px-3 py-1.5 bg-[var(--nim-bg)] border border-[var(--nim-border)] text-[var(--nim-text)] rounded-md text-[12.5px] font-medium cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
+                className="shrink-0 px-3 py-2 bg-[var(--nim-bg)] border border-[var(--nim-border)] text-[var(--nim-text)] rounded-ui-base text-[12.5px] font-medium cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
                 onClick={() => handleShow(tip.id, tip.version)}
               >
                 Show

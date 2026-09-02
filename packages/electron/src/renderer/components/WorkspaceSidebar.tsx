@@ -1125,7 +1125,7 @@ export function WorkspaceSidebar({
               <>
                 <button
                   ref={newFileButtonRef}
-                  className="workspace-action-button bg-transparent border-none p-1.5 cursor-pointer rounded text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                  className="workspace-action-button bg-transparent border-none p-2 cursor-pointer rounded-ui-base text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                   onClick={handleNewFileButtonClick}
                   title="New file"
                   aria-label="New file"
@@ -1137,7 +1137,7 @@ export function WorkspaceSidebar({
                 <HelpTooltip testId="file-tree-refresh-button">
                   <button
                     data-testid="file-tree-refresh-button"
-                    className="workspace-action-button bg-transparent border-none p-1.5 cursor-pointer rounded text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                    className="workspace-action-button bg-transparent border-none p-2 cursor-pointer rounded-ui-base text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                     onClick={handleRefreshFileTree}
                     title="Refresh file tree"
                     aria-label="Refresh file tree"
@@ -1148,7 +1148,7 @@ export function WorkspaceSidebar({
                   </button>
                 </HelpTooltip>
                 <button
-                  className="workspace-action-button bg-transparent border-none p-1.5 cursor-pointer rounded text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                  className="workspace-action-button bg-transparent border-none p-2 cursor-pointer rounded-ui-base text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                   onClick={handleNewFolder}
                   title="New folder"
                   aria-label="New folder"
@@ -1161,7 +1161,7 @@ export function WorkspaceSidebar({
                   <HelpTooltip testId="file-tree-quick-open-button">
                     <button
                       data-testid="file-tree-quick-open-button"
-                      className="workspace-action-button bg-transparent border-none p-1.5 cursor-pointer rounded text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                      className="workspace-action-button bg-transparent border-none p-2 cursor-pointer rounded-ui-base text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                       onClick={onOpenQuickSearch}
                       aria-label="Search files"
                     >
@@ -1175,7 +1175,7 @@ export function WorkspaceSidebar({
                   <button
                     ref={filterButtonRef}
                     data-testid="file-tree-filter-button"
-                    className="workspace-action-button bg-transparent border-none p-1.5 cursor-pointer rounded text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                    className="workspace-action-button bg-transparent border-none p-2 cursor-pointer rounded-ui-base text-[var(--nim-text-faint)] flex items-center justify-center transition-all duration-200 relative hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                     onClick={handleFilterButtonClick}
                     aria-label="Filter files"
                   >
@@ -1195,8 +1195,8 @@ export function WorkspaceSidebar({
 
       {currentView === 'files' ? (
         <>
-          <div className="workspace-section-label nim-section-label py-1.5 px-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Files</div>
-          <div className={`workspace-file-tree nim-scrollbar flex-1 overflow-y-auto overflow-x-hidden py-2 relative transition-colors duration-200 ${isDragOverRoot ? 'drag-over-root bg-[var(--nim-accent-subtle)] border-2 border-dashed border-[var(--nim-primary)] !py-1.5' : ''}`}>
+          <div className="workspace-section-label nim-section-label py-2 px-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Files</div>
+          <div className={`workspace-file-tree nim-scrollbar flex-1 overflow-y-auto overflow-x-hidden py-2 relative transition-colors duration-200 ${isDragOverRoot ? 'drag-over-root bg-[var(--nim-accent-subtle)] border-2 border-dashed border-[var(--nim-primary)] !py-2' : ''}`}>
             {shouldShowFilterHint && (
               <div className="file-tree-filter-hint py-2 px-3 text-xs text-[var(--nim-text-faint)] leading-relaxed border-b border-[var(--nim-border)] mb-1">
                 {aiFilterHintText}
@@ -1215,7 +1215,7 @@ export function WorkspaceSidebar({
                 <h3 className="file-tree-empty-title m-0 mb-2 text-base font-semibold text-[var(--nim-text)]">{getEmptyStateMessage().title}</h3>
                 <p className="file-tree-empty-description m-0 mb-6 text-[13px] text-[var(--nim-text-muted)] leading-normal max-w-[280px]">{getEmptyStateMessage().description}</p>
                 <button
-                  className="file-tree-clear-filter-btn nim-btn-primary px-4 py-2 rounded-md text-[13px] font-medium hover:opacity-90 hover:-translate-y-px active:translate-y-0 transition-all duration-200"
+                  className="file-tree-clear-filter-btn nim-btn-primary px-4 py-2 rounded-ui-base text-[13px] font-medium hover:opacity-90 hover:-translate-y-px active:translate-y-0 transition-all duration-200"
                   onClick={() => handleFilterChange('all')}
                 >
                   Clear Filter
@@ -1238,7 +1238,7 @@ export function WorkspaceSidebar({
               />
             )}
             {isDragOverRoot && (
-              <div className="root-drop-indicator sticky top-0 bg-gradient-to-b from-[var(--nim-accent-subtle)] to-transparent text-center text-[13px] font-medium text-[var(--nim-primary)] z-10 mb-2 rounded">
+              <div className="root-drop-indicator sticky top-0 bg-gradient-to-b from-[var(--nim-accent-subtle)] to-transparent text-center text-[13px] font-medium text-[var(--nim-primary)] z-10 mb-2 rounded-ui-base">
                 Drop here to move to workspace root
               </div>
             )}

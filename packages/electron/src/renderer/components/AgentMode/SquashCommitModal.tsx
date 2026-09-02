@@ -94,7 +94,7 @@ export function SquashCommitModal({
             <textarea
               ref={textareaRef}
               id="commit-message"
-              className="squash-commit-modal-textarea nim-input font-mono text-sm leading-relaxed resize-y min-h-[120px] p-3 rounded-md"
+              className="squash-commit-modal-textarea nim-input font-mono text-sm leading-relaxed resize-y min-h-[120px] p-3 rounded-ui-base"
               placeholder="Enter commit message for squashed commit..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}

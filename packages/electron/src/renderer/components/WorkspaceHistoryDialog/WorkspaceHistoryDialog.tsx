@@ -424,7 +424,7 @@ export function WorkspaceHistoryDialog({
               <div className="workspace-history-header-buttons flex items-center gap-2 shrink-0">
                 {selectedDeletedFiles.size > 0 && (
                   <button
-                    className="workspace-history-restore-selected-button px-3.5 py-1.5 bg-emerald-500 text-white border-none rounded-md text-xs font-medium cursor-pointer transition-all duration-200 flex items-center gap-1 whitespace-nowrap hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="workspace-history-restore-selected-button px-3 py-2 bg-emerald-500 text-white border-none rounded-ui-base text-xs font-medium cursor-pointer transition-all duration-200 flex items-center gap-1 whitespace-nowrap hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleBatchRestore}
                     disabled={isRestoring}
                   >
@@ -434,7 +434,7 @@ export function WorkspaceHistoryDialog({
                 )}
                 {selectedFilePath && selectedSnapshotTimestamp && (
                   <button
-                    className="workspace-history-restore-button nim-btn-primary px-3.5 py-1.5 text-xs font-medium rounded-md flex items-center gap-1 whitespace-nowrap"
+                    className="workspace-history-restore-button nim-btn-primary px-3 py-2 text-xs font-medium rounded-ui-base flex items-center gap-1 whitespace-nowrap"
                     onClick={handleRestoreVersion}
                     disabled={isRestoring || !previewContent}
                   >
@@ -460,7 +460,7 @@ export function WorkspaceHistoryDialog({
                         className={`workspace-history-snapshot-item flex items-center gap-3 px-4 py-2 cursor-pointer border-b border-[var(--nim-border)] last:border-b-0 transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] ${selectedSnapshotTimestamp === snapshot.timestamp ? 'selected bg-[var(--nim-bg-tertiary)] border-l-[3px] border-l-[var(--nim-primary)] pl-[13px]' : ''}`}
                         onClick={() => handleSnapshotSelect(snapshot.timestamp, index)}
                       >
-                        <div className={`workspace-history-snapshot-icon w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${getSnapshotIconBgClass(snapshot.type)}`}>
+                        <div className={`workspace-history-snapshot-icon w-7 h-7 rounded-ui-base flex items-center justify-center shrink-0 ${getSnapshotIconBgClass(snapshot.type)}`}>
                           <span className="material-symbols-outlined text-base">{getSnapshotIcon(snapshot.type)}</span>
                         </div>
                         <div className="workspace-history-snapshot-info flex-1 min-w-0">
@@ -476,23 +476,23 @@ export function WorkspaceHistoryDialog({
                 <div className="workspace-history-preview-area flex-1 overflow-auto bg-[var(--nim-bg)] flex flex-col nim-scrollbar">
                   {diffMode && versionAMeta && versionBMeta && (
                     <div className="workspace-history-diff-header px-4 py-2 flex items-center gap-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] flex-wrap">
-                      <span className="workspace-history-diff-label old px-2 py-0.5 rounded bg-[var(--nim-bg-tertiary)] text-[11px] font-medium text-[var(--nim-error)]">
+                      <span className="workspace-history-diff-label old px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[11px] font-medium text-[var(--nim-error)]">
                         {formatVersionLabel(versionAMeta.type, versionAMeta.timestamp)}
                       </span>
                       <span className="workspace-history-diff-separator text-[11px] font-semibold text-[var(--nim-text-faint)]">vs</span>
-                      <span className="workspace-history-diff-label new px-2 py-0.5 rounded bg-[var(--nim-bg-tertiary)] text-[11px] font-medium text-[var(--nim-success)]">
+                      <span className="workspace-history-diff-label new px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[11px] font-medium text-[var(--nim-success)]">
                         {formatVersionLabel(versionBMeta.type, versionBMeta.timestamp)}
                       </span>
                       {fileType === 'markdown' && (
-                        <div className="workspace-history-diff-mode-toggle flex bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md p-0.5 gap-1 ml-auto">
+                        <div className="workspace-history-diff-mode-toggle flex bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-0.5 gap-1 ml-auto">
                           <button
-                            className={`workspace-history-diff-mode-button px-3 py-1 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${diffViewMode === 'rich' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                            className={`workspace-history-diff-mode-button px-3 py-1 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${diffViewMode === 'rich' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                             onClick={() => setDiffViewMode('rich')}
                           >
                             Rich
                           </button>
                           <button
-                            className={`workspace-history-diff-mode-button px-3 py-1 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${diffViewMode === 'text' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                            className={`workspace-history-diff-mode-button px-3 py-1 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${diffViewMode === 'text' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                             onClick={() => setDiffViewMode('text')}
                           >
                             Text
@@ -504,7 +504,7 @@ export function WorkspaceHistoryDialog({
 
                   {loadingPreview ? (
                     <div className="workspace-history-preview-loading flex flex-col items-center justify-center p-10 gap-3 text-[var(--nim-text-muted)] text-[13px]">
-                      <div className="workspace-history-preview-loading-spinner w-6 h-6 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+                      <div className="workspace-history-preview-loading-spinner w-6 h-6 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
                       Loading preview...
                     </div>
                   ) : diffMode ? (

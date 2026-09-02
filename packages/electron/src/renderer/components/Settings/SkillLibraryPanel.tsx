@@ -302,7 +302,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
       <div
         key={card.name}
         data-testid={`skill-card-${card.name}`}
-        className={`flex flex-col justify-between gap-3 rounded-lg border p-3.5 transition-all duration-150 bg-[var(--nim-bg)] ${
+        className={`flex flex-col justify-between gap-3 rounded-ui-lg border p-3 transition-all duration-150 bg-[var(--nim-bg)] ${
           card.disabled
             ? 'border-[var(--nim-border-subtle)] opacity-70'
             : 'border-[var(--nim-border)] hover:border-[var(--nim-border-strong)] shadow-xs'
@@ -318,7 +318,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                   data-testid={`bundle-skill-checkbox-${card.name}`}
                   checked={isCardInEditingBundle}
                   onChange={(e) => toggleBundleSkillForCard(card, e.target.checked)}
-                  className="rounded text-[var(--nim-primary)] cursor-pointer mt-0.5"
+                  className="rounded-ui-base text-[var(--nim-primary)] cursor-pointer mt-0.5"
                 />
                 <span className="font-semibold text-sm text-[var(--nim-text)] leading-snug break-words">
                   {card.name}
@@ -343,7 +343,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           {/* Engine Badges & Content Comparison Badge */}
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`px-1.5 py-0.5 rounded text-ui-caption font-mono border ${
+              className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
                 card.engines.claude
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
@@ -352,7 +352,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               Claude {card.engines.claude ? '✓' : '✗'}
             </span>
             <span
-              className={`px-1.5 py-0.5 rounded text-ui-caption font-mono border ${
+              className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
                 card.engines.codex
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
@@ -361,7 +361,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               Codex {card.engines.codex ? '✓' : '✗'}
             </span>
             <span
-              className={`px-1.5 py-0.5 rounded text-ui-caption font-mono border ${
+              className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
                 card.engines.gemini
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
@@ -371,12 +371,12 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
             </span>
 
             {card.contentMatch === 'same' && (
-              <span className="px-1.5 py-0.5 rounded text-ui-caption bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)]">
+              <span className="px-2 py-0.5 rounded-ui-base text-ui-caption bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)]">
                 内容一致
               </span>
             )}
             {card.contentMatch === 'different' && (
-              <span className="px-1.5 py-0.5 rounded text-ui-caption bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
+              <span className="px-2 py-0.5 rounded-ui-base text-ui-caption bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
                 两家内容不一样
               </span>
             )}
@@ -399,7 +399,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
 
           {/* Expanded full description */}
           {isExpanded && card.rawDescription && (
-            <div className="mt-1 rounded-md bg-[var(--nim-bg-subtle)] p-2.5 text-xs text-[var(--nim-text-muted)] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto border border-[var(--nim-border-subtle)]">
+            <div className="mt-1 rounded-ui-base bg-[var(--nim-bg-subtle)] p-2.5 text-xs text-[var(--nim-text-muted)] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto border border-[var(--nim-border-subtle)]">
               {card.rawDescription}
             </div>
           )}
@@ -445,7 +445,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           <button
             type="button"
             data-testid="header-create-bundle-btn"
-            className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--nim-primary)] text-white hover:opacity-90 transition-opacity cursor-pointer border-none"
+            className="flex items-center gap-1 px-3 py-2 rounded-ui-base text-xs font-medium bg-[var(--nim-primary)] text-white hover:opacity-90 transition-opacity cursor-pointer border-none"
             onClick={handleCreateBundle}
           >
             <MaterialSymbol icon="add" size={14} />
@@ -456,7 +456,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
 
       {/* Verbatim Scan Errors */}
       {scanErrors.length > 0 && (
-        <div className="rounded-md border border-[var(--nim-danger)] bg-[var(--nim-danger-subtle)] p-3 text-sm text-[var(--nim-danger)] flex flex-col gap-1">
+        <div className="rounded-ui-base border border-[var(--nim-danger)] bg-[var(--nim-danger-subtle)] p-3 text-sm text-[var(--nim-danger)] flex flex-col gap-1">
           <div className="font-semibold flex items-center gap-2">
             <MaterialSymbol icon="warning" size={16} />
             <span>扫描发现异常：</span>
@@ -468,14 +468,14 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
       )}
 
       {status === 'failed' && scanErrors.length === 0 && (
-        <div className="rounded-md border border-[var(--nim-danger)] bg-[var(--nim-danger-subtle)] px-3 py-2 text-sm text-[var(--nim-danger)]">
+        <div className="rounded-ui-base border border-[var(--nim-danger)] bg-[var(--nim-danger-subtle)] px-3 py-2 text-sm text-[var(--nim-danger)]">
           技能库读取失败。
         </div>
       )}
 
       {/* Codex Notice */}
       {hasCodexSkills && (
-        <div className="rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg-subtle)] px-3 py-2 text-xs text-[var(--nim-text-muted)] flex items-center gap-2">
+        <div className="rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-subtle)] px-3 py-2 text-xs text-[var(--nim-text-muted)] flex items-center gap-2">
           <MaterialSymbol icon="info" size={16} className="text-[var(--nim-text-muted)] shrink-0" />
           <span>{CODEX_SKILL_CONTROL_NOTICE}</span>
         </div>
@@ -491,7 +491,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               <button
                 type="button"
                 data-testid="create-bundle-btn"
-                className="px-3 py-1.5 text-xs font-medium rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
+                className="px-3 py-2 text-xs font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
                 onClick={handleCreateBundle}
               >
                 + 新建
@@ -508,7 +508,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                   key={bundle.id}
                   type="button"
                   data-testid={`bundle-tag-${bundle.id}`}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-ui-full text-xs font-medium border transition-colors cursor-pointer ${
                     isEditing
                       ? 'bg-[var(--nim-primary)] text-white border-[var(--nim-primary)]'
                       : 'bg-[var(--nim-bg)] text-[var(--nim-text)] border-[var(--nim-border)] hover:border-[var(--nim-border-strong)]'
@@ -525,7 +525,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                 >
                   <span>{bundle.name}</span>
                   <span
-                    className={`px-1.5 py-0.5 text-ui-micro rounded-full font-mono ${
+                    className={`px-2 py-0.5 text-ui-micro rounded-ui-full font-mono ${
                       isEditing
                         ? 'bg-white/20 text-white'
                         : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)]'
@@ -539,7 +539,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
             <button
               type="button"
               data-testid="create-bundle-btn"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs border border-dashed border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:border-[var(--nim-border-strong)] cursor-pointer bg-transparent"
+              className="flex items-center gap-1 px-3 py-2 rounded-ui-full text-xs border border-dashed border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:border-[var(--nim-border-strong)] cursor-pointer bg-transparent"
               onClick={handleCreateBundle}
             >
               + 新建
@@ -551,7 +551,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         {editingBundle && (
           <div
             data-testid="bundle-editing-bar"
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border border-[var(--nim-primary)]/40 bg-[var(--nim-primary)]/5"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-ui-lg border border-[var(--nim-primary)]/40 bg-[var(--nim-primary)]/5"
           >
             <div className="flex items-center gap-2 min-w-0">
               {isRenaming ? (
@@ -560,7 +560,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                     type="text"
                     autoFocus
                     data-testid="bundle-rename-input"
-                    className="rounded border border-[var(--nim-primary)] bg-[var(--nim-bg)] px-2 py-1 text-sm font-medium text-[var(--nim-text)] focus:outline-none"
+                    className="rounded-ui-base border border-[var(--nim-primary)] bg-[var(--nim-bg)] px-2 py-1 text-sm font-medium text-[var(--nim-text)] focus:outline-none"
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => {
@@ -575,7 +575,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                   <button
                     type="button"
                     data-testid="bundle-rename-save-btn"
-                    className="text-xs px-2 py-1 rounded bg-[var(--nim-primary)] text-white cursor-pointer border-none"
+                    className="text-xs px-2 py-1 rounded-ui-base bg-[var(--nim-primary)] text-white cursor-pointer border-none"
                     onClick={handleSaveRename}
                   >
                     保存
@@ -591,7 +591,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                     data-testid="bundle-rename-btn"
                     aria-label="改名"
                     title="改名"
-                    className="p-1 rounded text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer border-none bg-transparent flex items-center"
+                    className="p-1 rounded-ui-base text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer border-none bg-transparent flex items-center"
                     onClick={() => {
                       setRenameValue(editingBundle.name);
                       setIsRenaming(true);
@@ -607,7 +607,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               <button
                 type="button"
                 data-testid="bundle-delete-btn"
-                className="px-2.5 py-1 text-xs rounded border border-[var(--nim-border)] text-[var(--nim-danger)] hover:bg-[var(--nim-danger-subtle)] cursor-pointer bg-transparent"
+                className="px-2.5 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-danger)] hover:bg-[var(--nim-danger-subtle)] cursor-pointer bg-transparent"
                 onClick={handleDeleteBundle}
               >
                 删除
@@ -615,7 +615,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               <button
                 type="button"
                 data-testid="bundle-finish-btn"
-                className="px-3 py-1 text-xs rounded font-medium bg-[var(--nim-primary)] text-white hover:opacity-90 cursor-pointer border-none"
+                className="px-3 py-1 text-xs rounded-ui-base font-medium bg-[var(--nim-primary)] text-white hover:opacity-90 cursor-pointer border-none"
                 onClick={() => {
                   setEditingBundleId(null);
                   setIsRenaming(false);
@@ -638,7 +638,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           />
           <input
             type="text"
-            className="w-full rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] pl-9 pr-3 py-2 text-sm text-[var(--nim-text)] placeholder-[var(--nim-text-muted)] focus:outline-none focus:border-[var(--nim-primary)]"
+            className="w-full rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] pl-9 pr-3 py-2 text-sm text-[var(--nim-text)] placeholder-[var(--nim-text-muted)] focus:outline-none focus:border-[var(--nim-primary)]"
             placeholder="搜索技能名称或说明..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -662,7 +662,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
             <button
               type="button"
               data-testid="save-search-to-bundle-btn"
-              className="px-2.5 py-1 text-xs rounded-md border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
+              className="px-2.5 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
               onClick={handleSaveSearchToBundle}
             >
               把这 {filteredCards.length} 个存成技能包
@@ -691,15 +691,15 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                 : 0;
 
               return (
-                <div key={group.category} className="flex flex-col gap-2 rounded-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
+                <div key={group.category} className="flex flex-col gap-2 rounded-ui-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
                   <div className="flex items-center justify-between gap-2 px-1 py-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm text-[var(--nim-text)]">{group.category}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
+                      <span className="text-xs px-2 py-0.5 rounded-ui-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
                         {group.cards.length}
                       </span>
                       {editingBundle && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-primary)]/10 text-[var(--nim-primary)] border border-[var(--nim-primary)]/20 font-medium">
+                        <span className="text-xs px-2 py-0.5 rounded-ui-full bg-[var(--nim-primary)]/10 text-[var(--nim-primary)] border border-[var(--nim-primary)]/20 font-medium">
                           已选 {selectedCountInGroup}
                         </span>
                       )}
@@ -731,7 +731,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               : 0;
 
             return (
-              <div key={group.category} className="flex flex-col gap-2 rounded-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
+              <div key={group.category} className="flex flex-col gap-2 rounded-ui-lg border border-[var(--nim-border)] p-3 bg-[var(--nim-bg-subtle)]">
                 {/* Category Row Header */}
                 <button
                   type="button"
@@ -745,11 +745,11 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                       className="text-[var(--nim-text-muted)]"
                     />
                     <span className="font-semibold text-sm text-[var(--nim-text)]">{group.category}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
+                    <span className="text-xs px-2 py-0.5 rounded-ui-full bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)] font-mono">
                       {group.cards.length}
                     </span>
                     {editingBundle && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--nim-primary)]/10 text-[var(--nim-primary)] border border-[var(--nim-primary)]/20 font-medium">
+                      <span className="text-xs px-2 py-0.5 rounded-ui-full bg-[var(--nim-primary)]/10 text-[var(--nim-primary)] border border-[var(--nim-primary)]/20 font-medium">
                         已选 {selectedCountInGroup}
                       </span>
                     )}

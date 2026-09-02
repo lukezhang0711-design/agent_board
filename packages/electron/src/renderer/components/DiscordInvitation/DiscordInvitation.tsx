@@ -127,7 +127,7 @@ export const DiscordInvitation: React.FC<DiscordInvitationProps> = ({
         aria-describedby="discord-invitation-description"
       >
         <button
-          className="absolute top-4 right-4 w-8 h-8 p-0 flex items-center justify-center bg-transparent border-none text-[24px] leading-none cursor-pointer rounded-md z-[1] text-[var(--nim-text-muted)] transition-[color,transform] duration-200 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:scale-110"
+          className="absolute top-4 right-4 w-8 h-8 p-0 flex items-center justify-center bg-transparent border-none text-[24px] leading-none cursor-pointer rounded-ui-base z-[1] text-[var(--nim-text-muted)] transition-[color,transform] duration-200 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:scale-110"
           onClick={handleRemindLater}
           aria-label="Close"
         >
@@ -147,7 +147,7 @@ export const DiscordInvitation: React.FC<DiscordInvitationProps> = ({
 
           <div className="discord-invitation-buttons flex justify-center mb-6">
             <button
-              className="discord-invitation-button discord-invitation-button-primary w-full max-w-[320px] px-8 py-3.5 rounded-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center justify-center gap-3 text-white bg-[var(--nim-primary)] shadow-[0_4px_12px_rgba(0,0,0,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--nim-primary-hover)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.3)] active:translate-y-0"
+              className="discord-invitation-button discord-invitation-button-primary w-full max-w-[320px] px-8 py-3 rounded-ui-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center justify-center gap-3 text-white bg-[var(--nim-primary)] shadow-[0_4px_12px_rgba(0,0,0,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--nim-primary-hover)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.3)] active:translate-y-0"
               onClick={() => handleOpenLink('https://discord.gg/ubZDt4esEn', 'Discord')}
             >
               <DiscordIcon className="w-5 h-auto text-white" />

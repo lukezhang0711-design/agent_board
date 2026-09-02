@@ -36,21 +36,21 @@ export const WorktreeOnboardingModal: React.FC<WorktreeOnboardingModalProps> = (
           </p>
 
           <div className="worktree-onboarding-benefits flex flex-col gap-4">
-            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
+            <div className="worktree-benefit flex items-start gap-3 p-3 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
               <span className="material-symbols-outlined benefit-icon text-2xl text-nim-primary shrink-0">shield</span>
               <div className="benefit-text flex flex-col gap-1">
                 <strong className="text-sm font-semibold text-nim">Safe experimentation</strong>
                 <span className="text-[13px] text-nim-muted">AI changes stay in a separate branch</span>
               </div>
             </div>
-            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
+            <div className="worktree-benefit flex items-start gap-3 p-3 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
               <span className="material-symbols-outlined benefit-icon text-2xl text-nim-primary shrink-0">rate_review</span>
               <div className="benefit-text flex flex-col gap-1">
                 <strong className="text-sm font-semibold text-nim">Easy review</strong>
                 <span className="text-[13px] text-nim-muted">Review and merge changes when ready</span>
               </div>
             </div>
-            <div className="worktree-benefit flex items-start gap-3.5 p-3.5 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
+            <div className="worktree-benefit flex items-start gap-3 p-3 px-4 bg-nim-secondary rounded-ui-lg border border-nim">
               <span className="material-symbols-outlined benefit-icon text-2xl text-nim-primary shrink-0">stacks</span>
               <div className="benefit-text flex flex-col gap-1">
                 <strong className="text-sm font-semibold text-nim">Parallel work</strong>
@@ -62,13 +62,13 @@ export const WorktreeOnboardingModal: React.FC<WorktreeOnboardingModalProps> = (
 
         <div className="worktree-onboarding-footer flex justify-end gap-3 px-7 py-5 border-t border-nim">
           <button
-            className="worktree-onboarding-secondary-button nim-btn-secondary px-5 py-2.5 text-sm font-medium rounded-lg"
+            className="worktree-onboarding-secondary-button nim-btn-secondary px-5 py-2.5 text-sm font-medium rounded-ui-lg"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="worktree-onboarding-primary-button nim-btn-primary px-6 py-2.5 text-sm font-semibold rounded-lg shadow-[0_2px_8px_rgba(88,166,255,0.2)] hover:shadow-[0_4px_12px_rgba(88,166,255,0.3)] hover:-translate-y-px active:translate-y-0 transition-all duration-150"
+            className="worktree-onboarding-primary-button nim-btn-primary px-6 py-2.5 text-sm font-semibold rounded-ui-lg shadow-[0_2px_8px_rgba(88,166,255,0.2)] hover:shadow-[0_4px_12px_rgba(88,166,255,0.3)] hover:-translate-y-px active:translate-y-0 transition-all duration-150"
             onClick={onContinue}
           >
             Create Worktree

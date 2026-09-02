@@ -279,14 +279,14 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
       </div>
 
       {(error || loadError) && (
-        <div className="settings-message error flex items-center gap-2 p-3 mb-4 rounded bg-[var(--nim-error)]/10 text-[var(--nim-error)] text-sm">
+        <div className="settings-message error flex items-center gap-2 p-3 mb-4 rounded-ui-base bg-[var(--nim-error)]/10 text-[var(--nim-error)] text-sm">
           <span className="material-symbols-outlined">error</span>
           <span>{error || loadError}</span>
         </div>
       )}
 
       {success && (
-        <div className="settings-message success flex items-center gap-2 p-3 mb-4 rounded bg-[var(--nim-success)]/10 text-[var(--nim-success)] text-sm">
+        <div className="settings-message success flex items-center gap-2 p-3 mb-4 rounded-ui-base bg-[var(--nim-success)]/10 text-[var(--nim-success)] text-sm">
           <span className="material-symbols-outlined">check_circle</span>
           <span>{success}</span>
         </div>
@@ -297,7 +297,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
         <div className="permissions-section-header text-sm font-medium text-[var(--nim-text)] mb-3">
           <span>Workspace Trust</span>
         </div>
-        <div className="permissions-trust-card flex items-center justify-between p-4 rounded-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]">
+        <div className="permissions-trust-card flex items-center justify-between p-4 rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]">
           <div className="permissions-trust-info flex-1">
             <div className="permissions-trust-status flex items-center gap-2 mb-1">
               {permissions?.permissionMode !== null ? (
@@ -316,14 +316,14 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
           <div className="permissions-trust-action">
             {permissions?.permissionMode !== null ? (
               <button
-                className="btn-secondary px-3 py-1.5 rounded text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer"
+                className="btn-secondary px-3 py-2 rounded-ui-base text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer"
                 onClick={handleRevokeWorkspaceTrust}
               >
                 Revoke Trust
               </button>
             ) : (
               <button
-                className="btn-primary px-3 py-1.5 rounded text-xs font-medium bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)] cursor-pointer"
+                className="btn-primary px-3 py-2 rounded-ui-base text-xs font-medium bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)] cursor-pointer"
                 onClick={handleTrustWorkspace}
               >
                 Trust Workspace
@@ -340,7 +340,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
             <span>Permission Mode</span>
           </div>
           <div className="permissions-mode-options flex flex-col gap-2">
-            <label className={`permissions-mode-option flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+            <label className={`permissions-mode-option flex items-start gap-3 p-3 rounded-ui-lg border cursor-pointer transition-colors ${
               permissions.permissionMode === 'ask'
                 ? 'border-[var(--nim-primary)] bg-[var(--nim-primary)]/5'
                 : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] hover:bg-[var(--nim-bg-hover)]'
@@ -363,7 +363,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                 </div>
               </div>
             </label>
-            <label className={`permissions-mode-option flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+            <label className={`permissions-mode-option flex items-start gap-3 p-3 rounded-ui-lg border cursor-pointer transition-colors ${
               permissions.permissionMode === 'allow-all'
                 ? 'border-[var(--nim-primary)] bg-[var(--nim-primary)]/5'
                 : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] hover:bg-[var(--nim-bg-hover)]'
@@ -386,7 +386,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                 </div>
               </div>
             </label>
-            <label className={`permissions-mode-option flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+            <label className={`permissions-mode-option flex items-start gap-3 p-3 rounded-ui-lg border cursor-pointer transition-colors ${
               permissions.permissionMode === 'bypass-all'
                 ? 'border-[var(--nim-primary)] bg-[var(--nim-primary)]/5'
                 : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] hover:bg-[var(--nim-bg-hover)]'
@@ -430,25 +430,25 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
         <div className="permissions-section mb-6">
           <div className="permissions-section-header flex items-center gap-2 text-sm font-medium text-[var(--nim-text)] mb-2">
             <span>Additional Directories</span>
-            <span className="permissions-section-count text-xs px-1.5 py-0.5 rounded bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">{permissions?.additionalDirectories.length || 0}</span>
+            <span className="permissions-section-count text-xs px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">{permissions?.additionalDirectories.length || 0}</span>
           </div>
           <p className="permissions-section-description text-xs text-[var(--nim-text-muted)] mb-3">
             Allow the agent to access directories outside this project.
           </p>
           {permissions?.additionalDirectories.length === 0 ? (
-            <div className="permissions-empty-state text-xs text-[var(--nim-text-faint)] py-4 px-3 rounded bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
+            <div className="permissions-empty-state text-xs text-[var(--nim-text-faint)] py-4 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
               No additional directories. The agent can only access files within this project.
             </div>
           ) : (
             <div className="permissions-directory-list flex flex-col gap-2 mb-3">
               {permissions?.additionalDirectories.map((dir) => (
-                <div key={dir.path} className="permissions-directory-item flex items-center justify-between p-2 rounded bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
+                <div key={dir.path} className="permissions-directory-item flex items-center justify-between p-2 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
                   <div className="permissions-directory-path flex items-center gap-2 min-w-0 flex-1">
                     <span className="material-symbols-outlined text-[var(--nim-text-muted)] text-base">folder</span>
                     <span className="permissions-directory-path-text text-xs text-[var(--nim-text)] truncate" title={dir.path}>{dir.path}</span>
                   </div>
                   <button
-                    className="permissions-directory-remove w-6 h-6 flex items-center justify-center rounded text-[var(--nim-text-muted)] hover:text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] cursor-pointer bg-transparent border-none"
+                    className="permissions-directory-remove w-6 h-6 flex items-center justify-center rounded-ui-base text-[var(--nim-text-muted)] hover:text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] cursor-pointer bg-transparent border-none"
                     onClick={() => handleRemoveDirectory(dir.path)}
                     title="Remove directory"
                   >
@@ -461,7 +461,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
             </div>
           )}
           <button
-            className="btn-secondary permissions-add-directory-btn px-3 py-1.5 rounded text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer flex items-center gap-1 disabled:opacity-50"
+            className="btn-secondary permissions-add-directory-btn px-3 py-2 rounded-ui-base text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer flex items-center gap-1 disabled:opacity-50"
             onClick={handleAddDirectory}
             disabled={isAddingDirectory}
           >
@@ -476,16 +476,16 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
         <div className="permissions-section mb-6">
           <div className="permissions-section-header flex items-center gap-2 text-sm font-medium text-[var(--nim-text)] mb-2">
             <span>Allowed URL Patterns</span>
-            <span className="permissions-section-count text-xs px-1.5 py-0.5 rounded bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">{permissions?.allowedUrlPatterns?.length || 0}</span>
+            <span className="permissions-section-count text-xs px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">{permissions?.allowedUrlPatterns?.length || 0}</span>
           </div>
           <p className="permissions-section-description text-xs text-[var(--nim-text-muted)] mb-3">
             Allow the agent to fetch or curl specific domains.
-            Use wildcards like <code className="bg-[var(--nim-bg-tertiary)] px-1 py-0.5 rounded">*.github.com</code> to allow all subdomains.
+            Use wildcards like <code className="bg-[var(--nim-bg-tertiary)] px-1 py-0.5 rounded-ui-base">*.github.com</code> to allow all subdomains.
           </p>
 
           {/* All Domains Allowed Card */}
           {isAllDomainsAllowed ? (
-            <div className="permissions-all-domains-card flex items-center justify-between p-3 rounded-lg border border-[var(--nim-primary)]/30 bg-[var(--nim-primary)]/5">
+            <div className="permissions-all-domains-card flex items-center justify-between p-3 rounded-ui-lg border border-[var(--nim-primary)]/30 bg-[var(--nim-primary)]/5">
               <div className="permissions-all-domains-info flex items-center gap-3">
                 <span className="material-symbols-outlined permissions-all-domains-icon text-[var(--nim-primary)]">public</span>
                 <div className="permissions-all-domains-text flex flex-col">
@@ -496,7 +496,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                 </div>
               </div>
               <button
-                className="btn-secondary px-3 py-1.5 rounded text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer"
+                className="btn-secondary px-3 py-2 rounded-ui-base text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer"
                 onClick={handleRevokeAllDomains}
               >
                 Revoke
@@ -505,13 +505,13 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
           ) : (
             <>
               {(permissions?.allowedUrlPatterns?.length || 0) === 0 && !isAddingUrl ? (
-                <div className="permissions-empty-state text-xs text-[var(--nim-text-faint)] py-4 px-3 rounded bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] mb-3">
+                <div className="permissions-empty-state text-xs text-[var(--nim-text-faint)] py-4 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] mb-3">
                   No URL patterns allowed yet. The agent will ask before making web requests.
                 </div>
               ) : (
                 <div className="permissions-url-list flex flex-col gap-2 mb-3">
                   {permissions?.allowedUrlPatterns?.map((urlPattern) => (
-                    <div key={urlPattern.pattern} className="permissions-url-item flex items-center justify-between p-2 rounded bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
+                    <div key={urlPattern.pattern} className="permissions-url-item flex items-center justify-between p-2 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
                       <div className="permissions-url-info flex flex-col min-w-0 flex-1">
                         <span className="permissions-url-pattern text-xs font-medium text-[var(--nim-text)] font-mono">{urlPattern.pattern}</span>
                         {urlPattern.description && (
@@ -519,7 +519,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                         )}
                       </div>
                       <button
-                        className="permissions-url-remove w-6 h-6 flex items-center justify-center rounded text-[var(--nim-text-muted)] hover:text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] cursor-pointer bg-transparent border-none"
+                        className="permissions-url-remove w-6 h-6 flex items-center justify-center rounded-ui-base text-[var(--nim-text-muted)] hover:text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] cursor-pointer bg-transparent border-none"
                         onClick={() => handleRemoveUrlPattern(urlPattern.pattern)}
                         title="Remove URL pattern"
                       >
@@ -532,10 +532,10 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                 </div>
               )}
               {isAddingUrl ? (
-                <div className="permissions-add-url-form flex flex-col gap-2 p-3 rounded bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
+                <div className="permissions-add-url-form flex flex-col gap-2 p-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
                   <input
                     type="text"
-                    className="permissions-url-input px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
+                    className="permissions-url-input px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
                     placeholder="URL pattern (e.g., *.github.com)"
                     value={newUrlPattern}
                     onChange={(e) => setNewUrlPattern(e.target.value)}
@@ -543,14 +543,14 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                   />
                   <input
                     type="text"
-                    className="permissions-url-input px-3 py-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
+                    className="permissions-url-input px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
                     placeholder="Description (optional)"
                     value={newUrlDescription}
                     onChange={(e) => setNewUrlDescription(e.target.value)}
                   />
                   <div className="permissions-add-url-actions flex items-center gap-2 justify-end mt-1">
                     <button
-                      className="btn-secondary px-3 py-1.5 rounded text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer"
+                      className="btn-secondary px-3 py-2 rounded-ui-base text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer"
                       onClick={() => {
                         setIsAddingUrl(false);
                         setNewUrlPattern('');
@@ -560,7 +560,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
                       Cancel
                     </button>
                     <button
-                      className="btn-primary px-3 py-1.5 rounded text-xs font-medium bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)] cursor-pointer disabled:opacity-50"
+                      className="btn-primary px-3 py-2 rounded-ui-base text-xs font-medium bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)] cursor-pointer disabled:opacity-50"
                       onClick={handleAddUrlPattern}
                       disabled={!newUrlPattern.trim()}
                     >
@@ -571,14 +571,14 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
               ) : (
                 <div className="permissions-url-actions flex items-center gap-2">
                   <button
-                    className="btn-secondary permissions-add-url-btn px-3 py-1.5 rounded text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer flex items-center gap-1"
+                    className="btn-secondary permissions-add-url-btn px-3 py-2 rounded-ui-base text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer flex items-center gap-1"
                     onClick={() => setIsAddingUrl(true)}
                   >
                     <span className="material-symbols-outlined text-base">add</span>
                     Add URL Pattern
                   </button>
                   <button
-                    className="btn-secondary permissions-allow-all-btn px-3 py-1.5 rounded text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer flex items-center gap-1"
+                    className="btn-secondary permissions-allow-all-btn px-3 py-2 rounded-ui-base text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer flex items-center gap-1"
                     onClick={handleAllowAllDomains}
                   >
                     <span className="material-symbols-outlined text-base">public</span>
@@ -596,19 +596,19 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
         <div className="permissions-section mb-6">
           <div className="permissions-section-header flex items-center gap-2 text-sm font-medium text-[var(--nim-text)] mb-2">
             <span>Allowed Patterns</span>
-            <span className="permissions-section-count text-xs px-1.5 py-0.5 rounded bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">{permissions?.allowedPatterns.length || 0}</span>
+            <span className="permissions-section-count text-xs px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">{permissions?.allowedPatterns.length || 0}</span>
           </div>
           {permissions?.allowedPatterns.length === 0 ? (
-            <div className="permissions-empty-state text-xs text-[var(--nim-text-faint)] py-4 px-3 rounded bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
+            <div className="permissions-empty-state text-xs text-[var(--nim-text-faint)] py-4 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
               No patterns allowed yet. When you approve a command, its pattern will appear here.
             </div>
           ) : (
             <div className="permissions-pattern-list flex flex-col gap-2">
               {permissions?.allowedPatterns.map((rule) => (
-                <div key={rule.pattern} className="permissions-pattern-item flex items-center justify-between p-2 rounded bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
+                <div key={rule.pattern} className="permissions-pattern-item flex items-center justify-between p-2 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)]">
                   <span className="permissions-pattern-name text-xs font-medium text-[var(--nim-text)] font-mono">{rule.displayName}</span>
                   <button
-                    className="permissions-pattern-remove w-6 h-6 flex items-center justify-center rounded text-[var(--nim-text-muted)] hover:text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] cursor-pointer bg-transparent border-none"
+                    className="permissions-pattern-remove w-6 h-6 flex items-center justify-center rounded-ui-base text-[var(--nim-text-muted)] hover:text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] cursor-pointer bg-transparent border-none"
                     onClick={() => handleRemovePattern(rule.pattern, 'allowed')}
                     title="Remove pattern"
                   >
@@ -632,7 +632,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
       ) ? (
         <div className="permissions-footer pt-4 border-t border-[var(--nim-border)]">
           <button
-            className="btn-secondary px-3 py-1.5 rounded text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer"
+            className="btn-secondary px-3 py-2 rounded-ui-base text-xs font-medium border border-[var(--nim-border)] bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] cursor-pointer"
             onClick={handleResetToDefaults}
           >
             Reset to Defaults

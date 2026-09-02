@@ -173,7 +173,7 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
             {SUPER_LOOP_FILES.map((file) => (
               <button
                 key={file.name}
-                className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-[var(--nim-primary)] bg-transparent border border-[var(--nim-border)] rounded cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-[var(--nim-primary)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
                 onClick={() => handleFileClick(file.name)}
                 title={`.superloop/${file.name}`}
               >
@@ -190,7 +190,7 @@ export const SuperFilesPanel: React.FC<SuperFilesPanelProps> = React.memo(({
                 <MaterialSymbol icon="data_object" size={12} className="shrink-0" />
                 <span>Raw JSON</span>
               </summary>
-              <pre className="mt-1 p-2 bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded text-[10px] leading-relaxed text-[var(--nim-text-muted)] overflow-auto max-h-[200px] whitespace-pre-wrap break-words m-0">
+              <pre className="mt-1 p-2 bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base text-[10px] leading-relaxed text-[var(--nim-text-muted)] overflow-auto max-h-[200px] whitespace-pre-wrap break-words m-0">
                 {JSON.stringify(progress, null, 2)}
               </pre>
             </details>
@@ -216,7 +216,7 @@ const PhaseBadge: React.FC<{ phase: string }> = React.memo(({ phase }) => {
   const classes = colorMap[phase] ?? 'bg-[rgba(156,163,175,0.15)] text-[var(--nim-text-faint)]';
 
   return (
-    <span className={`text-[9px] px-1.5 py-[0.0625rem] rounded-[0.625rem] font-medium ${classes}`}>
+    <span className={`text-[9px] px-2 py-[0.0625rem] rounded-ui-lg font-medium ${classes}`}>
       {phase}
     </span>
   );

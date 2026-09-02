@@ -97,7 +97,7 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({ todo }) => {
 
   return (
     <div
-      className={`todo-item flex items-start gap-2 py-1 px-1 rounded text-xs ${
+      className={`todo-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-xs ${
         todo.status === 'in_progress' ? 'bg-[var(--nim-bg-hover)]' : ''
       } ${todo.status === 'completed' ? 'opacity-60' : ''}`}
       data-status={todo.status}
@@ -107,7 +107,7 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({ todo }) => {
           <span className="text-[var(--nim-text-faint)] text-[10px]">○</span>
         )}
         {todo.status === 'in_progress' && (
-          <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-full animate-spin" />
+          <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
         {todo.status === 'completed' && (
           <span className="text-[#4ade80] text-[10px]">●</span>

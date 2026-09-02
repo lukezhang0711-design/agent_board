@@ -66,7 +66,7 @@ export function BadGitStateDialog({
             Cannot perform git operation on <strong className="text-[var(--nim-text)] font-medium">{worktreeName}</strong>.
           </p>
 
-          <div className="merge-conflict-dialog-info flex items-start gap-3 p-3 mb-4 rounded-lg bg-[var(--nim-warning-light)] text-[var(--nim-warning)] text-[13px] leading-snug">
+          <div className="merge-conflict-dialog-info flex items-start gap-3 p-3 mb-4 rounded-ui-lg bg-[var(--nim-warning-light)] text-[var(--nim-warning)] text-[13px] leading-snug">
             <MaterialSymbol icon="error" size={16} />
             <p className="m-0 text-[var(--nim-warning)]">
               {errorMessage}
@@ -74,7 +74,7 @@ export function BadGitStateDialog({
           </div>
 
           {conflictedFiles && conflictedFiles.length > 0 && (
-            <div className="merge-conflict-dialog-files mb-4 p-3 rounded-lg bg-[var(--nim-bg-secondary)]">
+            <div className="merge-conflict-dialog-files mb-4 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
               <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-2.5 text-[13px] font-medium text-[var(--nim-text)]">
                 <MaterialSymbol icon="description" size={16} />
                 <span>Conflicted Files:</span>
@@ -90,7 +90,7 @@ export function BadGitStateDialog({
             </div>
           )}
 
-          <div className="merge-conflict-dialog-suggestion flex items-start gap-3 p-3 mb-4 rounded-lg bg-[var(--nim-success-light)] text-[var(--nim-success)] text-[13px] leading-snug">
+          <div className="merge-conflict-dialog-suggestion flex items-start gap-3 p-3 mb-4 rounded-ui-lg bg-[var(--nim-success-light)] text-[var(--nim-success)] text-[13px] leading-snug">
             <MaterialSymbol icon="smart_toy" size={16} />
             <p className="m-0 text-[var(--nim-success)]">
               An AI agent can help you resolve this issue automatically, or you can fix it manually.
@@ -104,12 +104,12 @@ export function BadGitStateDialog({
             isLoading={isLoadingModels}
           />
 
-          <div className="merge-conflict-dialog-manual flex flex-col gap-2 p-3 rounded-lg bg-[var(--nim-bg-secondary)] text-[13px]">
+          <div className="merge-conflict-dialog-manual flex flex-col gap-2 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)] text-[13px]">
             <p className="m-0 flex items-center gap-2 text-[var(--nim-text-muted)]">
               <MaterialSymbol icon="terminal" size={16} />
               Worktree location:
             </p>
-            <code className="merge-conflict-dialog-path block font-[var(--nim-font-mono)] text-xs text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] px-2 py-1.5 rounded break-all">{worktreePath}</code>
+            <code className="merge-conflict-dialog-path block font-[var(--nim-font-mono)] text-xs text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] px-2 py-2 rounded-ui-base break-all">{worktreePath}</code>
           </div>
         </div>
 

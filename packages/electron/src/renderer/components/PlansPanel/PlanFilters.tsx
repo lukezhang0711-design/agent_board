@@ -52,14 +52,14 @@ export function PlanFilters({
         </span>
         <input
           type="text"
-          className="plan-search-input w-full py-2 pr-8 pl-9 border border-[var(--nim-border)] rounded-md bg-[var(--nim-bg)] text-[var(--nim-text)] text-[13px] outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-border-focus)]"
+          className="plan-search-input w-full py-2 pr-8 pl-9 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-[13px] outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-border-focus)]"
           placeholder="Search plans..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
         />
         {searchTerm && (
           <button
-            className="plan-search-clear absolute right-1.5 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer p-1 flex items-center justify-center text-[var(--nim-text-faint)] rounded transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-base"
+            className="plan-search-clear absolute right-1.5 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer p-1 flex items-center justify-center text-[var(--nim-text-faint)] rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-base"
             onClick={() => onSearchChange('')}
             aria-label="Clear search"
           >
@@ -70,7 +70,7 @@ export function PlanFilters({
 
       <div className="plan-filter-controls flex gap-2 mb-2.5">
         <select
-          className="plan-filter-select flex-1 py-1.5 px-2 border border-[var(--nim-border)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
+          className="plan-filter-select flex-1 py-2 px-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
           value={statusFilter}
           onChange={(e) => onStatusChange(e.target.value)}
         >
@@ -82,7 +82,7 @@ export function PlanFilters({
         </select>
 
         <select
-          className="plan-filter-select flex-1 py-1.5 px-2 border border-[var(--nim-border)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
+          className="plan-filter-select flex-1 py-2 px-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
           value={priorityFilter}
           onChange={(e) => onPriorityChange(e.target.value)}
         >

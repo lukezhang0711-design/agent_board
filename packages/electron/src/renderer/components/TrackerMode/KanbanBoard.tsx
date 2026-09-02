@@ -566,7 +566,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {(['manual', 'priority', 'created', 'updated'] as const).map(mode => (
           <button
             key={mode}
-            className={`text-[11px] px-2 py-0.5 rounded cursor-pointer transition-colors ${
+            className={`text-[11px] px-2 py-0.5 rounded-ui-base cursor-pointer transition-colors ${
               sortMode === mode
                 ? 'bg-[var(--nim-primary)] text-white'
                 : 'text-nim-muted hover:bg-nim-tertiary'
@@ -587,14 +587,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             key={col.value}
             data-testid={`tracker-kanban-column-${col.value}`}
             data-column-status={col.value}
-            className={`tracker-kanban-column flex flex-col min-w-[260px] max-w-[320px] flex-1 min-h-0 rounded-lg transition-colors bg-nim-secondary ${
+            className={`tracker-kanban-column flex flex-col min-w-[260px] max-w-[320px] flex-1 min-h-0 rounded-ui-lg transition-colors bg-nim-secondary ${
               dragOverColumn === col.value ? 'ring-1 ring-[var(--nim-primary)]' : ''
             }`}
           >
             {/* Column header */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-nim">
               <span
-                className="w-2 h-2 rounded-full shrink-0"
+                className="w-2 h-2 rounded-ui-full shrink-0"
                 style={{ backgroundColor: color }}
               />
               <span className="text-xs font-semibold text-nim truncate">
@@ -606,7 +606,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             </div>
 
             {/* Column cards */}
-            <div className="kanban-cards-container flex-1 overflow-y-auto p-1.5">
+            <div className="kanban-cards-container flex-1 overflow-y-auto p-2">
               {colItems.length === 0 ? (
                 <EmptyStateMessage
                   title="该阶段暂无卡片"
@@ -622,7 +622,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     <React.Fragment key={item.id}>
                       {/* Drop insertion line */}
                       {dragOverColumn === col.value && dropIndex === cardIndex && dragItemId !== item.id && (
-                        <div className="h-[2px] bg-[var(--nim-primary)] rounded-full mx-1 my-0.5" />
+                        <div className="h-[2px] bg-[var(--nim-primary)] rounded-ui-full mx-1 my-0.5" />
                       )}
                       <button
                         data-testid="tracker-kanban-card"
@@ -630,7 +630,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         draggable
                         onDragStart={(e) => handleDragStart(e, item)}
                         onDragEnd={handleDragEnd}
-                        className={`tracker-kanban-card w-full text-left p-2.5 rounded-md bg-nim hover:bg-nim-tertiary border transition-colors cursor-grab active:cursor-grabbing mb-1.5 ${
+                        className={`tracker-kanban-card w-full text-left p-2.5 rounded-ui-base bg-nim hover:bg-nim-tertiary border transition-colors cursor-grab active:cursor-grabbing mb-1.5 ${
                           dragItemId === item.id ? 'opacity-40' : ''
                         } ${
                           selectedIds.has(item.id) || (selectedItemId && item.id === selectedItemId)
@@ -643,7 +643,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         <div className="flex items-start gap-2">
                           {/* Priority dot */}
                           <span
-                            className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                            className="w-2 h-2 rounded-ui-full mt-1.5 shrink-0"
                             style={{ backgroundColor: PRIORITY_COLORS[getRecordPriority(item) || 'medium'] || '#6b7280' }}
                           />
                           <div className="flex-1 min-w-0">
@@ -664,7 +664,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             <div className="flex items-center gap-2 mt-2 pt-1 border-t border-nim/20 text-[10px]">
                               {/* Type badge */}
                               <span
-                                className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
                                 style={{
                                   color: TYPE_COLORS[item.primaryType] || '#6b7280',
                                   backgroundColor: `${TYPE_COLORS[item.primaryType] || '#6b7280'}20`,
@@ -678,7 +678,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                 .map(tag => (
                                   <span
                                     key={tag}
-                                    className="text-[9px] font-medium px-1 py-0.5 rounded"
+                                    className="text-[9px] font-medium px-1 py-0.5 rounded-ui-base"
                                     style={{
                                       color: TYPE_COLORS[tag] || '#6b7280',
                                       backgroundColor: `${TYPE_COLORS[tag] || '#6b7280'}12`,
@@ -691,7 +691,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               {/* Priority label */}
                               {(() => { const p = getRecordPriority(item); return p && p !== 'medium' ? (
                                 <span
-                                  className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                  className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
                                   style={{
                                     color: PRIORITY_COLORS[p] || '#6b7280',
                                     backgroundColor: `${PRIORITY_COLORS[p] || '#6b7280'}20`,
@@ -719,7 +719,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               )}
               {/* Drop indicator after last card */}
               {dragOverColumn === col.value && dropIndex === colItems.length && (
-                <div className="h-[2px] bg-[var(--nim-primary)] rounded-full mx-1 my-0.5" />
+                <div className="h-[2px] bg-[var(--nim-primary)] rounded-ui-full mx-1 my-0.5" />
               )}
               {/* Drop zone spacer -- ensures there's always a target area below the last card */}
               <div className="min-h-[40px]" />
@@ -733,7 +733,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         <FloatingPortal>
         <div
           ref={contextRefs.setFloating}
-          className="z-50 min-w-[180px] bg-nim-secondary border border-nim rounded-md shadow-lg py-1 text-[13px]"
+          className="z-50 min-w-[180px] bg-nim-secondary border border-nim rounded-ui-base shadow-lg py-1 text-[13px]"
           style={contextFloatingStyles}
           onClick={(e) => e.stopPropagation()}
         >
@@ -747,11 +747,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             {columns.map(col => (
               <button
                 key={col.value}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-nim hover:bg-nim-tertiary cursor-pointer"
+                className="w-full flex items-center gap-2 px-3 py-2 text-left text-nim hover:bg-nim-tertiary cursor-pointer"
                 onClick={() => handleBulkStatusUpdate(col.value)}
               >
                 <span
-                  className="w-2 h-2 rounded-full shrink-0"
+                  className="w-2 h-2 rounded-ui-full shrink-0"
                   style={{ backgroundColor: STATUS_COLORS[col.value] || '#6b7280' }}
                 />
                 {col.label}
@@ -764,11 +764,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             {(['critical', 'high', 'medium', 'low'] as const).map(p => (
               <button
                 key={p}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-nim hover:bg-nim-tertiary cursor-pointer"
+                className="w-full flex items-center gap-2 px-3 py-2 text-left text-nim hover:bg-nim-tertiary cursor-pointer"
                 onClick={() => handleBulkPriorityUpdate(p)}
               >
                 <span
-                  className="w-2 h-2 rounded-full shrink-0"
+                  className="w-2 h-2 rounded-ui-full shrink-0"
                   style={{ backgroundColor: PRIORITY_COLORS[p] || '#6b7280' }}
                 />
                 {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -780,7 +780,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
           {onCopyDeepLink && selectedIds.size === 1 && (
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-nim hover:bg-nim-tertiary cursor-pointer"
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-nim hover:bg-nim-tertiary cursor-pointer"
               onClick={() => {
                 const [onlyId] = selectedIds;
                 closeContextMenu();
@@ -794,7 +794,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
           {onArchiveItems && (
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-nim hover:bg-nim-tertiary cursor-pointer"
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-nim hover:bg-nim-tertiary cursor-pointer"
               onClick={() => {
                 closeContextMenu();
                 onArchiveItems(Array.from(selectedIds), true);
@@ -808,7 +808,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
           {onDeleteItems && (
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[#ef4444] hover:bg-nim-tertiary cursor-pointer"
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-[#ef4444] hover:bg-nim-tertiary cursor-pointer"
               onClick={() => {
                 closeContextMenu();
                 const ids = Array.from(selectedIds);
@@ -848,7 +848,7 @@ const KanbanContextSubmenu: React.FC<{
       onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); setOpen(true); }}
       onMouseLeave={() => { timeoutRef.current = setTimeout(() => setOpen(false), 150); }}
     >
-      <div className="flex items-center gap-2 px-3 py-1.5 text-nim hover:bg-nim-tertiary cursor-pointer">
+      <div className="flex items-center gap-2 px-3 py-2 text-nim hover:bg-nim-tertiary cursor-pointer">
         <MaterialSymbol icon={icon} size={16} />
         <span className="flex-1">{label}</span>
         <MaterialSymbol icon="chevron_right" size={14} className="text-nim-faint" />
@@ -857,7 +857,7 @@ const KanbanContextSubmenu: React.FC<{
         <FloatingPortal>
           <div
             ref={refs.setFloating}
-            className="min-w-[140px] bg-nim-secondary border border-nim rounded-md shadow-lg py-1 z-[60]"
+            className="min-w-[140px] bg-nim-secondary border border-nim rounded-ui-base shadow-lg py-1 z-[60]"
             style={floatingStyles}
             onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); setOpen(true); }}
             onMouseLeave={() => { timeoutRef.current = setTimeout(() => setOpen(false), 150); }}

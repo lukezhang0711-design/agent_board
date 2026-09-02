@@ -2552,7 +2552,7 @@ export const TabEditor: React.FC<TabEditorProps> = ({
                 }
                 setAutosaveConflictDiskContent(null);
               }}
-              className="px-2 py-1 rounded border border-nim text-nim hover:bg-nim-active"
+              className="px-2 py-1 rounded-ui-base border border-nim text-nim hover:bg-nim-active"
               data-testid="autosave-conflict-banner-reload"
             >
               Reload
@@ -2560,7 +2560,7 @@ export const TabEditor: React.FC<TabEditorProps> = ({
             <button
               type="button"
               onClick={() => setAutosaveConflictDiskContent(null)}
-              className="px-2 py-1 rounded border border-nim text-nim hover:bg-nim-active"
+              className="px-2 py-1 rounded-ui-base border border-nim text-nim hover:bg-nim-active"
               data-testid="autosave-conflict-banner-dismiss"
             >
               Dismiss
@@ -2578,7 +2578,7 @@ export const TabEditor: React.FC<TabEditorProps> = ({
                     </span>
                     <button
                       onClick={() => editorHost.toggleSourceMode?.()}
-                      className="py-1 px-3 text-[13px] cursor-pointer bg-nim border border-nim rounded text-nim"
+                      className="py-1 px-3 text-[13px] cursor-pointer bg-nim border border-nim rounded-ui-base text-nim"
                     >
                       Editor
                     </button>
@@ -2773,7 +2773,7 @@ export const TabEditor: React.FC<TabEditorProps> = ({
                 </span>
                 <button
                   onClick={() => editorHost.toggleSourceMode?.()}
-                  className="py-1 px-3 text-[13px] cursor-pointer bg-nim border border-nim rounded text-nim"
+                  className="py-1 px-3 text-[13px] cursor-pointer bg-nim border border-nim rounded-ui-base text-nim"
                 >
                   Rich Text
                 </button>
@@ -2873,7 +2873,7 @@ export const TabEditor: React.FC<TabEditorProps> = ({
             className="file-conflict-dialog-overlay absolute inset-0 bg-black/50 flex items-center justify-center z-[1000]"
           >
             <div
-              className="file-conflict-dialog bg-nim border border-nim rounded-lg p-6 max-w-[500px] shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+              className="file-conflict-dialog bg-nim border border-nim rounded-ui-lg p-6 max-w-[500px] shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
             >
               <h3 className="mt-0 text-nim">File Changed on Disk</h3>
               <p className="text-nim-muted">
@@ -2885,13 +2885,13 @@ export const TabEditor: React.FC<TabEditorProps> = ({
               <div className="flex gap-3 mt-6 justify-end">
                 <button
                   onClick={handleKeepLocalChanges}
-                  className="py-2 px-4 bg-nim-secondary border border-nim rounded text-nim cursor-pointer"
+                  className="py-2 px-4 bg-nim-secondary border border-nim rounded-ui-base text-nim cursor-pointer"
                 >
                   Keep My Changes
                 </button>
                 <button
                   onClick={handleReloadFromDisk}
-                  className="py-2 px-4 bg-nim-primary border-none rounded text-nim-on-primary cursor-pointer"
+                  className="py-2 px-4 bg-nim-primary border-none rounded-ui-base text-nim-on-primary cursor-pointer"
                 >
                   Reload from Disk
                 </button>

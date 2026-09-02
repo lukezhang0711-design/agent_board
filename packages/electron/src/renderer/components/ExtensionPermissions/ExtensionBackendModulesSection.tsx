@@ -155,7 +155,7 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
           return (
             <div
               key={mod.id}
-              className="ext-backend-module bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md p-3"
+              className="ext-backend-module bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-3"
             >
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--nim-text)]">
@@ -167,7 +167,7 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
                 </div>
                 {stateDescription && (
                   <span
-                    className={`ext-backend-module-state text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${stateDescription.classes}`}
+                    className={`ext-backend-module-state text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-ui-base ${stateDescription.classes}`}
                   >
                     {stateDescription.label}
                   </span>
@@ -240,7 +240,7 @@ const ScopePill: React.FC<{
   if (disabledReason) {
     return (
       <span
-        className="ext-backend-module-scope-pill px-2 py-1 text-xs rounded border border-[var(--nim-border)] text-[var(--nim-text-faint)] italic"
+        className="ext-backend-module-scope-pill px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-faint)] italic"
         title={disabledReason}
       >
         {label}: n/a
@@ -249,13 +249,13 @@ const ScopePill: React.FC<{
   }
   if (!enabled) {
     return (
-      <span className="ext-backend-module-scope-pill px-2 py-1 text-xs rounded border border-[var(--nim-border)] text-[var(--nim-text-muted)]">
+      <span className="ext-backend-module-scope-pill px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-muted)]">
         {label}: not enabled
       </span>
     );
   }
   return (
-    <span className="ext-backend-module-scope-pill inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-[var(--nim-success)] text-[var(--nim-success)]">
+    <span className="ext-backend-module-scope-pill inline-flex items-center gap-1 px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-success)] text-[var(--nim-success)]">
       <MaterialSymbol icon="check_circle" size={12} />
       {label}: enabled
       <button

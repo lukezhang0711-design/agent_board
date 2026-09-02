@@ -18,7 +18,7 @@ const SessionStatusIndicator = memo<{ sessionId: string }>(({ sessionId }) => {
   if (isProcessing) {
     return (
       <div
-        className="session-status-indicator processing w-2 h-2 rounded-full shrink-0 bg-[var(--nim-primary)] animate-pulse"
+        className="session-status-indicator processing w-2 h-2 rounded-ui-full shrink-0 bg-[var(--nim-primary)] animate-pulse"
         title="Running"
       />
     );
@@ -26,7 +26,7 @@ const SessionStatusIndicator = memo<{ sessionId: string }>(({ sessionId }) => {
   if (hasUnread) {
     return (
       <div
-        className="session-status-indicator unread w-2 h-2 rounded-full shrink-0 bg-[var(--nim-primary)]"
+        className="session-status-indicator unread w-2 h-2 rounded-ui-full shrink-0 bg-[var(--nim-primary)]"
         title="Unread response"
       />
     );
@@ -108,7 +108,7 @@ export function SessionDropdown({
       <button
         ref={menu.refs.setReference}
         {...menu.getReferenceProps()}
-        className="session-dropdown-trigger flex items-center gap-1 px-2 py-1.5 bg-transparent border border-[var(--nim-border)] rounded-md text-[var(--nim-text)] text-[13px] cursor-pointer transition-all duration-200 h-8 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+        className="session-dropdown-trigger flex items-center gap-1 px-2 py-2 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] text-[13px] cursor-pointer transition-all duration-200 h-8 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={() => menu.setIsOpen(!menu.isOpen)}
         title="Session History"
       >
@@ -128,7 +128,7 @@ export function SessionDropdown({
             ref={menu.refs.setFloating}
             style={menu.floatingStyles}
             {...menu.getFloatingProps()}
-            className="session-dropdown-menu min-w-[280px] max-w-[400px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.1)] z-[10000] overflow-hidden"
+            className="session-dropdown-menu min-w-[280px] max-w-[400px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-[0_4px_12px_rgba(0,0,0,0.1)] z-[10000] overflow-hidden"
           >
             {onOpenSessionManager && (
               <button
@@ -154,7 +154,7 @@ export function SessionDropdown({
                       {renamingId === session.id ? (
                         <input
                           type="text"
-                          className="session-rename-input flex-1 px-1.5 py-1 border border-[var(--nim-primary)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] text-[13px] outline-none"
+                          className="session-rename-input flex-1 px-2 py-1 border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-[13px] outline-none"
                           value={renameValue}
                           onChange={(e) => setRenameValue(e.target.value)}
                           onBlur={submitRename}
@@ -174,12 +174,12 @@ export function SessionDropdown({
                             <SessionStatusIndicator sessionId={session.id} />
                             <span className="session-name overflow-hidden text-ellipsis whitespace-nowrap">{formatSessionName(session)}</span>
                             {session.provider && session.provider !== 'claude-code' && (
-                              <span className={`session-provider-badge provider-${session.provider} inline-flex items-center px-1 py-px rounded text-[9px] font-semibold uppercase tracking-wide shrink-0`}>
+                              <span className={`session-provider-badge provider-${session.provider} inline-flex items-center px-1 py-px rounded-ui-base text-[9px] font-semibold uppercase tracking-wide shrink-0`}>
                                 {getProviderLabel(session.provider)}
                               </span>
                             )}
                             {session.model && (
-                              <span className="session-model-badge inline-flex items-center px-1.5 py-px rounded text-[10px] font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] shrink-0">
+                              <span className="session-model-badge inline-flex items-center px-2 py-px rounded-ui-base text-[10px] font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] shrink-0">
                                 {parseModelInfo(session.model)?.shortModelName}
                               </span>
                             )}

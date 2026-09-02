@@ -90,7 +90,7 @@ export const TrackerSyncRejectionBanner: React.FC<TrackerSyncRejectionBannerProp
           </span>
           <button
             type="button"
-            className="px-2 py-0.5 rounded border border-nim text-nim-muted hover:bg-nim hover:text-nim transition-colors"
+            className="px-2 py-0.5 rounded-ui-base border border-nim text-nim-muted hover:bg-nim hover:text-nim transition-colors"
             onClick={handleRetry}
             data-testid="tracker-sync-rejection-retry"
           >

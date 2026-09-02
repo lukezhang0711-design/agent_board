@@ -346,7 +346,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
 
     return (
       <span
-        className={`file-gutter__git-status file-gutter__git-status--${status.status} inline-flex items-center justify-center w-3.5 h-3.5 text-[0.65rem] font-semibold rounded-sm shrink-0 text-white ${statusClasses[status.status] || ''}`}
+        className={`file-gutter__git-status file-gutter__git-status--${status.status} inline-flex items-center justify-center w-3.5 h-3.5 text-[0.65rem] font-semibold rounded-ui-base shrink-0 text-white ${statusClasses[status.status] || ''}`}
         title={`Git status: ${status.status}`}
       >
         {statusChar}
@@ -370,7 +370,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
         {node.displayPath && (
           <button
             onClick={() => toggleFolder(node.path)}
-            className="file-gutter__directory-header w-full flex items-center gap-1 px-2 py-0.5 text-[0.8125rem] font-medium text-[var(--nim-text-muted)] bg-transparent border border-transparent rounded cursor-pointer transition-all duration-200 text-left hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+            className="file-gutter__directory-header w-full flex items-center gap-1 px-2 py-0.5 text-[0.8125rem] font-medium text-[var(--nim-text-muted)] bg-transparent border border-transparent rounded-ui-base cursor-pointer transition-all duration-200 text-left hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
           >
             <MaterialSymbol
               icon={isExpanded ? "expand_more" : "chevron_right"}
@@ -383,7 +383,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
               className="file-gutter__directory-icon shrink-0 text-[var(--nim-text-muted)]"
             />
             <span className="file-gutter__directory-path flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{node.displayPath}</span>
-            <span className="file-gutter__directory-count shrink-0 py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded text-[9px] text-[var(--nim-text-faint)]">{node.fileCount}</span>
+            <span className="file-gutter__directory-count shrink-0 py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded-ui-base text-[9px] text-[var(--nim-text-faint)]">{node.fileCount}</span>
           </button>
         )}
 
@@ -402,7 +402,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
                 <button
                   key={file.filePath}
                   onClick={() => handleFileClick(file.filePath)}
-                  className={`file-gutter__file w-full text-left px-2 py-0.5 rounded border border-transparent transition-all duration-200 bg-transparent hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border)] ${hasPendingReview ? 'file-gutter__file--pending bg-[rgba(251,191,36,0.08)] border-[rgba(251,191,36,0.2)] hover:bg-[rgba(251,191,36,0.15)] hover:border-[rgba(251,191,36,0.3)]' : ''}`}
+                  className={`file-gutter__file w-full text-left px-2 py-0.5 rounded-ui-base border border-transparent transition-all duration-200 bg-transparent hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border)] ${hasPendingReview ? 'file-gutter__file--pending bg-[rgba(251,191,36,0.08)] border-[rgba(251,191,36,0.2)] hover:bg-[rgba(251,191,36,0.15)] hover:border-[rgba(251,191,36,0.3)]' : ''}`}
                   title={getRelativePath(file.filePath)}
                 >
                   <div className="file-gutter__file-content flex items-center gap-2">
@@ -452,12 +452,12 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
       <div className="file-gutter__header-container flex items-center justify-between gap-2 py-1 px-2">
         <button
           onClick={toggleExpanded}
-          className="file-gutter__header w-full flex items-center justify-between py-1 px-2 text-base font-semibold text-[var(--nim-text-muted)] bg-transparent border-none rounded cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+          className="file-gutter__header w-full flex items-center justify-between py-1 px-2 text-base font-semibold text-[var(--nim-text-muted)] bg-transparent border-none rounded-ui-base cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
         >
           <div className="file-gutter__header-content flex items-center gap-2">
             {getSectionIcon()}
             <span>{label}</span>
-            <span className="file-gutter__count py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded text-[9px]">{groupedFiles.length}</span>
+            <span className="file-gutter__count py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded-ui-base text-[9px]">{groupedFiles.length}</span>
           </div>
           <MaterialSymbol
             icon="expand_more"
@@ -470,7 +470,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
           <div className="file-gutter__controls flex items-center gap-1 shrink-0">
             <button
               onClick={() => setGroupByDirectory(!groupByDirectory)}
-              className={`file-gutter__control-button flex items-center justify-center w-6 h-6 p-0 border border-[var(--nim-border)] rounded bg-[var(--nim-bg)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-200 hover:not-disabled:bg-[var(--nim-bg-hover)] hover:not-disabled:text-[var(--nim-text)] hover:not-disabled:border-[var(--nim-border-secondary)] disabled:opacity-40 disabled:cursor-not-allowed ${groupByDirectory ? 'file-gutter__control-button--active bg-[var(--nim-primary)] text-white border-[var(--nim-primary)] hover:bg-[var(--nim-primary)] hover:border-[var(--nim-primary)]' : ''}`}
+              className={`file-gutter__control-button flex items-center justify-center w-6 h-6 p-0 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-200 hover:not-disabled:bg-[var(--nim-bg-hover)] hover:not-disabled:text-[var(--nim-text)] hover:not-disabled:border-[var(--nim-border-secondary)] disabled:opacity-40 disabled:cursor-not-allowed ${groupByDirectory ? 'file-gutter__control-button--active bg-[var(--nim-primary)] text-white border-[var(--nim-primary)] hover:bg-[var(--nim-primary)] hover:border-[var(--nim-primary)]' : ''}`}
               title="Group by directory"
             >
               <MaterialSymbol icon="folder" size={16} />
@@ -478,7 +478,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
             <button
               onClick={expandAll}
               disabled={!groupByDirectory}
-              className="file-gutter__control-button flex items-center justify-center w-6 h-6 p-0 border border-[var(--nim-border)] rounded bg-[var(--nim-bg)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-200 hover:enabled:bg-[var(--nim-bg-hover)] hover:enabled:text-[var(--nim-text)] hover:enabled:border-[var(--nim-border-secondary)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="file-gutter__control-button flex items-center justify-center w-6 h-6 p-0 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-200 hover:enabled:bg-[var(--nim-bg-hover)] hover:enabled:text-[var(--nim-text)] hover:enabled:border-[var(--nim-border-secondary)] disabled:opacity-40 disabled:cursor-not-allowed"
               title="Expand all"
             >
               <MaterialSymbol icon="unfold_more" size={16} />
@@ -486,7 +486,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
             <button
               onClick={collapseAll}
               disabled={!groupByDirectory}
-              className="file-gutter__control-button flex items-center justify-center w-6 h-6 p-0 border border-[var(--nim-border)] rounded bg-[var(--nim-bg)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-200 hover:enabled:bg-[var(--nim-bg-hover)] hover:enabled:text-[var(--nim-text)] hover:enabled:border-[var(--nim-border-secondary)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="file-gutter__control-button flex items-center justify-center w-6 h-6 p-0 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-200 hover:enabled:bg-[var(--nim-bg-hover)] hover:enabled:text-[var(--nim-text)] hover:enabled:border-[var(--nim-border-secondary)] disabled:opacity-40 disabled:cursor-not-allowed"
               title="Collapse all"
             >
               <MaterialSymbol icon="unfold_less" size={16} />
@@ -509,7 +509,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
                 <button
                   key={file.filePath}
                   onClick={() => handleFileClick(file.filePath)}
-                  className={`file-gutter__file w-full text-left px-2 py-0.5 rounded border border-transparent transition-all duration-200 bg-transparent hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border)] ${hasPendingReview ? 'file-gutter__file--pending bg-[rgba(251,191,36,0.08)] border-[rgba(251,191,36,0.2)] hover:bg-[rgba(251,191,36,0.15)] hover:border-[rgba(251,191,36,0.3)]' : ''}`}
+                  className={`file-gutter__file w-full text-left px-2 py-0.5 rounded-ui-base border border-transparent transition-all duration-200 bg-transparent hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border)] ${hasPendingReview ? 'file-gutter__file--pending bg-[rgba(251,191,36,0.08)] border-[rgba(251,191,36,0.2)] hover:bg-[rgba(251,191,36,0.15)] hover:border-[rgba(251,191,36,0.3)]' : ''}`}
                   title={getRelativePath(file.filePath)}
                 >
                   <div className="file-gutter__file-content flex items-center gap-2">

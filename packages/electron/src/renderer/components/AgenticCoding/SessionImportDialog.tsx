@@ -209,13 +209,13 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
   return (
     <div className="session-import-dialog-overlay nim-overlay" onClick={onClose}>
       <div
-        className="session-import-dialog flex flex-col w-[90%] max-w-[900px] max-h-[85vh] rounded-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+        className="session-import-dialog flex flex-col w-[90%] max-w-[900px] max-h-[85vh] rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="session-import-dialog-header flex items-center justify-between px-5 py-4 border-b border-[var(--nim-border)]">
           <h2 className="m-0 text-base font-semibold text-[var(--nim-text)]">Import Claude Agent Sessions</h2>
           <button
-            className="session-import-dialog-close bg-transparent border-none text-[var(--nim-text-muted)] cursor-pointer p-1 flex items-center justify-center rounded transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+            className="session-import-dialog-close bg-transparent border-none text-[var(--nim-text-muted)] cursor-pointer p-1 flex items-center justify-center rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
             onClick={onClose}
             aria-label="Close dialog"
           >
@@ -233,7 +233,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
           <div className="session-import-dialog-error py-10 px-5 text-center text-[var(--nim-text-muted)]">
             <p>{error}</p>
             <button
-              className="mt-3 px-4 py-2 bg-[var(--nim-primary)] text-white border-none rounded cursor-pointer"
+              className="mt-3 px-4 py-2 bg-[var(--nim-primary)] text-white border-none rounded-ui-base cursor-pointer"
               onClick={loadSessions}
             >
               Retry
@@ -279,13 +279,13 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
             <div className="session-import-dialog-actions flex gap-2 px-5 py-3 border-b border-[var(--nim-border)]">
               <button
                 onClick={selectAll}
-                className="session-import-action-button px-3 py-1.5 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="session-import-action-button px-3 py-2 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               >
                 Select All
               </button>
               <button
                 onClick={deselectAll}
-                className="session-import-action-button px-3 py-1.5 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="session-import-action-button px-3 py-2 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               >
                 Deselect All
               </button>
@@ -367,7 +367,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
                                   <span>{session.tokenUsage.totalTokens.toLocaleString()} tokens</span>
                                   <span>•</span>
                                   <span
-                                    className={`session-import-status-badge px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                                    className={`session-import-status-badge px-2 py-0.5 rounded-ui-base text-[11px] font-medium ${
                                       session.syncStatus === 'new'
                                         ? 'bg-[rgba(76,175,80,0.15)] text-[rgb(76,175,80)]'
                                         : session.syncStatus === 'needs-update'

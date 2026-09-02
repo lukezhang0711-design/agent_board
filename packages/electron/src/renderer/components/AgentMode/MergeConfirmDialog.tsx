@@ -65,7 +65,7 @@ export function MergeConfirmDialog({
           </p>
 
           {hasUncommittedChanges && (
-            <div className="merge-confirm-dialog-info-banner flex items-start gap-3 p-3 mb-4 rounded-lg text-[0.8125rem] leading-snug bg-[var(--nim-info)]/10 text-[var(--nim-text-muted)]">
+            <div className="merge-confirm-dialog-info-banner flex items-start gap-3 p-3 mb-4 rounded-ui-lg text-[0.8125rem] leading-snug bg-[var(--nim-info)]/10 text-[var(--nim-text-muted)]">
               <MaterialSymbol icon="info" size={18} className="text-[var(--nim-info)]" />
               <span>
                 Your uncommitted changes will be preserved. Only committed work will be merged.
@@ -73,7 +73,7 @@ export function MergeConfirmDialog({
             </div>
           )}
 
-          <div className="merge-confirm-dialog-info flex flex-col gap-2 p-3 rounded-lg bg-[var(--nim-bg-secondary)]">
+          <div className="merge-confirm-dialog-info flex flex-col gap-2 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
             <div className="merge-confirm-dialog-info-row flex items-center gap-2 text-[0.8125rem]">
               <span className="merge-confirm-dialog-info-label min-w-[60px] text-[var(--nim-text-faint)]">Source:</span>
               <span className="merge-confirm-dialog-info-value font-mono text-[var(--nim-text)]">{worktreeName}</span>

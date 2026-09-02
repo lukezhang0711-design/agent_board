@@ -450,7 +450,7 @@ export function AgenticInput({
       >
         <textarea
           ref={textareaRef}
-          className="ai-chat-input-field nim-scrollbar-hidden flex-1 min-h-9 max-h-[200px] py-2 px-3 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md text-[var(--nim-text)] text-[13px] font-[inherit] resize-none outline-none transition-colors duration-200 focus:border-[var(--nim-primary)] disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-[var(--nim-text-faint)]"
+          className="ai-chat-input-field nim-scrollbar-hidden flex-1 min-h-9 max-h-[200px] py-2 px-3 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] text-[13px] font-[inherit] resize-none outline-none transition-colors duration-200 focus:border-[var(--nim-primary)] disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-[var(--nim-text-faint)]"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onCompositionStart={(e) => {
@@ -482,7 +482,7 @@ export function AgenticInput({
         />
         {isLoading && onCancel ? (
           <button
-            className="ai-chat-cancel-button w-9 h-9 flex items-center justify-center bg-[var(--nim-error)] border-none rounded-md text-white cursor-pointer transition-all duration-200 animate-pulse hover:opacity-90 hover:scale-105 hover:animate-none"
+            className="ai-chat-cancel-button w-9 h-9 flex items-center justify-center bg-[var(--nim-error)] border-none rounded-ui-base text-white cursor-pointer transition-all duration-200 animate-pulse hover:opacity-90 hover:scale-105 hover:animate-none"
             onClick={onCancel}
             title="Cancel request (Esc)"
             aria-label="Cancel request"
@@ -493,7 +493,7 @@ export function AgenticInput({
           </button>
         ) : (
           <button
-            className="ai-chat-send-button w-9 h-9 flex items-center justify-center bg-[var(--nim-primary)] border-none rounded-md text-white cursor-pointer transition-all duration-200 shrink-0 hover:enabled:bg-[var(--nim-primary-hover)] hover:enabled:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="ai-chat-send-button w-9 h-9 flex items-center justify-center bg-[var(--nim-primary)] border-none rounded-ui-base text-white cursor-pointer transition-all duration-200 shrink-0 hover:enabled:bg-[var(--nim-primary-hover)] hover:enabled:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={onSend}
             disabled={disabled || !value.trim()}
             title="Send message (Enter)"

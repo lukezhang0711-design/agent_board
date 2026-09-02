@@ -128,7 +128,7 @@ ${r.newText}
         </div>
 
         <div className="error-dialog-content nim-modal-body">
-          <div className="error-dialog-message flex items-start gap-3 mb-5 p-4 rounded-md border border-[var(--nim-error-border)] bg-[var(--nim-error-light)]">
+          <div className="error-dialog-message flex items-start gap-3 mb-5 p-4 rounded-ui-base border border-[var(--nim-error-border)] bg-[var(--nim-error-light)]">
             <div className="error-icon text-2xl shrink-0">⚠️</div>
             <p className="m-0 text-sm leading-relaxed text-[var(--nim-error)] select-text">{message}</p>
           </div>
@@ -137,7 +137,7 @@ ${r.newText}
 
           {typeof details === 'string' && details && (
             <div className="error-dialog-details mt-5">
-              <pre className="error-dialog-message-details m-0 p-3 rounded border border-[var(--nim-border)] bg-[var(--nim-code-bg)] text-[var(--nim-code-text)] font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">{details}</pre>
+              <pre className="error-dialog-message-details m-0 p-3 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-code-bg)] text-[var(--nim-code-text)] font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">{details}</pre>
             </div>
           )}
 
@@ -152,7 +152,7 @@ ${r.newText}
                 </button>
               </div>
 
-              <div className="error-dialog-sections border border-[var(--nim-border)] rounded-md overflow-hidden">
+              <div className="error-dialog-sections border border-[var(--nim-border)] rounded-ui-base overflow-hidden">
                 <div className="error-section border-b border-[var(--nim-border)] last:border-b-0">
                   <button
                     className={`section-header w-full py-3 px-4 border-none text-left cursor-pointer text-sm font-medium text-[var(--nim-text)] flex items-center gap-2 transition-colors duration-200 bg-[var(--nim-bg-tertiary)] hover:bg-[var(--nim-bg-hover)] ${expandedSections.has('error') ? 'expanded' : ''}`}
@@ -188,7 +188,7 @@ ${r.newText}
                   </button>
                   {expandedSections.has('prompt') && (
                     <div className="section-content p-4 bg-[var(--nim-bg-secondary)]">
-                      <pre className="code-block m-0 p-3 rounded border border-[var(--nim-border)] bg-[var(--nim-code-bg)] text-[var(--nim-code-text)] font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">{details.prompt}</pre>
+                      <pre className="code-block m-0 p-3 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-code-bg)] text-[var(--nim-code-text)] font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">{details.prompt}</pre>
                     </div>
                   )}
                 </div>
@@ -203,7 +203,7 @@ ${r.newText}
                   </button>
                   {expandedSections.has('response') && (
                     <div className="section-content p-4 bg-[var(--nim-bg-secondary)]">
-                      <pre className="code-block m-0 p-3 rounded border border-[var(--nim-border)] bg-[var(--nim-code-bg)] text-[var(--nim-code-text)] font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">{details.aiResponse}</pre>
+                      <pre className="code-block m-0 p-3 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-code-bg)] text-[var(--nim-code-text)] font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">{details.aiResponse}</pre>
                     </div>
                   )}
                 </div>
@@ -224,11 +224,11 @@ ${r.newText}
                           <div className="replacement-diff grid grid-cols-2 gap-3">
                             <div className="diff-old text-xs">
                               <strong className="block mb-1 font-semibold text-[var(--nim-text-muted)]">Old Text:</strong>
-                              <pre className="m-0 p-2 rounded font-mono text-[11px] leading-snug overflow-x-auto whitespace-pre-wrap break-all border border-[var(--nim-diff-removed-border)] bg-[var(--nim-diff-removed-bg)] text-[var(--nim-diff-removed)]">{r.oldText}</pre>
+                              <pre className="m-0 p-2 rounded-ui-base font-mono text-[11px] leading-snug overflow-x-auto whitespace-pre-wrap break-all border border-[var(--nim-diff-removed-border)] bg-[var(--nim-diff-removed-bg)] text-[var(--nim-diff-removed)]">{r.oldText}</pre>
                             </div>
                             <div className="diff-new text-xs">
                               <strong className="block mb-1 font-semibold text-[var(--nim-text-muted)]">New Text:</strong>
-                              <pre className="m-0 p-2 rounded font-mono text-[11px] leading-snug overflow-x-auto whitespace-pre-wrap break-all border border-[var(--nim-diff-added-border)] bg-[var(--nim-diff-added-bg)] text-[var(--nim-diff-added)]">{r.newText}</pre>
+                              <pre className="m-0 p-2 rounded-ui-base font-mono text-[11px] leading-snug overflow-x-auto whitespace-pre-wrap break-all border border-[var(--nim-diff-added-border)] bg-[var(--nim-diff-added-bg)] text-[var(--nim-diff-added)]">{r.newText}</pre>
                             </div>
                           </div>
                         </div>
@@ -247,7 +247,7 @@ ${r.newText}
                   </button>
                   {expandedSections.has('document') && (
                     <div className="section-content p-4 bg-[var(--nim-bg-secondary)]">
-                      <pre className="code-block document-content m-0 p-3 rounded border border-[var(--nim-border)] bg-[var(--nim-code-bg)] text-[var(--nim-code-text)] font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap break-words max-h-[300px] overflow-y-auto">
+                      <pre className="code-block document-content m-0 p-3 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-code-bg)] text-[var(--nim-code-text)] font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap break-words max-h-[300px] overflow-y-auto">
                         {details.originalMarkdown}
                       </pre>
                     </div>
@@ -255,7 +255,7 @@ ${r.newText}
                 </div>
               </div>
 
-              <div className="error-dialog-help mt-5 p-4 rounded-md border border-[var(--nim-info-border)] bg-[var(--nim-info-light)]">
+              <div className="error-dialog-help mt-5 p-4 rounded-ui-base border border-[var(--nim-info-border)] bg-[var(--nim-info-light)]">
                 <p className="m-0 mb-2 text-[13px] font-semibold text-[var(--nim-text)]"><strong>What to do next:</strong></p>
                 <ul className="m-0 pl-5">
                   <li className="text-[13px] leading-relaxed text-[var(--nim-text-muted)]">Check if the document was modified after the AI started processing</li>

@@ -92,7 +92,7 @@ export const TagBoard: React.FC<TagBoardProps> = ({
               key={key}
               data-testid={`tracker-tag-board-column-${key}`}
               data-tag={col.tag ?? ''}
-              className="tracker-tag-board-column flex flex-col min-w-[260px] max-w-[320px] flex-1 min-h-0 rounded-lg bg-nim-secondary"
+              className="tracker-tag-board-column flex flex-col min-w-[260px] max-w-[320px] flex-1 min-h-0 rounded-ui-lg bg-nim-secondary"
             >
               {/* Column header */}
               <div className="flex items-center gap-2 px-3 py-2 border-b border-nim">
@@ -110,13 +110,13 @@ export const TagBoard: React.FC<TagBoardProps> = ({
               </div>
 
               {/* Column cards */}
-              <div className="flex-1 overflow-y-auto p-1.5">
+              <div className="flex-1 overflow-y-auto p-2">
                 {col.items.map((item) => (
                   <button
                     key={item.id}
                     data-testid="tracker-tag-board-card"
                     data-item-id={item.id}
-                    className={`w-full text-left p-2.5 rounded-md bg-nim hover:bg-nim-tertiary border transition-colors cursor-pointer mb-1.5 ${
+                    className={`w-full text-left p-2.5 rounded-ui-base bg-nim hover:bg-nim-tertiary border transition-colors cursor-pointer mb-1.5 ${
                       selectedItemId && item.id === selectedItemId
                         ? 'border-[var(--nim-primary)]'
                         : 'border-nim'
@@ -125,7 +125,7 @@ export const TagBoard: React.FC<TagBoardProps> = ({
                   >
                     <div className="flex items-start gap-2">
                       <span
-                        className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                        className="w-2 h-2 rounded-ui-full mt-1.5 shrink-0"
                         style={{ backgroundColor: PRIORITY_COLORS[getRecordPriority(item) || 'medium'] || '#6b7280' }}
                       />
                       <div className="flex-1 min-w-0">
@@ -139,7 +139,7 @@ export const TagBoard: React.FC<TagBoardProps> = ({
                         </div>
                         <div className="flex items-center gap-2 mt-1.5">
                           <span
-                            className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
                             style={{
                               color: TYPE_COLORS[item.primaryType] || '#6b7280',
                               backgroundColor: `${TYPE_COLORS[item.primaryType] || '#6b7280'}20`,

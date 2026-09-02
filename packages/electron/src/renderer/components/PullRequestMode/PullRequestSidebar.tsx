@@ -56,7 +56,7 @@ export function PullRequestSidebar({
               <button
                 key={chip.id}
                 data-testid={`pr-filter-${chip.id}`}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                className={`flex items-center gap-1 px-2 py-1 rounded-ui-base text-[11px] font-medium transition-colors ${
                   isActive
                     ? 'bg-[var(--nim-primary)] text-white'
                     : 'bg-nim-tertiary text-nim-muted hover:bg-nim-active hover:text-nim'

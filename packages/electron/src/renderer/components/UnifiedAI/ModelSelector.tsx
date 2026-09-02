@@ -294,7 +294,7 @@ export function ModelSelector({
     <div
       id="model-current-unavailable"
       role="alert"
-      className="mt-1 max-w-[260px] rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
+      className="mt-1 max-w-[260px] rounded-ui-base px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
       data-testid="model-current-unavailable"
     >
       这个会话存的型号不在当前模型清单里，请重新选一个
@@ -309,7 +309,7 @@ export function ModelSelector({
     if (status.inFlight) {
       return (
         <div
-          className="mx-2 mb-1 rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)]"
+          className="mx-2 mb-1 rounded-ui-base px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)]"
           data-testid={`model-catalog-refreshing-${provider}`}
         >
           {hasVisibleRows
@@ -321,7 +321,7 @@ export function ModelSelector({
     if (status.lastError?.message) {
       return (
         <div
-          className="mx-2 mb-1 rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
+          className="mx-2 mb-1 rounded-ui-base px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
           data-testid={`model-catalog-status-${provider}`}
         >
           目录获取失败：{status.lastError.message}{cachedAt ? `。上次成功获取于 ${cachedAt}` : ''}。已保留上次成功清单；所选型号将原样交给引擎。
@@ -331,7 +331,7 @@ export function ModelSelector({
     if (!status.verified) {
       return (
         <div
-          className="mx-2 mb-1 rounded px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)]"
+          className="mx-2 mb-1 rounded-ui-base px-2 py-1 text-[10px] leading-relaxed text-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)]"
           data-testid={`model-catalog-status-${provider}`}
         >
           模型目录未验证，正在从引擎读取；此处的占位型号不可用于创建会话。
@@ -452,7 +452,7 @@ export function ModelSelector({
         <FloatingPortal>
           <div
             ref={refs.setFloating}
-            className="model-selector-dropdown nim-scrollbar min-w-[240px] max-w-[320px] max-h-[min(400px,calc(100vh-24px))] overflow-y-auto rounded-lg p-1 z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+            className="model-selector-dropdown nim-scrollbar min-w-[240px] max-w-[320px] max-h-[min(400px,calc(100vh-24px))] overflow-y-auto rounded-ui-lg p-1 z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
             style={floatingStyles}
             {...getFloatingProps()}
           >
@@ -471,7 +471,7 @@ export function ModelSelector({
             <>
               {defaultModelWarning && (
                 <div
-                  className="mx-2 mb-1 rounded px-2 py-1.5 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
+                  className="mx-2 mb-1 rounded-ui-base px-2 py-2 text-[10px] leading-relaxed text-[var(--nim-error)] bg-[rgba(239,68,68,0.08)]"
                   data-testid="model-default-unavailable"
                 >
                   {defaultModelWarning}
@@ -480,9 +480,9 @@ export function ModelSelector({
               {/* Agents Section */}
               {((groupedProviders.agents && Object.keys(groupedProviders.agents).length > 0) || hasRenderableMissingDynamicExtensions) && (
                 <>
-                  <div className="model-selector-section-header px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.5px] text-[var(--nim-text-faint)]">Agents</div>
+                  <div className="model-selector-section-header px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.5px] text-[var(--nim-text-faint)]">Agents</div>
                   {isSectionDisabled('agent') && (
-                    <div className="model-selector-disabled-notice px-2 pt-1 pb-1.5 text-[11px] italic text-[var(--nim-text-faint)]">
+                    <div className="model-selector-disabled-notice px-2 pt-1 pb-2 text-[11px] italic text-[var(--nim-text-faint)]">
                       Start a new session to use agents
                     </div>
                   )}
@@ -519,7 +519,7 @@ export function ModelSelector({
                         return (
                           <button
                             key={model.id}
-                            className={`model-selector-option flex items-center justify-between gap-2 pl-6 pr-2 py-1.5 w-full border-none rounded text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text)] ${isCurrent ? 'selected bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : ''} ${isDisabled ? 'disabled opacity-50 cursor-not-allowed' : 'hover:bg-[var(--nim-bg-hover)]'}`}
+                            className={`model-selector-option flex items-center justify-between gap-2 pl-6 pr-2 py-2 w-full border-none rounded-ui-base text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text)] ${isCurrent ? 'selected bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : ''} ${isDisabled ? 'disabled opacity-50 cursor-not-allowed' : 'hover:bg-[var(--nim-bg-hover)]'}`}
                             onClick={() => !isDisabled && handleModelSelect(model.id)}
                             title={isDisabled ? disabledTooltip : undefined}
                             aria-disabled={isDisabled}
@@ -562,9 +562,9 @@ export function ModelSelector({
                   {groupedProviders.agents && Object.keys(groupedProviders.agents).length > 0 && (
                     <div className="model-selector-divider h-px my-1 bg-[var(--nim-border)]" />
                   )}
-                  <div className="model-selector-section-header px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.5px] text-[var(--nim-text-faint)]">Chat with open document</div>
+                  <div className="model-selector-section-header px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.5px] text-[var(--nim-text-faint)]">Chat with open document</div>
                   {isSectionDisabled('model') && (
-                    <div className="model-selector-disabled-notice px-2 pt-1 pb-1.5 text-[11px] italic text-[var(--nim-text-faint)]">
+                    <div className="model-selector-disabled-notice px-2 pt-1 pb-2 text-[11px] italic text-[var(--nim-text-faint)]">
                       Start a new session to use chat models
                     </div>
                   )}
@@ -584,7 +584,7 @@ export function ModelSelector({
                         return (
                           <button
                             key={model.id}
-                            className={`model-selector-option flex items-center justify-between gap-2 pl-6 pr-2 py-1.5 w-full border-none rounded text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text)] ${isCurrent ? 'selected bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : ''} ${isDisabled ? 'disabled opacity-50 cursor-not-allowed' : 'hover:bg-[var(--nim-bg-hover)]'}`}
+                            className={`model-selector-option flex items-center justify-between gap-2 pl-6 pr-2 py-2 w-full border-none rounded-ui-base text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text)] ${isCurrent ? 'selected bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)]' : ''} ${isDisabled ? 'disabled opacity-50 cursor-not-allowed' : 'hover:bg-[var(--nim-bg-hover)]'}`}
                             onClick={() => !isDisabled && handleModelSelect(model.id)}
                             title={isDisabled ? disabledTooltip : undefined}
                             aria-disabled={isDisabled}
@@ -607,7 +607,7 @@ export function ModelSelector({
               {/* Configure Models */}
               <div className="model-selector-divider h-px my-1 bg-[var(--nim-border)]" />
               <button
-                className="model-selector-configure flex items-center gap-2 px-2 py-1.5 w-full bg-transparent border-none rounded text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                className="model-selector-configure flex items-center gap-2 px-2 py-2 w-full bg-transparent border-none rounded-ui-base text-xs cursor-pointer transition-[background] duration-150 text-left text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                 onClick={handleConfigureModels}
               >
                 <MaterialSymbol icon="settings" size={14} />

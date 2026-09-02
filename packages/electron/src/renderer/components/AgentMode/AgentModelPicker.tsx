@@ -102,13 +102,13 @@ export function AgentModelPicker({
   const isDisabled = disabled || (!hasModels && !isLoading);
 
   return (
-    <div className="merge-conflict-dialog-model flex flex-col gap-2 p-3 mb-4 rounded-lg bg-[var(--nim-bg-secondary)]">
+    <div className="merge-conflict-dialog-model flex flex-col gap-2 p-3 mb-4 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
       <div className="flex items-center gap-2 text-[13px] font-medium text-[var(--nim-text)]">
         <MaterialSymbol icon="memory" size={16} />
         <span>Model</span>
       </div>
       <select
-        className="w-full border border-[var(--nim-border)] rounded bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs px-2 py-1.5 focus:outline-none focus:border-[var(--nim-primary)]"
+        className="w-full border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs px-2 py-2 focus:outline-none focus:border-[var(--nim-primary)]"
         value={selectValue}
         onChange={(e) => onModelChange(e.target.value)}
         disabled={isDisabled}

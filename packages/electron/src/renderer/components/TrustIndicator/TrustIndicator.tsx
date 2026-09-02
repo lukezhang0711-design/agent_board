@@ -189,7 +189,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
 
   const getBadgeClasses = (): string => {
     const statusClass = getStatusClass();
-    const base = 'px-2 py-0.5 rounded text-[11px] font-medium';
+    const base = 'px-2 py-0.5 rounded-ui-base text-[11px] font-medium';
     switch (statusClass) {
       case 'untrusted':
         return `${base} bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)] text-[var(--nim-warning)]`;
@@ -206,7 +206,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
 
   const getCurrentModeClasses = (): string => {
     const statusClass = getStatusClass();
-    const base = 'mx-2 mb-2 p-3 rounded-md bg-[var(--nim-bg)] border border-[var(--nim-border)]';
+    const base = 'mx-2 mb-2 p-3 rounded-ui-base bg-[var(--nim-bg)] border border-[var(--nim-border)]';
     switch (statusClass) {
       case 'trusted':
         return `${base} border-[var(--nim-success)] bg-[color-mix(in_srgb,var(--nim-success)_10%,transparent)]`;
@@ -274,7 +274,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
       <HelpTooltip testId="gutter-permissions-button" placement="right">
         <button
           ref={buttonRef}
-          className={`trust-indicator nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${getStatusClass()} ${getIndicatorColorClass()}`}
+          className={`trust-indicator nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${getStatusClass()} ${getIndicatorColorClass()}`}
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label={getStatusLabel()}
           aria-expanded={menuOpen}
@@ -283,7 +283,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
         >
           <MaterialSymbol icon={getStatusIcon()} size={20} />
           <span
-            className={`trust-indicator-dot absolute bottom-1 right-1 w-2 h-2 rounded-full border-2 border-[var(--nim-bg-secondary)] ${getStatusClass()} ${getDotColorClass()}`}
+            className={`trust-indicator-dot absolute bottom-1 right-1 w-2 h-2 rounded-ui-full border-2 border-[var(--nim-bg-secondary)] ${getStatusClass()} ${getDotColorClass()}`}
           />
         </button>
       </HelpTooltip>
@@ -291,7 +291,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
       {menuOpen && (
         <div
           ref={menuRef}
-          className="trust-menu absolute bottom-0 left-[calc(100%+8px)] w-[280px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[100] animate-[trust-menu-appear_0.15s_ease-out]"
+          className="trust-menu absolute bottom-0 left-[calc(100%+8px)] w-[280px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[100] animate-[trust-menu-appear_0.15s_ease-out]"
           role="menu"
           style={{
             // Inline keyframe animation fallback
@@ -347,7 +347,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
 
           <div className="trust-menu-actions p-1">
               <button
-                className="trust-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
+                className="trust-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
                 onClick={handleChangeMode}
                 role="menuitem"
               >
@@ -355,7 +355,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
                 <span>Change permission mode</span>
               </button>
             <button
-              className="trust-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
+              className="trust-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleOpenSettings}
               role="menuitem"
             >

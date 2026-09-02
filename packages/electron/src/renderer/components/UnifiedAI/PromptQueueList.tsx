@@ -74,11 +74,11 @@ export function PromptQueueList({
       </div>
       <div className="prompt-queue-items flex flex-col gap-1">
         {queue.map((item, index) => (
-          <div key={item.id} className="prompt-queue-item flex items-center gap-2 px-2 py-1.5 bg-nim-tertiary border border-nim rounded text-[13px]">
-            <span className="prompt-queue-number shrink-0 w-[18px] h-[18px] flex items-center justify-center bg-nim-tertiary rounded-full text-[11px] font-medium text-nim-muted">{index + 1}</span>
+          <div key={item.id} className="prompt-queue-item flex items-center gap-2 px-2 py-2 bg-nim-tertiary border border-nim rounded-ui-base text-[13px]">
+            <span className="prompt-queue-number shrink-0 w-[18px] h-[18px] flex items-center justify-center bg-nim-tertiary rounded-ui-full text-[11px] font-medium text-nim-muted">{index + 1}</span>
             <span className="prompt-queue-text flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-nim-primary" title={item.prompt}>{item.prompt}</span>
             {item.prompt.includes('\n') && (
-              <span className="prompt-queue-lines shrink-0 text-[10px] text-nim-muted bg-nim-secondary rounded px-1 py-0.5" title={`${item.prompt.split('\n\n').length} messages bundled`}>
+              <span className="prompt-queue-lines shrink-0 text-[10px] text-nim-muted bg-nim-secondary rounded-ui-base px-1 py-0.5" title={`${item.prompt.split('\n\n').length} messages bundled`}>
                 +{item.prompt.split('\n\n').length - 1} more
               </span>
             )}
@@ -87,7 +87,7 @@ export function PromptQueueList({
             )}
             {onSendNow && (
               <button
-                className="prompt-queue-send-now shrink-0 w-5 h-5 flex items-center justify-center bg-transparent border-none rounded text-nim-muted cursor-pointer text-sm leading-none p-0 transition-all duration-150 hover:bg-nim-hover hover:text-nim-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-nim-muted"
+                className="prompt-queue-send-now shrink-0 w-5 h-5 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer text-sm leading-none p-0 transition-all duration-150 hover:bg-nim-hover hover:text-nim-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-nim-muted"
                 onClick={sendNowDisabledMessage ? undefined : () => onSendNow(item.id, item.prompt)}
                 disabled={!!sendNowDisabledMessage}
                 aria-label={sendNowDisabledMessage ?? 'Interrupt and send now'}
@@ -101,7 +101,7 @@ export function PromptQueueList({
             )}
             {onEdit && (
               <button
-                className="prompt-queue-edit shrink-0 w-5 h-5 flex items-center justify-center bg-transparent border-none rounded text-nim-muted cursor-pointer text-sm leading-none p-0 transition-all duration-150 hover:bg-nim-hover hover:text-nim-primary"
+                className="prompt-queue-edit shrink-0 w-5 h-5 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer text-sm leading-none p-0 transition-all duration-150 hover:bg-nim-hover hover:text-nim-primary"
                 onClick={() => onEdit(item.id, item.prompt)}
                 title="Edit this prompt"
                 type="button"
@@ -110,7 +110,7 @@ export function PromptQueueList({
               </button>
             )}
             <button
-              className="prompt-queue-cancel shrink-0 w-5 h-5 flex items-center justify-center bg-transparent border-none rounded text-nim-muted cursor-pointer text-lg leading-none p-0 transition-all duration-150 hover:bg-nim-hover hover:text-nim-primary"
+              className="prompt-queue-cancel shrink-0 w-5 h-5 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer text-lg leading-none p-0 transition-all duration-150 hover:bg-nim-hover hover:text-nim-primary"
               onClick={() => onCancel(item.id)}
               title="Cancel this prompt"
               type="button"

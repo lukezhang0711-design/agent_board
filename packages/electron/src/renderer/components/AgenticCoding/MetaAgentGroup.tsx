@@ -115,7 +115,7 @@ const MetaAgentChildRow: React.FC<{
   onContextMenu: (e: React.MouseEvent) => void;
 }> = memo(({ session, isActive, onSelect, onContextMenu }) => (
   <div
-    className={`meta-agent-child-item flex items-center gap-2 py-1.5 px-3 mr-2 mb-0.5 cursor-pointer rounded transition-colors duration-150 select-none ${
+    className={`meta-agent-child-item flex items-center gap-2 py-2 px-3 mr-2 mb-0.5 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
       isActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
     } focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:outline-offset-[-2px]`}
     onClick={onSelect}
@@ -216,7 +216,7 @@ export const MetaAgentGroup: React.FC<MetaAgentGroupProps> = memo(({
     <div data-testid="meta-agent-group" data-meta-session-id={metaSession.id}>
       {/* Group header */}
       <div
-        className={`meta-agent-group-header flex items-center gap-2 py-1.5 px-2 mr-2 cursor-pointer rounded transition-colors duration-150 select-none ${
+        className={`meta-agent-group-header flex items-center gap-2 py-2 px-2 mr-2 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
           isActive ? 'bg-[var(--nim-bg-selected)]' : isSelected ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
         }`}
         onClick={(e) => {
@@ -270,7 +270,7 @@ export const MetaAgentGroup: React.FC<MetaAgentGroupProps> = memo(({
 
         {/* Child count badge */}
         {childSessions.length > 0 && (
-          <span className="shrink-0 text-[0.5625rem] px-1.5 py-[0.0625rem] rounded-[0.625rem] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] font-medium">
+          <span className="shrink-0 text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] font-medium">
             {childSessions.length}
           </span>
         )}
