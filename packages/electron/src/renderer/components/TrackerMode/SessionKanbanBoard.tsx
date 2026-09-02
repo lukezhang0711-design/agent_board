@@ -1067,7 +1067,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
             </span>
             {queuedCount > 0 && (
               <span
-                className="flex items-center gap-0.5 rounded bg-[rgba(245,158,11,0.16)] px-1 py-px text-[9px] font-semibold text-[var(--nim-warning)]"
+                className="flex items-center gap-0.5 rounded bg-nim-warning-subtle px-1 py-px text-ui-micro font-semibold text-[var(--nim-warning)]"
                 title={`${queuedCount} 个派发正在等待 Head 调度槽位`}
               >
                 <MaterialSymbol icon="schedule" size={11} />

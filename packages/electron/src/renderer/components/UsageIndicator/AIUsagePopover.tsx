@@ -84,7 +84,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
         <div className="flex items-center justify-between border-b border-nim px-4 py-3 shrink-0 bg-nim-secondary sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <MaterialSymbol icon="speed" size={20} className="text-nim" />
-            <span className="text-[14px] font-semibold text-nim">AI 用量</span>
+            <span className="text-ui-subhead font-semibold text-nim">AI 用量</span>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -247,7 +247,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                   <div className="flex flex-col gap-2">
                     <div className="mb-1 flex items-baseline justify-between gap-3">
                       <div className="text-ui-body font-semibold text-nim">会话</div>
-                      <div className="text-[16px] font-semibold text-nim">
+                      <div className="text-ui-subhead font-semibold text-nim">
                         {Math.round(geminiUsage?.fiveHour?.utilization ?? 0)}%
                       </div>
                     </div>
