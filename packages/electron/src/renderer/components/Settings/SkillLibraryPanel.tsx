@@ -341,7 +341,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           {/* Engine Badges & Content Comparison Badge */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span
-              className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
+              className={`px-1.5 py-0.5 rounded text-ui-caption font-mono border ${
                 card.engines.claude
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
@@ -350,7 +350,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               Claude {card.engines.claude ? '✓' : '✗'}
             </span>
             <span
-              className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
+              className={`px-1.5 py-0.5 rounded text-ui-caption font-mono border ${
                 card.engines.codex
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
@@ -359,7 +359,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               Codex {card.engines.codex ? '✓' : '✗'}
             </span>
             <span
-              className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
+              className={`px-1.5 py-0.5 rounded text-ui-caption font-mono border ${
                 card.engines.gemini
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
@@ -369,12 +369,12 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
             </span>
 
             {card.contentMatch === 'same' && (
-              <span className="px-1.5 py-0.5 rounded text-[11px] bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)]">
+              <span className="px-1.5 py-0.5 rounded text-ui-caption bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)]">
                 内容一致
               </span>
             )}
             {card.contentMatch === 'different' && (
-              <span className="px-1.5 py-0.5 rounded text-[11px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
+              <span className="px-1.5 py-0.5 rounded text-ui-caption bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
                 两家内容不一样
               </span>
             )}
@@ -404,13 +404,13 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         </div>
 
         {/* Card Footer: Metadata & Expand button */}
-        <div className="pt-2 border-t border-[var(--nim-border-subtle)] flex flex-col gap-1.5 text-[11px] text-[var(--nim-text-muted)]">
+        <div className="pt-2 border-t border-[var(--nim-border-subtle)] flex flex-col gap-1.5 text-ui-caption text-[var(--nim-text-muted)]">
           <div className="flex items-center justify-between gap-2">
             <span>约 {card.estimatedTokens} token (估算)</span>
             {card.hasDescription && (
               <button
                 type="button"
-                className="text-[11px] text-[var(--nim-primary)] hover:underline cursor-pointer border-none bg-transparent p-0"
+                className="text-ui-caption text-[var(--nim-primary)] hover:underline cursor-pointer border-none bg-transparent p-0"
                 onClick={() => toggleCardExpanded(card.name)}
               >
                 {isExpanded ? '收起说明' : '展开说明'}
@@ -518,7 +518,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                 >
                   <span>{bundle.name}</span>
                   <span
-                    className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono ${
+                    className={`px-1.5 py-0.5 text-ui-micro rounded-full font-mono ${
                       isEditing
                         ? 'bg-white/20 text-white'
                         : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)]'

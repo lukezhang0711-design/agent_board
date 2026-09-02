@@ -1,0 +1,115 @@
+/**
+ * Visual Token Utility Classes
+ * 视觉令牌工具类（施工单 FX / FB-163）
+ *
+ * 遵循主题纪律：所有颜色 100% 绑定 --nim-* 变量，深浅主题自然成立。
+ */
+
+/* =============================================================================
+ * 1. Font Size Tokens (字号令牌 - 8 档)
+ * ============================================================================= */
+.text-ui-micro {
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.text-ui-caption {
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.text-ui-compact {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.text-ui-body {
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.text-ui-subhead {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.text-ui-title {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.text-ui-headline {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.text-ui-display {
+  font-size: 32px;
+  line-height: 40px;
+}
+
+/* =============================================================================
+ * 2. Border Radius Tokens (圆角令牌 - 5 档)
+ * ============================================================================= */
+.rounded-ui-none {
+  border-radius: 0px;
+}
+
+.rounded-ui-sm {
+  border-radius: 4px;
+}
+
+.rounded-ui-base {
+  border-radius: 6px;
+}
+
+.rounded-ui-lg {
+  border-radius: 10px;
+}
+
+.rounded-ui-full {
+  border-radius: 9999px;
+}
+
+/* =============================================================================
+ * 3. Surface & Tone Helpers (100% --nim-* 主题变量驱动，双主题自适应)
+ * ============================================================================= */
+.bg-nim-primary-subtle {
+  background-color: color-mix(in srgb, var(--nim-primary) 12%, transparent);
+}
+
+.bg-nim-warning-subtle {
+  background-color: color-mix(in srgb, var(--nim-warning) 14%, transparent);
+}
+
+.bg-nim-error-subtle {
+  background-color: color-mix(in srgb, var(--nim-error) 12%, transparent);
+}
+
+.bg-nim-success-subtle {
+  background-color: color-mix(in srgb, var(--nim-success) 12%, transparent);
+}
+
+.border-nim-primary-subtle {
+  border-color: color-mix(in srgb, var(--nim-primary) 35%, transparent);
+}
+
+.border-nim-warning-subtle {
+  border-color: color-mix(in srgb, var(--nim-warning) 35%, transparent);
+}
+
+.border-nim-error-subtle {
+  border-color: color-mix(in srgb, var(--nim-error) 35%, transparent);
+}
+
+.border-nim-success-subtle {
+  border-color: color-mix(in srgb, var(--nim-success) 35%, transparent);
+}
+
+.outline-nim-primary-subtle {
+  outline-color: color-mix(in srgb, var(--nim-primary) 40%, transparent);
+}
+
+.outline-nim-error-subtle {
+  outline-color: color-mix(in srgb, var(--nim-error) 40%, transparent);
+}

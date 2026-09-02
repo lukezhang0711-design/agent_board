@@ -114,7 +114,7 @@ function ChildRunStateBar({ sessionId }: { sessionId: string }) {
             className="w-[5px] h-[5px] rounded-full shrink-0"
             style={{ background: s.color }}
           />
-          <span className="text-[9px] whitespace-nowrap" style={{ color: s.color }}>
+          <span className="text-ui-micro whitespace-nowrap" style={{ color: s.color }}>
             {summary[s.key]} {s.label}
           </span>
         </div>
@@ -130,7 +130,7 @@ function ChildRunStateBar({ sessionId }: { sessionId: string }) {
 function CardTypeIcon({ type, provider }: { type: KanbanCardType; provider?: string }) {
   if (type === 'worktree') {
     return (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0 mt-px text-[#a78bfa]">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0 mt-px text-nim-purple">
         <rect x="3" y="2" width="3" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="10" y="2" width="3" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="3" y="11" width="3" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
@@ -141,7 +141,7 @@ function CardTypeIcon({ type, provider }: { type: KanbanCardType; provider?: str
   }
   if (type === 'workstream') {
     return (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0 mt-px text-[#60a5fa]">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0 mt-px text-nim-primary">
         <circle cx="8" cy="4" r="1.5" fill="currentColor"/>
         <circle cx="4" cy="12" r="1.5" fill="currentColor"/>
         <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
@@ -277,15 +277,15 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
 function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'running') {
     return (
-      <span className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-blue-400/10" style={{ color: info.badgeColor }}>
-        <span className={`material-symbols-outlined text-[12px] ${info.spinIcon ? 'animate-spin' : ''}`}>{info.badgeIcon}</span>
+      <span className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-blue-400/10" style={{ color: info.badgeColor }}>
+        <span className={`material-symbols-outlined text-ui-compact ${info.spinIcon ? 'animate-spin' : ''}`}>{info.badgeIcon}</span>
         {info.badgeLabel}
       </span>
     );
   }
   if (info.state === 'waiting') {
     return (
-      <span className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-orange-500/10" style={{ color: info.badgeColor }}>
+      <span className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-orange-500/10" style={{ color: info.badgeColor }}>
         <MaterialSymbol icon="help_outline" size={12} />
         {info.badgeLabel}
       </span>
@@ -294,7 +294,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'queued') {
     return (
       <span
-        className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-slate-400/10"
+        className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-slate-400/10"
         style={{ color: info.badgeColor }}
         title="Waiting for a Head Agent slot"
       >
@@ -306,7 +306,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'interrupted') {
     return (
       <span
-        className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-orange-500/10"
+        className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-orange-500/10"
         style={{ color: info.badgeColor }}
         title="Interrupted by Head Agent"
       >
@@ -318,7 +318,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'failed') {
     return (
       <span
-        className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-red-500/10"
+        className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-red-500/10"
         style={{ color: info.badgeColor }}
         title="Work order failed"
       >
@@ -481,7 +481,7 @@ function TranscriptPeek({ sessionId, anchorRef, onClose }: TranscriptPeekProps) 
     >
       {loading ? (
         <div className="flex-1 flex items-center justify-center text-nim-faint">
-          <span className="material-symbols-outlined text-sm animate-spin" style={{ fontSize: '16px' }}>progress_activity</span>
+          <span className="material-symbols-outlined text-ui-subhead animate-spin">progress_activity</span>
         </div>
       ) : messages && messages.length > 0 ? (
         <div className="flex-1 overflow-hidden">
@@ -493,7 +493,7 @@ function TranscriptPeek({ sessionId, anchorRef, onClose }: TranscriptPeekProps) 
           />
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-[11px] text-nim-disabled italic">
+        <div className="flex-1 flex items-center justify-center text-ui-caption text-nim-disabled italic">
           No messages yet
         </div>
       )}
@@ -629,7 +629,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
           isFocused
             ? 'border-[var(--nim-primary)] ring-1 ring-[var(--nim-primary)]'
             : isSelected
-              ? 'border-[rgba(96,165,250,0.5)] bg-[rgba(96,165,250,0.06)]'
+              ? 'border-nim-primary-subtle bg-nim-primary-subtle'
               : stateStyle.border
                 ? ''
                 : 'border-nim'
@@ -673,7 +673,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
 
         {workOrderAttemptNumber !== undefined && (
           <div
-            className="text-[10px] text-nim-faint mb-1.5"
+            className="text-ui-micro text-nim-faint mb-1.5"
             data-testid="work-order-attempt-summary"
           >
             第 {workOrderAttemptNumber} 次尝试
@@ -683,7 +683,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
 
         {/* Child session count (workstream/worktree only) */}
         {cardType !== 'session' && session.childCount > 0 && (
-          <div className="flex items-center gap-1 text-[10px] text-nim-faint mb-1">
+          <div className="flex items-center gap-1 text-ui-micro text-nim-faint mb-1">
             <MaterialSymbol icon="chat_bubble_outline" size={12} />
             {session.childCount} session{session.childCount !== 1 ? 's' : ''}
           </div>
@@ -702,13 +702,13 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
             {tags.slice(0, 4).map(tag => (
               <span
                 key={tag}
-                className="text-[10px] font-medium px-1.5 py-px rounded bg-white/[0.06] text-nim-muted"
+                className="text-ui-micro font-medium px-1.5 py-px rounded bg-white/[0.06] text-nim-muted"
               >
                 {tag}
               </span>
             ))}
             {tags.length > 4 && (
-              <span className="text-[10px] text-nim-faint">+{tags.length - 4}</span>
+              <span className="text-ui-micro text-nim-faint">+{tags.length - 4}</span>
             )}
           </div>
         )}
@@ -722,7 +722,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
             {hasDelegatedSession && (
               <button
                 type="button"
-                className="text-[10px] text-[var(--nim-primary)] hover:underline"
+                className="text-ui-micro text-[var(--nim-primary)] hover:underline"
                 onClick={(event) => {
                   event.stopPropagation();
                   onSelect(session.id);
@@ -735,7 +735,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
               </button>
             )}
             {session.uncommittedCount > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px] text-nim-faint" title={`${session.uncommittedCount} uncommitted file${session.uncommittedCount !== 1 ? 's' : ''}`}>
+              <span className="flex items-center gap-0.5 text-ui-micro text-nim-faint" title={`${session.uncommittedCount} uncommitted file${session.uncommittedCount !== 1 ? 's' : ''}`}>
                 <MaterialSymbol icon="edit_note" size={12} />
                 {session.uncommittedCount}
               </span>
@@ -760,7 +760,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
             >
               <MaterialSymbol icon="chat_bubble_outline" size={12} />
             </span>
-            <span className="text-[10px] text-nim-disabled">{timeAgo}</span>
+            <span className="text-ui-micro text-nim-disabled">{timeAgo}</span>
           </div>
         </div>
       </div>
@@ -873,7 +873,7 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
     return (
       <div
         className={`session-kanban-column flex flex-col w-10 shrink-0 rounded-lg bg-nim-secondary cursor-pointer transition-colors ${
-          isDragOver ? 'bg-[rgba(96,165,250,0.08)] outline outline-2 outline-dashed outline-[rgba(96,165,250,0.3)] -outline-offset-2' : ''
+          isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2' : ''
         }`}
         data-testid="session-kanban-column"
         data-phase={phase}
@@ -887,11 +887,11 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
             className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: color }}
           />
-          <span className="text-[10px] font-semibold text-nim-faint">
+          <span className="text-ui-micro font-semibold text-nim-faint">
             {sessions.length}
           </span>
           <span
-            className="text-[10px] font-semibold text-nim-faint uppercase tracking-wide"
+            className="text-ui-micro font-semibold text-nim-faint uppercase tracking-wide"
             style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}
           >
             {label}
@@ -920,10 +920,10 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
           className="w-2 h-2 rounded-full shrink-0"
           style={{ backgroundColor: color }}
         />
-        <span className="text-[11px] font-semibold text-nim uppercase tracking-wide truncate">
+        <span className="text-ui-caption font-semibold text-nim uppercase tracking-wide truncate">
           {label}
         </span>
-        <span className="text-[10px] font-semibold text-nim-faint ml-auto">
+        <span className="text-ui-micro font-semibold text-nim-faint ml-auto">
           {sessions.length}
         </span>
         <button
@@ -938,14 +938,14 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
       {/* Column cards */}
       <div
         className={`flex-1 overflow-y-auto p-1.5 space-y-1.5 transition-colors ${
-          isDragOver ? 'bg-[rgba(96,165,250,0.05)] outline outline-2 outline-dashed outline-[rgba(96,165,250,0.3)] -outline-offset-2 rounded' : ''
+          isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2 rounded' : ''
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {sessions.length === 0 ? (
-          <div className="flex items-center justify-center py-6 text-nim-disabled text-[11px] italic">
+          <div className="flex items-center justify-center py-6 text-nim-disabled text-ui-caption italic">
             No sessions
           </div>
         ) : (
@@ -1046,7 +1046,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
     return (
       <div
         className={`session-kanban-column flex flex-col w-10 shrink-0 rounded-lg bg-nim-secondary cursor-pointer transition-colors ${
-          isDragOver ? 'bg-[rgba(96,165,250,0.08)] outline outline-2 outline-dashed outline-[rgba(96,165,250,0.3)] -outline-offset-2' : ''
+          isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2' : ''
         }`}
         data-testid="session-kanban-column"
         data-phase="unphased"
@@ -1060,12 +1060,12 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
             className="w-2 h-2 rounded-full shrink-0 bg-neutral-600"
           />
           <div className="flex items-center gap-1">
-            <span className="text-[10px] font-semibold text-nim-faint">
+            <span className="text-ui-micro font-semibold text-nim-faint">
               {sessions.length}
             </span>
             {queuedCount > 0 && (
               <span
-                className="flex items-center gap-0.5 rounded bg-[rgba(245,158,11,0.16)] px-1 py-px text-[9px] font-semibold text-[var(--nim-warning)]"
+                className="flex items-center gap-0.5 rounded bg-nim-warning-subtle px-1 py-px text-ui-micro font-semibold text-nim-warning"
                 title={`${queuedCount} dispatch${queuedCount === 1 ? '' : 'es'} waiting for a Head Agent slot`}
               >
                 <MaterialSymbol icon="schedule" size={11} />
@@ -1074,7 +1074,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
             )}
           </div>
           <span
-            className="text-[10px] font-semibold text-nim-faint uppercase tracking-wide"
+            className="text-ui-micro font-semibold text-nim-faint uppercase tracking-wide"
             style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}
           >
             Inbox
@@ -1105,10 +1105,10 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
         }}
       >
         <span className="w-2 h-2 rounded-full shrink-0 bg-neutral-600" />
-        <span className="text-[11px] font-semibold text-nim uppercase tracking-wide truncate">
+        <span className="text-ui-caption font-semibold text-nim uppercase tracking-wide truncate">
           Inbox
         </span>
-        <span className="text-[10px] font-semibold text-nim-faint ml-auto">
+        <span className="text-ui-micro font-semibold text-nim-faint ml-auto">
           {sessions.length}
         </span>
         <button
@@ -1123,7 +1123,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
       {/* Column cards */}
       <div
         className={`flex-1 overflow-y-auto p-1.5 space-y-1.5 transition-colors ${
-          isDragOver ? 'bg-[rgba(96,165,250,0.05)] outline outline-2 outline-dashed outline-[rgba(96,165,250,0.3)] -outline-offset-2 rounded' : ''
+          isDragOver ? 'bg-nim-primary-subtle outline outline-2 outline-dashed outline-nim-primary-subtle -outline-offset-2 rounded' : ''
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -1276,7 +1276,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
       {/* Scope Title */}
       <div className="flex items-center gap-1.5 shrink-0 pr-2 border-r border-nim" data-testid="kanban-scope-header">
         <span className="text-xs font-semibold text-nim">Kanban</span>
-        <span className="text-[11px] text-nim-faint">本次派发相关</span>
+        <span className="text-ui-caption text-nim-faint">本次派发相关</span>
       </div>
 
       {/* Search with tag typeahead */}
@@ -1299,7 +1299,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
             }
           }}
           data-testid="kanban-search"
-          className="w-full pl-7 pr-2 py-1 text-[11px] bg-nim-secondary border border-nim rounded text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
+          className="w-full pl-7 pr-2 py-1 text-ui-caption bg-nim-secondary border border-nim rounded text-nim placeholder:text-nim-faint focus:outline-none focus:border-nim-primary"
         />
 
         {/* Tag typeahead dropdown */}
@@ -1311,14 +1311,14 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
             {filteredTags.slice(0, 15).map((tag, i) => (
               <button
                 key={tag.name}
-                className={`w-full text-left px-2.5 py-1.5 text-[11px] flex items-center justify-between cursor-pointer transition-colors ${
+                className={`w-full text-left px-2.5 py-1.5 text-ui-caption flex items-center justify-between cursor-pointer transition-colors ${
                   i === highlightedIndex ? 'bg-nim-tertiary text-nim' : 'text-nim-muted hover:bg-nim-tertiary'
                 }`}
                 onMouseEnter={() => setHighlightedIndex(i)}
                 onClick={() => addTag(tag.name)}
               >
                 <span>#{tag.name}</span>
-                <span className="text-nim-faint text-[10px]">{tag.count}</span>
+                <span className="text-nim-faint text-ui-micro">{tag.count}</span>
               </button>
             ))}
           </div>
@@ -1328,7 +1328,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
             ref={dropdownRef}
             className="absolute left-0 right-0 top-full mt-1 bg-nim-secondary border border-nim rounded shadow-lg z-50"
           >
-            <div className="px-2.5 py-2 text-[11px] text-nim-faint italic">
+            <div className="px-2.5 py-2 text-ui-caption text-nim-faint italic">
               No matching tags
             </div>
           </div>
@@ -1339,7 +1339,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
       {filter.tags.map(tag => (
         <button
           key={tag}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border cursor-pointer shrink-0 bg-blue-400/[0.12] border-blue-400/30 text-blue-400"
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-ui-caption border cursor-pointer shrink-0 bg-nim-primary-subtle border-nim-primary-subtle text-nim-primary"
           onClick={() => removeTag(tag)}
         >
           #{tag}
@@ -1350,7 +1350,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
       {/* Selection indicator */}
       {selectedCount > 0 && (
         <button
-          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border border-[rgba(96,165,250,0.4)] text-[#60a5fa] bg-[rgba(96,165,250,0.08)] cursor-pointer shrink-0"
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-ui-caption border border-nim-primary-subtle text-nim-primary bg-nim-primary-subtle cursor-pointer shrink-0"
           onClick={onClearSelection}
           title="Clear selection (Esc)"
         >
@@ -1362,7 +1362,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
       <div className="flex-1" />
 
       {/* Count */}
-      <span className="text-[11px] text-nim-faint shrink-0">
+      <span className="text-ui-caption text-nim-faint shrink-0">
         {totalCount} card{totalCount !== 1 ? 's' : ''}
         {groupedChildSessionCount > 0
           ? ` · ${groupedChildSessionCount} child session${groupedChildSessionCount !== 1 ? 's' : ''} grouped under parent workstreams`
@@ -1371,9 +1371,9 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
 
       {/* Show completed toggle */}
       <button
-        className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border transition-colors shrink-0 ${
+        className={`flex items-center gap-1 px-2 py-0.5 rounded text-ui-caption border transition-colors shrink-0 ${
           filter.showComplete
-            ? 'border-[rgba(96,165,250,0.4)] text-[#60a5fa] bg-[rgba(96,165,250,0.08)]'
+            ? 'border-nim-primary-subtle text-nim-primary bg-nim-primary-subtle'
             : 'border-nim text-nim-faint hover:text-nim'
         }`}
         onClick={() => setFilter({ ...filter, showComplete: !filter.showComplete })}
@@ -1555,7 +1555,7 @@ function ArchiveGutter({ onArchive }: { onArchive: (sessionIds: string[]) => voi
     <div
       className={`flex flex-col items-center justify-center w-10 shrink-0 rounded-lg transition-all ${
         isDragOver
-          ? 'bg-[rgba(239,68,68,0.1)] outline outline-2 outline-dashed outline-[rgba(239,68,68,0.4)] -outline-offset-2'
+          ? 'bg-nim-error-subtle outline outline-2 outline-dashed outline-nim-error-subtle -outline-offset-2'
           : 'bg-nim-secondary'
       }`}
       onDragOver={handleDragOver}
@@ -1566,11 +1566,11 @@ function ArchiveGutter({ onArchive }: { onArchive: (sessionIds: string[]) => voi
       <MaterialSymbol
         icon="archive"
         size={16}
-        className={`transition-colors ${isDragOver ? 'text-[#ef4444]' : 'text-nim-disabled'}`}
+        className={`transition-colors ${isDragOver ? 'text-nim-error' : 'text-nim-disabled'}`}
       />
       <span
-        className={`text-[10px] font-semibold uppercase tracking-wide mt-1 transition-colors ${
-          isDragOver ? 'text-[#ef4444]' : 'text-nim-disabled'
+        className={`text-ui-micro font-semibold uppercase tracking-wide mt-1 transition-colors ${
+          isDragOver ? 'text-nim-error' : 'text-nim-disabled'
         }`}
         style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}
       >

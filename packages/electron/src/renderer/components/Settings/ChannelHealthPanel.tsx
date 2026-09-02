@@ -147,7 +147,7 @@ export function ChannelHealthRow({
               data-testid={`channel-health-relogin-exit-${result.id}`}
             >
               {result.rawOutput && (
-                <div className="font-mono text-[11px] text-[var(--nim-text-muted)] break-all" data-testid={`channel-health-raw-output-${result.id}`}>
+                <div className="font-mono text-ui-caption text-[var(--nim-text-muted)] break-all" data-testid={`channel-health-raw-output-${result.id}`}>
                   <span className="font-sans text-[var(--nim-text-faint)]">引擎原话：</span>{result.rawOutput}
                 </div>
               )}
@@ -155,7 +155,7 @@ export function ChannelHealthRow({
                 <div className="flex items-center gap-1.5 text-[var(--nim-text)]">
                   <span className="text-[var(--nim-text-muted)]">重登命令：</span>
                   <code
-                    className="rounded bg-[var(--nim-bg-secondary)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--nim-text)] border border-[var(--nim-border)]"
+                    className="rounded bg-[var(--nim-bg-secondary)] px-1.5 py-0.5 font-mono text-ui-caption text-[var(--nim-text)] border border-[var(--nim-border)]"
                     data-testid={`channel-health-relogin-command-${result.id}`}
                   >
                     {getReLoginCommand(result.id)}
@@ -163,7 +163,7 @@ export function ChannelHealthRow({
                 </div>
                 <button
                   type="button"
-                  className="shrink-0 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-2 py-1 text-[11px] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors cursor-pointer"
+                  className="shrink-0 rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-2 py-1 text-ui-caption text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors cursor-pointer"
                   onClick={() => {
                     void navigator.clipboard.writeText(getReLoginCommand(result.id));
                     setCopied(true);

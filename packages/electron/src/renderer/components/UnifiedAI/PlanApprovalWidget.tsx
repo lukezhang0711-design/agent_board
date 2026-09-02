@@ -834,7 +834,7 @@ const RedispatchTrace: React.FC<{
 }> = ({ label, original, suggested, current, testId }) => (
   <div data-testid={testId} className="min-w-0">
     <dt className="text-xs font-semibold text-nim-muted">{label}</dt>
-    <dd className="mt-1 min-w-0 text-[13px] text-nim">
+    <dd className="mt-1 min-w-0 text-ui-body text-nim">
       <div className="break-words text-nim-muted">原参数：{original}</div>
       <div className="break-words">
         Head 建议：{suggested} → 当前：{current}
@@ -1185,7 +1185,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
 
         <dl
           data-testid="redispatch-param-grid"
-          className="plan-module-fields text-[13px]"
+          className="plan-module-fields text-ui-body"
         >
           <RedispatchTrace
             label="引擎"
@@ -1568,7 +1568,7 @@ export const WorkspaceTrustChangeWidget: React.FC<CustomToolWidgetProps> = (prop
         </div>
         <span className="shrink-0 text-xs text-nim-muted">{status}</span>
       </div>
-      <div className="space-y-3 p-4 text-[13px] text-nim">
+      <div className="space-y-3 p-4 text-ui-body text-nim">
         <dl data-testid="workspace-trust-change-details" className="space-y-2">
           <div><dt className="text-xs font-semibold text-nim-muted">当前模式</dt><dd>{workspaceTrustModeLabel(args.before)}</dd></div>
           <div><dt className="text-xs font-semibold text-nim-muted">目标模式</dt><dd>{args.target}</dd></div>
@@ -2460,7 +2460,7 @@ const SubmittedPlanApprovalCard: React.FC<{
               <div className="text-xs font-medium text-nim">Plan approval</div>
               {agentRole === 'meta-agent' && (
                 <span
-                  className="meta-agent-plan-marker rounded-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-[var(--nim-primary)]"
+                  className="meta-agent-plan-marker rounded-full border border-nim-primary bg-nim-primary-subtle px-2 py-0.5 text-ui-micro font-bold tracking-[0.1em] text-nim-primary"
                   data-testid="meta-agent-plan-marker"
                   aria-label="META AGENT"
                 >
@@ -2529,7 +2529,7 @@ const SubmittedPlanApprovalCard: React.FC<{
             <div className="text-xs font-semibold text-nim mb-1">
               Plan summary
             </div>
-            <div className="text-[13px] leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
+            <div className="text-ui-body leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
               {planSummary}
             </div>
           </div>
@@ -2733,7 +2733,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                     {isMultiModulePlan && (
                       <span
                         data-testid={`plan-module-status-${stableModuleIndex}`}
-                        className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
+                        className={`shrink-0 rounded-full px-2 py-1 text-ui-caption font-medium ${
                           isModuleRejected
                             ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
                             : moduleApproval.status === 'approved'
@@ -2751,7 +2751,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                   </div>
                   <dl
                     data-testid={`plan-module-fields-${stableModuleIndex}`}
-                    className="plan-module-fields text-[13px]"
+                    className="plan-module-fields text-ui-body"
                   >
                     <div className="min-w-0">
                       <dt className="text-xs font-semibold text-nim-muted">
@@ -2762,7 +2762,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           ? module.outputFiles.map((filePath) => (
                               <code
                                 key={filePath}
-                                className="block max-w-full whitespace-pre-wrap break-all text-[12px]"
+                                className="block max-w-full whitespace-pre-wrap break-all text-ui-compact"
                               >
                                 {formatPlanOutputPath(
                                   filePath,
@@ -3160,7 +3160,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       </div>
                       <div className="overflow-x-auto pb-2">
                         <div
-                          className="grid min-w-max text-[13px]"
+                          className="grid min-w-max text-ui-body"
                           style={{
                             gridTemplateColumns: `minmax(76px, 0.35fr) repeat(${module.candidates.length}, minmax(220px, 1fr))`,
                           }}
@@ -3326,7 +3326,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                                     moduleFeedback[stableModuleIndex] ?? ''
                                   ).trim() === ''
                                 }
-                                className="rounded-md border border-[var(--nim-primary)] bg-transparent px-3 py-1.5 text-xs text-[var(--nim-primary)] hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-md border border-nim-primary bg-transparent px-3 py-1.5 text-xs text-nim-primary hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 提交打回
                               </button>
@@ -3341,7 +3341,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
         )}
 
-        <ol className="m-0 pl-5 space-y-1 text-[13px] text-nim select-text">
+        <ol className="m-0 pl-5 space-y-1 text-ui-body text-nim select-text">
           {planItems.map((item, index) => (
             <li key={`${index}-${item}`}>{item}</li>
           ))}
@@ -3357,7 +3357,7 @@ const SubmittedPlanApprovalCard: React.FC<{
         {!isMultiModulePlan && (
           <div className="mt-3 rounded-md bg-nim-tertiary p-3">
             <div className="text-xs font-semibold text-nim mb-1">Risks</div>
-            <div className="text-[13px] leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
+            <div className="text-ui-body leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
               {risks}
             </div>
           </div>
@@ -3383,7 +3383,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                 data-testid="plan-approval-approve-all"
                 onClick={() => void handleApprove()}
                 disabled={isSubmitting || hasUnavailableModuleRoute}
-                className="inline-flex shrink-0 items-center justify-center rounded-md border-none bg-nim-primary px-4 py-2 text-[13px] font-medium text-white hover:bg-nim-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex shrink-0 items-center justify-center rounded-md border-none bg-nim-primary px-4 py-2 text-ui-body font-medium text-white hover:bg-nim-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 全部批准
               </button>
@@ -3408,7 +3408,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                   data-testid="plan-approval-approve"
                   onClick={() => void handleApprove()}
                   disabled={isSubmitting || hasUnavailableModuleRoute}
-                  className="w-full px-4 py-2 rounded-md border-none bg-nim-primary text-white text-[13px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 rounded-md border-none bg-nim-primary text-white text-ui-body font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Approve plan
                 </button>
@@ -3420,7 +3420,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       data-testid="plan-approval-request-changes"
                       onClick={() => setShowFeedbackInput(true)}
                       disabled={isSubmitting}
-                      className="w-full px-4 py-2 rounded-md border border-nim bg-nim-tertiary text-nim text-[13px] font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 rounded-md border border-nim bg-nim-tertiary text-nim text-ui-body font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Request changes
                     </button>
@@ -3429,7 +3429,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       data-testid="plan-approval-dismiss"
                       onClick={() => void handleDismiss()}
                       disabled={isSubmitting}
-                      className="w-full px-4 py-2 rounded-md border border-nim bg-transparent text-nim-muted text-[13px] font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 rounded-md border border-nim bg-transparent text-nim-muted text-ui-body font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Dismiss plan
                     </button>
@@ -3474,7 +3474,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       placeholder="Describe what should change in the plan..."
                       rows={3}
                       disabled={isSubmitting}
-                      className="w-full px-3 py-2 rounded-md text-[13px] border border-nim bg-nim-tertiary text-nim placeholder:text-nim-muted resize-none focus:outline-none focus:border-nim-focus"
+                      className="w-full px-3 py-2 rounded-md text-ui-body border border-nim bg-nim-tertiary text-nim placeholder:text-nim-muted resize-none focus:outline-none focus:border-nim-focus"
                     />
                     <div className="flex justify-end gap-2">
                       <button
@@ -3587,12 +3587,12 @@ const HeadNativePlanModeBlockedCard: React.FC<{ planFilePath: string | null }> =
       <div className="text-sm font-semibold">Native Plan Mode disabled</div>
       <span
         data-testid="head-native-exit-plan-mode-invalid"
-        className="rounded px-2 py-0.5 text-[11px] font-semibold uppercase text-nim-warning"
+        className="rounded px-2 py-0.5 text-ui-caption font-semibold uppercase text-nim-warning"
       >
         Invalid
       </span>
     </div>
-    <div className="space-y-2 px-4 py-3 text-[13px] leading-5 text-nim-muted">
+    <div className="space-y-2 px-4 py-3 text-ui-body leading-5 text-nim-muted">
       <p>
         Head 的方案请走正牌方案卡：调用 `mcp__nimbalyst-meta-agent__submit_plan`
         提交审批。这个 Claude 原生 ExitPlanMode 请求已失效，不会在 Head 中审批。
