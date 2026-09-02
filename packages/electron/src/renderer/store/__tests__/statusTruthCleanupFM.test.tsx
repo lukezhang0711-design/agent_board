@@ -281,7 +281,7 @@ describe('施工单 FM: 真话清仓 (FB-062, FB-063, FB-102, FB-103, FB-135)', 
       expect(trackerBtn.getAttribute('aria-label') || trackerBtn.getAttribute('title')).toContain('工作区全部事项');
     });
 
-    it('GREEN ⑤: Session Kanban toolbar clearly specifies "Kanban · 本次派发相关"', () => {
+    it('GREEN ⑤: Session Kanban toolbar clearly specifies "看板 · 本次派发相关"', () => {
       store.set(sessionRegistryAtom, new Map([
         ['s-1', makeMeta({ id: 's-1', title: 'Main task', phase: 'backlog' })],
       ]));
@@ -294,7 +294,7 @@ describe('施工单 FM: 真话清仓 (FB-062, FB-063, FB-102, FB-103, FB-135)', 
 
       const scopeHeader = screen.getByTestId('kanban-scope-header');
       expect(scopeHeader).toBeTruthy();
-      expect(scopeHeader.textContent).toContain('Kanban');
+      expect(scopeHeader.textContent).toContain('看板');
       expect(scopeHeader.textContent).toContain('本次派发相关');
     });
 

@@ -90,12 +90,12 @@ const ALL_COLUMN_KEYS: SessionPhaseKey[] = [
 // ============================================================
 
 const RUN_STATE_SEGMENTS = [
-  { key: 'running' as const, label: 'running', color: '#60a5fa' },
-  { key: 'waiting' as const, label: 'waiting', color: '#f97316' },
-  { key: 'review' as const, label: 'review', color: '#a78bfa' },
-  { key: 'failed' as const, label: 'failed', color: '#ef4444' },
-  { key: 'idle' as const, label: 'idle', color: '#666666' },
-  { key: 'done' as const, label: 'done', color: '#4ade80' },
+  { key: 'running' as const, label: '运行中', color: '#60a5fa' },
+  { key: 'waiting' as const, label: '等待输入', color: '#f97316' },
+  { key: 'review' as const, label: '待审批', color: '#a78bfa' },
+  { key: 'failed' as const, label: '失败', color: '#ef4444' },
+  { key: 'idle' as const, label: '空闲', color: '#666666' },
+  { key: 'done' as const, label: '已完成', color: '#4ade80' },
 ];
 
 function ChildRunStateBar({ sessionId }: { sessionId: string }) {
@@ -204,7 +204,7 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   if (isWorkOrderFailed || (isParent && hasChildFailed && !hasChildRunning && !hasChildWaiting)) {
     return {
       state: 'failed',
-      badgeLabel: isParent && hasChildFailed ? `${childStates.failed} failed` : 'failed',
+      badgeLabel: isParent && hasChildFailed ? `${childStates.failed} 个失败` : '失败',
       badgeIcon: 'error',
       badgeColor: '#ef4444',
       spinIcon: false,
@@ -217,7 +217,7 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   if (isDispatchQueued && !isProcessing) {
     return {
       state: 'queued',
-      badgeLabel: 'queued',
+      badgeLabel: '排队中',
       badgeIcon: 'schedule',
       badgeColor: '#94a3b8',
       spinIcon: false,
@@ -227,7 +227,7 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   if (isInterrupted && !isProcessing) {
     return {
       state: 'interrupted',
-      badgeLabel: 'interrupted',
+      badgeLabel: '已中断',
       badgeIcon: 'cancel',
       badgeColor: '#f97316',
       spinIcon: false,
@@ -237,7 +237,7 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   if (isProcessing || hasChildRunning) {
     return {
       state: 'running',
-      badgeLabel: hasChildRunning ? `${childStates.running} running` : 'running',
+      badgeLabel: hasChildRunning ? `${childStates.running} 个运行中` : '运行中',
       badgeIcon: 'progress_activity',
       badgeColor: '#60a5fa',
       spinIcon: true,
@@ -246,7 +246,7 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
   if (hasPendingPrompt || hasChildWaiting) {
     return {
       state: 'waiting',
-      badgeLabel: hasChildWaiting ? `${childStates.waiting} waiting` : 'needs input',
+      badgeLabel: hasChildWaiting ? `${childStates.waiting} 个等待输入` : '等待输入',
       badgeIcon: 'help_outline',
       badgeColor: '#f97316',
       spinIcon: false,
@@ -296,7 +296,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
       <span
         className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-slate-400/10"
         style={{ color: info.badgeColor }}
-        title="Waiting for a Head Agent slot"
+        title="等待 Head 调度槽位"
       >
         <MaterialSymbol icon="schedule" size={12} />
         {info.badgeLabel}
@@ -308,7 +308,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
       <span
         className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-orange-500/10"
         style={{ color: info.badgeColor }}
-        title="Interrupted by Head Agent"
+        title="已被 Head 中断"
       >
         <MaterialSymbol icon="cancel" size={12} />
         {info.badgeLabel}
@@ -320,7 +320,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
       <span
         className="flex items-center gap-0.5 text-[10px] px-1 py-px rounded bg-red-500/10"
         style={{ color: info.badgeColor }}
-        title="Work order failed"
+        title="工单失败"
       >
         <MaterialSymbol icon="error" size={12} />
         {info.badgeLabel}
@@ -329,7 +329,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   }
   if (info.state === 'unread') {
     return (
-      <span className="flex items-center justify-center w-[8px] h-[8px] text-[var(--nim-primary)]" title="Unread response">
+      <span className="flex items-center justify-center w-[8px] h-[8px] text-[var(--nim-primary)]" title="未读回复">
         <MaterialSymbol icon="circle" size={8} fill />
       </span>
     );
@@ -494,7 +494,7 @@ function TranscriptPeek({ sessionId, anchorRef, onClose }: TranscriptPeekProps) 
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center text-[11px] text-nim-disabled italic">
-          No messages yet
+          暂无消息
         </div>
       )}
     </div>,
@@ -588,13 +588,13 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
   const timeAgo = useMemo(() => {
     const diff = Date.now() - session.updatedAt;
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1) return '刚刚';
+    if (mins < 60) return `${mins} 分钟前`;
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return `${hours} 小时前`;
     const days = Math.floor(hours / 24);
-    if (days === 1) return 'yesterday';
-    return `${days}d ago`;
+    if (days === 1) return '昨天';
+    return `${days} 天前`;
   }, [session.updatedAt]);
 
   // Cleanup hover timer on unmount
@@ -685,7 +685,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
         {cardType !== 'session' && session.childCount > 0 && (
           <div className="flex items-center gap-1 text-[10px] text-nim-faint mb-1">
             <MaterialSymbol icon="chat_bubble_outline" size={12} />
-            {session.childCount} session{session.childCount !== 1 ? 's' : ''}
+            {session.childCount} 个会话
           </div>
         )}
 
@@ -727,15 +727,15 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
                   event.stopPropagation();
                   onSelect(session.id);
                 }}
-                title="Open this delegated session in Agent"
+                title="在 Agent 中打开此已派发会话"
                 data-testid="session-kanban-open-in-agent"
                 data-session-id={session.id}
               >
-                Open in Agent
+                在 Agent 中打开
               </button>
             )}
             {session.uncommittedCount > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px] text-nim-faint" title={`${session.uncommittedCount} uncommitted file${session.uncommittedCount !== 1 ? 's' : ''}`}>
+              <span className="flex items-center gap-0.5 text-[10px] text-nim-faint" title={`${session.uncommittedCount} 个未提交文件`}>
                 <MaterialSymbol icon="edit_note" size={12} />
                 {session.uncommittedCount}
               </span>
@@ -745,7 +745,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
             <span
               ref={peekIconRef}
               className="w-4 h-4 rounded flex items-center justify-center text-nim-disabled hover:text-nim-muted transition-colors"
-              title="Preview transcript"
+              title="预览记录"
               data-testid="session-kanban-peek"
               onMouseEnter={handlePeekEnter}
               onMouseLeave={handlePeekLeave}
@@ -858,7 +858,7 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
     // Custom drag image showing count
     if (ids.length > 1) {
       const badge = document.createElement('div');
-      badge.textContent = `${ids.length} sessions`;
+      badge.textContent = `${ids.length} 个会话`;
       badge.style.cssText = 'position:fixed;left:-1000px;top:-1000px;padding:4px 10px;border-radius:6px;background:#60a5fa;color:#fff;font-size:12px;font-weight:600;white-space:nowrap;';
       document.body.appendChild(badge);
       e.dataTransfer.setDragImage(badge, badge.offsetWidth / 2, badge.offsetHeight / 2);
@@ -929,7 +929,7 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
         <button
           className="text-nim-disabled hover:text-nim-muted transition-colors"
           onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}
-          title="Collapse column"
+          title="折叠列"
         >
           <MaterialSymbol icon="chevron_left" size={16} />
         </button>
@@ -946,7 +946,7 @@ function SessionKanbanColumn({ phase, label, color, sessions, onSelect, onArchiv
       >
         {sessions.length === 0 ? (
           <div className="flex items-center justify-center py-6 text-nim-disabled text-[11px] italic">
-            No sessions
+            暂无会话
           </div>
         ) : (
           sessions.map(session => (
@@ -1031,7 +1031,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
     e.dataTransfer.effectAllowed = 'move';
     if (ids.length > 1) {
       const badge = document.createElement('div');
-      badge.textContent = `${ids.length} sessions`;
+      badge.textContent = `${ids.length} 个会话`;
       badge.style.cssText = 'position:fixed;left:-1000px;top:-1000px;padding:4px 10px;border-radius:6px;background:#60a5fa;color:#fff;font-size:12px;font-weight:600;white-space:nowrap;';
       document.body.appendChild(badge);
       e.dataTransfer.setDragImage(badge, badge.offsetWidth / 2, badge.offsetHeight / 2);
@@ -1066,10 +1066,10 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
             {queuedCount > 0 && (
               <span
                 className="flex items-center gap-0.5 rounded bg-[rgba(245,158,11,0.16)] px-1 py-px text-[9px] font-semibold text-[var(--nim-warning)]"
-                title={`${queuedCount} dispatch${queuedCount === 1 ? '' : 'es'} waiting for a Head Agent slot`}
+                title={`${queuedCount} 个派发正在等待 Head 调度槽位`}
               >
                 <MaterialSymbol icon="schedule" size={11} />
-                {queuedCount} queued
+                {queuedCount} 排队中
               </span>
             )}
           </div>
@@ -1077,7 +1077,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
             className="text-[10px] font-semibold text-nim-faint uppercase tracking-wide"
             style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}
           >
-            Inbox
+            收件箱
           </span>
         </div>
       </div>
@@ -1106,7 +1106,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
       >
         <span className="w-2 h-2 rounded-full shrink-0 bg-neutral-600" />
         <span className="text-[11px] font-semibold text-nim uppercase tracking-wide truncate">
-          Inbox
+          收件箱
         </span>
         <span className="text-[10px] font-semibold text-nim-faint ml-auto">
           {sessions.length}
@@ -1114,7 +1114,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
         <button
           className="text-nim-faint hover:text-nim transition-colors"
           onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-          title="Collapse"
+          title="折叠"
         >
           <MaterialSymbol icon="chevron_left" size={16} />
         </button>
@@ -1275,7 +1275,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
     <div className="flex items-center gap-2 px-3 py-1.5 border-b border-nim bg-nim shrink-0" data-testid="kanban-toolbar">
       {/* Scope Title */}
       <div className="flex items-center gap-1.5 shrink-0 pr-2 border-r border-nim" data-testid="kanban-scope-header">
-        <span className="text-xs font-semibold text-nim">Kanban</span>
+        <span className="text-xs font-semibold text-nim">看板</span>
         <span className="text-[11px] text-nim-faint">本次派发相关</span>
       </div>
 
@@ -1289,7 +1289,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
         <input
           ref={inputRef}
           type="text"
-          placeholder="Search or type # to filter by tag..."
+          placeholder="搜索会话或输入 # 筛选标签..."
           value={inputValue}
           onChange={handleSearchChange}
           onKeyDown={handleKeyDown}
@@ -1329,7 +1329,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
             className="absolute left-0 right-0 top-full mt-1 bg-nim-secondary border border-nim rounded shadow-lg z-50"
           >
             <div className="px-2.5 py-2 text-[11px] text-nim-faint italic">
-              No matching tags
+              无匹配标签
             </div>
           </div>
         )}
@@ -1352,9 +1352,9 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
         <button
           className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border border-[rgba(96,165,250,0.4)] text-[#60a5fa] bg-[rgba(96,165,250,0.08)] cursor-pointer shrink-0"
           onClick={onClearSelection}
-          title="Clear selection (Esc)"
+          title="清除选择 (Esc)"
         >
-          {selectedCount} selected
+          已选 {selectedCount} 个
           <MaterialSymbol icon="close" size={12} />
         </button>
       )}
@@ -1363,9 +1363,9 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
 
       {/* Count */}
       <span className="text-[11px] text-nim-faint shrink-0">
-        {totalCount} card{totalCount !== 1 ? 's' : ''}
+        {totalCount} 个卡片
         {groupedChildSessionCount > 0
-          ? ` · ${groupedChildSessionCount} child session${groupedChildSessionCount !== 1 ? 's' : ''} grouped under parent workstreams`
+          ? ` · ${groupedChildSessionCount} 个子会话已归入父工作流`
           : ''}
       </span>
 
@@ -1380,7 +1380,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
         data-testid="kanban-toggle-complete"
       >
         <MaterialSymbol icon="visibility" size={13} />
-        Complete
+        已完成
       </button>
     </div>
   );
@@ -1428,7 +1428,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
           onMouseLeave={onClose}
         >
           <div className="px-2.5 py-2 text-[0.8125rem] text-[var(--nim-text-faint)] italic">
-            No sessions in column
+            本列暂无会话
           </div>
         </div>
       </FloatingPortal>
@@ -1451,7 +1451,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
           onClick={(e) => { e.stopPropagation(); onClose(); onSelectAll(sessionIds); }}
         >
           <MaterialSymbol icon="select_all" size={14} />
-          Select All ({count})
+          全选 ({count})
         </button>
 
         <div className="h-px bg-[var(--nim-border)] my-1" />
@@ -1474,7 +1474,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
             onClick={(e) => { e.stopPropagation(); setShowMoveSubmenu(!showMoveSubmenu); }}
           >
             <MaterialSymbol icon="drive_file_move" size={14} />
-            <span className="flex-1">Move All to...</span>
+            <span className="flex-1">全部移至...</span>
             <MaterialSymbol icon="chevron_right" size={12} />
           </button>
           {showMoveSubmenu && (
@@ -1497,7 +1497,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
                     onClick={(e) => { e.stopPropagation(); onClose(); onRemovePhase(sessionIds); }}
                   >
                     <MaterialSymbol icon="close" size={14} />
-                    Remove from board
+                    从看板移除
                   </button>
                 </>
               )}
@@ -1513,7 +1513,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
           onClick={(e) => { e.stopPropagation(); onClose(); onArchiveAll(sessionIds); }}
         >
           <MaterialSymbol icon="archive" size={14} />
-          Archive All ({count})
+          全部归档 ({count})
         </button>
       </div>
     </FloatingPortal>
@@ -1574,7 +1574,7 @@ function ArchiveGutter({ onArchive }: { onArchive: (sessionIds: string[]) => voi
         }`}
         style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}
       >
-        Archive
+        归档
       </span>
     </div>
   );
@@ -2137,7 +2137,7 @@ export const SessionKanbanBoard: React.FC<SessionKanbanBoardProps> = ({ onSessio
         <div className="flex-1 flex items-center justify-center text-nim-muted" data-testid="kanban-empty-state">
           <div className="text-center max-w-[300px]">
             <MaterialSymbol icon="view_kanban" size={48} className="opacity-30" />
-            <p className="mt-2 text-sm">No sessions on the board</p>
+            <p className="mt-2 text-sm">看板上暂无会话</p>
           </div>
         </div>
       ) : (

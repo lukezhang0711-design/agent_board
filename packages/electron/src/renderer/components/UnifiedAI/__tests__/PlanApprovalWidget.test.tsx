@@ -661,15 +661,15 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getByText('Review child-session plan')).toBeTruthy();
     expect(screen.getByText('Inspect the durable response')).toBeTruthy();
     expect(screen.getByText('Gate implementation dispatch')).toBeTruthy();
-    expect(screen.getByText('3 work orders')).toBeTruthy();
+    expect(screen.getByText('3 个工单')).toBeTruthy();
     expect(
       screen.getByText('A stale response could approve the wrong plan.'),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '批准方案' })).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: 'Request changes' }),
+      screen.getByRole('button', { name: '打回修订' }),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Dismiss plan' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '放弃方案' })).toBeTruthy();
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
   });
 
@@ -895,7 +895,7 @@ describe('PlanApprovalWidget', () => {
     });
 
     fireEvent.click(screen.getByTestId('plan-candidate-radio-0-方案 B'));
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
 
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
@@ -939,7 +939,7 @@ describe('PlanApprovalWidget', () => {
     expect(screen.getByTestId('plan-module-disturbance-level-trace-1').textContent)
       .toContain('Head 建议：失败才问 → 当前：高危必问');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
         expect.objectContaining({
@@ -1043,7 +1043,7 @@ describe('PlanApprovalWidget', () => {
       .toHaveProperty('value', fb136FinalSelectedCandidate.disturbanceLevel);
     expect(screen.getByTestId('plan-module-skill-tags-1').textContent)
       .toContain('gemini-review');
-    expect(screen.getByText('Plan approved')).toBeTruthy();
+    expect(screen.getByText('方案已批准')).toBeTruthy();
   });
 
   it('green FB-136-4: dispatch payload retains hidden engine skills while current tags stay filtered', async () => {
@@ -1072,7 +1072,7 @@ describe('PlanApprovalWidget', () => {
       skills: screen.getByTestId('plan-module-skill-tags-1').textContent,
     };
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
 
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
@@ -1128,7 +1128,7 @@ describe('PlanApprovalWidget', () => {
     });
     expect(screen.getByText('diagnosing-bugs')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
         expect.objectContaining({
@@ -1162,7 +1162,7 @@ describe('PlanApprovalWidget', () => {
       .toContain('implement');
     expect(screen.getByTestId('plan-module-skill-bundle-select-1')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
     await waitFor(() => expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId));
   });
 
@@ -1197,7 +1197,7 @@ describe('PlanApprovalWidget', () => {
       screen.getByTestId('plan-module-skill-tags-1').textContent,
     ).toContain('implement'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
         expect.objectContaining({
@@ -1302,7 +1302,7 @@ describe('PlanApprovalWidget', () => {
     // carrying a coincidentally named tier from the previous model/engine.
     expect(effortSelect.value).toBe('medium');
     fireEvent.change(effortSelect, { target: { value: 'high' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
 
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId, [
@@ -1473,7 +1473,7 @@ describe('PlanApprovalWidget', () => {
       'openai-codex:gpt-5.6-sol',
     );
     expect(
-      screen.getByRole('button', { name: 'Approve plan' }).hasAttribute('disabled'),
+      screen.getByRole('button', { name: '批准方案' }).hasAttribute('disabled'),
     ).toBe(true);
   });
 
@@ -1507,9 +1507,9 @@ describe('PlanApprovalWidget', () => {
     const actions = screen.getByTestId('plan-approval-actions');
     expect(actions.className).toContain('sticky');
     expect(actions.className).toContain('bottom-0');
-    expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '批准方案' })).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: 'Request changes' }),
+      screen.getByRole('button', { name: '打回修订' }),
     ).toBeTruthy();
   });
 
@@ -1544,7 +1544,7 @@ describe('PlanApprovalWidget', () => {
     });
     expect(screen.getByText('已失效')).toBeTruthy();
     expect(screen.getByText('重新发送消息继续')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Approve plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '批准方案' })).toBeNull();
   });
 
   it('states plainly when the submitted plan declares no risks', () => {
@@ -1610,25 +1610,25 @@ describe('PlanApprovalWidget', () => {
 
     expect(screen.getByTestId('plan-approval-summary')).toBeTruthy();
     expect(screen.getByText('完整中文方案', { exact: false })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '批准方案' })).toBeTruthy();
     expect(screen.queryByText('Ready to exit planning mode?')).toBeNull();
   });
 
   it('does not invent a response ID when the durable provider tool-call ID is missing', () => {
     renderWidget(planArguments, {}, null);
 
-    expect(screen.queryByRole('button', { name: 'Approve plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '批准方案' })).toBeNull();
     expect(
-      screen.queryByRole('button', { name: 'Request changes' }),
+      screen.queryByRole('button', { name: '打回修订' }),
     ).toBeNull();
-    expect(screen.getByText('Waiting for a durable approval ID…')).toBeTruthy();
+    expect(screen.getByText('正在等待持久审批 ID…')).toBeTruthy();
   });
 
   it('reuses the existing approve response route with the composite request ID', async () => {
     const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
     renderWidget(planArguments, { exitPlanModeApprove });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
 
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId);
@@ -1639,7 +1639,7 @@ describe('PlanApprovalWidget', () => {
     const exitPlanModeApprove = vi.fn().mockResolvedValue(undefined);
     renderWidget(planArguments, { exitPlanModeApprove });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
 
     await waitFor(() => {
       expect(exitPlanModeApprove).toHaveBeenCalledWith(compositeRequestId);
@@ -1647,8 +1647,8 @@ describe('PlanApprovalWidget', () => {
     expect(
       screen.getByTestId('plan-approval-widget').getAttribute('data-state'),
     ).toBe('pending');
-    expect(screen.getByText('Awaiting review')).toBeTruthy();
-    expect(screen.queryByText('Plan approved')).toBeNull();
+    expect(screen.getByText('待批准')).toBeTruthy();
+    expect(screen.queryByText('方案已批准')).toBeNull();
   });
 
   it('flips to changes requested as soon as the durable state reaches responded', async () => {
@@ -1688,10 +1688,10 @@ describe('PlanApprovalWidget', () => {
         expect(
           screen.getByTestId('plan-approval-widget').getAttribute('data-state'),
         ).toBe('changes-requested');
-        expect(screen.getByText('Changes requested')).toBeTruthy();
+        expect(screen.getByText('需要修订')).toBeTruthy();
         expect(
           screen.getByText(
-            'Response recorded. Head is preparing the revision…',
+            '打回已记录。Head 正在准备修订…',
           ),
         ).toBeTruthy();
       },
@@ -1706,12 +1706,12 @@ describe('PlanApprovalWidget', () => {
       .mockRejectedValue(new Error('persist failed'));
     renderWidget(planArguments, { exitPlanModeApprove });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '批准方案' }));
 
     await waitFor(() => {
       expect(
         screen
-          .getByRole('button', { name: 'Approve plan' })
+          .getByRole('button', { name: '批准方案' })
           .hasAttribute('disabled'),
       ).toBe(false);
     });
@@ -1729,11 +1729,11 @@ describe('PlanApprovalWidget', () => {
     const exitPlanModeDeny = vi.fn().mockResolvedValue(undefined);
     renderWidget(planArguments, { exitPlanModeDeny });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
-    fireEvent.change(screen.getByLabelText('Requested changes'), {
+    fireEvent.click(screen.getByRole('button', { name: '打回修订' }));
+    fireEvent.change(screen.getByLabelText('修订意见'), {
       target: { value: 'Split the persistence and dispatch work orders.' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
+    fireEvent.click(screen.getByRole('button', { name: '提交修订' }));
 
     await waitFor(() => {
       expect(exitPlanModeDeny).toHaveBeenCalledWith(
@@ -1747,9 +1747,9 @@ describe('PlanApprovalWidget', () => {
     const exitPlanModeDeny = vi.fn().mockResolvedValue(undefined);
     renderWidget(planArguments, { exitPlanModeDeny });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
+    fireEvent.click(screen.getByRole('button', { name: '打回修订' }));
     const feedback = screen.getByLabelText(
-      'Requested changes',
+      '修订意见',
     ) as HTMLTextAreaElement;
     fireEvent.compositionStart(feedback, { data: '' });
     fireEvent.compositionUpdate(feedback, { data: 'zhongwen' });
@@ -1787,7 +1787,7 @@ describe('PlanApprovalWidget', () => {
     const exitPlanModeDeny = vi.fn().mockResolvedValue(undefined);
     renderWidget(planArguments, { exitPlanModeDeny });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss plan' }));
+    fireEvent.click(screen.getByRole('button', { name: '放弃方案' }));
 
     await waitFor(() => {
       expect(exitPlanModeDeny).toHaveBeenCalledWith(
@@ -1814,15 +1814,15 @@ describe('PlanApprovalWidget', () => {
     renderWidget(planArguments, { exitPlanModeDeny });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
+      fireEvent.click(screen.getByRole('button', { name: '打回修订' }));
     });
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Requested changes'), {
+      fireEvent.change(screen.getByLabelText('修订意见'), {
         target: { value: 'Split the persistence and dispatch work orders.' },
       });
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
+      fireEvent.click(screen.getByRole('button', { name: '提交修订' }));
       await Promise.resolve();
     });
     await vi.waitFor(() => expect(exitPlanModeDeny).toHaveBeenCalledTimes(1));
@@ -1832,7 +1832,7 @@ describe('PlanApprovalWidget', () => {
     });
     expect(
       screen.getByText(
-        'Response was saved, but confirmation did not arrive. Retry the response.',
+        '响应已保存，但未收到确认消息。请重试响应。',
       ),
     ).toBeTruthy();
 
@@ -1853,7 +1853,7 @@ describe('PlanApprovalWidget', () => {
 
     expect(await screen.findByText('Ready to exit planning mode?')).toBeTruthy();
     expect(screen.getByText('Would you like to proceed?')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Approve plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '批准方案' })).toBeNull();
     expect(screen.queryByTestId('meta-agent-plan-marker')).toBeNull();
   });
 

@@ -153,7 +153,7 @@ describe('AIUsageIndicator & AIUsagePopover', () => {
     // Assert Codex's 1 exact window name is rendered
     expect(screen.getByText('primary')).toBeTruthy();
     expect(screen.getByText('75%')).toBeTruthy();
-    expect(screen.getByText('250 remaining')).toBeTruthy();
+    expect(screen.getByText('剩余 250')).toBeTruthy();
   });
 
   it('GREEN ② (empty state): displays honest empty text when engines return 0 windows', () => {
@@ -176,8 +176,8 @@ describe('AIUsageIndicator & AIUsagePopover', () => {
 
     fireEvent.click(screen.getByTestId('ai-usage-indicator'));
 
-    expect(screen.getByText('No Claude quota pools returned by the Usage API.')).toBeTruthy();
-    expect(screen.getByText('No Codex quota pools found in recent session data.')).toBeTruthy();
+    expect(screen.getByText('用量 API 未返回 Claude 额度池。')).toBeTruthy();
+    expect(screen.getByText('近期会话数据中未找到 Codex 额度池。')).toBeTruthy();
   });
 
   it('GREEN ③: reverse assertion - NO warning badge, red dot, or warning colors on the indicator button', () => {

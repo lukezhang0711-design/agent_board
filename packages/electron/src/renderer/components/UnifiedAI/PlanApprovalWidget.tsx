@@ -1123,7 +1123,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
     return (
       <InteractivePromptStatusCard
         testId="redispatch-work-order-status"
-        title="Redispatch approval"
+        title="重派审批"
         status="unavailable"
         detail="重派确认卡参数无效。"
       />
@@ -1152,16 +1152,16 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
     >
       <div className="flex items-start justify-between gap-3 border-b border-nim bg-nim-tertiary px-4 py-3">
         <div className="min-w-0">
-          <div className="mb-1 text-xs font-medium text-nim">Redispatch approval</div>
+          <div className="mb-1 text-xs font-medium text-nim">重派审批</div>
           <div className="break-words text-sm font-semibold text-nim">{args.title}</div>
           <div className="mt-1 text-xs text-nim-muted">
-            工单 {args.trackerItemId} · attempts {args.attemptCount}
+            工单 {args.trackerItemId} · 第 {args.attemptCount} 次尝试
           </div>
         </div>
         <span className="shrink-0 text-xs text-nim-muted">
           {completedResult
-            ? completedResult.approved ? 'Redispatch approved' : 'Redispatch rejected'
-            : 'Awaiting review'}
+            ? completedResult.approved ? '重派已批准' : '重派已拒绝'
+            : '待批准'}
         </span>
       </div>
 
@@ -1545,7 +1545,7 @@ export const WorkspaceTrustChangeWidget: React.FC<CustomToolWidgetProps> = (prop
     return (
       <InteractivePromptStatusCard
         testId="workspace-trust-change-status"
-        title="Permission increase approval"
+        title="提升权限审批"
         status="unavailable"
         detail="权限确认卡参数无效。"
       />
@@ -1553,8 +1553,8 @@ export const WorkspaceTrustChangeWidget: React.FC<CustomToolWidgetProps> = (prop
   }
 
   const status = result
-    ? result.approved ? 'Approved' : result.timedOut ? 'Expired' : 'Rejected'
-    : 'Awaiting review';
+    ? result.approved ? '已批准' : result.timedOut ? '已过期' : '已拒绝'
+    : '待批准';
   return (
     <div
       data-testid="workspace-trust-change-widget"
@@ -1563,8 +1563,8 @@ export const WorkspaceTrustChangeWidget: React.FC<CustomToolWidgetProps> = (prop
     >
       <div className="flex items-start justify-between gap-3 border-b border-nim bg-nim-tertiary px-4 py-3">
         <div className="min-w-0">
-          <div className="mb-1 text-xs font-medium text-nim">Permission increase approval</div>
-          <div className="text-sm font-semibold text-nim">代理请求提高工作区权限</div>
+          <div className="mb-1 text-xs font-medium text-nim">提升权限审批</div>
+          <div className="text-sm font-semibold text-nim">工人请求提升工作区权限</div>
         </div>
         <span className="shrink-0 text-xs text-nim-muted">{status}</span>
       </div>
@@ -2457,7 +2457,7 @@ const SubmittedPlanApprovalCard: React.FC<{
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <div className="text-xs font-medium text-nim">Plan approval</div>
+              <div className="text-xs font-medium text-nim">方案审批</div>
               {agentRole === 'meta-agent' && (
                 <span
                   className="meta-agent-plan-marker rounded-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-[var(--nim-primary)]"
@@ -2472,10 +2472,10 @@ const SubmittedPlanApprovalCard: React.FC<{
           </div>
           <span className="text-xs text-nim-muted shrink-0">
             {displayResult === 'approved'
-              ? 'Plan approved'
+              ? '方案已批准'
               : displayResult === 'changes-requested'
-              ? 'Changes requested'
-              : 'Awaiting review'}
+              ? '需要修订'
+              : '待批准'}
           </span>
           {autoApproved && displayResult === 'approved' && (
             <span
@@ -2511,7 +2511,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           (promptStatus === 'resolved' && !displayResult)) && (
           <InteractivePromptStatusCard
             testId="plan-approval-status"
-            title="Plan approval"
+            title="方案审批"
             status={promptStatus}
             detail={
               promptStatus === 'unavailable'
@@ -2527,7 +2527,7 @@ const SubmittedPlanApprovalCard: React.FC<{
             className="mb-3 rounded-md bg-nim-tertiary p-3"
           >
             <div className="text-xs font-semibold text-nim mb-1">
-              Plan summary
+              方案摘要
             </div>
             <div className="text-[13px] leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
               {planSummary}
@@ -3349,14 +3349,13 @@ const SubmittedPlanApprovalCard: React.FC<{
 
         {!isMultiModulePlan && (
           <div className="mt-3 text-xs font-medium text-nim-muted">
-            {workOrderCount}{' '}
-            {workOrderCount === 1 ? 'work order' : 'work orders'}
+            {workOrderCount} 个工单
           </div>
         )}
 
         {!isMultiModulePlan && (
           <div className="mt-3 rounded-md bg-nim-tertiary p-3">
-            <div className="text-xs font-semibold text-nim mb-1">Risks</div>
+            <div className="text-xs font-semibold text-nim mb-1">总体风险</div>
             <div className="text-[13px] leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
               {risks}
             </div>
@@ -3410,7 +3409,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                   disabled={isSubmitting || hasUnavailableModuleRoute}
                   className="w-full px-4 py-2 rounded-md border-none bg-nim-primary text-white text-[13px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Approve plan
+                  批准方案
                 </button>
 
                 {!showFeedbackInput ? (
@@ -3422,7 +3421,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       disabled={isSubmitting}
                       className="w-full px-4 py-2 rounded-md border border-nim bg-nim-tertiary text-nim text-[13px] font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Request changes
+                      打回修订
                     </button>
                     <button
                       type="button"
@@ -3431,7 +3430,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       disabled={isSubmitting}
                       className="w-full px-4 py-2 rounded-md border border-nim bg-transparent text-nim-muted text-[13px] font-medium cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Dismiss plan
+                      放弃方案
                     </button>
                   </>
                 ) : (
@@ -3440,7 +3439,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       htmlFor={`plan-change-feedback-${message.id}`}
                       className="text-xs font-medium text-nim"
                     >
-                      Requested changes
+                      修订意见
                     </label>
                     <textarea
                       ref={feedbackInputRef}
@@ -3471,7 +3470,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           setFeedback('');
                         }
                       }}
-                      placeholder="Describe what should change in the plan..."
+                      placeholder="描述方案需要修改的内容…"
                       rows={3}
                       disabled={isSubmitting}
                       className="w-full px-3 py-2 rounded-md text-[13px] border border-nim bg-nim-tertiary text-nim placeholder:text-nim-muted resize-none focus:outline-none focus:border-nim-focus"
@@ -3486,7 +3485,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         disabled={isSubmitting}
                         className="px-3 py-1.5 rounded-md border border-nim bg-transparent text-nim-muted text-xs cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Cancel
+                        取消
                       </button>
                       <button
                         type="button"
@@ -3495,7 +3494,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         disabled={isSubmitting || feedback.trim() === ''}
                         className="px-3 py-1.5 rounded-md border-none bg-nim-primary text-white text-xs cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Request changes
+                        提交修订
                       </button>
                     </div>
                   </div>
@@ -3507,8 +3506,8 @@ const SubmittedPlanApprovalCard: React.FC<{
         {displayResult && isPending && hasRecordedResponse && (
           <div className="mt-4 text-xs text-nim-muted">
             {displayResult === 'approved'
-              ? 'Response recorded. Head is preparing to start work…'
-              : 'Response recorded. Head is preparing the revision…'}
+              ? '审批已记录。Head 正在准备派活…'
+              : '打回已记录。Head 正在准备修订…'}
           </div>
         )}
 
@@ -3527,8 +3526,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           confirmationTimedOut && (
             <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs text-nim">
               <span>
-                Response was saved, but confirmation did not arrive. Retry the
-                response.
+                响应已保存，但未收到确认消息。请重试响应。
               </span>
               <button
                 type="button"
@@ -3537,7 +3535,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                 disabled={isSubmitting || !submittedResponse}
                 className="shrink-0 px-3 py-1.5 rounded-md border border-nim bg-nim-tertiary text-nim text-xs cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Retry response
+                重试响应
               </button>
             </div>
           )}
@@ -3547,7 +3545,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           !requestId &&
           !responseSubmitted && (
             <div className="mt-4 text-xs text-nim-muted">
-              Waiting for a durable approval ID…
+              正在等待持久审批 ID…
             </div>
           )}
 
@@ -3556,7 +3554,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           promptStatus === 'checking' &&
           !responseSubmitted && (
             <div className="mt-4 text-xs text-nim-muted">
-              Checking approval availability…
+              正在检查审批可用性…
             </div>
           )}
 
@@ -3567,7 +3565,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           !host &&
           !responseSubmitted && (
             <div className="mt-4 text-xs text-nim-muted">
-              Waiting for an active approval surface…
+              正在等待活动审批面板…
             </div>
           )}
       </div>
@@ -3584,12 +3582,12 @@ const HeadNativePlanModeBlockedCard: React.FC<{ planFilePath: string | null }> =
     className="rounded-md border border-nim-warning/60 bg-nim-warning/10 text-nim"
   >
     <div className="flex items-center justify-between gap-3 border-b border-nim-warning/30 px-4 py-3">
-      <div className="text-sm font-semibold">Native Plan Mode disabled</div>
+      <div className="text-sm font-semibold">原生方案模式已禁用</div>
       <span
         data-testid="head-native-exit-plan-mode-invalid"
         className="rounded px-2 py-0.5 text-[11px] font-semibold uppercase text-nim-warning"
       >
-        Invalid
+        无效
       </span>
     </div>
     <div className="space-y-2 px-4 py-3 text-[13px] leading-5 text-nim-muted">
@@ -3599,7 +3597,7 @@ const HeadNativePlanModeBlockedCard: React.FC<{ planFilePath: string | null }> =
       </p>
       {planFilePath && (
         <div className="break-all rounded bg-nim-bg-secondary px-2 py-1 text-xs">
-          Native plan file: {planFilePath}
+          原生方案文件：{planFilePath}
         </div>
       )}
     </div>
@@ -3621,7 +3619,7 @@ const NativeExitPlanModeFallback: React.FC<CustomToolWidgetProps> = (props) => {
       data-testid="exit-plan-mode-role-checking"
       className="rounded-md border border-nim-border bg-nim-bg-secondary px-4 py-3 text-sm text-nim-muted"
     >
-      Checking plan approval availability…
+      正在检查方案审批可用性…
     </div>
   );
 };

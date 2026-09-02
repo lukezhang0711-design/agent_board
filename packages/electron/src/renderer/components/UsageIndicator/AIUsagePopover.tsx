@@ -55,12 +55,12 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
   const claudeHasPools = claudeUsage && Object.keys(claudeUsage.pools).length > 0;
   const claudeAuthHint = claudeUsage?.error?.includes('Usage authorization failed')
     ? claudeAuthState.status === 'logged-out'
-      ? 'Claude login is no longer valid. Sign in again, then refresh quota information.'
+      ? 'Claude 登录已失效。请重新登录后再刷新额度信息。'
       : claudeAuthState.status === 'logged-in'
-        ? 'Claude is signed in, but the Usage API rejected quota authorization.'
+        ? 'Claude 已登录，但用量 API 拒绝了额度授权。'
         : claudeAuthState.status === 'check-failed'
-          ? 'Claude login status could not be verified; the quota authorization failure is separate.'
-          : 'Claude login status is being rechecked; the quota authorization failure is separate.'
+          ? 'Claude 登录状态无法验证；额度授权失败是独立问题。'
+          : '正在重新检查 Claude 登录状态；额度授权失败是独立问题。'
     : null;
 
   const codexHasPools = codexUsage && Object.keys(codexUsage.pools).length > 0;
@@ -84,22 +84,22 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
         <div className="flex items-center justify-between border-b border-nim px-4 py-3 shrink-0 bg-nim-secondary sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <MaterialSymbol icon="speed" size={20} className="text-nim" />
-            <span className="text-[14px] font-semibold text-nim">AI Usage</span>
+            <span className="text-[14px] font-semibold text-nim">AI 用量</span>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="rounded p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim disabled:opacity-50"
-              aria-label="Refresh all usage"
-              title="Refresh all usage"
+              aria-label="刷新全部用量"
+              title="刷新全部用量"
             >
               <MaterialSymbol icon="refresh" size={16} className={isRefreshing ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={onClose}
               className="rounded p-1 text-nim-muted transition-colors hover:bg-nim-tertiary hover:text-nim"
-              aria-label="Close"
+              aria-label="关闭"
             >
               <MaterialSymbol icon="close" size={16} />
             </button>
@@ -134,13 +134,13 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
               <>
                 {claudeUsage?.error && (
                   <div className="mb-2 text-[11px] text-nim-warning">
-                    <div>Refresh failed: {claudeUsage.error}</div>
+                    <div>刷新失败：{claudeUsage.error}</div>
                     {claudeAuthHint && <div className="mt-0.5">{claudeAuthHint}</div>}
                   </div>
                 )}
                 <UsagePoolList
                   pools={claudeUsage?.pools ?? {}}
-                  emptyMessage="No Claude quota pools returned by the Usage API."
+                  emptyMessage="用量 API 未返回 Claude 额度池。"
                 />
               </>
             )}
@@ -167,22 +167,22 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
               <>
                 {codexUsage?.error && (
                   <div className="mb-2 text-[11px] text-nim-warning">
-                    Refresh failed: {codexUsage.error}
+                    刷新失败：{codexUsage.error}
                   </div>
                 )}
                 <UsagePoolList
                   pools={codexUsage?.pools ?? {}}
-                  emptyMessage="No Codex quota pools found in recent session data."
+                  emptyMessage="近期会话数据中未找到 Codex 额度池。"
                 />
                 {codexUsage?.credits && (
                   <div className="mt-2.5 pt-2 border-t border-nim/50 text-[11px] text-nim-muted flex justify-between">
-                    <span>Credits</span>
+                    <span>积分</span>
                     <span>
                       {codexUsage.credits.unlimited
-                        ? 'Unlimited'
+                        ? '无限制'
                         : codexUsage.credits.balance !== null
-                          ? `${codexUsage.credits.balance} remaining`
-                          : 'Available'}
+                          ? `剩余 ${codexUsage.credits.balance}`
+                          : '可用'}
                     </span>
                   </div>
                 )}
@@ -233,8 +233,8 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                               <MaterialSymbol icon="schedule" size={12} className="opacity-70" />
                               <span>
                                 {model.resetsAt
-                                  ? `Resets in ${formatResetTime(model.resetsAt)}`
-                                  : 'Reset time unavailable'}
+                                  ? `${formatResetTime(model.resetsAt)}后重置`
+                                  : '重置时间不可用'}
                               </span>
                             </div>
                           </div>
@@ -246,7 +246,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
                   // Fallback if groups not formatted
                   <div className="flex flex-col gap-2">
                     <div className="mb-1 flex items-baseline justify-between gap-3">
-                      <div className="text-[13px] font-semibold text-nim">Session</div>
+                      <div className="text-[13px] font-semibold text-nim">会话</div>
                       <div className="text-[16px] font-semibold text-nim">
                         {Math.round(geminiUsage?.fiveHour?.utilization ?? 0)}%
                       </div>
@@ -287,7 +287,7 @@ export const AIUsagePopover: React.FC<AIUsagePopoverProps> = ({
         <div className="flex flex-col gap-1.5 border-t border-nim px-4 py-2.5 shrink-0 bg-nim-secondary mt-auto">
           <div className="text-[10px] text-nim-faint mb-1">
             {claudeUsage?.lastUpdated && (
-              <span>Last updated {formatUsageLastUpdated(claudeUsage.lastUpdated)}</span>
+              <span>上次更新于 {formatUsageLastUpdated(claudeUsage.lastUpdated)}</span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-nim-muted">

@@ -46,8 +46,8 @@ describe('UsagePoolList', () => {
     expect(container.querySelectorAll('.usage-pool-row')).toHaveLength(2);
     expect(screen.getByText('63%')).toBeTruthy();
     expect(screen.getByText('0%')).toBeTruthy();
-    expect(screen.getByText('Stale · Last updated 1 minute ago')).toBeTruthy();
-    expect(screen.getByText('Reset time unavailable')).toBeTruthy();
+    expect(screen.getByText('已过期 · 上次更新于 1 分钟前')).toBeTruthy();
+    expect(screen.getByText('重置时间不可用')).toBeTruthy();
   });
 
   it('shows the missing-data message without inventing a zero percentage', () => {

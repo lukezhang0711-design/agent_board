@@ -41,7 +41,7 @@ export const AIUsageIndicator: React.FC<AIUsageIndicatorProps> = ({ className })
           ref={buttonRef}
           onClick={handleClick}
           className={`nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${isPopoverOpen ? 'bg-nim-tertiary text-nim' : 'text-nim-muted hover:text-nim'}`}
-          aria-label="AI Usage"
+          aria-label="AI 用量"
           aria-expanded={isPopoverOpen}
           data-testid="ai-usage-indicator"
         >
