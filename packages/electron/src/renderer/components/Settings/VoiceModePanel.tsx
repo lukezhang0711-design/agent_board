@@ -26,6 +26,7 @@ import { useDialog } from '../../contexts/DialogContext';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../common/AlphaBadge';
 import { buildVoiceProjectSummaryPrompt, VOICE_PROJECT_SUMMARY_PATH } from './voiceModeSummaryPrompt';
 import type { SessionCreateResult } from '../../../shared/ipc/types';
+import { PageHeader } from '../common/PageHeader';
 
 interface VoiceModePanelProps {
   /** Optional workspace path for project-specific features like summary generation */
@@ -348,16 +349,16 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
   };
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
-          Voice Mode
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Use OpenAI's Advanced Voice Mode to control your coding agent with your voice.
-          Speak naturally to give commands, and receive spoken responses.
-        </p>
-      </div>
+      <PageHeader
+        icon="mic"
+        title={
+          <span className="flex items-center gap-2">
+            Voice Mode
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }
+        className="mb-6"
+      />
 
       <div className="provider-panel-section mb-6">
         <h4 className="provider-panel-section-title text-base font-medium mb-4 text-[var(--nim-text)]">Enable Voice Mode</h4>

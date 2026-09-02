@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import type { SettingsScope } from '../SettingsView';
 import { getPullRequestService } from '../../../services/RendererPullRequestService';
+import { PageHeader } from '../../common/PageHeader';
 
 interface GitHubAccountPanelProps {
   scope: SettingsScope;
@@ -78,11 +79,7 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
 
   return (
     <div className="github-account-panel provider-panel flex flex-col" data-testid="github-account-panel">
-      <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-          GitHub Account
-        </h3>
-      </div>
+      <PageHeader icon="account_circle" title="GitHub Account" className="mb-5" />
 
       {loading ? (
         <div className="flex items-center gap-2 py-6 text-[var(--nim-text-muted)] text-sm">

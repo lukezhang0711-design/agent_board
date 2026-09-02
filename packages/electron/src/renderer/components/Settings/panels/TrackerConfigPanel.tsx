@@ -17,6 +17,7 @@ import {
   getTrackerStorageCopy,
   requiresTrackerUpgradeConfirmation,
 } from './trackerConfigUpgrade';
+import { PageHeader } from '../../common/PageHeader';
 
 // ============================================================================
 // Types
@@ -879,17 +880,17 @@ export function TrackerConfigPanel({ workspacePath }: TrackerConfigPanelProps) {
   return (
     <div className="tracker-config-panel provider-panel flex flex-col">
       {/* Header */}
-      <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
-          Trackers
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </h3>
-        <p className="provider-panel-description text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
-          {isAdmin
-            ? 'Configure which tracker types are shared with the team and manage local-only trackers.'
-            : 'View team-shared tracker types and manage your local trackers.'}
-        </p>
-      </div>
+      <PageHeader
+        icon="checklist"
+        title={
+          <span className="flex items-center gap-2">
+            Trackers
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }
+        subtitle={isAdmin ? 'Admin' : 'Member'}
+        className="mb-5"
+      />
 
       <TrackerStorageInfoBanner />
 

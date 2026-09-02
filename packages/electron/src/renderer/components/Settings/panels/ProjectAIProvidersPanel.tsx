@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MaterialSymbol, getProviderIcon } from '@nimbalyst/runtime';
+import { PageHeader } from '../../common/PageHeader';
 
 interface ProviderOverride {
   enabled?: boolean;
@@ -272,12 +273,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
 
   return (
     <div className="project-ai-providers-panel flex flex-col h-full p-6 gap-6">
-      <div className="panel-header">
-        <h2 className="m-0 mb-2 text-lg font-semibold text-[var(--nim-text)]">AI Providers</h2>
-        <p className="panel-description m-0 text-ui-body text-[var(--nim-text-muted)] leading-normal">
-          Override AI provider settings for <strong className="text-[var(--nim-text)] font-medium">{workspaceName}</strong>.
-        </p>
-      </div>
+      <PageHeader icon="hub" title="AI Providers" subtitle={workspaceName} />
 
       {PROVIDERS
         .map(({ id }) => formatCatalogWarning(id, catalogStatuses[id]))

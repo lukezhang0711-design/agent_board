@@ -4,6 +4,7 @@ import { useDialogState } from '../../../contexts/DialogContext';
 import { DIALOG_IDS } from '../../../dialogs/registry';
 import type { CreateTeamData } from '../../../dialogs/teamDialogs';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../../common/AlphaBadge';
+import { PageHeader } from '../../common/PageHeader';
 
 // ============================================================================
 // Types
@@ -1097,14 +1098,18 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
   if (!stytchAuth.isAuthenticated) {
     return (
       <div className="provider-panel flex flex-col">
-        <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)]">
-          <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
-            Team
-            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-          </h3>
-          <p className="provider-panel-description text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
-            Create a team to collaborate on shared tracker items and documents with end-to-end encryption.
-          </p>
+        <PageHeader
+          icon="group"
+          title={
+            <span className="flex items-center gap-2">
+              Team
+              <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+            </span>
+          }
+          subtitle="Not signed in"
+          className="mb-3"
+        />
+        <div className="mb-5">
           <TeamPricingNotice />
         </div>
         <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-ui-lg text-center">
@@ -1130,21 +1135,19 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
   return (
     <div className="provider-panel flex flex-col">
       {/* Header */}
-      <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
-          Team
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </h3>
-        <p className="provider-panel-description text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
-          Create a team to collaborate on shared tracker items and documents with end-to-end encryption.
-        </p>
+      <PageHeader
+        icon="group"
+        title={
+          <span className="flex items-center gap-2">
+            Team
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }
+        subtitle={userEmail && team ? (userName || userEmail) : undefined}
+        className="mb-3"
+      />
+      <div className="mb-5">
         <TeamPricingNotice />
-        {userEmail && team && (
-          <div className="flex items-center gap-2 mt-2 text-ui-compact text-[var(--nim-text-faint)]">
-            <MaterialSymbol icon="person" size={13} />
-            <span>Signed in as <span className="text-[var(--nim-text-muted)]">{userName || userEmail}</span></span>
-          </div>
-        )}
       </div>
 
       {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}

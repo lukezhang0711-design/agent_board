@@ -7,6 +7,7 @@ import { ExtensionConfigPanel } from './ExtensionConfigPanel';
 import { ExtensionBackendModulesSection } from '../../ExtensionPermissions/ExtensionBackendModulesSection';
 import { useTheme } from '../../../hooks/useTheme';
 import { ToggleSwitch } from '../../GlobalSettings/SettingsToggle';
+import { PageHeader } from '../../common/PageHeader';
 
 interface InstalledExtension {
   id: string;
@@ -348,10 +349,11 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
       data-source="packages/electron/src/renderer/components/Settings/panels/InstalledExtensionsPanel.tsx"
     >
       {/* Header */}
-      <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)] flex-shrink-0">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">Installed Extensions</h3>
-
-      </div>
+      <PageHeader
+        icon="extension"
+        title="Installed Extensions"
+        className="mb-5 flex-shrink-0"
+      />
 
       {error && (
         <div className="flex items-center gap-2 p-3 mb-4 rounded-ui-lg bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-error)_30%,transparent)] text-[var(--nim-error)] flex-shrink-0">

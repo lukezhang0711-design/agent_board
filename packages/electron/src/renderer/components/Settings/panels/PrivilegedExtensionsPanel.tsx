@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { extensionPermissionHostStateVersionAtom } from '../../../store/atoms/extensionPermissions';
+import { PageHeader } from '../../common/PageHeader';
 
 interface PrivilegedExtensionsPanelProps {
   workspacePath?: string;
@@ -105,16 +106,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
 
   return (
     <div className="privileged-extensions-panel max-w-4xl">
-      <div className="mb-5">
-        <h2 className="text-base font-semibold text-[var(--nim-text)] m-0">
-          Privileged Capabilities
-        </h2>
-        <p className="m-0 mt-1 text-xs text-[var(--nim-text-muted)] leading-relaxed">
-          Extensions that have been granted permission to run code outside the app
-          (e.g., spawning processes, opening network connections). Revoke anything you
-          do not recognize.
-        </p>
-      </div>
+      <PageHeader icon="admin_panel_settings" title="Privileged Capabilities" className="mb-5" />
 
       {error && (
         <div className="mb-4 rounded-ui-base border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] p-3 text-sm text-[var(--nim-error)]">

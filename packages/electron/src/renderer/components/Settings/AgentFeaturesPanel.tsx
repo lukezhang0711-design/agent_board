@@ -11,6 +11,7 @@ import { autoCommitEnabledAtom, setAutoCommitEnabledAtom } from '../../store/ato
 import { ALPHA_FEATURES, type AlphaFeatureTag } from '../../../shared/alphaFeatures';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../common/AlphaBadge';
 import { SettingsToggle } from '../GlobalSettings/SettingsToggle';
+import { PageHeader } from '../common/PageHeader';
 
 const AGENT_FEATURE_TAGS: AlphaFeatureTag[] = [
   'super-loops',
@@ -225,14 +226,7 @@ export function AgentFeaturesPanel() {
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-          Agent Features
-        </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Settings that control how agent sessions behave.
-        </p>
-      </div>
+      <PageHeader icon="tune" title="Agent Features" className="mb-6" />
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
         <SettingsToggle
