@@ -255,7 +255,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                     <select
                       value={preventSleepMode ?? 'off'}
                       onChange={(e) => onPreventSleepModeChange(e.target.value as 'off' | 'always' | 'pluggedIn')}
-                      className="bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-[12px] text-nim cursor-pointer shrink-0 mt-0.5"
+                      className="bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-[12px] text-nim cursor-pointer shrink-0 mt-1"
                     >
                       <option value="off">Off</option>
                       <option value="always">Always</option>

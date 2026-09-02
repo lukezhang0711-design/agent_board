@@ -39,7 +39,8 @@ export function scanFileViolations(content: string, isExempt = false) {
     const rawRoundeds = content.match(/(?<![a-zA-Z0-9_\-])rounded[^\s"'`>]+/g) ?? [];
     nonStdRounded = rawRoundeds.filter(cls => !ALLOWED_ROUNDED.test(cls));
 
-    const halfSpacingRegex = /(?<![a-zA-Z0-9_\-])(?:gap(?:-[xy])?-(?:0\.5|1\.5|2\.5|3\.5)|(?:p|px|py|pt|pb|pl|pr)-(?:1\.5|3\.5))(?![a-zA-Z0-9_\-])/g;
+    // 施工单 GH (甲案): 放行 p*-0.5 (微内衬 2px，用于徽章/药丸/小标签上下内衬)，其余 15 类间距/外边距/内边距前缀的任意 .5 档一律违例
+    const halfSpacingRegex = /(?<![a-zA-Z0-9_\-])(?:gap(?:-[xy])?-\d*\.5|m[xytblr]?-\d*\.5|p[xytblr]?-(?!0\.5\b)\d*\.5)(?![a-zA-Z0-9_\-])/g;
     halfGap = content.match(halfSpacingRegex) ?? [];
   }
 
@@ -340,10 +341,122 @@ describe('Visual Token Guard & Single Truth Table (施工单 FX & GA)', () => {
     });
   });
 
-  describe('绿⑤: 守门半档判定覆盖内边距——注入 py-1.5 夹具被拦截', () => {
-    it('catches py-1.5 fixture', () => {
-      const result = scanFileViolations('<div className="py-1.5" />');
-      expect(result.halfGap).toContain('py-1.5');
+  describe('绿①: 守门半档判定覆盖十五类前缀的任意 .5 档（注入 mt-1.5、px-2.5、mb-3.5 夹具均被拦截）', () => {
+    it('catches mt-1.5, px-2.5, mb-3.5 fixtures', () => {
+      const r1 = scanFileViolations('<div className="mt-1.5" />');
+      expect(r1.halfGap).toContain('mt-1.5');
+      const r2 = scanFileViolations('<div className="px-2.5" />');
+      expect(r2.halfGap).toContain('px-2.5');
+      const r3 = scanFileViolations('<div className="mb-3.5" />');
+      expect(r3.halfGap).toContain('mb-3.5');
+    });
+
+    it('covers all fifteen prefix categories of half-step spacing', () => {
+      const fifteenPrefixes = [
+        'gap-1.5',
+        'gap-x-1.5',
+        'gap-y-1.5',
+        'p-1.5',
+        'px-2.5',
+        'py-2.5',
+        'pt-1.5',
+        'pb-3.5',
+        'pl-1.5',
+        'pr-1.5',
+        'm-1.5',
+        'mx-2.5',
+        'my-1.5',
+        'mt-1.5',
+        'mb-3.5',
+        'ml-0.5',
+        'mr-2.5',
+      ];
+      for (const cls of fifteenPrefixes) {
+        const result = scanFileViolations(`<div className="${cls}" />`);
+        expect(result.halfGap, `Expected ${cls} to be caught by guard`).toContain(cls);
+      }
+    });
+  });
+
+  describe('绿②: 甲案判定——p*-0.5 为唯一放行档，且 DESIGN.md 间距表包含微内衬 2px 并写明理由', () => {
+    it('asserts p*-0.5 is the only exempted half-step spacing tier', () => {
+      const allowed = scanFileViolations('<div className="py-0.5 px-0.5 p-0.5 pt-0.5 pb-0.5 pl-0.5 pr-0.5" />');
+      expect(allowed.halfGap).toEqual([]);
+
+      const disallowed = scanFileViolations('<div className="m-0.5 mt-0.5 mb-0.5 ml-0.5 mr-0.5 mx-0.5 my-0.5 gap-0.5" />');
+      expect(disallowed.halfGap).toContain('m-0.5');
+      expect(disallowed.halfGap).toContain('mt-0.5');
+      expect(disallowed.halfGap).toContain('mb-0.5');
+      expect(disallowed.halfGap).toContain('ml-0.5');
+      expect(disallowed.halfGap).toContain('mr-0.5');
+      expect(disallowed.halfGap).toContain('mx-0.5');
+      expect(disallowed.halfGap).toContain('my-0.5');
+      expect(disallowed.halfGap).toContain('gap-0.5');
+    });
+
+    it('asserts DESIGN.md spacing table documents micro / 微内衬 2px with rationale', () => {
+      const designMdPath = path.resolve(REPO_ROOT, 'DESIGN.md');
+      const content = fs.readFileSync(designMdPath, 'utf8');
+      expect(content).toMatch(/micro:\s*\n\s*value:\s*2px/);
+      expect(content).toMatch(/微内衬 2px/);
+      expect(content).toMatch(/徽章.*药丸.*上下.*内衬|微标.*内衬/);
+    });
+  });
+
+  describe('绿④: 全渲染层 p*-2.5 与全部外边距半档为 0（逐类断言）', () => {
+    it('asserts each p*-2.5 and all outer margin half-step classes have zero occurrences across renderer', () => {
+      const allFiles = walkRendererFiles(RENDERER_ROOT).filter(
+        f => !path.relative(RENDERER_ROOT, f).startsWith('styles/')
+      );
+
+      const halfStepClassesToBan = [
+        // p*-2.5 classes
+        'p-2.5',
+        'px-2.5',
+        'py-2.5',
+        'pt-2.5',
+        'pb-2.5',
+        'pl-2.5',
+        'pr-2.5',
+        // All outer margin half-step classes
+        'm-0.5', 'm-1.5', 'm-2.5', 'm-3.5',
+        'mt-0.5', 'mt-1.5', 'mt-2.5', 'mt-3.5',
+        'mb-0.5', 'mb-1.5', 'mb-2.5', 'mb-3.5',
+        'ml-0.5', 'ml-1.5', 'ml-2.5', 'ml-3.5',
+        'mr-0.5', 'mr-1.5', 'mr-2.5', 'mr-3.5',
+        'mx-0.5', 'mx-1.5', 'mx-2.5', 'mx-3.5',
+        'my-0.5', 'my-1.5', 'my-2.5', 'my-3.5',
+      ];
+
+      for (const cls of halfStepClassesToBan) {
+        const regex = new RegExp(`(?<![a-zA-Z0-9_\\-])${cls.replace('.', '\\.')}(?![a-zA-Z0-9_\\-])`, 'g');
+        const matchingFiles: string[] = [];
+        allFiles.forEach(f => {
+          const content = fs.readFileSync(f, 'utf8');
+          if (regex.test(content)) {
+            matchingFiles.push(path.relative(RENDERER_ROOT, f));
+          }
+        });
+        expect(
+          matchingFiles,
+          `Found half-step class ${cls} in: ${matchingFiles.join(', ')}`
+        ).toEqual([]);
+      }
+    });
+  });
+
+  describe('绿⑤: 守门测试文件与基线产出脚本的正则逐字相同（比对两处字符串）', () => {
+    it('asserts guard test regex and baseline script regex are identical word-for-word', () => {
+      const guardContent = fs.readFileSync(__filename, 'utf8');
+      const baselineScriptPath = path.resolve(REPO_ROOT, 'packages/electron/scripts/generate-visual-tokens-baseline.js');
+      const baselineContent = fs.readFileSync(baselineScriptPath, 'utf8');
+
+      const guardMatch = guardContent.match(/const halfSpacingRegex = (\/.+?\/[a-z]*);/);
+      const baselineMatch = baselineContent.match(/const halfSpacingRegex = (\/.+?\/[a-z]*);/);
+
+      expect(guardMatch, 'guard test must define halfSpacingRegex').not.toBeNull();
+      expect(baselineMatch, 'baseline script must define halfSpacingRegex').not.toBeNull();
+      expect(guardMatch![1]).toBe(baselineMatch![1]);
     });
   });
 

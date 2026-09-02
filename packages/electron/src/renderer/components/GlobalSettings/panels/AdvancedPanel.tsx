@@ -381,7 +381,7 @@ export function AdvancedPanel() {
 
         {releaseChannel === 'alpha' && (
           <div className="mt-3 flex items-start gap-2 p-3 rounded-ui-base border border-[var(--nim-warning)]/30 bg-[var(--nim-warning)]/10">
-            <MaterialSymbol icon="warning" size={16} className="text-[var(--nim-warning)] shrink-0 mt-0.5" />
+            <MaterialSymbol icon="warning" size={16} className="text-[var(--nim-warning)] shrink-0 mt-1" />
             <p className="m-0 text-[13px] text-[var(--nim-text)] leading-snug">
               The alpha channel ships rough developer releases that may be unstable or contain unfinished work. Switch back to Stable if you encounter problems.
             </p>

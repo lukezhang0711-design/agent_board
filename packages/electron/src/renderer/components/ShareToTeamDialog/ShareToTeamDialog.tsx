@@ -362,14 +362,14 @@ export function ShareToTeamDialog({
       >
         {/* Header */}
         <div className="flex items-start gap-3 px-5 pt-4 pb-3 border-b border-[var(--nim-border)]">
-          <div className="w-7 h-7 rounded-ui-base bg-[var(--nim-primary)]/15 text-[var(--nim-primary)] flex items-center justify-center shrink-0 mt-0.5">
+          <div className="w-7 h-7 rounded-ui-base bg-[var(--nim-primary)]/15 text-[var(--nim-primary)] flex items-center justify-center shrink-0 mt-1">
             <MaterialSymbol icon="group" size={18} />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-[14px] font-semibold text-[var(--nim-text)] m-0 leading-tight">
               Share to Team
             </h2>
-            <p className="text-[12px] text-[var(--nim-text-faint)] m-0 mt-0.5 leading-snug">
+            <p className="text-[12px] text-[var(--nim-text-faint)] m-0 mt-1 leading-snug">
               Pick where this document should live in your team space.
             </p>
           </div>
@@ -385,7 +385,7 @@ export function ShareToTeamDialog({
 
         {/* Body */}
         <div className="px-5 pt-3 pb-2">
-          <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-1.5">
+          <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-2">
             Source file
           </div>
           <div className="flex items-center gap-3 px-3 py-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-ui-base mb-4">
@@ -396,7 +396,7 @@ export function ShareToTeamDialog({
             </div>
           </div>
 
-          <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-1.5">
+          <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-2">
             Shared name
           </div>
           <div className="flex items-center gap-2 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-ui-base mb-4 focus-within:border-[var(--nim-primary)]">
@@ -416,7 +416,7 @@ export function ShareToTeamDialog({
             />
           </div>
 
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-2">
             <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)]">
               Destination folder
             </div>

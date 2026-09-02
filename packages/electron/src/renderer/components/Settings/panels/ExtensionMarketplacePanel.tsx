@@ -471,7 +471,7 @@ export function ExtensionMarketplacePanel({
 
         <div className="flex flex-col gap-4 p-6 border border-[var(--nim-warning)] rounded-ui-lg bg-[rgba(251,191,36,0.05)]">
           <div className="flex items-start gap-3">
-            <MaterialSymbol icon="warning" size={24} className="text-[var(--nim-warning)] shrink-0 mt-0.5" />
+            <MaterialSymbol icon="warning" size={24} className="text-[var(--nim-warning)] shrink-0 mt-1" />
             <div>
               <h4 className="m-0 mb-2 text-base font-semibold text-[var(--nim-text)]">Security Warning</h4>
               <div className="text-sm leading-relaxed text-[var(--nim-text-muted)] flex flex-col gap-3">
@@ -496,7 +496,7 @@ export function ExtensionMarketplacePanel({
 
           <div className="flex items-center gap-3 pt-2 border-t border-[var(--nim-border)]">
             <button
-              className="py-2.5 px-5 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
+              className="py-3 px-5 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
               onClick={handleAcceptRisk}
               data-testid="marketplace-accept-risk"
             >
@@ -740,14 +740,14 @@ export function ExtensionMarketplacePanel({
             value={githubUrl}
             onChange={(e) => setGithubUrl(e.target.value)}
             placeholder="https://github.com/user/nimbalyst-extension"
-            className="flex-1 py-2.5 px-3 border border-[var(--nim-border)] rounded-ui-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm outline-none focus:border-[var(--nim-primary)] placeholder:text-[var(--nim-text-faint)]"
+            className="flex-1 py-3 px-3 border border-[var(--nim-border)] rounded-ui-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm outline-none focus:border-[var(--nim-primary)] placeholder:text-[var(--nim-text-faint)]"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleGithubInstall();
             }}
             data-testid="marketplace-github-url"
           />
           <button
-            className="py-2.5 px-4 border-none rounded-ui-lg bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="py-3 px-4 border-none rounded-ui-lg bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={handleGithubInstall}
             disabled={githubInstalling || !githubUrl.trim()}
             data-testid="marketplace-github-install"

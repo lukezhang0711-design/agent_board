@@ -46,7 +46,7 @@ export function SettingsToggle({
       <div>
         <span className="text-sm font-medium text-[var(--nim-text)]">{name}</span>
         {description && (
-          <p className="text-xs text-[var(--nim-text-muted)] mt-0.5">{description}</p>
+          <p className="text-xs text-[var(--nim-text-muted)] mt-1">{description}</p>
         )}
       </div>
       <ToggleSwitch checked={checked} onChange={onChange} disabled={disabled} />

@@ -588,7 +588,7 @@ export const WorkspaceManager: React.FC = () => {
             filteredWorkspaces.map((workspace, index) => (
               <div
                 key={workspace.path}
-                className={`workspace-item flex gap-2 py-2 px-2 mb-0.5 rounded-ui-base cursor-pointer transition-colors duration-100 border-none items-center hover:bg-[var(--nim-bg-hover)] ${selectedWorkspace?.path === workspace.path ? 'selected bg-[var(--nim-bg-selected)]' : ''} ${highlightedIndex === index ? 'highlighted bg-[var(--nim-bg-hover)]' : ''} ${highlightedIndex === index && selectedWorkspace?.path === workspace.path ? '!bg-[var(--nim-bg-selected-hover)]' : ''}`}
+                className={`workspace-item flex gap-2 py-2 px-2 mb-1 rounded-ui-base cursor-pointer transition-colors duration-100 border-none items-center hover:bg-[var(--nim-bg-hover)] ${selectedWorkspace?.path === workspace.path ? 'selected bg-[var(--nim-bg-selected)]' : ''} ${highlightedIndex === index ? 'highlighted bg-[var(--nim-bg-hover)]' : ''} ${highlightedIndex === index && selectedWorkspace?.path === workspace.path ? '!bg-[var(--nim-bg-selected-hover)]' : ''}`}
                 onClick={(e) => {
                   // Command/Ctrl + click to deselect
                   if (e.metaKey || e.ctrlKey) {
@@ -607,8 +607,8 @@ export const WorkspaceManager: React.FC = () => {
                   <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>folder</span>
                 </div>
                 <div className="workspace-info flex-1 min-w-0">
-                  <div className={`workspace-name text-[13px] font-medium text-[var(--nim-text)] mb-0.5 overflow-hidden text-ellipsis whitespace-nowrap ${selectedWorkspace?.path === workspace.path ? '!text-[var(--nim-primary)]' : ''}`}>{workspace.name}</div>
-                  <div className="workspace-path text-[11px] text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap mb-0.5">{workspace.path}</div>
+                  <div className={`workspace-name text-[13px] font-medium text-[var(--nim-text)] mb-1 overflow-hidden text-ellipsis whitespace-nowrap ${selectedWorkspace?.path === workspace.path ? '!text-[var(--nim-primary)]' : ''}`}>{workspace.name}</div>
+                  <div className="workspace-path text-[11px] text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap mb-1">{workspace.path}</div>
                   <div className="workspace-meta flex gap-3 text-[11px] text-[var(--nim-text-faint)]">
                     {workspace.markdownCount !== undefined && (
                       <span className="whitespace-nowrap">{workspace.markdownCount} markdown files</span>
@@ -641,13 +641,13 @@ export const WorkspaceManager: React.FC = () => {
                 </div>
                 <div className="content-actions-secondary flex flex-wrap justify-end gap-2">
                   <button
-                    className="btn nim-btn-secondary !h-8 !px-2.5 !text-[12px]"
+                    className="btn nim-btn-secondary !h-8 !px-3 !text-[12px]"
                     onClick={() => openRenameDialog(selectedWorkspace)}
                   >
                     Rename
                   </button>
                   <button
-                    className="btn nim-btn-secondary !h-8 !px-2.5 !text-[12px]"
+                    className="btn nim-btn-secondary !h-8 !px-3 !text-[12px]"
                     onClick={() => handleMoveProject(selectedWorkspace)}
                   >
                     Move
@@ -781,7 +781,7 @@ export const WorkspaceManager: React.FC = () => {
 
             {/* Warning banner */}
             <div className="bg-[var(--nim-warning)]/10 border border-[var(--nim-warning)]/30 rounded-ui-base p-3 mb-4 flex gap-2">
-              <span className="material-symbols-outlined text-[18px] text-[var(--nim-warning)] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>warning</span>
+              <span className="material-symbols-outlined text-[18px] text-[var(--nim-warning)] shrink-0 mt-1" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>warning</span>
               <div className="text-[12px] text-[var(--nim-text-muted)]">
                 <p className="m-0 mb-1 font-medium text-[var(--nim-text)]">This will rename the project folder on disk</p>
                 <p className="m-0">All AI session history, file history, and settings will be migrated. This may take a while for large projects.</p>
@@ -842,7 +842,7 @@ export const WorkspaceManager: React.FC = () => {
 
             {/* Warning banner */}
             <div className="bg-[var(--nim-warning)]/10 border border-[var(--nim-warning)]/30 rounded-ui-base p-3 mb-4 flex gap-2">
-              <span className="material-symbols-outlined text-[18px] text-[var(--nim-warning)] shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>warning</span>
+              <span className="material-symbols-outlined text-[18px] text-[var(--nim-warning)] shrink-0 mt-1" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>warning</span>
               <div className="text-[12px] text-[var(--nim-text-muted)]">
                 <p className="m-0 mb-1 font-medium text-[var(--nim-text)]">This will move the entire project folder</p>
                 <p className="m-0">All project files will be copied to the new location, and all AI session history, file history, and settings will be migrated. This may take a while for large projects.</p>
@@ -851,11 +851,11 @@ export const WorkspaceManager: React.FC = () => {
 
             <div className="mb-4 space-y-2">
               <div>
-                <label className="block text-[12px] text-[var(--nim-text-muted)] mb-0.5">From</label>
+                <label className="block text-[12px] text-[var(--nim-text-muted)] mb-1">From</label>
                 <div className="text-[13px] text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] font-mono overflow-hidden text-ellipsis">{confirmDialog.workspace?.path}</div>
               </div>
               <div>
-                <label className="block text-[12px] text-[var(--nim-text-muted)] mb-0.5">To</label>
+                <label className="block text-[12px] text-[var(--nim-text-muted)] mb-1">To</label>
                 <div className="text-[13px] text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] font-mono overflow-hidden text-ellipsis">{confirmDialog.destinationPath}</div>
               </div>
               {confirmDialog.stats && (

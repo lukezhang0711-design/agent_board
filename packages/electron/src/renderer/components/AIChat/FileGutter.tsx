@@ -366,7 +366,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
     const hasContent = node.files.length > 0 || node.subdirectories.size > 0;
 
     return (
-      <div key={node.path} className="file-gutter__directory-node mb-0.5">
+      <div key={node.path} className="file-gutter__directory-node mb-1">
         {node.displayPath && (
           <button
             onClick={() => toggleFolder(node.path)}
@@ -388,7 +388,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
         )}
 
         {(isExpanded || !node.displayPath) && hasContent && (
-          <div className={node.displayPath ? "file-gutter__directory-children mt-0.5 pl-4" : "file-gutter__directory-children mt-0.5"}>
+          <div className={node.displayPath ? "file-gutter__directory-children mt-1 pl-4" : "file-gutter__directory-children mt-1"}>
             {Array.from(node.subdirectories.values()).map(subdir =>
               renderDirectoryNode(subdir)
             )}

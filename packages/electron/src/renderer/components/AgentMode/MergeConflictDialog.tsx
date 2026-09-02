@@ -64,7 +64,7 @@ export function MergeConflictDialog({
           </p>
 
           <div className="merge-conflict-dialog-files mb-4 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-            <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-2.5 text-[13px] font-medium text-[var(--nim-text)]">
+            <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-[13px] font-medium text-[var(--nim-text)]">
               <MaterialSymbol icon="description" size={16} />
               <span>Conflicted Files:</span>
             </div>

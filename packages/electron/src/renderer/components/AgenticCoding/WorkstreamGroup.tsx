@@ -1127,7 +1127,7 @@ const WorkstreamSessionItem: React.FC<WorkstreamSessionItemProps> = ({
   return (
     <div
       data-testid="workstream-child-item"
-      className={`workstream-session-item flex items-center gap-2 py-2 px-3 mr-2 mb-0.5 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
+      className={`workstream-session-item flex items-center gap-2 py-2 px-3 mr-2 mb-1 cursor-pointer rounded-ui-base transition-colors duration-150 select-none ${
         isActive ? 'active bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
       } ${session.isArchived ? 'opacity-60 hover:opacity-80' : ''} focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:outline-offset-[-2px]`}
       onClick={onClick}

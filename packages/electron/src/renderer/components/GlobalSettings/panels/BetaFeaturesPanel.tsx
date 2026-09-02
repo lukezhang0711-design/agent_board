@@ -73,7 +73,7 @@ export function BetaFeaturesPanel() {
                       enabled: checked,
                     });
                   }}
-                  className="setting-checkbox w-4 h-4 mt-0.5 cursor-pointer shrink-0 accent-[var(--nim-primary)]"
+                  className="setting-checkbox w-4 h-4 mt-1 cursor-pointer shrink-0 accent-[var(--nim-primary)]"
                   disabled={enableAllBetaFeatures}
                 />
                 <div className="setting-text flex flex-col gap-1">

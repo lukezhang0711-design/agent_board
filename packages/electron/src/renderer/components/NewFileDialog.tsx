@@ -176,7 +176,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
           return (
             <li key={folder.path}>
               <div
-                className={`new-file-folder-item flex items-center gap-2 py-2 px-2.5 rounded-ui-base cursor-pointer text-[13px] ${
+                className={`new-file-folder-item flex items-center gap-2 py-2 px-3 rounded-ui-base cursor-pointer text-[13px] ${
                   isSelected
                     ? 'bg-nim-primary text-nim-on-primary'
                     : 'text-nim hover:bg-nim-hover'
@@ -219,7 +219,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
 
         {/* File Type Selector */}
         <div className="new-file-field mb-4">
-          <label className="block mb-1.5 text-[13px] font-medium text-nim-muted">
+          <label className="block mb-2 text-[13px] font-medium text-nim-muted">
             Type
           </label>
           <select
@@ -240,7 +240,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
 
         {/* Location Selector */}
         <div className="new-file-field mb-4">
-          <label className="block mb-1.5 text-[13px] font-medium text-nim-muted">
+          <label className="block mb-2 text-[13px] font-medium text-nim-muted">
             Location
           </label>
           <div className="new-file-location-picker relative" ref={folderPickerRef}>
@@ -258,7 +258,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
             {showFolderPicker && fileTree.length > 0 && (
               <div className="new-file-folder-picker absolute top-[calc(100%+4px)] left-0 right-0 max-h-[250px] overflow-y-auto p-1 rounded-ui-base z-[10001] shadow-[0_4px_12px_rgba(0,0,0,0.3)] bg-nim border border-nim">
                 <div
-                  className={`new-file-folder-item flex items-center gap-2 py-2 px-2.5 rounded-ui-base cursor-pointer text-[13px] ${
+                  className={`new-file-folder-item flex items-center gap-2 py-2 px-3 rounded-ui-base cursor-pointer text-[13px] ${
                     currentDirectory === workspacePath
                       ? 'bg-nim-primary text-nim-on-primary'
                       : 'text-nim hover:bg-nim-hover'
@@ -281,7 +281,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
         {/* File Name Input */}
         <form onSubmit={handleSubmit}>
           <div className="new-file-field mb-4">
-            <label className="block mb-1.5 text-[13px] font-medium text-nim-muted">
+            <label className="block mb-2 text-[13px] font-medium text-nim-muted">
               Name
             </label>
             <div className="new-file-input-wrapper flex items-center overflow-hidden rounded-ui-base bg-nim-secondary border border-nim focus-within:border-nim-focus">

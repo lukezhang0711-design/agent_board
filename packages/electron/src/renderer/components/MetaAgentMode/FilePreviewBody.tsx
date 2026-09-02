@@ -86,7 +86,7 @@ function OpenWithSystemButton({
   return (
     <button
       type="button"
-      className="nim-btn-secondary rounded-ui-base px-2.5 py-1 text-xs"
+      className="nim-btn-secondary rounded-ui-base px-3 py-1 text-xs"
       onClick={() => onOpenWithSystem(filePath)}
       data-testid="file-preview-open-system-fallback"
     >

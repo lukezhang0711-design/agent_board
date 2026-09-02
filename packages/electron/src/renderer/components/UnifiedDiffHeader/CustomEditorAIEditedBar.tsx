@@ -66,7 +66,7 @@ export const CustomEditorAIEditedBar: React.FC<CustomEditorAIEditedBarProps> = (
                   {' '}edited {fileName || 'file'}
                 </span>
                 {sessionInfo.editedAt && (
-                  <span className="unified-diff-header-timestamp text-[var(--nim-text-faint)] shrink-0 before:content-['\00b7'] before:mr-1.5">
+                  <span className="unified-diff-header-timestamp text-[var(--nim-text-faint)] shrink-0 before:content-['\00b7'] before:mr-2">
                     {formatRelativeTime(sessionInfo.editedAt)}
                   </span>
                 )}

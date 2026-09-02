@@ -551,7 +551,7 @@ export function DatabaseBrowser() {
           {tables.map(table => (
             <div
               key={table}
-              className={`table-item py-2 px-3 cursor-pointer rounded-ui-base mb-0.5 text-sm hover:bg-[var(--nim-bg-hover)] ${selectedTable === table ? 'bg-[var(--nim-primary)] text-white' : ''}`}
+              className={`table-item py-2 px-3 cursor-pointer rounded-ui-base mb-1 text-sm hover:bg-[var(--nim-bg-hover)] ${selectedTable === table ? 'bg-[var(--nim-primary)] text-white' : ''}`}
               onClick={() => handleTableSelect(table)}
             >
               {table}

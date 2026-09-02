@@ -71,7 +71,7 @@ export function DownloadProgressToast({
 
         {/* Progress details */}
         <div className="update-toast-progress-details flex-1">
-          <div className="update-toast-progress-text text-xs text-[var(--nim-text)] mb-1.5" data-testid="download-progress-text">
+          <div className="update-toast-progress-text text-xs text-[var(--nim-text)] mb-2" data-testid="download-progress-text">
             {progress ? `${formatBytes(progress.transferred)} of ${formatBytes(progress.total)}` : 'Preparing...'}
           </div>
           <div className="update-toast-progress-bar h-1.5 bg-[var(--nim-bg-tertiary)] rounded-ui-base overflow-hidden">

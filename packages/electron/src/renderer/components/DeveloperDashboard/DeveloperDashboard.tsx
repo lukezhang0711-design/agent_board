@@ -457,7 +457,7 @@ function OverviewPanel({
                 className="text-xs font-mono px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)]"
               >
                 <div className="text-[var(--nim-text)]">{ws.workspacePath}</div>
-                <div className="text-[var(--nim-text-muted)] mt-0.5">
+                <div className="text-[var(--nim-text-muted)] mt-1">
                   Subscribers ({ws.subscriberCount}): {ws.subscriberIds.join(', ')}
                 </div>
               </div>
@@ -501,7 +501,7 @@ function OverviewPanel({
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)] border border-[var(--nim-border)]">
-      <div className="text-[10px] uppercase tracking-wider text-[var(--nim-text-muted)] mb-0.5">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-[var(--nim-text-muted)] mb-1">{label}</div>
       <div className="text-sm font-mono text-[var(--nim-text)]">{value}</div>
     </div>
   );
@@ -579,7 +579,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
                     onClick={() => setExpandedRow(isExpanded ? null : key)}
                   >
                     <td className="px-4 py-2 font-mono text-[var(--nim-text)]">
-                      <span className="mr-1.5 text-[var(--nim-text-muted)] text-xs">
+                      <span className="mr-2 text-[var(--nim-text-muted)] text-xs">
                         {isExpanded ? '\u25BC' : '\u25B6'}
                       </span>
                       {s.name}

@@ -61,7 +61,7 @@ function TodoItem({ todo }: TodoItemProps) {
       className={`todo-item flex items-start gap-2 p-2 mb-1 last:mb-0 rounded-ui-base transition-all duration-200 ${statusClasses[todo.status]}`}
       data-status={todo.status}
     >
-      <div className="todo-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-0.5">
+      <div className="todo-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-1">
         {todo.status === 'pending' && (
           <span className="todo-icon-pending text-[var(--nim-text-faint)] text-sm">○</span>
         )}

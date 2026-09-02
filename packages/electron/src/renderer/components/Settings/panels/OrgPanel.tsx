@@ -172,7 +172,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
     return (
       <div className="org-settings-panel p-4">
         <div className="flex items-start gap-3 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-lg">
-          <MaterialSymbol icon="corporate_fare" size={18} className="text-[var(--nim-text-muted)] mt-0.5" />
+          <MaterialSymbol icon="corporate_fare" size={18} className="text-[var(--nim-text-muted)] mt-1" />
           <div className="text-[13px] text-[var(--nim-text-muted)] leading-relaxed">
             This workspace isn’t linked to an organization yet. Create or join a team
             from the <span className="font-semibold text-[var(--nim-text)]">Team</span> panel.
@@ -288,7 +288,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
             <input
               type="email"
               placeholder="Invite by email…"
-              className="flex-1 text-[13px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-2.5 py-2 text-[var(--nim-text)]"
+              className="flex-1 text-[13px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-3 py-2 text-[var(--nim-text)]"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void handleInvite(); }}

@@ -274,7 +274,7 @@ export function ActionPromptsDropdown({ workspacePath, onInsert, onLaunchNewSess
                         <MaterialSymbol
                           icon="open_in_new"
                           size={14}
-                          className="shrink-0 mt-0.5 text-[var(--nim-text-faint)]"
+                          className="shrink-0 mt-1 text-[var(--nim-text-faint)]"
                         />
                       )}
                     </button>

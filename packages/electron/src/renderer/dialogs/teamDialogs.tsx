@@ -97,7 +97,7 @@ function CreateTeamDialogWrapper({
           {/* Account Picker (only shown with multiple accounts) */}
           {showAccountPicker && (
             <div className="mb-4">
-              <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-1.5">
+              <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-2">
                 Account
               </label>
               <select
@@ -119,7 +119,7 @@ function CreateTeamDialogWrapper({
 
           {/* Team Name */}
           <div className="mb-4">
-            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-1.5">
+            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-2">
               Team Name
             </label>
             <input
@@ -137,7 +137,7 @@ function CreateTeamDialogWrapper({
 
           {/* Git Remote */}
           <div className="mb-4">
-            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-1.5">
+            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-2">
               Git Remote
             </label>
             <div className="w-full px-3 py-2 border border-[var(--nim-bg-tertiary)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] text-[12px] font-mono">
@@ -149,20 +149,20 @@ function CreateTeamDialogWrapper({
                 Detected from git remote origin
               </span>
             </div>
-            <div className="text-[11px] text-[var(--nim-text-disabled)] mt-1.5">
+            <div className="text-[11px] text-[var(--nim-text-disabled)] mt-2">
               Any team member who opens a clone of this repo will be automatically connected.
             </div>
           </div>
 
           {/* Encryption Info */}
           <div className="mb-0">
-            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-1.5">
+            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-2">
               Encryption
             </label>
             <div className="flex items-start gap-2 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-base border border-[var(--nim-bg-tertiary)]">
-              <MaterialSymbol icon="lock" size={16} className="text-[var(--nim-success)] shrink-0 mt-0.5" />
+              <MaterialSymbol icon="lock" size={16} className="text-[var(--nim-success)] shrink-0 mt-1" />
               <div>
-                <div className="text-[12px] font-medium text-[var(--nim-text)] mb-0.5">E2E Encrypted</div>
+                <div className="text-[12px] font-medium text-[var(--nim-text)] mb-1">E2E Encrypted</div>
                 <div className="text-[11px] text-[var(--nim-text-faint)] leading-snug">
                   A unique encryption key will be generated for this team. Keys are shared securely via ECDH exchange when members join.
                 </div>

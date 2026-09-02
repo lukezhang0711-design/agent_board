@@ -142,7 +142,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
       <div className="flex-1 overflow-y-auto">
         {/* Filter chips (multi-select) */}
         <div className="px-2 pt-2 pb-1">
-          <div className="text-[10px] font-semibold text-nim-faint uppercase tracking-wider px-1 mb-1.5">
+          <div className="text-[10px] font-semibold text-nim-faint uppercase tracking-wider px-1 mb-2">
             Filters
           </div>
           <div className="flex flex-wrap gap-1">
@@ -177,7 +177,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
 
         {/* Saved Views Section (NIM-788) */}
         <div className="px-2 pt-2 pb-1 border-t border-nim mt-1" data-testid="tracker-saved-views">
-          <div className="flex items-center justify-between px-1 mb-1.5">
+          <div className="flex items-center justify-between px-1 mb-2">
             <span className="text-[10px] font-semibold text-nim-faint uppercase tracking-wider">
               Saved Views
             </span>
@@ -192,7 +192,7 @@ export const TrackerSidebar: React.FC<TrackerSidebarProps> = ({
           </div>
 
           {savingView && (
-            <div className="flex items-center gap-1 mb-1.5 px-1">
+            <div className="flex items-center gap-1 mb-2 px-1">
               <input
                 autoFocus
                 type="text"

@@ -61,7 +61,7 @@ export function GutterContextMenu({ x, y, onClose, targetButton, workspacePath }
         {targetButton && !hiddenButtons.includes(targetButton) && (
           <>
             <button
-              className="w-full flex items-center gap-2 px-2.5 py-2 text-nim hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left rounded-ui-base transition-colors duration-75"
+              className="w-full flex items-center gap-2 px-3 py-2 text-nim hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left rounded-ui-base transition-colors duration-75"
               onClick={() => {
                 toggleHidden({ buttonId: targetButton, workspacePath });
                 onClose();
@@ -80,7 +80,7 @@ export function GutterContextMenu({ x, y, onClose, targetButton, workspacePath }
             {hiddenButtons.map((id) => (
               <button
                 key={id}
-                className="w-full flex items-center gap-2 px-2.5 py-2 text-nim hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left rounded-ui-base transition-colors duration-75"
+                className="w-full flex items-center gap-2 px-3 py-2 text-nim hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left rounded-ui-base transition-colors duration-75"
                 onClick={() => {
                   toggleHidden({ buttonId: id, workspacePath });
                   onClose();
@@ -92,7 +92,7 @@ export function GutterContextMenu({ x, y, onClose, targetButton, workspacePath }
             ))}
             <div className="my-1 border-t border-nim" />
             <button
-              className="w-full flex items-center gap-2 px-2.5 py-2 text-nim hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left rounded-ui-base transition-colors duration-75"
+              className="w-full flex items-center gap-2 px-3 py-2 text-nim hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left rounded-ui-base transition-colors duration-75"
               onClick={() => {
                 showAll(workspacePath);
                 onClose();
@@ -106,7 +106,7 @@ export function GutterContextMenu({ x, y, onClose, targetButton, workspacePath }
 
         {/* If nothing to show (no target, nothing hidden) */}
         {!targetButton && !hasHidden && (
-          <div className="px-2.5 py-2 text-nim-muted text-center">
+          <div className="px-3 py-2 text-nim-muted text-center">
             Right-click buttons to hide them
           </div>
         )}

@@ -110,7 +110,7 @@ export const MonacoDiffApprovalBar: React.FC<MonacoDiffApprovalBarProps> = ({
           {renderLabel()}
           {sessionInfo?.sessionId && onGoToSession && (
             <button
-              className="monaco-diff-approval-bar-goto flex items-center gap-1 px-2.5 py-1 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 font-inherit whitespace-nowrap hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
+              className="monaco-diff-approval-bar-goto flex items-center gap-1 px-3 py-1 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 font-inherit whitespace-nowrap hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
               onClick={handleGoToSession}
               type="button"
               title="Open the AI session that made these changes"

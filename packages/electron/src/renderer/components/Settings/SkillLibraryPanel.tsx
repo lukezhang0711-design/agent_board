@@ -318,7 +318,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
                   data-testid={`bundle-skill-checkbox-${card.name}`}
                   checked={isCardInEditingBundle}
                   onChange={(e) => toggleBundleSkillForCard(card, e.target.checked)}
-                  className="rounded-ui-base text-[var(--nim-primary)] cursor-pointer mt-0.5"
+                  className="rounded-ui-base text-[var(--nim-primary)] cursor-pointer mt-1"
                 />
                 <span className="font-semibold text-sm text-[var(--nim-text)] leading-snug break-words">
                   {card.name}
@@ -399,7 +399,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
 
           {/* Expanded full description */}
           {isExpanded && card.rawDescription && (
-            <div className="mt-1 rounded-ui-base bg-[var(--nim-bg-subtle)] p-2.5 text-xs text-[var(--nim-text-muted)] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto border border-[var(--nim-border-subtle)]">
+            <div className="mt-1 rounded-ui-base bg-[var(--nim-bg-subtle)] p-3 text-xs text-[var(--nim-text-muted)] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto border border-[var(--nim-border-subtle)]">
               {card.rawDescription}
             </div>
           )}
@@ -607,7 +607,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
               <button
                 type="button"
                 data-testid="bundle-delete-btn"
-                className="px-2.5 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-danger)] hover:bg-[var(--nim-danger-subtle)] cursor-pointer bg-transparent"
+                className="px-3 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-danger)] hover:bg-[var(--nim-danger-subtle)] cursor-pointer bg-transparent"
                 onClick={handleDeleteBundle}
               >
                 删除
@@ -662,7 +662,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
             <button
               type="button"
               data-testid="save-search-to-bundle-btn"
-              className="px-2.5 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
+              className="px-3 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-subtle)] cursor-pointer"
               onClick={handleSaveSearchToBundle}
             >
               把这 {filteredCards.length} 个存成技能包

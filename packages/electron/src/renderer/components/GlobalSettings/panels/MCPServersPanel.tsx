@@ -1821,7 +1821,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
               </div>
               <div className="mcp-config-title-text">
                 <h4 className="m-0 text-base font-semibold text-[var(--nim-text)]">{selectedTemplate.name}</h4>
-                <p className="m-0 mt-0.5 text-xs text-[var(--nim-text-faint)]">{selectedTemplate.description}</p>
+                <p className="m-0 mt-1 text-xs text-[var(--nim-text-faint)]">{selectedTemplate.description}</p>
               </div>
             </div>
             {selectedTemplate.docsUrl && (
@@ -1949,7 +1949,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
               const help = ENV_VAR_HELP[key];
               return (
                 <div key={key} className="mcp-required-field mb-4 last:mb-0">
-                  <label className="flex items-center gap-1 mb-1.5 font-medium text-sm text-[var(--nim-text)]">
+                  <label className="flex items-center gap-1 mb-2 font-medium text-sm text-[var(--nim-text)]">
                     {help?.label || key}
                     <span className="required-asterisk text-[var(--nim-warning)]">*</span>
                   </label>
@@ -1959,7 +1959,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                     onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
                     onBlur={!isNewConfig ? autoSave : undefined}
                     placeholder={`Enter your ${help?.label || key}`}
-                    className="w-full px-3 py-2.5 border-2 border-[color-mix(in_srgb,var(--nim-warning)_50%,transparent)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:outline-none"
+                    className="w-full px-3 py-3 border-2 border-[color-mix(in_srgb,var(--nim-warning)_50%,transparent)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:outline-none"
                   />
                   {help && (
                     <span className="mcp-field-help block mt-1 text-xs text-[var(--nim-text-faint)]">
@@ -2387,7 +2387,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   <span className="mcp-empty-state-text text-[var(--nim-text-muted)]">No MCP servers configured</span>
                   <button
                     onClick={handleNewServer}
-                    className="mcp-empty-state-cta px-5 py-2.5 rounded-ui-base border-2 border-dashed border-[var(--nim-primary)] bg-transparent text-[var(--nim-primary)] text-sm font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)]"
+                    className="mcp-empty-state-cta px-5 py-3 rounded-ui-base border-2 border-dashed border-[var(--nim-primary)] bg-transparent text-[var(--nim-primary)] text-sm font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)]"
                     aria-label="Add your first MCP server"
                   >
                     + Add Your First Server
@@ -2460,7 +2460,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                         </div>
                       )}
                       <div className="mcp-server-item-info flex-1 min-w-0">
-                        <div className={`mcp-server-item-name font-medium text-sm mb-0.5 ${isActive ? 'text-white' : ''} ${isDisabled ? 'line-through' : ''}`}>{server.name}</div>
+                        <div className={`mcp-server-item-name font-medium text-sm mb-1 ${isActive ? 'text-white' : ''} ${isDisabled ? 'line-through' : ''}`}>{server.name}</div>
                         <div className={`mcp-server-item-command text-xs overflow-hidden text-ellipsis whitespace-nowrap ${isActive ? 'text-white/80' : 'text-[var(--nim-text-faint)]'}`}>{server.command || server.url}</div>
                       </div>
                       {isOAuthServer(server) && serverOAuthStatuses[server.name] === 'not-authorized' && (

@@ -291,7 +291,7 @@ export function MetaAgentMode({
       <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
         <div className="flex items-center justify-between gap-3 m-3 mb-0">
           <div
-            className="meta-agent-identity-badge shrink-0 self-start rounded-ui-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-2.5 py-1 text-[11px] font-bold tracking-[0.12em] text-[var(--nim-primary)]"
+            className="meta-agent-identity-badge shrink-0 self-start rounded-ui-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[11px] font-bold tracking-[0.12em] text-[var(--nim-primary)]"
             data-testid="meta-agent-identity-badge"
             aria-label="META AGENT"
           >

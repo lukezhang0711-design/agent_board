@@ -98,7 +98,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Total Sessions
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5">
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">
             {allSessionCount.toLocaleString()}
           </div>
           {overallStats.sessionCount < allSessionCount && (
@@ -112,7 +112,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Total Tokens
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5">
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">
             {overallStats.totalTokens.toLocaleString()}
           </div>
           <div className="stat-detail text-[11px] text-[var(--nim-text-muted)]">
@@ -124,7 +124,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Normal Input
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5" data-testid="normal-input-tokens">
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1" data-testid="normal-input-tokens">
             {formatTokens(overallStats.totalInputTokens)}
           </div>
         </div>
@@ -133,7 +133,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Read
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5" data-testid="cache-read-input-tokens">
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-read-input-tokens">
             {formatTokens(overallStats.totalCacheReadInputTokens)}
           </div>
         </div>
@@ -142,7 +142,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Creation
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5" data-testid="cache-creation-input-tokens">
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-creation-input-tokens">
             {formatTokens(overallStats.totalCacheCreationInputTokens)}
           </div>
         </div>
@@ -151,7 +151,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
           <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Hit Rate
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5" data-testid="cache-hit-rate">
+          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-hit-rate">
             {formatRate(overallStats.cacheHitRate)}
           </div>
         </div>
@@ -161,7 +161,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
             <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
               Most Used
             </div>
-            <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-0.5">
+            <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">
               {mostUsedProvider.provider}
             </div>
             <div className="stat-detail text-[11px] text-[var(--nim-text-muted)]">

@@ -103,10 +103,10 @@ export const visualTokens: VisualTokensTable = {
     },
     micro: {
       id: 'micro',
-      name: '微间距 (0.5x)',
+      name: '微内衬 2px (0.5x)',
       value: '2px',
-      cssClass: 'p-0.5 / m-0.5',
-      description: '紧凑徽标内边距、状态指示点间隙',
+      cssClass: 'py-0.5 / p-0.5',
+      description: '徽章、药丸、紧凑小标签上下微内衬',
       legacySources: ['1px', '2px', '3px'],
     },
     tight: {

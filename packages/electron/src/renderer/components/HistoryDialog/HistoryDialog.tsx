@@ -584,7 +584,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                     data-snapshot-id={snapshotId}
                     data-snapshot-type={snapshot.type}
                     data-selected={isSelected}
-                    className={`history-item mb-0.5 rounded-ui-base cursor-pointer transition-all duration-150 ${isSelected ? 'selected bg-[var(--nim-primary)]' : 'hover:bg-[var(--nim-bg-hover)]'}`}
+                    className={`history-item mb-1 rounded-ui-base cursor-pointer transition-all duration-150 ${isSelected ? 'selected bg-[var(--nim-primary)]' : 'hover:bg-[var(--nim-bg-hover)]'}`}
                     onClick={(e) => handleSnapshotSelect(snapshotId, snapshot.timestamp, index, e.metaKey || e.ctrlKey)}
                   >
                     <div className="history-item-content py-2 px-2 flex items-center justify-between">

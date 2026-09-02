@@ -85,7 +85,7 @@ export function ArchiveWorktreeDialog({
 
           {hasUncommittedChanges && (
             <div className="archive-worktree-warning flex items-start gap-3 mb-4 p-3 rounded-ui-lg bg-[var(--nim-warning)]/10 border border-[var(--nim-warning)]/30">
-              <MaterialSymbol icon="warning" size={20} className="text-[var(--nim-warning)] shrink-0 mt-0.5" />
+              <MaterialSymbol icon="warning" size={20} className="text-[var(--nim-warning)] shrink-0 mt-1" />
               <div>
                 <p className="m-0 text-sm font-medium text-[var(--nim-warning)]">
                   Uncommitted changes will be lost
@@ -102,7 +102,7 @@ export function ArchiveWorktreeDialog({
 
           {hasUnmergedChanges && (
             <div className="archive-worktree-warning flex items-start gap-3 mb-4 p-3 rounded-ui-lg bg-[var(--nim-warning)]/10 border border-[var(--nim-warning)]/30">
-              <MaterialSymbol icon="warning" size={20} className="text-[var(--nim-warning)] shrink-0 mt-0.5" />
+              <MaterialSymbol icon="warning" size={20} className="text-[var(--nim-warning)] shrink-0 mt-1" />
               <div>
                 <p className="m-0 text-sm font-medium text-[var(--nim-warning)]">
                   Unmerged commits will be lost

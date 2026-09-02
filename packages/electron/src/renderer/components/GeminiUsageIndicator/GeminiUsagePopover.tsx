@@ -75,7 +75,7 @@ const UsageSection: React.FC<UsageSectionProps> = ({
           {Math.round(utilization)}%
         </div>
       </div>
-      <div className="relative h-1.5 bg-nim-tertiary rounded-ui-full overflow-hidden mb-1.5">
+      <div className="relative h-1.5 bg-nim-tertiary rounded-ui-full overflow-hidden mb-2">
         <div
           className={`h-full rounded-ui-full transition-all duration-300 ${colors.bar}`}
           style={{ width: `${Math.min(utilization, 100)}%` }}

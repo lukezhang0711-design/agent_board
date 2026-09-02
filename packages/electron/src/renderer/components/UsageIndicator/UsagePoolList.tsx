@@ -78,7 +78,7 @@ export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessag
                 {pool.utilization}%
               </div>
             </div>
-            <div className="mb-1.5 h-1.5 overflow-hidden rounded-ui-full bg-nim-tertiary">
+            <div className="mb-2 h-1.5 overflow-hidden rounded-ui-full bg-nim-tertiary">
               <div
                 className={`h-full rounded-ui-full transition-all duration-300 ${colors.bar}`}
                 style={{ width: `${barWidth}%` }}

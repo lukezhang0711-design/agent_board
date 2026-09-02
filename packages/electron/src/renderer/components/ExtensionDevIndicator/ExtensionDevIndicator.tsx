@@ -294,7 +294,7 @@ export const ExtensionDevIndicator: React.FC<ExtensionDevIndicatorProps> = ({
             <span className="extension-dev-menu-title text-[13px] font-semibold text-[var(--nim-text)]">Extension Dev Mode</span>
           </div>
 
-          <div className="extension-dev-menu-status flex items-center gap-2 mx-3 mb-2 py-2 px-2.5 rounded-ui-base bg-purple-500/10 border border-purple-500/30 text-xs text-[var(--nim-text-muted)] [&_.material-symbols-outlined]:text-purple-500">
+          <div className="extension-dev-menu-status flex items-center gap-2 mx-3 mb-2 py-2 px-3 rounded-ui-base bg-purple-500/10 border border-purple-500/30 text-xs text-[var(--nim-text-muted)] [&_.material-symbols-outlined]:text-purple-500">
             <MaterialSymbol icon="check_circle" size={16} />
             <span>Development tools active</span>
           </div>

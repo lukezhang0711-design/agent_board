@@ -104,7 +104,7 @@ const TaskRow: React.FC<{
 
   return (
     <div className="flex items-start gap-3 rounded-ui-base border border-nim bg-nim-tertiary px-3 py-2">
-      <div className={`mt-0.5 flex h-7 w-7 items-center justify-center rounded-ui-base bg-nim-tertiary text-nim-muted ${task.status === 'running' ? 'text-[#3b82f6]' : ''} ${task.status === 'error' ? 'text-[#ef4444]' : ''}`}>
+      <div className={`mt-1 flex h-7 w-7 items-center justify-center rounded-ui-base bg-nim-tertiary text-nim-muted ${task.status === 'running' ? 'text-[#3b82f6]' : ''} ${task.status === 'error' ? 'text-[#ef4444]' : ''}`}>
         {task.category === 'ai-session' ? (
           <ProviderIcon provider={task.provider || 'claude-code'} size={16} />
         ) : (
@@ -115,7 +115,7 @@ const TaskRow: React.FC<{
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="truncate text-[13px] font-medium text-nim">{task.label}</div>
-            <div className="mt-0.5 text-[11px] text-nim-muted">{task.detail}</div>
+            <div className="mt-1 text-[11px] text-nim-muted">{task.detail}</div>
           </div>
           {task.category === 'ai-session' && task.status === 'running' ? (
             <SessionRunningIndicator />
@@ -280,7 +280,7 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
             <div className="flex items-center justify-between border-b border-nim px-4 py-3">
               <div>
                 <div className="text-[14px] font-semibold text-nim">Background Tasks</div>
-                <div className="mt-0.5 text-[11px] text-nim-muted">
+                <div className="mt-1 text-[11px] text-nim-muted">
                   Dev mode only. {activeTaskCount > 0 ? `${activeTaskCount} active` : 'No active work'}.
                 </div>
               </div>

@@ -478,7 +478,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
           <span className="plugin-empty-icon material-symbols-outlined text-5xl mb-4 opacity-50">extension_off</span>
           <p className="m-0 mb-6 text-[0.9375rem]">No plugins installed yet</p>
           <button
-            className="plugin-empty-cta py-2.5 px-5 rounded-ui-base border-none bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
+            className="plugin-empty-cta py-3 px-5 rounded-ui-base border-none bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
             onClick={() => setViewState('discover')}
           >
             Browse Plugins
@@ -496,7 +496,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                     <PluginIcon pluginName={plugin.name} category="external" isDark={isDark} />
                   </div>
                   <div className="plugin-installed-details flex-1 min-w-0">
-                    <div className="plugin-installed-name flex items-center gap-2 font-medium text-[0.9375rem] text-[var(--nim-text)] mb-0.5">
+                    <div className="plugin-installed-name flex items-center gap-2 font-medium text-[0.9375rem] text-[var(--nim-text)] mb-1">
                       <span>{plugin.name}</span>
                       {plugin.source && (
                         <span className="plugin-installed-source text-xs text-[var(--nim-text-faint)] font-normal">@{plugin.source}</span>

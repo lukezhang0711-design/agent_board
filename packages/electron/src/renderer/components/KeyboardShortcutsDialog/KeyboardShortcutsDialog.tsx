@@ -312,7 +312,7 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
                       <span className="keyboard-shortcut-label text-[var(--nim-text)] text-sm flex-1">
                         {item.label}
                       </span>
-                      <kbd className="keyboard-shortcut-key bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-2.5 py-1 font-sans text-[13px] font-medium text-[var(--nim-text)] whitespace-nowrap shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] min-w-[60px] text-center">
+                      <kbd className="keyboard-shortcut-key bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-3 py-1 font-sans text-[13px] font-medium text-[var(--nim-text)] whitespace-nowrap shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] min-w-[60px] text-center">
                         {getShortcutDisplay(item.shortcut)}
                       </kbd>
                     </div>

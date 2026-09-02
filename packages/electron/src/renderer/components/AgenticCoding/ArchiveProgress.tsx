@@ -74,7 +74,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
         return (
           <MaterialSymbol
             icon="schedule"
-            className="archive-task-icon archive-task-icon--queued text-lg shrink-0 mt-0.5 text-[var(--nim-text-faint)]"
+            className="archive-task-icon archive-task-icon--queued text-lg shrink-0 mt-1 text-[var(--nim-text-faint)]"
           />
         );
       case 'pending':
@@ -82,21 +82,21 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
         return (
           <MaterialSymbol
             icon="progress_activity"
-            className="archive-task-icon archive-task-icon--active text-lg shrink-0 mt-0.5 text-[var(--nim-primary)] animate-spin"
+            className="archive-task-icon archive-task-icon--active text-lg shrink-0 mt-1 text-[var(--nim-primary)] animate-spin"
           />
         );
       case 'completed':
         return (
           <MaterialSymbol
             icon="check_circle"
-            className="archive-task-icon archive-task-icon--completed text-lg shrink-0 mt-0.5 text-[var(--nim-success)]"
+            className="archive-task-icon archive-task-icon--completed text-lg shrink-0 mt-1 text-[var(--nim-success)]"
           />
         );
       case 'failed':
         return (
           <MaterialSymbol
             icon="error"
-            className="archive-task-icon archive-task-icon--failed text-lg shrink-0 mt-0.5 text-[var(--nim-error)]"
+            className="archive-task-icon archive-task-icon--failed text-lg shrink-0 mt-1 text-[var(--nim-error)]"
           />
         );
     }
@@ -126,7 +126,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
   return (
     <div className="archive-progress shrink-0 border-t border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]">
       <button
-        className="archive-progress-header flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-[var(--nim-text)] bg-transparent border-none w-full cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)]"
+        className="archive-progress-header flex items-center gap-2 px-3 py-3 text-[13px] font-medium text-[var(--nim-text)] bg-transparent border-none w-full cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)]"
         onClick={handleToggleExpand}
       >
         <MaterialSymbol
@@ -161,7 +161,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
             {tasks.map((task) => (
               <div
                 key={task.worktreeId}
-                className={`archive-task flex items-start gap-3 px-3 py-2.5 bg-[var(--nim-bg)] rounded-ui-base border border-[var(--nim-border)] ${task.status === 'completed' ? 'opacity-60' : ''}`}
+                className={`archive-task flex items-start gap-3 px-3 py-3 bg-[var(--nim-bg)] rounded-ui-base border border-[var(--nim-border)] ${task.status === 'completed' ? 'opacity-60' : ''}`}
               >
                 {getStatusIcon(task.status)}
                 <div className="archive-task-content flex-1 min-w-0 flex flex-col gap-1">
@@ -172,7 +172,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
                     {task.worktreeId}
                   </div>
                   <div
-                    className={`archive-task-status text-xs mt-0.5 ${task.status === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}
+                    className={`archive-task-status text-xs mt-1 ${task.status === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}
                   >
                     {task.error || getStatusText(task.status)}
                   </div>

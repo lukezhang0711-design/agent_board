@@ -110,7 +110,7 @@ const SessionTab: React.FC<{
   return (
     <div className="relative">
       <button
-        className={`session-tab flex items-center gap-2 px-2.5 py-[5px] border-none rounded-ui-base text-xs font-medium cursor-pointer whitespace-nowrap transition-colors duration-150 ${
+        className={`session-tab flex items-center gap-2 px-3 py-[5px] border-none rounded-ui-base text-xs font-medium cursor-pointer whitespace-nowrap transition-colors duration-150 ${
           isActive
             ? 'active bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]'
             : 'bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]'

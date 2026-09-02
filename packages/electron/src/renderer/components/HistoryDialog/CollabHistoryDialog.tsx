@@ -224,7 +224,7 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
                     <div
                       key={rev.revisionId}
                       data-testid={`collab-revision-${rev.revisionId}`}
-                      className={`collab-history-item flex items-center gap-2 py-2 px-2 mb-0.5 rounded-ui-base cursor-pointer ${isSelected ? 'bg-[var(--nim-primary)] text-white' : 'hover:bg-[var(--nim-bg-hover)]'}`}
+                      className={`collab-history-item flex items-center gap-2 py-2 px-2 mb-1 rounded-ui-base cursor-pointer ${isSelected ? 'bg-[var(--nim-primary)] text-white' : 'hover:bg-[var(--nim-bg-hover)]'}`}
                       onClick={() => setSelectedId(rev.revisionId)}
                     >
                       <span className="material-symbols-outlined text-lg shrink-0">

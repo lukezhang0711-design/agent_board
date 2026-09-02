@@ -103,7 +103,7 @@ export function UserMenuPopover({ onNavigateSettings, onClose, isProjectConnecte
         {/* Identity row - always shown for login and mobile sync access */}
         <div className="border-t border-nim" />
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left transition-colors duration-100"
+          className="w-full flex items-center gap-3 px-3 py-3 hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left transition-colors duration-100"
           onClick={() => {
             onNavigateSettings('user', 'sync');
             onClose();

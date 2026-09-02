@@ -58,7 +58,7 @@ export function MemoryPromptIndicator({
   }, [target, workspacePath]);
 
   return (
-    <div className="memory-prompt-indicator flex items-center justify-between gap-2 px-2.5 py-2 mb-2 rounded-ui-base border border-[var(--nim-primary)] bg-[var(--nim-bg-secondary)]">
+    <div className="memory-prompt-indicator flex items-center justify-between gap-2 px-3 py-2 mb-2 rounded-ui-base border border-[var(--nim-primary)] bg-[var(--nim-bg-secondary)]">
       <div className="memory-prompt-left flex items-center gap-2">
         <div className="memory-prompt-icon flex items-center justify-center text-[var(--nim-primary)]">
           <MemoryIcon />

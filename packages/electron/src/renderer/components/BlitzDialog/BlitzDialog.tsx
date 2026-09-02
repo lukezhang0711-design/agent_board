@@ -233,7 +233,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
               </p>
             </div>
           </div>
-          <span className="text-[11px] text-nim-faint px-2.5 py-1 rounded-ui-full border border-nim bg-nim-tertiary">
+          <span className="text-[11px] text-nim-faint px-3 py-1 rounded-ui-full border border-nim bg-nim-tertiary">
             Max 10 worktrees
           </span>
         </div>
@@ -281,7 +281,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
                   {modelSelections.map(model => (
                     <label
                       key={model.id}
-                      className={`grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2.5 py-2 cursor-pointer transition-colors rounded-ui-lg border border-nim bg-nim ${
+                      className={`grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-2 cursor-pointer transition-colors rounded-ui-lg border border-nim bg-nim ${
                         model.checked
                           ? 'bg-nim-selected border-l-2 border-l-[var(--nim-primary)]'
                           : 'hover:bg-nim-hover border-l-2 border-l-transparent'

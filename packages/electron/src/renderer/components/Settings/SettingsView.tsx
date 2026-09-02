@@ -868,7 +868,7 @@ export function SettingsView({
         return (
           <>
             {hasWorkspaceMcpServers && scope === 'user' && (
-              <div className="settings-project-indicator flex items-start gap-3 py-3 px-4 mb-6 bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)] rounded-ui-lg text-[var(--nim-text)] [&_.material-symbols-outlined]:text-[var(--nim-info)] [&_.material-symbols-outlined]:shrink-0 [&_.material-symbols-outlined]:mt-0.5">
+              <div className="settings-project-indicator flex items-start gap-3 py-3 px-4 mb-6 bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)] rounded-ui-lg text-[var(--nim-text)] [&_.material-symbols-outlined]:text-[var(--nim-info)] [&_.material-symbols-outlined]:shrink-0 [&_.material-symbols-outlined]:mt-1">
                 <MaterialSymbol icon="info" size={20} />
                 <div className="settings-project-indicator-text flex flex-col gap-1">
                   <strong className="text-sm font-semibold text-[var(--nim-text)]">

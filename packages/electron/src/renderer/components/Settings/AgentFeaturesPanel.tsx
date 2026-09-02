@@ -250,7 +250,7 @@ export function AgentFeaturesPanel() {
             <div className="text-sm font-medium text-[var(--nim-text)] leading-tight">
               Preferred Agent Language
             </div>
-            <div className="text-xs text-[var(--nim-text-muted)] leading-snug mt-0.5">
+            <div className="text-xs text-[var(--nim-text-muted)] leading-snug mt-1">
               Preferred language for AI-generated session names (e.g. "Japanese", "ja", "Spanish"). Leave blank to let the agent pick based on the conversation.
             </div>
           </div>
@@ -272,7 +272,7 @@ export function AgentFeaturesPanel() {
         </div>
 
         <div className="mb-4 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] p-3">
-          <h5 className="text-sm font-semibold mb-1.5 text-[var(--nim-text)]">
+          <h5 className="text-sm font-semibold mb-2 text-[var(--nim-text)]">
             Agent skills and commands compatibility
           </h5>
 
@@ -339,7 +339,7 @@ export function AgentFeaturesPanel() {
                   </label>
                   <div
                     id="meta-agent-max-parallel-help"
-                    className="text-xs text-[var(--nim-text-muted)] leading-snug mt-0.5"
+                    className="text-xs text-[var(--nim-text-muted)] leading-snug mt-1"
                   >
                     New child sessions queue when all parallel slots are in use.
                   </div>

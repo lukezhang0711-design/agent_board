@@ -632,7 +632,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
             {showAISessions && (
               <div className="unified-header-ai-dropdown absolute top-[calc(100%+4px)] right-0 min-w-[300px] max-w-[400px] overflow-hidden rounded-ui-base z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 {/* Dropdown header */}
-                <div className="ai-sessions-header px-4 py-2.5 border-b border-[var(--nim-border)]">
+                <div className="ai-sessions-header px-4 py-3 border-b border-[var(--nim-border)]">
                   <div className="ai-sessions-title text-[11px] font-semibold uppercase tracking-wide text-[var(--nim-text-muted)]">
                     AI Sessions that edited this file
                   </div>
@@ -671,7 +671,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
 
                 {/* Start new session button - only shown when agent mode switch is available */}
                 {onSwitchToAgentMode && (
-                  <div className="ai-session-start-container px-3 py-2.5 border-t border-[var(--nim-border)]">
+                  <div className="ai-session-start-container px-3 py-3 border-t border-[var(--nim-border)]">
                     <button
                       className="ai-session-start-button w-full py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-[13px] font-medium text-left cursor-pointer flex items-center gap-2 transition-all duration-150 text-[var(--nim-text-muted)] bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
                       onClick={handleStartAgentSession}
@@ -810,7 +810,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                           {sharedDocNameAndFolder.name}
                         </span>
                         {sharedDocNameAndFolder.folder && (
-                          <sub className="shared-doc-open-link-folder text-[11px] text-[var(--nim-text-faint)] truncate not-italic align-baseline mt-0.5">
+                          <sub className="shared-doc-open-link-folder text-[11px] text-[var(--nim-text-faint)] truncate not-italic align-baseline mt-1">
                             {sharedDocNameAndFolder.folder}
                           </sub>
                         )}

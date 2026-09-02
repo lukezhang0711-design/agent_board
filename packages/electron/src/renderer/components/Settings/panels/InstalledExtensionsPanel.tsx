@@ -370,7 +370,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
         <div className="flex gap-4 flex-1 min-h-0">
           {/* Left: Extension list */}
           <div className="w-[260px] flex-shrink-0 flex flex-col bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg overflow-hidden">
-            <div className="px-3 py-2.5 border-b border-[var(--nim-border)] flex items-center justify-between flex-shrink-0">
+            <div className="px-3 py-3 border-b border-[var(--nim-border)] flex items-center justify-between flex-shrink-0">
               <span className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Extensions</span>
               <span className="text-xs text-[var(--nim-text-faint)]">
                 {enabledCount}/{totalCount}
@@ -383,9 +383,9 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
               {extensions.map((ext) => (
                 <div
                   key={ext.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer border-b border-[var(--nim-border)] transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-3 cursor-pointer border-b border-[var(--nim-border)] transition-colors ${
                     selectedId === ext.id
-                      ? 'bg-[rgba(38,139,210,0.15)] border-l-2 border-l-[var(--nim-primary)] pl-2.5'
+                      ? 'bg-[rgba(38,139,210,0.15)] border-l-2 border-l-[var(--nim-primary)] pl-3'
                       : 'hover:bg-[var(--nim-bg-hover)]'
                   } ${!ext.enabled ? 'opacity-50' : ''}`}
                   onClick={() => setSelectedId(ext.id)}
@@ -397,7 +397,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                         <MaterialSymbol icon="upgrade" size={14} className="text-[var(--nim-primary)] shrink-0" />
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 mt-1">
                       <span className={`inline-flex items-center px-2 py-0 rounded-ui-base text-[0.625rem] font-semibold uppercase tracking-tight ${sourcePillClasses(ext.source)}`}>
                         {sourceLabel(ext.source)}
                       </span>
@@ -516,7 +516,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   {/* Claude Plugin */}
                   {selectedExtension.manifest.contributions?.claudePlugin && (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">Claude Agent Plugin</div>
+                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Claude Agent Plugin</div>
                       <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-3">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-xs font-medium text-[var(--nim-text)]">
@@ -529,7 +529,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                             disabled={processingId === selectedExtension.id || !selectedExtension.enabled}
                           />
                         </div>
-                        <div className="text-xs text-[var(--nim-text-muted)] mb-2.5">
+                        <div className="text-xs text-[var(--nim-text-muted)] mb-3">
                           {selectedExtension.manifest.contributions.claudePlugin.description || 'No description'}
                         </div>
                         {selectedExtension.manifest.contributions.claudePlugin.commands && selectedExtension.manifest.contributions.claudePlugin.commands.length > 0 && (
@@ -552,7 +552,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
 
                   {selectedExtension.manifest.contributions?.agentWorkflows && (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">Agent Workflows</div>
+                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Agent Workflows</div>
                       <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-3">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-xs font-medium text-[var(--nim-text)]">
@@ -580,7 +580,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   {/* Contributions */}
                   {selectedExtension.manifest.contributions && (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">Contributions</div>
+                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Contributions</div>
                       <div className="flex flex-wrap gap-2">
                         {selectedExtension.manifest.contributions.customEditors?.map((editor, idx) => (
                           <span key={`editor-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
@@ -621,22 +621,22 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   {/* Permissions */}
                   {selectedExtension.manifest.permissions && (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">Permissions</div>
+                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Permissions</div>
                       <div className="flex flex-wrap gap-2">
                         {selectedExtension.manifest.permissions.filesystem && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                             <span className="material-symbols-outlined text-sm">folder</span>
                             File System
                           </span>
                         )}
                         {selectedExtension.manifest.permissions.ai && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                             <span className="material-symbols-outlined text-sm">psychology</span>
                             AI Tools
                           </span>
                         )}
                         {selectedExtension.manifest.permissions.network && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                             <span className="material-symbols-outlined text-sm">cloud</span>
                             Network
                           </span>

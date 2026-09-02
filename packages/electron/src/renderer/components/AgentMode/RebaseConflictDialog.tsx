@@ -73,7 +73,7 @@ export function RebaseConflictDialog({
           </p>
 
           <div className="merge-conflict-dialog-files mb-4 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-            <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-2.5 text-[13px] font-medium text-[var(--nim-text)]">
+            <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-[13px] font-medium text-[var(--nim-text)]">
               <MaterialSymbol icon="description" size={16} />
               <span>Conflicted Files:</span>
             </div>
@@ -91,7 +91,7 @@ export function RebaseConflictDialog({
             <div className="grid grid-cols-2 gap-3 mb-4">
               {ourCommits.length > 0 && (
                 <div className="merge-conflict-dialog-files p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-                  <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-2.5 text-[13px] font-medium text-[var(--nim-primary)]">
+                  <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-[13px] font-medium text-[var(--nim-primary)]">
                     <MaterialSymbol icon="commit" size={16} />
                     <span>Your Conflicting Commits:</span>
                   </div>
@@ -116,7 +116,7 @@ export function RebaseConflictDialog({
 
               {theirCommits.length > 0 && (
                 <div className="merge-conflict-dialog-files p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-                  <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-2.5 text-[13px] font-medium text-[var(--nim-success)]">
+                  <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-[13px] font-medium text-[var(--nim-success)]">
                     <MaterialSymbol icon="commit" size={16} />
                     <span>Incoming Conflicting Commits:</span>
                   </div>

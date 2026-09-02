@@ -292,7 +292,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                   <button
                     onClick={handleGoogleSignIn}
                     disabled={authLoading || !isStytchAvailable}
-                    className="w-full px-4 py-2.5 flex items-center justify-center gap-3 bg-white border border-[var(--nim-border)] rounded-ui-lg text-[#333] font-medium text-[0.8125rem] cursor-pointer disabled:opacity-70 disabled:cursor-wait"
+                    className="w-full px-4 py-3 flex items-center justify-center gap-3 bg-white border border-[var(--nim-border)] rounded-ui-lg text-[#333] font-medium text-[0.8125rem] cursor-pointer disabled:opacity-70 disabled:cursor-wait"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -322,7 +322,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                     <button
                       type="submit"
                       disabled={authLoading || !isStytchAvailable || !authEmail}
-                      className="w-full px-4 py-2.5 rounded-ui-lg border-none text-[0.8125rem] font-medium text-white bg-[var(--nim-primary)] cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                      className="w-full px-4 py-3 rounded-ui-lg border-none text-[0.8125rem] font-medium text-white bg-[var(--nim-primary)] cursor-pointer disabled:opacity-50 disabled:cursor-default"
                     >
                       {authLoading ? 'Sending...' : 'Send sign-in link'}
                     </button>
@@ -339,7 +339,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               {/* Footer cancel */}
               <div className="flex justify-end mt-5">
                 <button
-                  className="px-4 py-2.5 rounded-ui-lg border-none text-[0.8125rem] cursor-pointer text-[var(--nim-text-muted)] bg-transparent transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="px-4 py-3 rounded-ui-lg border-none text-[0.8125rem] cursor-pointer text-[var(--nim-text-muted)] bg-transparent transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={onClose}
                 >
                   Cancel
@@ -350,7 +350,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             <>
               {/* Privacy explanation */}
               <div className="flex gap-3 p-3 mb-5 rounded-ui-lg bg-[var(--nim-bg-hover)]">
-                <MaterialSymbol icon="lock" size={18} className="shrink-0 mt-0.5 text-[var(--nim-text-muted)]" />
+                <MaterialSymbol icon="lock" size={18} className="shrink-0 mt-1 text-[var(--nim-text-muted)]" />
                 <div>
                   <p className="m-0 text-[0.8125rem] text-[var(--nim-text)]">
                     Anyone with the link can view this {contentLabel}
@@ -366,7 +366,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               {/* Expiration dropdown */}
               {shareState !== 'success' && (
                 <div className="mb-5">
-                  <label className="block text-[0.75rem] font-medium text-[var(--nim-text-muted)] mb-1.5">
+                  <label className="block text-[0.75rem] font-medium text-[var(--nim-text-muted)] mb-2">
                     Link expires after
                   </label>
                   <select
@@ -382,7 +382,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                       </option>
                     ))}
                   </select>
-                  <p className="m-0 mt-1.5 text-[0.6875rem] text-[var(--nim-text-faint)]">
+                  <p className="m-0 mt-2 text-[0.6875rem] text-[var(--nim-text-faint)]">
                     Your choice will be remembered for next time
                   </p>
                 </div>
@@ -391,7 +391,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               {/* Success state: show URL */}
               {shareState === 'success' && shareUrl && (
                 <div className="mb-5">
-                  <label className="block text-[0.75rem] font-medium text-[var(--nim-text-muted)] mb-1.5">
+                  <label className="block text-[0.75rem] font-medium text-[var(--nim-text-muted)] mb-2">
                     Share link
                   </label>
                   <div className="flex gap-2">
@@ -425,7 +425,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               <div className="flex justify-end gap-2">
                 {shareState === 'success' ? (
                   <button
-                    className="px-5 py-2.5 rounded-ui-lg border-none text-[0.8125rem] font-medium cursor-pointer text-[var(--nim-text)] bg-[var(--nim-bg-hover)] transition-colors duration-150 hover:bg-[var(--nim-border)]"
+                    className="px-5 py-3 rounded-ui-lg border-none text-[0.8125rem] font-medium cursor-pointer text-[var(--nim-text)] bg-[var(--nim-bg-hover)] transition-colors duration-150 hover:bg-[var(--nim-border)]"
                     onClick={onClose}
                   >
                     Done
@@ -433,13 +433,13 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                 ) : (
                   <>
                     <button
-                      className="px-4 py-2.5 rounded-ui-lg border-none text-[0.8125rem] cursor-pointer text-[var(--nim-text-muted)] bg-transparent transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="px-4 py-3 rounded-ui-lg border-none text-[0.8125rem] cursor-pointer text-[var(--nim-text-muted)] bg-transparent transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onClick={onClose}
                     >
                       Cancel
                     </button>
                     <button
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-ui-lg border-none text-[0.8125rem] font-medium cursor-pointer text-white bg-[var(--nim-primary)] transition-all duration-150 hover:brightness-110 disabled:opacity-50 disabled:cursor-default"
+                      className="flex items-center gap-2 px-5 py-3 rounded-ui-lg border-none text-[0.8125rem] font-medium cursor-pointer text-white bg-[var(--nim-primary)] transition-all duration-150 hover:brightness-110 disabled:opacity-50 disabled:cursor-default"
                       onClick={handleShare}
                       disabled={shareState === 'sharing'}
                     >

@@ -109,7 +109,7 @@
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
-    "fileCount": 2
+    "fileCount": 3
   },
   "components/DiffPreview": {
     "pxFonts": 3,
@@ -462,11 +462,11 @@
     "fileCount": 20
   },
   "components/common": {
-    "pxFonts": 9,
-    "rawColors": 2,
+    "pxFonts": 6,
+    "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
-    "fileCount": 5
+    "fileCount": 10
   },
   "components/editors": {
     "pxFonts": 0,

@@ -318,7 +318,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
 
           {/* Current mode - prominent display */}
           <div className={`trust-menu-current-mode ${getStatusClass()} ${getCurrentModeClasses()}`}>
-            <div className="trust-menu-current-mode-label text-[11px] font-medium text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1.5">
+            <div className="trust-menu-current-mode-label text-[11px] font-medium text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-2">
               Current mode:
             </div>
             <div className={`trust-menu-current-mode-value flex items-center gap-2 text-sm font-semibold mb-1 ${getModeValueColorClass()}`}>

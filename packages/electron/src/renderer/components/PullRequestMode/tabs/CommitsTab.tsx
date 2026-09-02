@@ -76,7 +76,7 @@ export function CommitsTab({ workspaceId, remote, pr, refreshToken }: CommitsTab
           >
             <div className="flex-1 min-w-0">
               <div className="text-sm text-nim truncate">{commit.message.split('\n')[0]}</div>
-              <div className="text-[11px] text-nim-faint flex items-center gap-2 mt-0.5">
+              <div className="text-[11px] text-nim-faint flex items-center gap-2 mt-1">
                 {commit.authorLogin && <span>{commit.authorLogin}</span>}
                 <span>{formatRelative(commit.authoredAt)}</span>
                 {(commit.additions > 0 || commit.deletions > 0) && (

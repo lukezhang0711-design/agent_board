@@ -190,7 +190,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
       {/* Pending fallback banner */}
       {pendingFallback && (
         <div className="theme-fallback-banner mb-4 p-3 bg-nim-warning/10 border border-nim-warning/30 rounded-ui-base flex items-start gap-2">
-          <MaterialSymbol icon="info" size={18} className="text-nim-warning shrink-0 mt-0.5" />
+          <MaterialSymbol icon="info" size={18} className="text-nim-warning shrink-0 mt-1" />
           <div className="flex-1 text-sm text-nim">
             The theme <span className="font-semibold">{pendingFallback.missingId}</span> is no longer available. Switched to <span className="font-semibold">{pendingFallback.appliedId}</span>.
           </div>
@@ -402,7 +402,7 @@ export const ThemesPanel: React.FC<ThemesPanelProps> = ({ scope, workspacePath }
           <div className="flex items-start justify-between mb-3">
             <div>
               <h3 className="text-sm font-medium text-nim">{selectedTheme.name}</h3>
-              <p className="text-xs text-nim-muted mt-0.5">{selectedTheme.description || 'No description'}</p>
+              <p className="text-xs text-nim-muted mt-1">{selectedTheme.description || 'No description'}</p>
             </div>
             <button
               onClick={() => setSelectedThemeId(null)}

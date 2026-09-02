@@ -389,7 +389,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-nim-primary"
+                    className="shrink-0 mt-1 text-nim-primary"
                   >
                     <path d="M13.5 4.5l-7 7-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -403,7 +403,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-nim-primary"
+                    className="shrink-0 mt-1 text-nim-primary"
                   >
                     <path d="M13.5 4.5l-7 7-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -417,7 +417,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-nim-primary"
+                    className="shrink-0 mt-1 text-nim-primary"
                   >
                     <path d="M13.5 4.5l-7 7-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -441,7 +441,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-[#f59e0b]"
+                    className="shrink-0 mt-1 text-[#f59e0b]"
                   >
                     <path d="M8 5.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                     <path d="M8 11h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -456,7 +456,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-[#f59e0b]"
+                    className="shrink-0 mt-1 text-[#f59e0b]"
                   >
                     <path d="M8 5.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                     <path d="M8 11h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -471,7 +471,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-[#f59e0b]"
+                    className="shrink-0 mt-1 text-[#f59e0b]"
                   >
                     <path d="M8 5.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                     <path d="M8 11h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -496,7 +496,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-[#f59e0b]"
+                    className="shrink-0 mt-1 text-[#f59e0b]"
                   >
                     <path d="M8 5.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                     <path d="M8 11h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -511,7 +511,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-[#f59e0b]"
+                    className="shrink-0 mt-1 text-[#f59e0b]"
                   >
                     <path d="M8 5.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                     <path d="M8 11h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -526,7 +526,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                     height="14"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="shrink-0 mt-0.5 text-[#f59e0b]"
+                    className="shrink-0 mt-1 text-[#f59e0b]"
                   >
                     <path d="M8 5.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                     <path d="M8 11h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -540,7 +540,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                   checked={allowAllUsesClassifier}
                   onChange={(e) => setAllowAllUsesClassifier(e.target.checked)}
                   disabled={isSubmitting}
-                  className="mt-0.5"
+                  className="mt-1"
                 />
                 <span className="text-[13px] leading-relaxed text-nim-muted">
                   <strong className="font-medium text-nim">Run an AI safety classifier (Claude Code)</strong> — review risky operations like deploys and prompt for confirmation instead of running them silently.

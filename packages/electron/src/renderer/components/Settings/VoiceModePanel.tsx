@@ -404,7 +404,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
           data-testid="voice-mode-mic-permission-warning"
         >
           <div className="flex items-start gap-3">
-            <MaterialSymbol icon="mic_off" size={20} className="mt-0.5 text-[var(--nim-warning)]" />
+            <MaterialSymbol icon="mic_off" size={20} className="mt-1 text-[var(--nim-warning)]" />
             <div className="flex-1">
               <h4 className="text-sm font-medium text-[var(--nim-text)] mb-1">Microphone access not granted</h4>
               <p className="text-xs text-[var(--nim-text-muted)] mb-3">

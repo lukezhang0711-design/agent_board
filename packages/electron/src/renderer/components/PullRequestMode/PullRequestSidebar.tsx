@@ -39,14 +39,14 @@ export function PullRequestSidebar({
           Pull Requests
         </div>
         {remote && (
-          <div className="text-[11px] text-nim-faint truncate mt-0.5" title={remote}>
+          <div className="text-[11px] text-nim-faint truncate mt-1" title={remote}>
             {remote}
           </div>
         )}
       </div>
 
       <div className="px-2 pt-2 pb-1">
-        <div className="text-[10px] font-semibold text-nim-faint uppercase tracking-wider px-1 mb-1.5">
+        <div className="text-[10px] font-semibold text-nim-faint uppercase tracking-wider px-1 mb-2">
           Filters
         </div>
         <div className="flex flex-wrap gap-1">
