@@ -17,10 +17,10 @@ export function ProcessingAttachmentPreview({ filename }: ProcessingAttachmentPr
         <div className="attachment-preview-spinner w-5 h-5 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
       </div>
       <div className="attachment-preview-info flex-1 min-w-0 flex flex-col gap-1">
-        <div className="attachment-preview-filename text-[13px] font-medium text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis" title={filename}>
+        <div className="attachment-preview-filename text-ui-body font-medium text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis" title={filename}>
           {filename}
         </div>
-        <div className="attachment-preview-size attachment-preview-processing-text text-[11px] text-[var(--nim-text-faint)] italic">
+        <div className="attachment-preview-size attachment-preview-processing-text text-ui-caption text-[var(--nim-text-faint)] italic">
           Processing...
         </div>
       </div>
@@ -129,10 +129,10 @@ export function AttachmentPreview({ attachment, onRemove, onConvertToText }: Att
         </div>
 
       <div className="attachment-preview-info flex-1 min-w-0 flex flex-col gap-1">
-        <div className="attachment-preview-filename text-[13px] font-medium text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis" title={attachment.filename}>
+        <div className="attachment-preview-filename text-ui-body font-medium text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis" title={attachment.filename}>
           {attachment.filename}
         </div>
-        <div className="attachment-preview-size text-[11px] text-[var(--nim-text-faint)]">
+        <div className="attachment-preview-size text-ui-caption text-[var(--nim-text-faint)]">
           {formatFileSize(attachment.size)}
         </div>
       </div>
@@ -193,7 +193,7 @@ export function AttachmentPreview({ attachment, onRemove, onConvertToText }: Att
           }}
         >
           <button
-            className="attachment-context-menu-item block w-full py-2 px-3 border-none bg-transparent text-[13px] text-[var(--nim-text)] text-left cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
+            className="attachment-context-menu-item block w-full py-2 px-3 border-none bg-transparent text-ui-body text-[var(--nim-text)] text-left cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
             onClick={handleConvertToText}
           >
             Insert as text

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../common/PageHeader';
 
 interface SquashCommitModalProps {
   isOpen: boolean;
@@ -63,22 +64,24 @@ export function SquashCommitModal({
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
-          <div className="squash-commit-modal-header flex items-center justify-between px-5 py-4 border-b border-[var(--nim-border)]">
-            <h3 className="squash-commit-modal-title m-0 text-base font-semibold text-[var(--nim-text)]">
-              Squash {commitCount} Commits
-            </h3>
-            <button
-              type="button"
-              className="squash-commit-modal-close nim-btn-icon"
-              onClick={onCancel}
-              title="Close"
-            >
-              <MaterialSymbol icon="close" size={20} />
-            </button>
-          </div>
+          <PageHeader
+            title={`Squash ${commitCount} Commits`}
+            actions={
+              <button
+                type="button"
+                className="squash-commit-modal-close nim-btn-icon"
+                onClick={onCancel}
+                title="Close"
+              >
+                <MaterialSymbol icon="close" size={20} />
+              </button>
+            }
+            className="px-5 py-4"
+            testId="squash-commit-modal-header"
+          />
 
           {warningMessage && (
-            <div className="squash-commit-modal-warning flex items-center gap-2 px-5 py-3 text-sm leading-relaxed bg-[rgba(255,152,0,0.1)] border-b border-[rgba(255,152,0,0.3)] text-[var(--nim-warning)]">
+            <div className="squash-commit-modal-warning flex items-center gap-2 px-5 py-3 text-sm leading-relaxed bg-nim-warning-subtle border-b border-nim-warning-subtle text-[var(--nim-warning)]">
               <MaterialSymbol icon="warning" size={20} className="shrink-0" />
               <span>{warningMessage}</span>
             </div>

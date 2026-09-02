@@ -126,7 +126,7 @@ const TeammateSection: React.FC<TeammateSectionProps> = React.memo(({
         />
         <MaterialSymbol icon="group" size={16} className="text-[var(--nim-text-muted)] shrink-0" />
         <span className="text-xs font-medium text-[var(--nim-text)]">Teammates</span>
-        <span className="ml-auto text-[11px] text-[var(--nim-text-muted)] font-mono">
+        <span className="ml-auto text-ui-caption text-[var(--nim-text-muted)] font-mono">
           {runningCount}/{entries.length}
         </span>
       </button>
@@ -176,7 +176,7 @@ const TaskSection: React.FC<TaskSectionProps> = React.memo(({
         />
         <MaterialSymbol icon="swap_horiz" size={16} className="text-[var(--nim-text-muted)] shrink-0" />
         <span className="text-xs font-medium text-[var(--nim-text)]">Sub-agents</span>
-        <span className="ml-auto text-[11px] text-[var(--nim-text-muted)] font-mono">
+        <span className="ml-auto text-ui-caption text-[var(--nim-text-muted)] font-mono">
           {runningCount}/{tasks.length}
         </span>
       </button>
@@ -269,10 +269,10 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ task }) => {
           <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
         {task.status === 'completed' && (
-          <span className="text-[#4ade80] text-[10px]">&#x25CF;</span>
+          <span className="text-[var(--nim-success)] text-ui-micro">&#x25CF;</span>
         )}
         {(task.status === 'failed' || task.status === 'stopped') && (
-          <span className="text-[var(--nim-error)] text-[10px]">&#x25CF;</span>
+          <span className="text-[var(--nim-error)] text-ui-micro">&#x25CF;</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -282,7 +282,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ task }) => {
           {task.description}
         </div>
         {stats.length > 0 && (
-          <div className="text-[10px] text-[var(--nim-text-faint)] truncate font-mono">
+          <div className="text-ui-micro text-[var(--nim-text-faint)] truncate font-mono">
             {stats.join(' \u00B7 ')}
           </div>
         )}
@@ -344,13 +344,13 @@ const TeammateItem: React.FC<TeammateItemProps> = React.memo(({ teammate, onClic
           <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
         {teammate.status === 'idle' && (
-          <span className="text-[var(--nim-primary)] text-[10px]">&#x25CB;</span>
+          <span className="text-[var(--nim-primary)] text-ui-micro">&#x25CB;</span>
         )}
         {teammate.status === 'completed' && (
-          <span className="text-[var(--nim-success)] text-[10px]">&#x25CF;</span>
+          <span className="text-[var(--nim-success)] text-ui-micro">&#x25CF;</span>
         )}
         {teammate.status === 'errored' && (
-          <span className="text-[var(--nim-error)] text-[10px]">&#x25CF;</span>
+          <span className="text-[var(--nim-error)] text-ui-micro">&#x25CF;</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -361,11 +361,11 @@ const TeammateItem: React.FC<TeammateItemProps> = React.memo(({ teammate, onClic
         }`}>
           {teammate.name}
         </div>
-        <div className="text-[10px] text-[var(--nim-text-faint)] truncate">
+        <div className="text-ui-micro text-[var(--nim-text-faint)] truncate">
           {teammate.agentType}{teammate.status === 'idle' ? ' (idle)' : ''}
         </div>
         {stats.length > 0 && (
-          <div className="text-[10px] text-[var(--nim-text-faint)] truncate font-mono">
+          <div className="text-ui-micro text-[var(--nim-text-faint)] truncate font-mono">
             {stats.join(' \u00B7 ')}
           </div>
         )}

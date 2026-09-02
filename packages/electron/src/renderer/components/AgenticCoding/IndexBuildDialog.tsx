@@ -1,4 +1,5 @@
 import React from 'react';
+import { PageHeader } from '../common/PageHeader';
 
 export interface IndexBuildDialogProps {
   isOpen: boolean;
@@ -26,9 +27,11 @@ export const IndexBuildDialog: React.FC<IndexBuildDialogProps> = ({
         className="index-build-dialog min-w-[400px] max-w-[500px] rounded-ui-lg p-6 shadow-lg border border-[var(--nim-border)] bg-[var(--nim-bg)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="index-build-dialog-title m-0 mb-3 text-lg font-semibold text-[var(--nim-text)]">
-          Build Search Index?
-        </h2>
+        <PageHeader
+          title="Build Search Index?"
+          className="p-0 mb-3 border-none"
+          testId="index-build-dialog-header"
+        />
         <p className="index-build-dialog-message m-0 mb-6 text-sm leading-relaxed text-[var(--nim-text-muted)] [&_strong]:text-[var(--nim-text)]">
           Your session history contains <strong>{messageCount.toLocaleString()}</strong> messages.
           Building a search index will make searches much faster, but may take a few minutes.

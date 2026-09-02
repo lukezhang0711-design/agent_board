@@ -139,7 +139,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
           >
             {/* Show Files section */}
             <div className="files-scope-dropdown__section px-3 py-2 border-b border-[var(--nim-border)]">
-              <div className="files-scope-dropdown__section-header text-[10px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wide mb-2">
+              <div className="files-scope-dropdown__section-header text-ui-micro font-semibold text-[var(--nim-text-faint)] uppercase tracking-wide mb-2">
                 Show Files
               </div>
               {(Object.entries(SCOPE_MODE_LABELS) as [AgentFileScopeMode, { title: string; description: string }][]).map(
@@ -167,7 +167,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
                         <span className="files-scope-dropdown__option-title text-xs font-medium text-[var(--nim-text)]">
                           {title}
                         </span>
-                        <span className="files-scope-dropdown__option-description text-[10px] text-[var(--nim-text-muted)]">
+                        <span className="files-scope-dropdown__option-description text-ui-micro text-[var(--nim-text-muted)]">
                           {displayDescription}
                         </span>
                       </div>
@@ -180,7 +180,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
             {/* Scope section - only show if multiple sessions and not in all-changes mode */}
             {hasMultipleSessions && fileScopeMode !== 'all-changes' && (
               <div className="files-scope-dropdown__section px-3 py-2 border-b border-[var(--nim-border)]">
-                <div className="files-scope-dropdown__section-header text-[10px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wide mb-2">
+                <div className="files-scope-dropdown__section-header text-ui-micro font-semibold text-[var(--nim-text-faint)] uppercase tracking-wide mb-2">
                   Scope
                 </div>
                 <label className="files-scope-dropdown__option flex items-center gap-2 px-2 py-2 rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)]">
@@ -212,7 +212,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
 
             {/* Display section */}
             <div className="files-scope-dropdown__section px-3 py-2">
-              <div className="files-scope-dropdown__section-header text-[10px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wide mb-2">
+              <div className="files-scope-dropdown__section-header text-ui-micro font-semibold text-[var(--nim-text-faint)] uppercase tracking-wide mb-2">
                 Display
               </div>
               <label className="files-scope-dropdown__option flex items-center gap-2 px-2 py-2 rounded-ui-base cursor-pointer hover:bg-[var(--nim-bg-hover)]">

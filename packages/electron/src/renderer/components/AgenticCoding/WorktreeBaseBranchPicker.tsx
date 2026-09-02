@@ -20,6 +20,7 @@
 
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PageHeader } from '../common/PageHeader';
 
 interface WorktreeBaseBranchPickerProps {
   isOpen: boolean;
@@ -273,18 +274,18 @@ export function WorktreeBaseBranchPicker({
         aria-label="Create new worktree"
         aria-busy={isSubmitting}
       >
-        <div className="worktree-base-branch-picker-header px-6 pt-6 pb-4 border-b border-nim">
-          <h2 className="m-0 text-[18px] font-semibold text-nim">Create new worktree</h2>
-          <p className="m-0 mt-1 text-[13px] text-nim-muted">
-            Pick a base branch and (optionally) a name for the new worktree.
-          </p>
-        </div>
+        <PageHeader
+          title="Create new worktree"
+          subtitle="Pick a base branch and (optionally) a name for the new worktree."
+          className="px-6 pt-6 pb-4"
+          testId="worktree-base-branch-picker-header"
+        />
 
         <div className="worktree-base-branch-picker-body flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5">
           <div className="worktree-name-field flex flex-col gap-2">
             <label
               htmlFor="worktree-name-input"
-              className="text-[12px] font-semibold text-nim uppercase tracking-wider"
+              className="text-ui-compact font-semibold text-nim uppercase tracking-wider"
             >
               Worktree name
             </label>
@@ -295,7 +296,7 @@ export function WorktreeBaseBranchPicker({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Leave blank to auto-generate (e.g. swift-rabbit)"
-              className="worktree-name-input px-3 py-2 text-[13px] rounded-ui-base border border-nim bg-nim-secondary text-nim focus:outline-none focus:border-nim-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="worktree-name-input px-3 py-2 text-ui-body rounded-ui-base border border-nim bg-nim-secondary text-nim focus:outline-none focus:border-nim-primary disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="worktree-name-input"
               autoComplete="off"
               spellCheck={false}
@@ -303,7 +304,7 @@ export function WorktreeBaseBranchPicker({
               aria-invalid={Boolean(nameError)}
               aria-describedby={nameError ? 'worktree-name-error' : undefined}
             />
-            <div className="flex items-center justify-between text-[11px] text-nim-muted gap-2">
+            <div className="flex items-center justify-between text-ui-caption text-nim-muted gap-2">
               <span className="font-mono truncate" data-testid="worktree-branch-preview">
                 Branch: {branchPreview}
               </span>
@@ -321,12 +322,12 @@ export function WorktreeBaseBranchPicker({
 
           <div className="worktree-base-branch-field flex flex-col gap-2 min-h-[140px]">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-semibold text-nim uppercase tracking-wider">
+              <span className="text-ui-compact font-semibold text-nim uppercase tracking-wider">
                 Base branch
               </span>
               {isRefreshingRemotes && (
                 <span
-                  className="text-[11px] text-nim-muted italic"
+                  className="text-ui-caption text-nim-muted italic"
                   data-testid="worktree-base-branch-refreshing"
                 >
                   Refreshing remotes…
@@ -336,7 +337,7 @@ export function WorktreeBaseBranchPicker({
 
             {isLoading && (
               <div
-                className="px-3 py-3 text-[12px] text-nim-muted"
+                className="px-3 py-3 text-ui-compact text-nim-muted"
                 data-testid="worktree-base-branch-loading"
               >
                 Loading branches…
@@ -344,11 +345,11 @@ export function WorktreeBaseBranchPicker({
             )}
 
             {!isLoading && loadError && (
-              <div className="px-3 py-3 text-[12px] text-[var(--nim-error)]">{loadError}</div>
+              <div className="px-3 py-3 text-ui-compact text-[var(--nim-error)]">{loadError}</div>
             )}
 
             {!isLoading && !loadError && !hasAnyBranch && (
-              <div className="px-3 py-3 text-[12px] text-nim-muted">No branches found.</div>
+              <div className="px-3 py-3 text-ui-compact text-nim-muted">No branches found.</div>
             )}
 
             {!isLoading && !loadError && hasAnyBranch && (
@@ -383,7 +384,7 @@ export function WorktreeBaseBranchPicker({
 
           {submitError && (
             <div
-              className="worktree-base-branch-submit-error text-[12px] text-[var(--nim-error)] px-3 py-2 rounded-ui-base border border-[var(--nim-error)] bg-[var(--nim-error)]/10"
+              className="worktree-base-branch-submit-error text-ui-compact text-[var(--nim-error)] px-3 py-2 rounded-ui-base border border-[var(--nim-error)] bg-[var(--nim-error)]/10"
               data-testid="worktree-base-branch-submit-error"
               role="alert"
             >
@@ -395,7 +396,7 @@ export function WorktreeBaseBranchPicker({
         <div className="worktree-base-branch-picker-footer flex justify-end gap-3 px-6 py-4 border-t border-nim">
           <button
             type="button"
-            className="worktree-base-branch-cancel nim-btn-secondary px-4 py-2 text-[13px] font-medium rounded-ui-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="worktree-base-branch-cancel nim-btn-secondary px-4 py-2 text-ui-body font-medium rounded-ui-lg disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="worktree-base-branch-cancel"
             onClick={handleCancel}
             disabled={isSubmitting}
@@ -404,7 +405,7 @@ export function WorktreeBaseBranchPicker({
           </button>
           <button
             type="button"
-            className="worktree-base-branch-create nim-btn-primary px-5 py-2 text-[13px] font-semibold rounded-ui-lg disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            className="worktree-base-branch-create nim-btn-primary px-5 py-2 text-ui-body font-semibold rounded-ui-lg disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
             data-testid="worktree-base-branch-create"
             onClick={() => void handleSubmit()}
             disabled={!canSubmit}
@@ -443,7 +444,7 @@ function BranchSection({ title, branches, current, selected, onSelect, disabled 
     <div className="worktree-base-branch-section" role="group" aria-labelledby={sectionLabelId}>
       <div
         id={sectionLabelId}
-        className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-nim-faint"
+        className="px-2 py-1 text-ui-micro font-semibold uppercase tracking-wider text-nim-faint"
       >
         {title}
       </div>
@@ -457,7 +458,7 @@ function BranchSection({ title, branches, current, selected, onSelect, disabled 
                 type="button"
                 role="radio"
                 aria-checked={isSelected}
-                className={`worktree-base-branch-item flex items-center w-full px-2 py-2 text-left text-[12px] bg-transparent border-none cursor-pointer gap-2 rounded-ui-base disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`worktree-base-branch-item flex items-center w-full px-2 py-2 text-left text-ui-compact bg-transparent border-none cursor-pointer gap-2 rounded-ui-base disabled:opacity-50 disabled:cursor-not-allowed ${
                   isSelected
                     ? 'bg-[var(--nim-primary)]/15 text-nim'
                     : 'text-nim hover:bg-nim-hover'
@@ -466,14 +467,14 @@ function BranchSection({ title, branches, current, selected, onSelect, disabled 
                 onClick={() => onSelect(branch)}
                 disabled={disabled}
               >
-                <span className="flex-1 truncate font-mono text-[12px]">{branch}</span>
+                <span className="flex-1 truncate font-mono text-ui-compact">{branch}</span>
                 {isCurrent && (
-                  <span className="text-[10px] text-nim-muted" aria-label="current branch">
+                  <span className="text-ui-micro text-nim-muted" aria-label="current branch">
                     current
                   </span>
                 )}
                 {isSelected && (
-                  <span className="text-[14px] leading-none text-nim-primary" aria-hidden="true">●</span>
+                  <span className="text-ui-body leading-none text-nim-primary" aria-hidden="true">●</span>
                 )}
               </button>
             </li>

@@ -108,8 +108,8 @@ export interface AgentWorkstreamPanelProps {
  * Measurement runs in a hidden layer that mirrors the real pill widths, so the
  * visible row never has to render-then-clip the overflowing pills.
  */
-const TAG_PILL_CLASS = "group flex items-center gap-1 text-[10px] font-medium leading-none pl-2 pr-1 py-0.5 rounded-ui-full whitespace-nowrap cursor-default text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)]";
-const TAG_OVERFLOW_PILL_CLASS = "flex items-center gap-1 text-[10px] font-medium leading-none px-2 py-0.5 rounded-ui-full whitespace-nowrap cursor-pointer text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--nim-text)_14%,transparent)] border-none";
+const TAG_PILL_CLASS = "group flex items-center gap-1 text-ui-micro font-medium leading-none pl-2 pr-1 py-0.5 rounded-ui-full whitespace-nowrap cursor-default text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)]";
+const TAG_OVERFLOW_PILL_CLASS = "flex items-center gap-1 text-ui-micro font-medium leading-none px-2 py-0.5 rounded-ui-full whitespace-nowrap cursor-pointer text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--nim-text)_14%,transparent)] border-none";
 
 const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstreamId }) => {
   const tags = useAtomValue(workstreamTagsAtom(workstreamId));
@@ -255,7 +255,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
         <input
           ref={tagInputRef}
           type="text"
-          className="text-[10px] leading-none py-0.5 px-2 rounded-ui-full border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] outline-none w-[80px]"
+          className="text-ui-micro leading-none py-0.5 px-2 rounded-ui-full border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] outline-none w-[80px]"
           placeholder="add tag..."
           value={tagInput}
           onChange={(e) => setTagInput(e.target.value)}
@@ -270,7 +270,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
         {filteredSuggestions.length > 0 && (
           <div
             ref={tagDropdownRef}
-            className="absolute top-full left-0 mt-1 min-w-[120px] rounded-ui-base z-[10000] py-0.5 text-[11px] bg-nim border border-nim shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+            className="absolute top-full left-0 mt-1 min-w-[120px] rounded-ui-base z-[10000] py-0.5 text-ui-caption bg-nim border border-nim shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
           >
             {filteredSuggestions.map(s => (
               <div
@@ -364,7 +364,7 @@ const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstrea
                 {hiddenTags.map(tag => (
                   <div
                     key={tag}
-                    className="group flex items-center justify-between gap-2 px-2 py-1 text-[11px] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                    className="group flex items-center justify-between gap-2 px-2 py-1 text-ui-caption text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                   >
                     <span className="truncate">{tag}</span>
                     <button
@@ -607,7 +607,7 @@ const WorkstreamHeader: React.FC<{
         {terminalContextMenu && (
           <div
             ref={terminalContextMenuRef}
-            className="fixed p-1 min-w-[140px] rounded-ui-base z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+            className="fixed p-1 min-w-[140px] rounded-ui-base z-[10000] text-ui-body backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
             style={{
               left: terminalContextMenu.x,
               top: terminalContextMenu.y,
@@ -634,7 +634,7 @@ const WorkstreamHeader: React.FC<{
 
         {/* Archive/Unarchive button */}
         <button
-          className="workstream-archive-button flex items-center gap-2 h-8 px-2 rounded-ui-base text-[var(--nim-text-faint)] text-[11px] font-medium cursor-pointer border-none bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
+          className="workstream-archive-button flex items-center gap-2 h-8 px-2 rounded-ui-base text-[var(--nim-text-faint)] text-ui-caption font-medium cursor-pointer border-none bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
           onClick={isArchived ? handleUnarchive : handleArchive}
           title={isArchived ? `Unarchive ${getSessionTypeLabel().toLowerCase()}` : `Archive ${getSessionTypeLabel().toLowerCase()}`}
         >
