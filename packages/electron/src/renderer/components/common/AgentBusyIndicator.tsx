@@ -98,7 +98,7 @@ export const AgentBusyIndicator: React.FC<AgentBusyIndicatorProps> = ({
       </span>
 
       {queuedCount > 0 && (
-        <span className="text-ui-micro px-1.5 py-0.5 rounded-ui-full bg-nim-warning-subtle text-[var(--nim-warning)] border border-nim-warning-subtle font-mono">
+        <span className="text-ui-micro px-2 py-0.5 rounded-ui-full bg-nim-warning-subtle text-[var(--nim-warning)] border border-nim-warning-subtle font-mono">
           +{queuedCount} queued
         </span>
       )}

@@ -116,7 +116,7 @@ export const ComponentShowcase: React.FC = () => {
               actions={
                 <button
                   type="button"
-                  className="px-3 py-1.5 rounded-ui-base bg-[var(--nim-primary)] text-[var(--nim-on-primary)] text-ui-compact font-medium"
+                  className="px-3 py-2 rounded-ui-base bg-[var(--nim-primary)] text-[var(--nim-on-primary)] text-ui-compact font-medium"
                 >
                   + 新建技能
                 </button>
@@ -338,7 +338,7 @@ export const ComponentShowcase: React.FC = () => {
             action={
               <button
                 type="button"
-                className="px-3 py-1.5 rounded-ui-base bg-[var(--nim-primary)] text-[var(--nim-on-primary)] text-ui-compact font-medium"
+                className="px-3 py-2 rounded-ui-base bg-[var(--nim-primary)] text-[var(--nim-on-primary)] text-ui-compact font-medium"
               >
                 + 添加首个技能
               </button>
