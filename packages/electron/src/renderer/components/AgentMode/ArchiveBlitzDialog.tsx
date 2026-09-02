@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../common/PageHeader';
 
 interface ArchiveBlitzDialogProps {
   blitzName: string;
@@ -43,10 +44,12 @@ export function ArchiveBlitzDialog({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="archive-worktree-dialog-header flex items-center gap-3 px-6 pt-5 pb-4 text-[var(--nim-text)]">
-          <MaterialSymbol icon="archive" size={24} />
-          <h2 className="m-0 text-lg font-semibold">Merge Successful</h2>
-        </div>
+        <PageHeader
+          icon="archive"
+          title="Merge Successful"
+          className="px-6 pt-5 pb-4"
+          testId="archive-blitz-dialog-header"
+        />
 
         <div className="archive-worktree-dialog-body px-6 pb-5">
           <div className="flex items-start gap-3 mb-4 p-3 rounded-ui-lg bg-[var(--nim-success)]/10 border border-[var(--nim-success)]/30">

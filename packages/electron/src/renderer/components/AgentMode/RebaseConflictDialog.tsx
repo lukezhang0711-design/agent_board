@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../common/PageHeader';
 import { getWorktreeNameFromPath } from '../../utils/pathUtils';
 import { AgentModelPicker, type AgentModelOption } from './AgentModelPicker';
 
@@ -62,10 +63,12 @@ export function RebaseConflictDialog({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="merge-conflict-dialog-header shrink-0 flex items-center gap-3 px-6 pt-5 pb-4 text-[var(--nim-text)]">
-          <MaterialSymbol icon="warning" size={24} className="merge-conflict-dialog-icon-warning text-[var(--nim-warning)]" />
-          <h2 className="m-0 text-lg font-semibold">Rebase Conflicts Detected</h2>
-        </div>
+        <PageHeader
+          icon={<MaterialSymbol icon="warning" size={24} className="merge-conflict-dialog-icon-warning text-[var(--nim-warning)]" />}
+          title="Rebase Conflicts Detected"
+          className="px-6 pt-5 pb-4 shrink-0"
+          testId="rebase-conflict-dialog-header"
+        />
 
         <div className="merge-conflict-dialog-body flex-1 min-h-0 overflow-y-auto px-6 pb-5">
           <p className="m-0 mb-4 text-sm leading-relaxed text-[var(--nim-text-muted)]">
@@ -73,13 +76,13 @@ export function RebaseConflictDialog({
           </p>
 
           <div className="merge-conflict-dialog-files mb-4 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-            <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-[13px] font-medium text-[var(--nim-text)]">
+            <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-ui-body font-medium text-[var(--nim-text)]">
               <MaterialSymbol icon="description" size={16} />
               <span>Conflicted Files:</span>
             </div>
             <ul className="merge-conflict-dialog-files-list list-none m-0 p-0 flex flex-col gap-2">
               {conflictedFiles.map((file) => (
-                <li key={file} className="merge-conflict-dialog-file flex items-center gap-2 text-[13px] text-[var(--nim-text-muted)]">
+                <li key={file} className="merge-conflict-dialog-file flex items-center gap-2 text-ui-body text-[var(--nim-text-muted)]">
                   <MaterialSymbol icon="error" size={14} className="merge-conflict-dialog-file-icon text-[var(--nim-error)] shrink-0" />
                   <code className="font-[var(--nim-font-mono)] text-[var(--nim-text)] bg-transparent p-0">{file}</code>
                 </li>
@@ -91,7 +94,7 @@ export function RebaseConflictDialog({
             <div className="grid grid-cols-2 gap-3 mb-4">
               {ourCommits.length > 0 && (
                 <div className="merge-conflict-dialog-files p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-                  <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-[13px] font-medium text-[var(--nim-primary)]">
+                  <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-ui-body font-medium text-[var(--nim-primary)]">
                     <MaterialSymbol icon="commit" size={16} />
                     <span>Your Conflicting Commits:</span>
                   </div>
@@ -116,7 +119,7 @@ export function RebaseConflictDialog({
 
               {theirCommits.length > 0 && (
                 <div className="merge-conflict-dialog-files p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-                  <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-[13px] font-medium text-[var(--nim-success)]">
+                  <div className="merge-conflict-dialog-files-header flex items-center gap-2 mb-3 text-ui-body font-medium text-[var(--nim-success)]">
                     <MaterialSymbol icon="commit" size={16} />
                     <span>Incoming Conflicting Commits:</span>
                   </div>
@@ -141,14 +144,14 @@ export function RebaseConflictDialog({
             </div>
           )}
 
-          <div className="merge-conflict-dialog-info flex items-start gap-3 p-3 mb-4 rounded-ui-lg bg-[var(--nim-info-light)] text-[var(--nim-info)] text-[13px] leading-snug">
+          <div className="merge-conflict-dialog-info flex items-start gap-3 p-3 mb-4 rounded-ui-lg bg-[var(--nim-info-light)] text-[var(--nim-info)] text-ui-body leading-snug">
             <MaterialSymbol icon="info" size={16} />
             <p className="m-0 text-[var(--nim-info)]">
               Conflicts were detected before starting the rebase. You must resolve these conflicts before the rebase can complete.
             </p>
           </div>
 
-          <div className="merge-conflict-dialog-suggestion flex items-start gap-3 p-3 mb-4 rounded-ui-lg bg-[var(--nim-success-light)] text-[var(--nim-success)] text-[13px] leading-snug">
+          <div className="merge-conflict-dialog-suggestion flex items-start gap-3 p-3 mb-4 rounded-ui-lg bg-[var(--nim-success-light)] text-[var(--nim-success)] text-ui-body leading-snug">
             <MaterialSymbol icon="smart_toy" size={16} />
             <p className="m-0 text-[var(--nim-success)]">
               An AI agent can help you resolve these conflicts automatically, or you can resolve them manually.
@@ -162,7 +165,7 @@ export function RebaseConflictDialog({
             isLoading={isLoadingModels}
           />
 
-          <div className="merge-conflict-dialog-manual flex flex-col gap-2 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)] text-[13px]">
+          <div className="merge-conflict-dialog-manual flex flex-col gap-2 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)] text-ui-body">
             <p className="m-0 flex items-center gap-2 text-[var(--nim-text-muted)]">
               <MaterialSymbol icon="terminal" size={16} />
               Worktree location:

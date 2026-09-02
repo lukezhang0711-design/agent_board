@@ -11,6 +11,7 @@ import {
 } from '../../store';
 import { worktreeDisplayNameUpdateAtom } from '../../store/atoms/worktrees';
 import { LayoutControls } from '../UnifiedAI/LayoutControls';
+import { PageHeader } from '../common/PageHeader';
 import { dialogRef, DIALOG_IDS } from '../../dialogs';
 import type { ShareDialogData } from '../../dialogs';
 
@@ -159,103 +160,105 @@ export const AgentSessionHeader: React.FC<AgentSessionHeaderProps> = ({
 
   const displayTitle = sessionData.title || 'Untitled Session';
 
-  return (
-    <div className="agent-session-header shrink-0 px-4 py-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg)]">
-      <div className="agent-session-header-main flex items-center gap-3">
-        {/* Icon renders immediately - worktree icon if worktreeId exists, workstream icon if parentSessionId exists, otherwise provider icon */}
-        {isWorktreeSession ? (
-          <div className="agent-session-header-icon-wrapper relative shrink-0 w-6 h-6">
-            <div className="agent-session-header-wt-icon w-6 h-6 text-[var(--nim-text-muted)] [&_svg]:w-full [&_svg]:h-full">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M8 21v-4a2 2 0 0 1 2-2h4"/>
-                <path d="M14 15V7"/>
-                <circle cx="8" cy="7" r="2"/>
-                <circle cx="14" cy="7" r="2"/>
-                <path d="M8 9v4a2 2 0 0 0 2 2"/>
-              </svg>
-            </div>
-            <div className="agent-session-header-ai-badge absolute -bottom-0.5 -right-1 bg-[var(--nim-bg)] rounded-ui-full p-0.5 flex items-center justify-center">
-              <ProviderIcon provider={sessionData.provider || 'claude'} size={12} />
-            </div>
-          </div>
-        ) : isWorkstreamSession ? (
-          <div className="agent-session-header-icon workstream-header-icon shrink-0 text-[var(--nim-text-muted)]">
-            <MaterialSymbol icon="account_tree" size={20} />
-          </div>
-        ) : (
-          <div className="agent-session-header-icon shrink-0 text-[var(--nim-text-muted)]">
-            <ProviderIcon provider={sessionData.provider || 'claude'} size={20} />
-          </div>
-        )}
-
-        <div className="agent-session-header-content flex-1 min-w-0">
-          <h1 className="agent-session-header-title m-0 text-base font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight">{displayTitle}</h1>
-
-          <div className="agent-session-header-meta flex items-center gap-2 mt-1 text-xs text-[var(--nim-text-muted)]">
-            {/* Meta info: worktree details load async, but we show model immediately for non-worktree */}
-            {isWorktreeSession ? (
-              worktreeMetadata ? (
-                <>
-                  <span className="agent-session-header-worktree-name text-[var(--nim-text-muted)] font-medium">{worktreeMetadata.name}</span>
-                  {worktreeGitStatus && worktreeGitStatus.ahead > 0 && (
-                    <span className="agent-session-header-badge ahead inline-flex items-center px-2 py-0.5 rounded-ui-base text-[0.625rem] font-medium uppercase tracking-wide bg-green-500/15 text-green-500">
-                      {worktreeGitStatus.ahead} ahead
-                    </span>
-                  )}
-                  {worktreeGitStatus && worktreeGitStatus.behind > 0 && (
-                    <span className="agent-session-header-badge behind inline-flex items-center px-2 py-0.5 rounded-ui-base text-[0.625rem] font-medium uppercase tracking-wide bg-orange-500/15 text-orange-500">
-                      {worktreeGitStatus.behind} behind
-                    </span>
-                  )}
-                  {worktreeGitStatus?.hasUncommittedChanges && (
-                    <span className="agent-session-header-badge uncommitted inline-flex items-center px-2 py-0.5 rounded-ui-base text-[0.625rem] font-medium uppercase tracking-wide bg-violet-500/15 text-violet-500">
-                      uncommitted
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span className="agent-session-header-worktree-name agent-session-header-loading text-[var(--nim-text-faint)] italic">Loading...</span>
-              )
-            ) : null}
-          </div>
-        </div>
-
-        {isProcessing && (
-          <div className="agent-session-header-processing shrink-0 flex items-center justify-center">
-            <div className="agent-session-header-spinner w-4 h-4 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
-          </div>
-        )}
-
-        {/* Share button */}
-        <button
-          className="agent-session-header-share shrink-0 flex items-center justify-center w-7 h-7 rounded-ui-base bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
-          title="Share session link"
-          onClick={handleShareLink}
-        >
-          <MaterialSymbol icon="link" size={16} />
-        </button>
-
-        {/* Export button */}
-        <button
-          className="agent-session-header-export shrink-0 flex items-center justify-center w-7 h-7 rounded-ui-base bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
-          title="Export session as HTML"
-          onClick={() => (window as any).electronAPI?.exportSessionToHtml({ sessionId: sessionData.id })}
-        >
-          <MaterialSymbol icon="download" size={16} />
-        </button>
-
-        {/* Layout controls for non-worktree sessions */}
-        {showLayoutControls && (
-          <div className="agent-session-header-layout-controls shrink-0 ml-auto pl-3 border-l border-[var(--nim-border)]">
-            <LayoutControls
-              mode={sessionEditorState.layoutMode}
-              hasTabs={hasTabs}
-              onModeChange={(mode) => setSessionLayoutMode({ sessionId: sessionData.id, mode })}
-            />
-          </div>
-        )}
+  const iconNode = isWorktreeSession ? (
+    <div className="agent-session-header-icon-wrapper relative shrink-0 w-6 h-6">
+      <div className="agent-session-header-wt-icon w-6 h-6 text-[var(--nim-text-muted)] [&_svg]:w-full [&_svg]:h-full">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M8 21v-4a2 2 0 0 1 2-2h4"/>
+          <path d="M14 15V7"/>
+          <circle cx="8" cy="7" r="2"/>
+          <circle cx="14" cy="7" r="2"/>
+          <path d="M8 9v4a2 2 0 0 0 2 2"/>
+        </svg>
       </div>
-
+      <div className="agent-session-header-ai-badge absolute -bottom-0.5 -right-1 bg-[var(--nim-bg)] rounded-ui-full p-0.5 flex items-center justify-center">
+        <ProviderIcon provider={sessionData.provider || 'claude'} size={12} />
+      </div>
     </div>
+  ) : isWorkstreamSession ? (
+    <div className="agent-session-header-icon workstream-header-icon shrink-0 text-[var(--nim-text-muted)]">
+      <MaterialSymbol icon="account_tree" size={20} />
+    </div>
+  ) : (
+    <div className="agent-session-header-icon shrink-0 text-[var(--nim-text-muted)]">
+      <ProviderIcon provider={sessionData.provider || 'claude'} size={20} />
+    </div>
+  );
+
+  const subtitleNode = isWorktreeSession ? (
+    <div className="agent-session-header-meta flex items-center gap-2 mt-1 text-xs text-[var(--nim-text-muted)]">
+      {worktreeMetadata ? (
+        <>
+          <span className="agent-session-header-worktree-name text-[var(--nim-text-muted)] font-medium">{worktreeMetadata.name}</span>
+          {worktreeGitStatus && worktreeGitStatus.ahead > 0 && (
+            <span className="agent-session-header-badge ahead inline-flex items-center px-2 py-0.5 rounded-ui-base text-ui-micro font-medium uppercase tracking-wide bg-nim-success-subtle text-[var(--nim-success)]">
+              {worktreeGitStatus.ahead} ahead
+            </span>
+          )}
+          {worktreeGitStatus && worktreeGitStatus.behind > 0 && (
+            <span className="agent-session-header-badge behind inline-flex items-center px-2 py-0.5 rounded-ui-base text-ui-micro font-medium uppercase tracking-wide bg-nim-warning-subtle text-[var(--nim-warning)]">
+              {worktreeGitStatus.behind} behind
+            </span>
+          )}
+          {worktreeGitStatus?.hasUncommittedChanges && (
+            <span className="agent-session-header-badge uncommitted inline-flex items-center px-2 py-0.5 rounded-ui-base text-ui-micro font-medium uppercase tracking-wide bg-nim-primary-subtle text-[var(--nim-primary)]">
+              uncommitted
+            </span>
+          )}
+        </>
+      ) : (
+        <span className="agent-session-header-worktree-name agent-session-header-loading text-[var(--nim-text-faint)] italic">Loading...</span>
+      )}
+    </div>
+  ) : undefined;
+
+  const actionsNode = (
+    <div className="flex items-center gap-2">
+      {isProcessing && (
+        <div className="agent-session-header-processing shrink-0 flex items-center justify-center">
+          <div className="agent-session-header-spinner w-4 h-4 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
+        </div>
+      )}
+
+      {/* Share button */}
+      <button
+        className="agent-session-header-share shrink-0 flex items-center justify-center w-7 h-7 rounded-ui-base bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+        title="Share session link"
+        onClick={handleShareLink}
+      >
+        <MaterialSymbol icon="link" size={16} />
+      </button>
+
+      {/* Export button */}
+      <button
+        className="agent-session-header-export shrink-0 flex items-center justify-center w-7 h-7 rounded-ui-base bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+        title="Export session as HTML"
+        onClick={() => (window as any).electronAPI?.exportSessionToHtml({ sessionId: sessionData.id })}
+      >
+        <MaterialSymbol icon="download" size={16} />
+      </button>
+
+      {/* Layout controls for non-worktree sessions */}
+      {showLayoutControls && (
+        <div className="agent-session-header-layout-controls shrink-0 ml-auto pl-3 border-l border-[var(--nim-border)]">
+          <LayoutControls
+            mode={sessionEditorState.layoutMode}
+            hasTabs={hasTabs}
+            onModeChange={(mode) => setSessionLayoutMode({ sessionId: sessionData.id, mode })}
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <PageHeader
+      icon={iconNode}
+      title={<span className="agent-session-header-title m-0 text-base font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight">{displayTitle}</span>}
+      subtitle={subtitleNode}
+      actions={actionsNode}
+      className="agent-session-header shrink-0 px-4 py-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg)]"
+      testId="agent-session-header"
+    />
   );
 };

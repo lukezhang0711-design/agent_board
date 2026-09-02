@@ -20,20 +20,6 @@
     "halfGap": 0,
     "fileCount": 7
   },
-  "components/AgentMode": {
-    "pxFonts": 86,
-    "rawColors": 14,
-    "nonStdRounded": 0,
-    "halfGap": 0,
-    "fileCount": 23
-  },
-  "components/AgenticCoding": {
-    "pxFonts": 75,
-    "rawColors": 29,
-    "nonStdRounded": 0,
-    "halfGap": 0,
-    "fileCount": 19
-  },
   "components/ApiKeyDialog": {
     "pxFonts": 0,
     "rawColors": 0,

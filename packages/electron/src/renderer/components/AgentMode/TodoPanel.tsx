@@ -67,7 +67,7 @@ export const TodoPanel: React.FC<TodoPanelProps> = React.memo(({
         <span className="todo-panel-title text-xs font-medium text-[var(--nim-text)]">
           Tasks
         </span>
-        <span className="todo-panel-count ml-auto text-[11px] text-[var(--nim-text-muted)] font-mono">
+        <span className="todo-panel-count ml-auto text-ui-caption text-[var(--nim-text-muted)] font-mono">
           {completedCount}/{totalCount}
         </span>
       </button>
@@ -104,13 +104,13 @@ const TodoItem: React.FC<TodoItemProps> = React.memo(({ todo }) => {
     >
       <div className="todo-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-1">
         {todo.status === 'pending' && (
-          <span className="text-[var(--nim-text-faint)] text-[10px]">○</span>
+          <span className="text-[var(--nim-text-faint)] text-ui-micro">○</span>
         )}
         {todo.status === 'in_progress' && (
           <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
         {todo.status === 'completed' && (
-          <span className="text-[#4ade80] text-[10px]">●</span>
+          <span className="text-[var(--nim-success)] text-ui-micro">●</span>
         )}
       </div>
       <div

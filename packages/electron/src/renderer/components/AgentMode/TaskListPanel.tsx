@@ -65,7 +65,7 @@ export const TaskListPanel: React.FC<TaskListPanelProps> = React.memo(({
         <span className="task-list-panel-title text-xs font-medium text-[var(--nim-text)]">
           Task List
         </span>
-        <span className="task-list-panel-count ml-auto text-[11px] text-[var(--nim-text-muted)] font-mono">
+        <span className="task-list-panel-count ml-auto text-ui-caption text-[var(--nim-text-muted)] font-mono">
           {completedCount}/{totalCount}
         </span>
       </button>
@@ -109,13 +109,13 @@ const TaskRow: React.FC<TaskRowProps> = React.memo(({ task, openIds }) => {
     >
       <div className="task-list-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-1">
         {task.status === 'pending' && (
-          <span className="text-[var(--nim-text-faint)] text-[10px]">○</span>
+          <span className="text-[var(--nim-text-faint)] text-ui-micro">○</span>
         )}
         {task.status === 'in_progress' && (
           <span className="inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
         )}
         {task.status === 'completed' && (
-          <span className="text-[#4ade80] text-[10px]">●</span>
+          <span className="text-[var(--nim-success)] text-ui-micro">●</span>
         )}
       </div>
       <div className="task-list-item-body flex-1 min-w-0">
@@ -129,7 +129,7 @@ const TaskRow: React.FC<TaskRowProps> = React.memo(({ task, openIds }) => {
           {displayText}
         </div>
         {(isBlocked || task.owner) && (
-          <div className="task-list-item-meta flex items-center gap-2 mt-1 text-[10px] text-[var(--nim-text-muted)]">
+          <div className="task-list-item-meta flex items-center gap-2 mt-1 text-ui-micro text-[var(--nim-text-muted)]">
             {isBlocked && (
               <span className="task-list-item-blocked inline-flex items-center gap-1">
                 <MaterialSymbol icon="lock" size={11} className="shrink-0" />

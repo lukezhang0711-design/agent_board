@@ -2765,11 +2765,11 @@ const SessionHistoryComponent: React.FC = () => {
             </>
           }
         />
-        <div className="session-history-section-label px-3 py-2 text-[11px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
+        <div className="session-history-section-label px-3 py-2 text-ui-caption font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
         <div className="session-history-search px-3 py-2 border-b border-[var(--nim-border)] shrink-0 relative">
           <input
             type="text"
-            className="session-history-search-input nim-input w-full pl-3 pr-9 py-2 text-[13px] text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:bg-[var(--nim-bg)]"
+            className="session-history-search-input nim-input w-full pl-3 pr-9 py-2 text-ui-body text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:bg-[var(--nim-bg)]"
             placeholder="Search sessions..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -2804,7 +2804,7 @@ const SessionHistoryComponent: React.FC = () => {
             {sortDropdownOpen && (
               <div className="session-history-sort-menu absolute top-[calc(100%+4px)] right-0 min-w-[140px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base overflow-hidden z-[100] shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
                 <button
-                  className={`session-history-sort-option flex items-center justify-between w-full px-3 py-2 text-[13px] border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&>span]:flex-1 [&_svg]:shrink-0 [&_svg]:text-[var(--nim-primary)] ${sortBy === 'updated' ? 'bg-[var(--nim-bg-selected)] font-medium' : ''}`}
+                  className={`session-history-sort-option flex items-center justify-between w-full px-3 py-2 text-ui-body border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&>span]:flex-1 [&_svg]:shrink-0 [&_svg]:text-[var(--nim-primary)] ${sortBy === 'updated' ? 'bg-[var(--nim-bg-selected)] font-medium' : ''}`}
                   onClick={() => selectSortOption('updated')}
                 >
                   <span>Last Updated</span>
@@ -2815,7 +2815,7 @@ const SessionHistoryComponent: React.FC = () => {
                   )}
                 </button>
                 <button
-                  className={`session-history-sort-option flex items-center justify-between w-full px-3 py-2 text-[13px] border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&>span]:flex-1 [&_svg]:shrink-0 [&_svg]:text-[var(--nim-primary)] ${sortBy === 'created' ? 'bg-[var(--nim-bg-selected)] font-medium' : ''}`}
+                  className={`session-history-sort-option flex items-center justify-between w-full px-3 py-2 text-ui-body border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&>span]:flex-1 [&_svg]:shrink-0 [&_svg]:text-[var(--nim-primary)] ${sortBy === 'created' ? 'bg-[var(--nim-bg-selected)] font-medium' : ''}`}
                   onClick={() => selectSortOption('created')}
                 >
                   <span>Created</span>
@@ -2829,7 +2829,7 @@ const SessionHistoryComponent: React.FC = () => {
             )}
           </div>
         </div>
-        <div className="session-history-loading flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-text-faint)] text-[13px]">
+        <div className="session-history-loading flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-text-faint)] text-ui-body">
           <span>Searching sessions...</span>
         </div>
       </div>
@@ -2865,8 +2865,8 @@ const SessionHistoryComponent: React.FC = () => {
             </>
           }
         />
-        <div className="session-history-section-label px-3 py-2 text-[11px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
-        <div className="session-history-error flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-error)] text-[13px]">
+        <div className="session-history-section-label px-3 py-2 text-ui-caption font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
+        <div className="session-history-error flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-error)] text-ui-body">
           <span>{error}</span>
         </div>
       </div>
@@ -2894,7 +2894,7 @@ const SessionHistoryComponent: React.FC = () => {
       >
       {onNewSession && (
         <button
-          className="session-history-new-option flex items-center w-full px-3 py-2 text-[13px] bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] [&>span]:flex-1"
+          className="session-history-new-option flex items-center w-full px-3 py-2 text-ui-body bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] [&>span]:flex-1"
           data-testid="new-session-button"
           onClick={() => { onNewSession(); newDropdownMenu.setIsOpen(false); }}
         >
@@ -2902,12 +2902,12 @@ const SessionHistoryComponent: React.FC = () => {
             <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
           <span>New Session</span>
-          <span className="session-history-new-option-shortcut flex-none text-[11px] text-[var(--nim-text-muted)] opacity-70">{getShortcutDisplay(KeyboardShortcuts.file.newSession)}</span>
+          <span className="session-history-new-option-shortcut flex-none text-ui-caption text-[var(--nim-text-muted)] opacity-70">{getShortcutDisplay(KeyboardShortcuts.file.newSession)}</span>
         </button>
       )}
       {onNewWorktreeSession && (
         <button
-          className={`session-history-new-option flex items-center w-full px-3 py-2 text-[13px] bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] [&>span]:flex-1 ${!isGitRepo ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
+          className={`session-history-new-option flex items-center w-full px-3 py-2 text-ui-body bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] [&>span]:flex-1 ${!isGitRepo ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
           data-testid="new-worktree-session-button"
           onClick={() => { if (isGitRepo) { openWorktreeBaseBranchPicker(); } }}
           disabled={!isGitRepo}
@@ -2922,12 +2922,12 @@ const SessionHistoryComponent: React.FC = () => {
             <path d="M12 7v4M10 9h4"/>
           </svg>
           <span>New Worktree</span>
-          <span className="session-history-new-option-shortcut flex-none text-[11px] text-[var(--nim-text-muted)] opacity-70">{getShortcutDisplay(KeyboardShortcuts.window.newWorktree)}</span>
+          <span className="session-history-new-option-shortcut flex-none text-ui-caption text-[var(--nim-text-muted)] opacity-70">{getShortcutDisplay(KeyboardShortcuts.window.newWorktree)}</span>
         </button>
       )}
       {onNewBlitz && (
         <button
-          className={`session-history-new-option flex items-center w-full px-3 py-2 text-[13px] bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] ${!isGitRepo ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
+          className={`session-history-new-option flex items-center w-full px-3 py-2 text-ui-body bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] ${!isGitRepo ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
           data-testid="new-blitz-button"
           onClick={() => { if (isGitRepo) { onNewBlitz(); newDropdownMenu.setIsOpen(false); } }}
           disabled={!isGitRepo}
@@ -2942,7 +2942,7 @@ const SessionHistoryComponent: React.FC = () => {
       )}
       {onNewTerminal && (
         <button
-          className="session-history-new-option flex items-center w-full px-3 py-2 text-[13px] bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] [&>span]:flex-1"
+          className="session-history-new-option flex items-center w-full px-3 py-2 text-ui-body bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] [&>span]:flex-1"
           data-testid="new-terminal-button"
           onClick={() => { onNewTerminal(); newDropdownMenu.setIsOpen(false); }}
         >
@@ -2955,7 +2955,7 @@ const SessionHistoryComponent: React.FC = () => {
       )}
       {isSuperLoopsAvailable && (
         <button
-          className={`session-history-new-option flex items-center w-full px-3 py-2 text-[13px] bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] ${!isGitRepo ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
+          className={`session-history-new-option flex items-center w-full px-3 py-2 text-ui-body bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)] ${!isGitRepo ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
           data-testid="new-super-loop-button"
           onClick={() => { if (isGitRepo) { openSuperLoopDialog(); newDropdownMenu.setIsOpen(false); } }}
           disabled={!isGitRepo}
@@ -2971,7 +2971,7 @@ const SessionHistoryComponent: React.FC = () => {
       )}
       {isMetaAgentEnabled && (
         <button
-          className="session-history-new-option flex items-center w-full px-3 py-2 text-[13px] bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)]"
+          className="session-history-new-option flex items-center w-full px-3 py-2 text-ui-body bg-transparent border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0 [&_svg]:text-[var(--nim-text-muted)]"
           data-testid="new-meta-agent-button"
           onClick={() => { void handleNewMetaAgent(); newDropdownMenu.setIsOpen(false); }}
         >
@@ -3060,8 +3060,8 @@ const SessionHistoryComponent: React.FC = () => {
             </>
           }
         />
-        <div className="session-history-section-label px-3 py-2 text-[11px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
-        <div className="session-history-empty flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-text-faint)] text-[13px]">
+        <div className="session-history-section-label px-3 py-2 text-ui-caption font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
+        <div className="session-history-empty flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-text-faint)] text-ui-body">
           <p className="my-1">No sessions yet</p>
           <p className="session-history-empty-hint my-1 text-xs text-[var(--nim-text-faint)]">
             Create a new session to get started
@@ -3088,7 +3088,7 @@ const SessionHistoryComponent: React.FC = () => {
           <>
           <HelpTooltip testId="session-kanban-button">
             <button
-              className={`flex items-center gap-1 px-2 py-2 text-[11px] font-semibold rounded-ui-base border cursor-pointer transition-all duration-150 shrink-0 ${viewMode === 'kanban' ? 'bg-[var(--nim-primary)] border-[var(--nim-primary)] text-white hover:opacity-90' : 'bg-[var(--nim-bg-secondary)] border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)]'}`}
+              className={`flex items-center gap-1 px-2 py-2 text-ui-caption font-semibold rounded-ui-base border cursor-pointer transition-all duration-150 shrink-0 ${viewMode === 'kanban' ? 'bg-[var(--nim-primary)] border-[var(--nim-primary)] text-white hover:opacity-90' : 'bg-[var(--nim-bg-secondary)] border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)]'}`}
               data-testid="session-kanban-button"
               onClick={async () => {
                 const newMode = viewMode === 'kanban' ? 'list' : 'kanban';
@@ -3162,12 +3162,12 @@ const SessionHistoryComponent: React.FC = () => {
           </>
         }
       />
-      <div className="session-history-section-label px-3 py-2 text-[11px] font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
+      <div className="session-history-section-label px-3 py-2 text-ui-caption font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
       <div className="session-history-search px-3 py-2 border-b border-[var(--nim-border)] shrink-0 relative z-10">
         <input
           ref={searchInputRef}
           type="text"
-          className="session-history-search-input nim-input w-full px-3 py-2 pr-14 text-[13px] text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:bg-[var(--nim-bg)]"
+          className="session-history-search-input nim-input w-full px-3 py-2 pr-14 text-ui-body text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:bg-[var(--nim-bg)]"
           placeholder="Search or type # to filter by tag..."
           value={showTagDropdown
             ? (searchQuery ? searchQuery + ' ' : '') + '#' + tagQuery
@@ -3266,7 +3266,7 @@ const SessionHistoryComponent: React.FC = () => {
                 <button
                   key={tag.name}
                   type="button"
-                  className={`w-full text-left px-3 py-2 text-[12px] flex items-center justify-between cursor-pointer transition-colors ${
+                  className={`w-full text-left px-3 py-2 text-ui-compact flex items-center justify-between cursor-pointer transition-colors ${
                     i === highlightedTagIndex
                       ? 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]'
                       : 'text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-tertiary)]'
@@ -3275,11 +3275,11 @@ const SessionHistoryComponent: React.FC = () => {
                   onClick={() => addTagFilter(tag.name)}
                 >
                   <span>#{tag.name}</span>
-                  <span className="text-[var(--nim-text-faint)] text-[11px] tabular-nums">{tag.count}</span>
+                  <span className="text-[var(--nim-text-faint)] text-ui-caption tabular-nums">{tag.count}</span>
                 </button>
               ))
             ) : (
-              <div className="px-3 py-2 text-[12px] text-[var(--nim-text-faint)] italic">
+              <div className="px-3 py-2 text-ui-compact text-[var(--nim-text-faint)] italic">
                 {tagQuery ? 'No matching tags' : 'No tags in this workspace yet'}
               </div>
             )}
@@ -3301,7 +3301,7 @@ const SessionHistoryComponent: React.FC = () => {
         )}
         {searchTruncated && (
           <div
-            className="session-history-search-truncated mt-1 text-[11px] text-[var(--nim-text-faint)]"
+            className="session-history-search-truncated mt-1 text-ui-caption text-[var(--nim-text-faint)]"
             data-testid="session-search-truncated"
           >
             Showing the first {searchResultLimit} results. Refine your search to narrow it down.
@@ -3382,7 +3382,7 @@ const SessionHistoryComponent: React.FC = () => {
               <button
                 key={tag}
                 type="button"
-                className="session-history-tag-chip flex items-center gap-1 px-2 py-0.5 rounded-ui-full text-[11px] border cursor-pointer bg-blue-400/[0.12] border-blue-400/30 text-blue-400 hover:bg-blue-400/[0.18]"
+                className="session-history-tag-chip flex items-center gap-1 px-2 py-0.5 rounded-ui-full text-ui-caption border cursor-pointer bg-blue-400/[0.12] border-blue-400/30 text-blue-400 hover:bg-blue-400/[0.18]"
                 onClick={() => removeTagFilter(tag)}
                 title={`Remove #${tag} filter`}
                 data-testid={`session-list-tag-chip-${tag}`}
@@ -3417,7 +3417,7 @@ const SessionHistoryComponent: React.FC = () => {
             : totalLabel;
           return (
             <span
-              className="session-history-match-count text-[11px] text-[var(--nim-text-faint)] tabular-nums"
+              className="session-history-match-count text-ui-caption text-[var(--nim-text-faint)] tabular-nums"
               title={title}
               data-testid="session-list-match-count"
             >
@@ -3441,7 +3441,7 @@ const SessionHistoryComponent: React.FC = () => {
           {sortDropdownOpen && (
             <div className="session-history-sort-menu absolute top-[calc(100%+4px)] right-0 min-w-[140px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base overflow-hidden z-[100] shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
               <button
-                className={`session-history-sort-option flex items-center justify-between w-full px-3 py-2 text-[13px] border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&>span]:flex-1 [&_svg]:shrink-0 [&_svg]:text-[var(--nim-primary)] ${sortBy === 'updated' ? 'bg-[var(--nim-bg-selected)] font-medium' : ''}`}
+                className={`session-history-sort-option flex items-center justify-between w-full px-3 py-2 text-ui-body border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&>span]:flex-1 [&_svg]:shrink-0 [&_svg]:text-[var(--nim-primary)] ${sortBy === 'updated' ? 'bg-[var(--nim-bg-selected)] font-medium' : ''}`}
                 onClick={() => selectSortOption('updated')}
               >
                 <span>Last Updated</span>
@@ -3452,7 +3452,7 @@ const SessionHistoryComponent: React.FC = () => {
                 )}
               </button>
               <button
-                className={`session-history-sort-option flex items-center justify-between w-full px-3 py-2 text-[13px] border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&>span]:flex-1 [&_svg]:shrink-0 [&_svg]:text-[var(--nim-primary)] ${sortBy === 'created' ? 'bg-[var(--nim-bg-selected)] font-medium' : ''}`}
+                className={`session-history-sort-option flex items-center justify-between w-full px-3 py-2 text-ui-body border-none text-[var(--nim-text)] cursor-pointer transition-colors duration-150 text-left gap-2 hover:bg-[var(--nim-bg-hover)] [&>span]:flex-1 [&_svg]:shrink-0 [&_svg]:text-[var(--nim-primary)] ${sortBy === 'created' ? 'bg-[var(--nim-bg-selected)] font-medium' : ''}`}
                 onClick={() => selectSortOption('created')}
               >
                 <span>Created</span>
@@ -3471,7 +3471,7 @@ const SessionHistoryComponent: React.FC = () => {
           <span className="session-history-bulk-count text-xs font-medium text-[var(--nim-text)]">{selectedSessionIds.size + selectedGroupIds.size} selected</span>
           <div className="session-history-bulk-buttons flex gap-2">
             {showArchived ? (
-              <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] [&_svg]:shrink-0" onClick={handleBulkUnarchive} title="Unarchive selected">
+              <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-ui-caption font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] [&_svg]:shrink-0" onClick={handleBulkUnarchive} title="Unarchive selected">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M2 5h12M4 5v8a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M8 11V7M6 9l2-2 2 2" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
@@ -3479,7 +3479,7 @@ const SessionHistoryComponent: React.FC = () => {
                 Unarchive
               </button>
             ) : (
-              <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] [&_svg]:shrink-0" onClick={handleBulkArchive} title="Archive selected">
+              <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-ui-caption font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] [&_svg]:shrink-0" onClick={handleBulkArchive} title="Archive selected">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M2 5h12M4 5v8a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M8 7v4M6 9l2 2 2-2" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
@@ -3488,14 +3488,14 @@ const SessionHistoryComponent: React.FC = () => {
               </button>
             )}
             {(
-              <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-error)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:border-[var(--nim-error)] hover:text-white [&_svg]:shrink-0" onClick={handleBulkDelete} title="Delete selected">
+              <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-ui-caption font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-error)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:border-[var(--nim-error)] hover:text-white [&_svg]:shrink-0" onClick={handleBulkDelete} title="Delete selected">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M2 4h12M5.333 4V2.667A.667.667 0 016 2h4a.667.667 0 01.667.667V4M12.667 4v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 Delete
               </button>
             )}
-            <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] [&_svg]:shrink-0" onClick={clearSelection} title="Clear selection">
+            <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-ui-caption font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] [&_svg]:shrink-0" onClick={clearSelection} title="Clear selection">
               Cancel
             </button>
           </div>
@@ -3504,7 +3504,7 @@ const SessionHistoryComponent: React.FC = () => {
       <div className="session-history-list nim-scrollbar flex-1 overflow-y-auto overflow-x-hidden py-2 scroll-smooth" ref={scrollContainerCallbackRef}>
         {groupKeys.length === 0 && (hasSearchQuery || hasTagFilter) ? (
           // No results for the active search/tag filter - offer a clear affordance
-          <div className="session-history-empty flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-text-faint)] text-[13px]">
+          <div className="session-history-empty flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-text-faint)] text-ui-body">
             <p className="my-1">No matching sessions found</p>
             <p className="session-history-empty-hint my-1 text-xs text-[var(--nim-text-faint)]">
               {hasSearchQuery && hasTagFilter ? 'Adjust your search or ' : hasSearchQuery ? 'Try a different search term or ' : 'Remove the active tag filter or '}
@@ -3531,7 +3531,7 @@ const SessionHistoryComponent: React.FC = () => {
               endReached={handleSessionListEndReached}
               components={{
                 Footer: () => hasMoreSessions ? (
-                  <div className="session-history-load-more py-3 text-center text-[11px] text-[var(--nim-text-faint)]" data-testid="session-list-load-more">
+                  <div className="session-history-load-more py-3 text-center text-ui-caption text-[var(--nim-text-faint)]" data-testid="session-list-load-more">
                     {isLoadingMoreSessions ? 'Loading more sessions…' : 'Scroll to load more sessions'}
                   </div>
                 ) : null,

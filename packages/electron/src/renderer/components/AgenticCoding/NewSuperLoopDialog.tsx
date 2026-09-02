@@ -8,6 +8,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../common/PageHeader';
 import {
   newSuperLoopDialogOpenAtom,
   upsertSuperLoopAtom,
@@ -187,19 +188,21 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-nim">
-          <div className="flex items-center gap-2">
-            <MaterialSymbol icon="sync" size={20} className="text-nim-primary" />
-            <h2 className="text-lg font-semibold text-nim">New Super Loop</h2>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-1 rounded-ui-base hover:bg-nim-hover text-nim-muted hover:text-nim transition-colors"
-            disabled={isCreating}
-          >
-            <MaterialSymbol icon="close" size={20} />
-          </button>
-        </div>
+        <PageHeader
+          icon={<MaterialSymbol icon="sync" size={20} className="text-nim-primary" />}
+          title="New Super Loop"
+          actions={
+            <button
+              onClick={handleClose}
+              className="p-1 rounded-ui-base hover:bg-nim-hover text-nim-muted hover:text-nim transition-colors"
+              disabled={isCreating}
+            >
+              <MaterialSymbol icon="close" size={20} />
+            </button>
+          }
+          className="px-4 py-3"
+          testId="new-super-loop-dialog-header"
+        />
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">

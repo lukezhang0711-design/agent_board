@@ -421,7 +421,7 @@ export const SessionListItem = memo<SessionListItemProps>(({
         id={"session-list-item-" + id}
       data-testid={isWorktreeSession ? 'worktree-session-item' : isWorkstream ? 'workstream-session-item' : 'session-list-item'}
       data-session-type={isWorktreeSession ? 'worktree' : isWorkstream ? 'workstream' : 'session'}
-      className={`session-list-item relative flex items-start gap-3 py-1 px-3 pl-8 cursor-pointer rounded-ui-base mx-2 transition-[background-color,opacity] duration-150 select-none
+      className={`session-list-item relative flex items-start gap-3 py-2 px-3 pl-8 cursor-pointer rounded-ui-none w-full border-b border-[var(--nim-border)] transition-[background-color,opacity] duration-150 select-none
         hover:bg-[var(--nim-bg-hover)]
         focus:outline-2 focus:outline-[var(--nim-border-focus)] focus:-outline-offset-2
         ${isActive ? 'active bg-[var(--nim-bg-selected)]' : ''}
@@ -430,9 +430,9 @@ export const SessionListItem = memo<SessionListItemProps>(({
         ${isSelected ? 'selected bg-[var(--nim-bg-selected)]' : ''}
         ${isPinned ? 'pinned' : ''}
         ${isDragging ? 'dragging opacity-50 cursor-grabbing' : ''}
-        ${isValidDropTarget ? 'drop-target-valid bg-[rgba(83,89,93,0.4)] border-2 border-dashed border-[var(--nim-primary)]' : ''}
+        ${isValidDropTarget ? 'drop-target-valid bg-[var(--nim-bg-hover)] border-2 border-dashed border-[var(--nim-primary)]' : ''}
         ${isDraggable ? 'cursor-grab' : ''}
-        ${isAwaitingInput && !isActive ? 'bg-[rgba(251,191,36,0.08)]' : ''}
+        ${isAwaitingInput && !isActive ? 'bg-nim-warning-subtle' : ''}
       `}
       style={isAwaitingInput ? { borderLeft: '2px solid var(--nim-warning)' } : undefined}
       onClick={onClick}
@@ -503,7 +503,7 @@ export const SessionListItem = memo<SessionListItemProps>(({
           <input
             ref={renameInputRef}
             type="text"
-            className="session-list-item-rename-input w-full px-2 py-1 text-[0.8125rem] font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none box-border"
+            className="session-list-item-rename-input w-full px-2 py-1 text-ui-body font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none box-border"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={handleRenameKeyDown}
@@ -512,9 +512,9 @@ export const SessionListItem = memo<SessionListItemProps>(({
           />
         ) : (
           <>
-            <div title={displayTitle} className={`session-list-item-title text-[0.8125rem] text-[var(--nim-text)] font-medium overflow-hidden text-ellipsis whitespace-nowrap mb-1 transition-colors duration-150 ${isActive ? 'font-semibold' : ''} ${isArchived ? 'text-[var(--nim-text-faint)]' : ''}`}>{truncatedTitle}</div>
-            <div className="session-list-item-meta flex gap-2 text-[0.6875rem] text-[var(--nim-text-faint)] items-center mt-1">
-              <span className="session-list-item-datetime text-[0.6875rem] text-[var(--nim-text-faint)] whitespace-nowrap transition-colors duration-150" title={fullDateTime}>{relativeTime}</span>
+            <div title={displayTitle} className={`session-list-item-title text-ui-body text-[var(--nim-text)] font-medium overflow-hidden text-ellipsis whitespace-nowrap mb-1 transition-colors duration-150 ${isActive ? 'font-semibold' : ''} ${isArchived ? 'text-[var(--nim-text-faint)]' : ''}`}>{truncatedTitle}</div>
+            <div className="session-list-item-meta flex gap-2 text-ui-caption text-[var(--nim-text-faint)] items-center mt-1">
+              <span className="session-list-item-datetime text-ui-caption text-[var(--nim-text-faint)] whitespace-nowrap transition-colors duration-150" title={fullDateTime}>{relativeTime}</span>
               {displayModel && <span className="session-list-item-model overflow-hidden text-ellipsis whitespace-nowrap">{displayModel}</span>}
               {phase && <SessionPhaseBadge phase={phase} />}
             </div>
@@ -523,7 +523,7 @@ export const SessionListItem = memo<SessionListItemProps>(({
       </div>
       <div className="session-list-item-right shrink-0 flex items-center gap-2 ml-auto">
         {uncommittedCount !== undefined && uncommittedCount > 0 && (
-          <span className="session-list-item-badge uncommitted text-[0.6875rem] px-2 py-0.5 rounded-ui-lg font-semibold whitespace-nowrap bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]" title={`${uncommittedCount} uncommitted change${uncommittedCount !== 1 ? 's' : ''}`}>
+          <span className="session-list-item-badge uncommitted text-ui-caption px-2 py-0.5 rounded-ui-lg font-semibold whitespace-nowrap bg-nim-warning-subtle text-[var(--nim-warning)]" title={`${uncommittedCount} uncommitted change${uncommittedCount !== 1 ? 's' : ''}`}>
             {uncommittedCount}
           </span>
         )}

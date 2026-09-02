@@ -564,7 +564,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
       <div
         className={`workstream-group-header flex items-center gap-0 text-[0.8125rem] text-[var(--nim-text)] transition-colors duration-150 rounded-ui-base mx-2 w-[calc(100%-1rem)] ${
           isSelected ? 'bg-[var(--nim-bg-selected)]' : isActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
-        } ${isValidDropTarget ? 'bg-[rgba(83,89,93,0.4)] border-2 border-dashed border-[var(--nim-primary)]' : ''}`}
+        } ${isValidDropTarget ? 'bg-[var(--nim-bg-hover)] border-2 border-dashed border-[var(--nim-primary)]' : ''}`}
         onContextMenu={handleContextMenu}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -653,7 +653,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
                 <MaterialSymbol icon="push_pin" size={12} className="workstream-group-pin-icon shrink-0 text-[var(--nim-text-faint)] opacity-70" />
               )}
               {displayIsArchived && !isRenamingWorktree && (
-                <span className="workstream-group-badge archived text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[rgba(156,163,175,0.15)] text-[var(--nim-text-faint)]">archived</span>
+                <span className="workstream-group-badge archived text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">archived</span>
               )}
               {/* Status indicator for child sessions (processing/pending/unread) */}
               {!isRenamingWorktree && (
@@ -665,17 +665,17 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
               {type === 'worktree' && gitStatus && (
                 <>
                   {gitStatus.ahead && gitStatus.ahead > 0 && (
-                    <span className="workstream-group-badge ahead text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[rgba(74,158,255,0.15)] text-[var(--nim-primary)]">
+                    <span className="workstream-group-badge ahead text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-primary-subtle text-[var(--nim-primary)]">
                       {gitStatus.ahead} ahead
                     </span>
                   )}
                   {gitStatus.behind && gitStatus.behind > 0 && (
-                    <span className="workstream-group-badge behind text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]">
+                    <span className="workstream-group-badge behind text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]">
                       {gitStatus.behind} behind
                     </span>
                   )}
                   {gitStatus.uncommitted && (
-                    <span className="workstream-group-badge uncommitted text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]">
+                    <span className="workstream-group-badge uncommitted text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]">
                       uncommitted
                     </span>
                   )}
@@ -684,7 +684,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
               {/* Show total uncommitted count for workstreams */}
               {type === 'workstream' && totalUncommittedCount > 0 && (
                 <span
-                  className="workstream-group-badge uncommitted text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]"
+                  className="workstream-group-badge uncommitted text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]"
                   title={`${totalUncommittedCount} uncommitted change${totalUncommittedCount !== 1 ? 's' : ''} across all sessions`}
                 >
                   {totalUncommittedCount} uncommitted
@@ -830,7 +830,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
             <>
               <div className="workstream-group-context-menu-divider h-px my-1 bg-[var(--nim-border)]" />
               <button
-                className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
+                className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
                 onClick={handleArchive}
               >
                 <MaterialSymbol icon="archive" size={14} />
@@ -931,7 +931,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'workstream' && onSessionDelete && (
             <button
-              className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[rgba(239,68,68,0.1)]"
+              className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
               onClick={handleWorkstreamDelete}
             >
               <MaterialSymbol icon="delete" size={14} />
