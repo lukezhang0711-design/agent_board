@@ -87,19 +87,19 @@ describe('SessionKanbanBoard interrupted and Inbox states', () => {
   it('shows a warning queued badge on a collapsed Inbox that contains queued work', () => {
     renderBoard([makeMeta({ dispatchQueued: true })]);
 
-    const queuedBadge = within(getInboxColumn()).getByText('1 queued');
-    expect(queuedBadge.className).toMatch(/text-(?:\[var\(--nim-warning\)\]|nim-warning)/);
+    const queuedBadge = within(getInboxColumn()).getByText('1 排队中');
+    expect(queuedBadge.className).toContain('text-[var(--nim-warning)]');
     expect(within(getInboxColumn()).getByText('schedule')).toBeTruthy();
 
     fireEvent.click(getInboxColumn());
     expect(screen.getByText('Queued inbox task')).toBeTruthy();
-    expect(screen.queryByText('1 queued')).toBeNull();
+    expect(screen.queryByText('1 排队中')).toBeNull();
   });
 
   it('does not show a collapsed Inbox queued badge when no contained session is queued', () => {
     renderBoard([makeMeta({ dispatchQueued: false })]);
 
-    expect(within(getInboxColumn()).queryByText(/queued/)).toBeNull();
+    expect(within(getInboxColumn()).queryByText(/排队中/)).toBeNull();
   });
 
   it('explains that child sessions are grouped under their parent workstreams', () => {
@@ -117,7 +117,7 @@ describe('SessionKanbanBoard interrupted and Inbox states', () => {
 
     renderBoard([...parentCards, ...childSessions]);
 
-    expect(screen.getByText('139 cards · 5 child sessions grouped under parent workstreams')).toBeTruthy();
+    expect(screen.getByText('139 个卡片 · 5 个子会话已归入父工作流')).toBeTruthy();
   });
 
   it('shows a persisted Head interruption as an orange card state', () => {
@@ -131,7 +131,7 @@ describe('SessionKanbanBoard interrupted and Inbox states', () => {
     ]);
 
     const card = screen.getByTestId('session-kanban-card');
-    const badge = within(card).getByText('interrupted');
+    const badge = within(card).getByText('已中断');
     expect(badge.className).toContain('bg-orange-500/10');
     expect(within(card).getByText('cancel')).toBeTruthy();
   });
@@ -163,7 +163,7 @@ describe('SessionKanbanBoard interrupted and Inbox states', () => {
     const card = screen.getByTestId('session-kanban-card');
     expect(card.dataset.workOrderStatus).toBe('failed');
     expect(card.dataset.workOrderFailed).toBe('true');
-    const badge = within(card).getByText('failed');
+    const badge = within(card).getByText('失败');
     expect(badge.className).toContain('bg-red-500/10');
     expect(within(card).getByText('error')).toBeTruthy();
   });

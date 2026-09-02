@@ -18,28 +18,28 @@ function getPoolColors(pool: UsagePool): { text: string; bar: string } {
 }
 
 function formatWindow(windowMinutes: number | null): string {
-  if (windowMinutes === null) return 'Usage limit';
+  if (windowMinutes === null) return '用量上限';
   if (windowMinutes % (24 * 60) === 0) {
     const days = windowMinutes / (24 * 60);
-    return `${days}-day window`;
+    return `${days} 天周期`;
   }
   if (windowMinutes % 60 === 0) {
     const hours = windowMinutes / 60;
-    return `${hours}-hour window`;
+    return `${hours} 小时周期`;
   }
-  return `${windowMinutes}-minute window`;
+  return `${windowMinutes} 分钟周期`;
 }
 
 export function formatUsageLastUpdated(timestamp: number): string {
   const diffMs = Math.max(0, Date.now() - timestamp);
   const diffSeconds = Math.floor(diffMs / 1000);
-  if (diffSeconds < 60) return 'just now';
+  if (diffSeconds < 60) return '刚刚';
   const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+  if (diffMinutes < 60) return `${diffMinutes} 分钟前`;
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} 小时前`;
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  return `${diffDays} 天前`;
 }
 
 export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessage, emptyActionHint }) => {
@@ -87,10 +87,10 @@ export const UsagePoolList: React.FC<UsagePoolListProps> = ({ pools, emptyMessag
             <div className="flex flex-col gap-0.5 text-ui-caption text-nim-muted">
               <div className="flex items-center gap-1">
                 <MaterialSymbol icon="schedule" size={12} className="opacity-70" />
-                <span>{pool.resetsAt ? `Resets in ${formatResetTime(pool.resetsAt)}` : 'Reset time unavailable'}</span>
+                <span>{pool.resetsAt ? `${formatResetTime(pool.resetsAt)}后重置` : '重置时间不可用'}</span>
               </div>
               <div className={pool.stale ? 'text-nim-warning' : 'text-nim-faint'}>
-                {pool.stale ? 'Stale · ' : ''}Last updated {formatUsageLastUpdated(pool.updatedAt)}
+                {pool.stale ? '已过期 · ' : ''}上次更新于 {formatUsageLastUpdated(pool.updatedAt)}
               </div>
             </div>
           </div>
