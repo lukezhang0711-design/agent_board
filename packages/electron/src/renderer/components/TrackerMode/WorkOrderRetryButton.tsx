@@ -79,7 +79,7 @@ export const WorkOrderRetryButton: React.FC<WorkOrderRetryButtonProps> = ({
         {retrying ? '打开中…' : '重试'}
       </button>
       {!retrying && !availability.canRetry && availability.reason && (
-        <span className="text-[10px] text-nim-muted" data-testid="work-order-retry-reason">
+        <span className="text-ui-micro text-nim-muted" data-testid="work-order-retry-reason">
           {availability.reason}
         </span>
       )}

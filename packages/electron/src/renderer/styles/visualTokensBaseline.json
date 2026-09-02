@@ -357,8 +357,8 @@
     "fileCount": 1
   },
   "components/TrackerMode": {
-    "pxFonts": 84,
-    "rawColors": 4,
+    "pxFonts": 0,
+    "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 14

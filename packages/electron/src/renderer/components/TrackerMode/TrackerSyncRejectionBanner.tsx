@@ -70,7 +70,7 @@ export const TrackerSyncRejectionBanner: React.FC<TrackerSyncRejectionBannerProp
 
   return (
     <div
-      className="tracker-sync-rejection-banner flex items-center gap-2 px-3 py-2 border-b border-nim bg-nim-tertiary text-xs text-nim shrink-0"
+      className="tracker-sync-rejection-banner flex items-center gap-2 px-3 py-2 border-b border-nim bg-nim-tertiary text-ui-caption text-nim shrink-0"
       role="status"
       data-testid="tracker-sync-rejection-banner"
       data-rejection-code={active.code}

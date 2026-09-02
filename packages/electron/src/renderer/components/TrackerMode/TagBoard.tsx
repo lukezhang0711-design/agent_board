@@ -65,7 +65,7 @@ export const TagBoard: React.FC<TagBoardProps> = ({
       <div className="flex-1 flex items-center justify-center text-nim-muted">
         <div className="text-center">
           <MaterialSymbol icon="sell" size={48} className="opacity-30" />
-          <p className="mt-2 text-sm">No items to display</p>
+          <p className="mt-2 text-ui-compact">No items to display</p>
         </div>
       </div>
     );
@@ -76,7 +76,7 @@ export const TagBoard: React.FC<TagBoardProps> = ({
       <div className="flex-1 flex items-center justify-center text-nim-muted">
         <div className="text-center">
           <MaterialSymbol icon="sell" size={48} className="opacity-30" />
-          <p className="mt-2 text-sm">No tags on these items yet</p>
+          <p className="mt-2 text-ui-compact">No tags on these items yet</p>
         </div>
       </div>
     );
@@ -101,10 +101,10 @@ export const TagBoard: React.FC<TagBoardProps> = ({
                   size={13}
                   className="text-nim-faint shrink-0"
                 />
-                <span className="text-xs font-semibold text-nim truncate">
+                <span className="text-ui-caption font-semibold text-nim truncate">
                   {col.tag === null ? 'Untagged' : `#${col.label}`}
                 </span>
-                <span className="text-[10px] font-semibold text-nim-faint ml-auto">
+                <span className="text-ui-micro font-semibold text-nim-faint ml-auto">
                   {col.items.length}
                 </span>
               </div>
@@ -130,16 +130,16 @@ export const TagBoard: React.FC<TagBoardProps> = ({
                       />
                       <div className="flex-1 min-w-0">
                         {item.issueKey && (
-                          <div className="text-[10px] font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-1">
+                          <div className="text-ui-micro font-mono font-medium uppercase tracking-[0.08em] text-nim-faint mb-1">
                             {item.issueKey}
                           </div>
                         )}
-                        <div className="text-sm text-nim leading-snug line-clamp-2">
+                        <div className="text-ui-compact text-nim leading-snug line-clamp-2">
                           {getRecordTitle(item)}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                           <span
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-ui-base"
+                            className="text-ui-micro font-medium px-2 py-0.5 rounded-ui-base"
                             style={{
                               color: TYPE_COLORS[item.primaryType] || '#6b7280',
                               backgroundColor: `${TYPE_COLORS[item.primaryType] || '#6b7280'}20`,
