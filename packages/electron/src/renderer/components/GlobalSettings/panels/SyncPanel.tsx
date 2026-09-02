@@ -79,7 +79,7 @@ function SharingCallout() {
   return (
     <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
       <div className="p-3.5 bg-nim-primary/8 border border-nim-primary/20 rounded-lg">
-        <div className="flex items-start gap-2.5">
+        <div className="flex items-start gap-3">
           <MaterialSymbol icon="share" size={18} className="text-[var(--nim-primary)] shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -690,7 +690,7 @@ export function SyncPanel() {
                 <button
                   onClick={handleGoogleSignIn}
                   disabled={authLoading || !isStytchAvailable}
-                  className={`w-full px-4 py-2.5 flex items-center justify-center gap-2.5 bg-white border border-nim rounded-md text-[#333] font-medium text-[13px] ${
+                  className={`w-full px-4 py-2.5 flex items-center justify-center gap-3 bg-white border border-nim rounded-md text-[#333] font-medium text-[13px] ${
                     authLoading ? 'cursor-wait opacity-70' : 'cursor-pointer opacity-100'
                   }`}
                 >
@@ -783,7 +783,7 @@ export function SyncPanel() {
           <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
             <h4 className="provider-panel-section-title text-[15px] font-semibold mb-3 text-[var(--nim-text)]">Mobile App</h4>
             <div className="flex gap-3.5 p-3.5 bg-nim-secondary rounded-lg">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-ui-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                   <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
                   <line x1="12" y1="18" x2="12" y2="18"/>
@@ -799,7 +799,7 @@ export function SyncPanel() {
                 <div className="flex items-center gap-2">
                   <button
                       onClick={() => window.electronAPI.openExternal('https://apps.apple.com/app/id6756393105')}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white rounded text-[11px] font-medium text-gray-900 border-none cursor-pointer hover:bg-gray-100"
+                      className="inline-flex items-center gap-2 px-2.5 py-1 bg-white rounded text-[11px] font-medium text-gray-900 border-none cursor-pointer hover:bg-gray-100"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
@@ -810,7 +810,7 @@ export function SyncPanel() {
               </div>
               {/* Pair Device button - right side of card */}
               <button
-                  className="self-center flex flex-col items-center gap-1.5 px-4 py-2.5 bg-nim-primary border-none rounded-lg text-nim-on-primary text-[14px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  className="self-center flex flex-col items-center gap-2 px-4 py-2.5 bg-nim-primary border-none rounded-lg text-nim-on-primary text-[14px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   onClick={() => {
                     if (enabledProjectCount === 0) {
                       setPairError('Enable at least one project to sync before pairing your device.');
@@ -995,7 +995,7 @@ export function SyncPanel() {
           {connectedDevices.map((device) => (
             <div
               key={device.deviceId}
-              className="flex items-center gap-2.5 px-2.5 py-2 bg-nim-secondary rounded-md mb-1.5 last:mb-0"
+              className="flex items-center gap-3 px-2.5 py-2 bg-nim-secondary rounded-md mb-1.5 last:mb-0"
             >
               <div className={`w-2 h-2 rounded-full ${device.isOnline ? 'bg-green-500' : 'bg-neutral-500'}`} />
               <div className="flex-1">

@@ -171,7 +171,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
       onClick={onClose}
     >
       <div
-        className="extension-error-console flex flex-col w-4/5 max-w-[1000px] h-[70%] max-h-[600px] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.25)] nim-animate-slide-up bg-nim border border-nim"
+        className="extension-error-console flex flex-col w-4/5 max-w-[1000px] h-[70%] max-h-[600px] rounded-ui-lg shadow-[0_8px_32px_rgba(0,0,0,0.25)] nim-animate-slide-up bg-nim border border-nim"
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -264,7 +264,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
           </div>
 
           <div className="extension-error-console-actions flex items-center gap-2">
-            <label className="auto-refresh-toggle flex items-center gap-1.5 text-xs cursor-pointer text-nim-muted">
+            <label className="auto-refresh-toggle flex items-center gap-2 text-xs cursor-pointer text-nim-muted">
               <input
                 type="checkbox"
                 className="cursor-pointer"

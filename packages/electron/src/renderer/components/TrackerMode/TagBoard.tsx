@@ -137,7 +137,7 @@ export const TagBoard: React.FC<TagBoardProps> = ({
                         <div className="text-sm text-nim leading-snug line-clamp-2">
                           {getRecordTitle(item)}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1.5">
+                        <div className="flex items-center gap-2 mt-1.5">
                           <span
                             className="text-[10px] font-medium px-1.5 py-0.5 rounded"
                             style={{

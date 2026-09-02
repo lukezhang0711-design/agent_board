@@ -128,7 +128,7 @@ export function OrgSwitcher() {
             {orgs.map((o) => (
               <button
                 key={o.orgId}
-                className={`org-switcher-item w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[var(--nim-bg-secondary)] ${o.orgId === activeOrgId ? 'bg-[var(--nim-bg-secondary)]' : ''}`}
+                className={`org-switcher-item w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[var(--nim-bg-secondary)] ${o.orgId === activeOrgId ? 'bg-[var(--nim-bg-secondary)]' : ''}`}
                 onClick={goToOrgSettings}
               >
                 <span className="w-6 h-6 rounded bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] text-white text-[10px] font-semibold flex items-center justify-center shrink-0">

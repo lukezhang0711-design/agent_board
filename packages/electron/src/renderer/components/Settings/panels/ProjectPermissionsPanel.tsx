@@ -355,7 +355,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
               />
               <div className="permissions-mode-option-content flex items-start gap-3">
                 <span className="material-symbols-outlined text-[var(--nim-text-muted)]">verified_user</span>
-                <div className="permissions-mode-option-text flex flex-col gap-0.5">
+                <div className="permissions-mode-option-text flex flex-col gap-1">
                   <span className="permissions-mode-option-title text-sm font-medium text-[var(--nim-text)]">Ask</span>
                   <span className="permissions-mode-option-description text-xs text-[var(--nim-text-muted)]">
                     Agent asks before running commands.
@@ -378,7 +378,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
               />
               <div className="permissions-mode-option-content flex items-start gap-3">
                 <span className="material-symbols-outlined text-[var(--nim-text-muted)]">check_circle</span>
-                <div className="permissions-mode-option-text flex flex-col gap-0.5">
+                <div className="permissions-mode-option-text flex flex-col gap-1">
                   <span className="permissions-mode-option-title text-sm font-medium text-[var(--nim-text)]">Allow Edits</span>
                   <span className="permissions-mode-option-description text-xs text-[var(--nim-text-muted)]">
                     File operations auto-approved. Bash and web requests follow Claude Code settings.
@@ -401,7 +401,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
               />
               <div className="permissions-mode-option-content flex items-start gap-3">
                 <span className="material-symbols-outlined text-[var(--nim-text-muted)]">check_circle</span>
-                <div className="permissions-mode-option-text flex flex-col gap-0.5">
+                <div className="permissions-mode-option-text flex flex-col gap-1">
                   <span className="permissions-mode-option-title text-sm font-medium text-[var(--nim-text)]">Allow All</span>
                   <span className="permissions-mode-option-description text-xs text-[var(--nim-text-muted)]">
                     All operations auto-approved without any prompts.

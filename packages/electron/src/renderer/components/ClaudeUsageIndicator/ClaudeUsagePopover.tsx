@@ -119,7 +119,7 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
           )}
         </div>
 
-        <div className="flex flex-col gap-1.5 border-t border-nim px-4 py-2">
+        <div className="flex flex-col gap-2 border-t border-nim px-4 py-2">
           <div className="flex items-center justify-between">
             {usage.lastUpdated !== null && (
               <span className="text-[10px] text-nim-faint">

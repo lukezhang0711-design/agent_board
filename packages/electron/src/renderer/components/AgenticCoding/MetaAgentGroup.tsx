@@ -216,7 +216,7 @@ export const MetaAgentGroup: React.FC<MetaAgentGroupProps> = memo(({
     <div data-testid="meta-agent-group" data-meta-session-id={metaSession.id}>
       {/* Group header */}
       <div
-        className={`meta-agent-group-header flex items-center gap-1.5 py-1.5 px-2 mr-2 cursor-pointer rounded transition-colors duration-150 select-none ${
+        className={`meta-agent-group-header flex items-center gap-2 py-1.5 px-2 mr-2 cursor-pointer rounded transition-colors duration-150 select-none ${
           isActive ? 'bg-[var(--nim-bg-selected)]' : isSelected ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
         }`}
         onClick={(e) => {

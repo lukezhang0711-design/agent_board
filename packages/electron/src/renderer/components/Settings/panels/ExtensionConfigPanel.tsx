@@ -172,7 +172,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
       if (property.enum && property.enum.length > 0) {
         return (
           <div className="config-field config-field-select py-2">
-            <label className="config-field-label-block flex flex-col gap-1.5">
+            <label className="config-field-label-block flex flex-col gap-2">
               <span className="text-sm font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
               <select
                 value={String(value ?? '')}
@@ -194,7 +194,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
       // Regular text input
       return (
         <div className="config-field config-field-text py-2">
-          <label className="config-field-label-block flex flex-col gap-1.5">
+          <label className="config-field-label-block flex flex-col gap-2">
             <span className="text-sm font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
             <input
               type="text"
@@ -212,7 +212,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
     case 'number':
       return (
         <div className="config-field config-field-number py-2">
-          <label className="config-field-label-block flex flex-col gap-1.5">
+          <label className="config-field-label-block flex flex-col gap-2">
             <span className="text-sm font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
             <input
               type="number"

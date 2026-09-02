@@ -169,7 +169,7 @@ export function FileContextMenu({
           className="file-context-menu p-1 min-w-[200px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-md z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
         >
           <div
-            className="file-context-menu-item file-context-menu-item-danger flex items-center gap-2.5 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-error)] hover:bg-[var(--nim-error-subtle)]"
+            className="file-context-menu-item file-context-menu-item-danger flex items-center gap-3 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-error)] hover:bg-[var(--nim-error-subtle)]"
             onClick={handleDelete}
           >
             <MaterialSymbol icon="delete" size={18} />
@@ -180,8 +180,8 @@ export function FileContextMenu({
     );
   }
 
-  const menuItemClasses = "file-context-menu-item flex items-center gap-2.5 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]";
-  const dangerItemClasses = "file-context-menu-item file-context-menu-item-danger flex items-center gap-2.5 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-error)] hover:bg-[var(--nim-error-subtle)]";
+  const menuItemClasses = "file-context-menu-item flex items-center gap-3 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]";
+  const dangerItemClasses = "file-context-menu-item file-context-menu-item-danger flex items-center gap-3 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-error)] hover:bg-[var(--nim-error-subtle)]";
   const separatorClasses = "context-menu-separator h-px my-1 mx-2 bg-[var(--nim-border)]";
 
   return (

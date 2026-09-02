@@ -348,7 +348,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
                             <div
                               key={session.sessionId}
                               data-id={session.sessionId}
-                              className="session-import-session-item flex items-start gap-2.5 py-3 pr-5 pl-[50px] border-t border-[var(--nim-border)] transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                              className="session-import-session-item flex items-start gap-3 py-3 pr-5 pl-[50px] border-t border-[var(--nim-border)] transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                             >
                               <input
                                 type="checkbox"
@@ -359,7 +359,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
                               />
                               <div className="session-import-session-info flex-1 min-w-0">
                                 <div className="session-import-session-title text-sm text-[var(--nim-text)] font-medium mb-1">{session.title}</div>
-                                <div className="session-import-session-meta text-xs text-[var(--nim-text-muted)] flex items-center gap-1.5">
+                                <div className="session-import-session-meta text-xs text-[var(--nim-text-muted)] flex items-center gap-2">
                                   <span>{getRelativeTimeString(session.updatedAt)}</span>
                                   <span>•</span>
                                   <span>{session.messageCount} messages</span>

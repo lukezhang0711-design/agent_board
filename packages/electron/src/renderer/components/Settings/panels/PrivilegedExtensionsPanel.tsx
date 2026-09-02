@@ -149,7 +149,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
                 className="privileged-extension rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] p-3"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--nim-text)]">
+                  <div className="flex items-center gap-2 text-sm font-medium text-[var(--nim-text)]">
                     <MaterialSymbol icon="extension" size={16} />
                     {row.extensionId}
                     <span className="text-xs text-[var(--nim-text-faint)] font-mono">/{row.moduleId}</span>
@@ -195,7 +195,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
                 </div>
 
                 {summaryRows.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {summaryRows.map((s) => {
                       const d = descriptorById.get(s.permissionId);
                       return (

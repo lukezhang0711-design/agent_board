@@ -418,7 +418,7 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
                 role="tab"
                 aria-selected={active}
                 data-tab={tab.id}
-                className={`unified-quick-open-tab flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[13px] font-medium whitespace-nowrap border-b-2 cursor-pointer transition-colors duration-100 ${
+                className={`unified-quick-open-tab flex-1 min-w-0 flex items-center justify-center gap-2 px-2 py-1.5 text-[13px] font-medium whitespace-nowrap border-b-2 cursor-pointer transition-colors duration-100 ${
                   active
                     ? 'text-nim border-[var(--nim-primary)] bg-nim'
                     : 'text-nim-muted border-transparent hover:text-nim hover:bg-nim-hover'
@@ -444,7 +444,7 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
           {FUTURE_TABS.map((tab) => (
             <div
               key={tab.id}
-              className="unified-quick-open-tab future flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[13px] font-medium whitespace-nowrap border-b-2 border-transparent text-nim-faint italic cursor-not-allowed opacity-60"
+              className="unified-quick-open-tab future flex-1 min-w-0 flex items-center justify-center gap-2 px-2 py-1.5 text-[13px] font-medium whitespace-nowrap border-b-2 border-transparent text-nim-faint italic cursor-not-allowed opacity-60"
               title="Coming soon"
             >
               <span>{tab.label}</span>
@@ -1477,7 +1477,7 @@ const SessionsPane: React.FC<SessionsPaneProps> = memo(({
         <div className="flex items-center gap-2 px-4 py-1.5 text-xs text-nim-muted border-b border-nim bg-[var(--nim-accent-subtle)]">
           <span className="text-nim-faint">Filtered to sessions that edited:</span>
           <span
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[rgba(0,122,255,0.15)] text-[var(--nim-primary)] text-xs max-w-[60%]"
+            className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-[rgba(0,122,255,0.15)] text-[var(--nim-primary)] text-xs max-w-[60%]"
             title={fileFilter}
           >
             <MaterialSymbol icon="description" size={14} className="shrink-0" />
@@ -1587,7 +1587,7 @@ const SessionsPane: React.FC<SessionsPaneProps> = memo(({
                     {getRelativeTimeString(session.updatedAt)}
                   </div>
                 </div>
-                <div className="shrink-0 flex items-center gap-1.5 ml-auto">
+                <div className="shrink-0 flex items-center gap-2 ml-auto">
                   {session.uncommittedCount !== undefined && session.uncommittedCount > 0 && (
                     <span
                       className="shrink-0 text-[10px] py-0.5 px-1.5 rounded font-semibold bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]"
@@ -1808,7 +1808,7 @@ const PromptsPane: React.FC<PromptsPaneProps> = memo(({
                   {truncatePrompt(prompt.content)}
                 </div>
                 <div className="text-xs text-nim-faint flex items-center gap-2">
-                  <span className="flex items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap">
+                  <span className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
                     <span className="shrink-0 inline-flex items-center justify-center text-nim-muted">
                       <ProviderIcon provider={prompt.provider || 'claude'} size={12} />
                     </span>

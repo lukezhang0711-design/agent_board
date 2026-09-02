@@ -121,7 +121,7 @@ export const SharedLinksPanel: React.FC = () => {
         </div>
         {state === 'loaded' && shares.length > 0 && (
           <button
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[0.8125rem] text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-md cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+            className="flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-md cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
             onClick={fetchShares}
           >
             <MaterialSymbol icon="refresh" size={14} />
@@ -159,7 +159,7 @@ export const SharedLinksPanel: React.FC = () => {
             {errorMessage}
           </p>
           <button
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[0.8125rem] text-[var(--nim-text)] bg-transparent border border-[var(--nim-border)] rounded-md cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+            className="flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] text-[var(--nim-text)] bg-transparent border border-[var(--nim-border)] rounded-md cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
             onClick={fetchShares}
           >
             <MaterialSymbol icon="refresh" size={14} />

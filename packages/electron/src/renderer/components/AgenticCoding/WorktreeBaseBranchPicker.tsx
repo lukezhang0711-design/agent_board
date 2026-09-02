@@ -281,7 +281,7 @@ export function WorktreeBaseBranchPicker({
         </div>
 
         <div className="worktree-base-branch-picker-body flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5">
-          <div className="worktree-name-field flex flex-col gap-1.5">
+          <div className="worktree-name-field flex flex-col gap-2">
             <label
               htmlFor="worktree-name-input"
               className="text-[12px] font-semibold text-nim uppercase tracking-wider"
@@ -319,7 +319,7 @@ export function WorktreeBaseBranchPicker({
             </div>
           </div>
 
-          <div className="worktree-base-branch-field flex flex-col gap-1.5 min-h-[140px]">
+          <div className="worktree-base-branch-field flex flex-col gap-2 min-h-[140px]">
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-semibold text-nim uppercase tracking-wider">
                 Base branch

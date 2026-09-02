@@ -134,7 +134,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
 
   return (
     <div className="welcome-modal-overlay nim-overlay bg-black/60">
-      <div className="welcome-modal flex flex-col w-[90%] max-w-[700px] max-h-[85vh] rounded-2xl overflow-hidden nim-animate-slide-up bg-nim shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+      <div className="welcome-modal flex flex-col w-[90%] max-w-[700px] max-h-[85vh] rounded-ui-lg overflow-hidden nim-animate-slide-up bg-nim shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
         {/* Progress Bar */}
         <div className="welcome-modal-progress h-1 relative bg-nim-tertiary">
           <div
@@ -261,7 +261,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                       onChange={(e) => setCustomPlansLocation(e.target.value)}
                       className="w-full py-2 px-3 rounded text-sm mb-3 outline-none bg-nim border border-nim text-nim focus:border-nim-focus"
                     />
-                    <label className="checkbox-label flex items-start gap-2.5 cursor-pointer p-3 rounded-md transition-colors duration-200 hover:bg-nim-hover">
+                    <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-md transition-colors duration-200 hover:bg-nim-hover">
                       <input
                         type="checkbox"
                         checked={checkInPlans}
@@ -297,7 +297,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               </p>
 
               <div className="claude-code-option mb-6">
-                <label className="checkbox-label flex items-start gap-2.5 cursor-pointer p-3 rounded-md transition-colors duration-200 hover:bg-nim-hover">
+                <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-md transition-colors duration-200 hover:bg-nim-hover">
                   <input
                     type="checkbox"
                     checked={enableClaudeCode}
@@ -346,7 +346,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
 
                   <p className="options-intro m-0 mb-4 mt-6 font-semibold text-nim">Select components to install:</p>
 
-                  <label className="checkbox-label flex items-start gap-2.5 cursor-pointer p-3 rounded-md transition-colors duration-200 mb-2 hover:bg-nim-hover">
+                  <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-md transition-colors duration-200 mb-2 hover:bg-nim-hover">
                     <input
                       type="checkbox"
                       checked={installTrackCommand}
@@ -358,7 +358,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                     </span>
                   </label>
 
-                  <label className="checkbox-label flex items-start gap-2.5 cursor-pointer p-3 rounded-md transition-colors duration-200 mb-2 hover:bg-nim-hover">
+                  <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-md transition-colors duration-200 mb-2 hover:bg-nim-hover">
                     <input
                       type="checkbox"
                       checked={configureCLAUDEmd}

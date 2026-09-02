@@ -526,7 +526,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
             {/* Title line */}
             <div className="flex items-center gap-1">
               {isRenaming ? (
@@ -557,7 +557,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
               {!isRenaming && <SuperGroupStatus sessionIds={iterationSessionIds} loopStatus={loop.status} />}
             </div>
             {/* Subtitle line */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)]">
                 {currentIteration}/{loop.maxIterations} iterations
               </span>
@@ -568,7 +568,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
           </div>
 
           {/* Control buttons */}
-          <div className="flex items-center gap-0.5 shrink-0 self-center" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1 shrink-0 self-center" onClick={(e) => e.stopPropagation()}>
             {isActiveLoop && (
               <>
                 {isRunning ? (

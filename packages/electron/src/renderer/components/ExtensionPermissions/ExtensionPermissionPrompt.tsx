@@ -177,7 +177,7 @@ export const ExtensionPermissionPrompt: React.FC = () => {
             return (
               <div key={tier} className="ext-permission-prompt-group">
                 <div
-                  className={`ext-permission-prompt-group-title flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-2 ${RISK_TEXT_CLASS[tier]}`}
+                  className={`ext-permission-prompt-group-title flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2 ${RISK_TEXT_CLASS[tier]}`}
                 >
                   <MaterialSymbol icon={RISK_ICON[tier]} size={14} />
                   {RISK_LABEL[tier]}

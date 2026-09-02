@@ -108,8 +108,8 @@ export interface AgentWorkstreamPanelProps {
  * Measurement runs in a hidden layer that mirrors the real pill widths, so the
  * visible row never has to render-then-clip the overflowing pills.
  */
-const TAG_PILL_CLASS = "group flex items-center gap-0.5 text-[10px] font-medium leading-none pl-1.5 pr-1 py-0.5 rounded-full whitespace-nowrap cursor-default text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)]";
-const TAG_OVERFLOW_PILL_CLASS = "flex items-center gap-0.5 text-[10px] font-medium leading-none px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--nim-text)_14%,transparent)] border-none";
+const TAG_PILL_CLASS = "group flex items-center gap-1 text-[10px] font-medium leading-none pl-1.5 pr-1 py-0.5 rounded-full whitespace-nowrap cursor-default text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)]";
+const TAG_OVERFLOW_PILL_CLASS = "flex items-center gap-1 text-[10px] font-medium leading-none px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer text-nim-faint bg-[color-mix(in_srgb,var(--nim-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--nim-text)_14%,transparent)] border-none";
 
 const WorkstreamHeaderTagsRow: React.FC<{ workstreamId: string }> = ({ workstreamId }) => {
   const tags = useAtomValue(workstreamTagsAtom(workstreamId));
@@ -562,7 +562,7 @@ const WorkstreamHeader: React.FC<{
           )}
         </div>
 
-        <div className="workstream-header-content flex flex-col min-w-0 flex-1 gap-0.5 items-start">
+        <div className="workstream-header-content flex flex-col min-w-0 flex-1 gap-1 items-start">
           {isEditing ? (
             <input
               ref={inputRef}
@@ -616,7 +616,7 @@ const WorkstreamHeader: React.FC<{
             }}
           >
             <div
-              className="flex items-center gap-2.5 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+              className="flex items-center gap-3 px-3 py-1.5 rounded cursor-pointer transition-colors text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
               onClick={handleNewTerminalClick}
             >
               <MaterialSymbol icon="add" size={18} />
@@ -634,7 +634,7 @@ const WorkstreamHeader: React.FC<{
 
         {/* Archive/Unarchive button */}
         <button
-          className="workstream-archive-button flex items-center gap-1.5 h-8 px-2 rounded text-[var(--nim-text-faint)] text-[11px] font-medium cursor-pointer border-none bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
+          className="workstream-archive-button flex items-center gap-2 h-8 px-2 rounded text-[var(--nim-text-faint)] text-[11px] font-medium cursor-pointer border-none bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text-muted)]"
           onClick={isArchived ? handleUnarchive : handleArchive}
           title={isArchived ? `Unarchive ${getSessionTypeLabel().toLowerCase()}` : `Archive ${getSessionTypeLabel().toLowerCase()}`}
         >

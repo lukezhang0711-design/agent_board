@@ -12,6 +12,7 @@ export interface TokenItem {
   cssClass: string;
   description: string;
   legacySources: string[];
+  status?: 'formal' | 'transitional';
 }
 
 export interface VisualTokensTable {
@@ -104,7 +105,7 @@ export const visualTokens: VisualTokensTable = {
       id: 'micro',
       name: '微间距 (0.5x)',
       value: '2px',
-      cssClass: 'p-0.5 / m-0.5 / gap-0.5',
+      cssClass: 'p-0.5 / m-0.5',
       description: '紧凑徽标内边距、状态指示点间隙',
       legacySources: ['1px', '2px', '3px'],
     },
@@ -158,47 +159,52 @@ export const visualTokens: VisualTokensTable = {
     },
   },
 
-  // 3. 圆角令牌（5 档 <= 5 档，从基准 6px 推导）
+  // 3. 圆角令牌（3 档正式 + 2 档过渡，从基准 6px 推导）
   radius: {
     none: {
       id: 'none',
       name: '无圆角',
       value: '0px',
       cssClass: 'rounded-none / rounded-ui-none',
-      description: '直角容器、无圆角表格与边缘接缝',
+      description: '【过渡档·新代码禁入，存量逐步迁走】直角容器、无圆角表格与边缘接缝',
       legacySources: ['rounded-none'],
+      status: 'transitional',
     },
     sm: {
       id: 'sm',
       name: '小圆角',
       value: '4px',
       cssClass: 'rounded-sm / rounded-ui-sm',
-      description: '紧凑徽标、小按钮、状态 Tag',
+      description: '【过渡档·新代码禁入，存量逐步迁走】紧凑徽标、小按钮、状态 Tag',
       legacySources: ['rounded-sm', 'rounded'],
+      status: 'transitional',
     },
     base: {
       id: 'base',
-      name: '标准圆角 (基准)',
+      name: '标准圆角 (基准 6px)',
       value: '6px',
       cssClass: 'rounded-md / rounded-ui-base',
-      description: '标准按钮、输入框、列表项、操作条',
+      description: '按钮、输入框、小控件 (基准)',
       legacySources: ['rounded-md'],
+      status: 'formal',
     },
     lg: {
       id: 'lg',
-      name: '大圆角',
+      name: '大圆角 (10px)',
       value: '10px',
       cssClass: 'rounded-lg / rounded-ui-lg',
-      description: '面板容器、卡片、浮窗、主弹窗、看板大列',
-      legacySources: ['rounded-[10px]', 'rounded-lg', 'rounded-xl', 'rounded-2xl'],
+      description: '卡片、面板、对话框',
+      legacySources: ['10px', '12px', '16px'],
+      status: 'formal',
     },
     full: {
       id: 'full',
       name: '全圆角/胶囊',
       value: '9999px',
       cssClass: 'rounded-full / rounded-ui-full',
-      description: '胶囊形 Pill 徽标、头像、圆形状态灯',
+      description: '徽章、头像、药丸',
       legacySources: ['rounded-full'],
+      status: 'formal',
     },
   },
 

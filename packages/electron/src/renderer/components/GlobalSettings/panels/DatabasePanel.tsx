@@ -575,7 +575,7 @@ function MigrationModal(props: {
 
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/45 px-4">
-      <div className="w-full max-w-2xl rounded-xl border border-[var(--nim-border)] bg-[var(--nim-bg-primary)] p-6 shadow-2xl">
+      <div className="w-full max-w-2xl rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-primary)] p-6 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h4 className="text-lg font-semibold text-[var(--nim-text)]">Migrate to SQLite</h4>

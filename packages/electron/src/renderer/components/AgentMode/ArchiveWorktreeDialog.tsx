@@ -62,7 +62,7 @@ export function ArchiveWorktreeDialog({
       onClick={onKeep}
     >
       <div
-        className="archive-worktree-dialog w-full max-w-[440px] rounded-xl outline-none bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.24)]"
+        className="archive-worktree-dialog w-full max-w-[440px] rounded-ui-lg outline-none bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.24)]"
         ref={dialogRef}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}

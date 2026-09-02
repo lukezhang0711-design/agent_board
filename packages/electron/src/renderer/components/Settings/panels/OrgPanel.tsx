@@ -213,7 +213,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
       <div className="py-3">
         <h4 className="text-[15px] font-semibold mb-1 text-[var(--nim-text)]">Members &amp; access</h4>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {members.map((m) => {
             const orgRole = m.role as OrgRole;
             const implicitAdmin = orgRole === 'owner' || orgRole === 'admin';

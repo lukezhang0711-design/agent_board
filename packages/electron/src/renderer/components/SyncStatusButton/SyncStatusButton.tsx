@@ -275,7 +275,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
               Session Sync
             </span>
             <span
-              className={`sync-status-badge text-[11px] font-medium px-2 py-0.5 rounded-[10px] ${getBadgeColorClass()}`}
+              className={`sync-status-badge text-[11px] font-medium px-2 py-0.5 rounded-ui-lg ${getBadgeColorClass()}`}
             >
               {status.projectEnabled ? (status.connected ? 'Connected' : 'Disconnected') : 'Disabled'}
             </span>
@@ -314,7 +314,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
             <>
               <div className="sync-menu-divider h-px bg-[var(--nim-border)] m-0" />
               <div className="px-3.5 py-3">
-                <div className="flex items-center gap-1.5 mb-2">
+                <div className="flex items-center gap-2 mb-2">
                   <MaterialSymbol icon="description" size={14} className="text-[var(--nim-text-muted)]" />
                   <span className="text-[11px] font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">Document Sync</span>
                 </div>
@@ -338,7 +338,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
 
           <div className="sync-menu-actions p-1.5">
             <button
-              className="sync-menu-action flex items-center gap-2.5 w-full px-2.5 py-2 bg-transparent border-none rounded-md text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="sync-menu-action flex items-center gap-3 w-full px-2.5 py-2 bg-transparent border-none rounded-md text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleToggleProjectSync}
               role="menuitem"
             >
@@ -348,7 +348,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
               <span>{status.projectEnabled ? 'Disable sync for this project' : 'Enable sync for this project'}</span>
             </button>
             <button
-              className="sync-menu-action flex items-center gap-2.5 w-full px-2.5 py-2 bg-transparent border-none rounded-md text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="sync-menu-action flex items-center gap-3 w-full px-2.5 py-2 bg-transparent border-none rounded-md text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleOpenSettings}
               role="menuitem"
             >

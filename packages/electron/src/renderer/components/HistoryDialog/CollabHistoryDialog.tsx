@@ -169,7 +169,7 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
   if (!controller) {
     return (
       <div className="collab-history-overlay fixed inset-0 flex items-center justify-center z-[10000] bg-black/50" onClick={onClose}>
-        <div className="collab-history-empty bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-xl p-6 max-w-md text-sm text-[var(--nim-text)]" onClick={(e) => e.stopPropagation()}>
+        <div className="collab-history-empty bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg p-6 max-w-md text-sm text-[var(--nim-text)]" onClick={(e) => e.stopPropagation()}>
           {graceExpired ? (
             <>
               <div className="font-semibold mb-1">Open the document first</div>
@@ -195,7 +195,7 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
 
   return (
     <div className="collab-history-overlay fixed inset-0 flex items-center justify-center z-[10000] bg-black/50" onClick={onClose}>
-      <div className="collab-history-dialog flex flex-col overflow-hidden rounded-xl bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[80vw] max-w-[900px] h-[70vh] max-h-[700px]" onClick={(e) => e.stopPropagation()}>
+      <div className="collab-history-dialog flex flex-col overflow-hidden rounded-ui-lg bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[80vw] max-w-[900px] h-[70vh] max-h-[700px]" onClick={(e) => e.stopPropagation()}>
         <div className="collab-history-header flex items-center justify-between py-3 px-4 border-b border-[var(--nim-border)]">
           <div>
             <h2 className="m-0 text-base font-semibold text-[var(--nim-text)]">Document History</h2>

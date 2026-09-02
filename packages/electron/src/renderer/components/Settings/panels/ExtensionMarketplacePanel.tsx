@@ -479,7 +479,7 @@ export function ExtensionMarketplacePanel({
                   Extensions run with access to your local file system and can execute code on your machine.
                   Installing untrusted extensions may pose security risks including:
                 </p>
-                <ul className="m-0 pl-5 flex flex-col gap-1.5">
+                <ul className="m-0 pl-5 flex flex-col gap-2">
                   <li>Reading or modifying files on your computer</li>
                   <li>Executing arbitrary code in the application context</li>
                   <li>Accessing network resources</li>
@@ -776,7 +776,7 @@ export function ExtensionMarketplacePanel({
         data-testid="marketplace-details-overlay"
       >
         <div
-          className="bg-[var(--nim-bg)] rounded-xl p-6 max-w-[500px] w-full max-h-[80vh] overflow-y-auto relative shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+          className="bg-[var(--nim-bg)] rounded-ui-lg p-6 max-w-[500px] w-full max-h-[80vh] overflow-y-auto relative shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -787,7 +787,7 @@ export function ExtensionMarketplacePanel({
           </button>
 
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-[10px] bg-[var(--nim-bg-tertiary)] flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-ui-lg bg-[var(--nim-bg-tertiary)] flex items-center justify-center shrink-0">
               <MaterialSymbol icon={CATEGORY_ICONS[selectedExtension.categories[0]] || 'extension'} size={24} />
             </div>
             <div>
@@ -808,7 +808,7 @@ export function ExtensionMarketplacePanel({
 
           {/* Highlights */}
           {selectedExtension.highlights && selectedExtension.highlights.length > 0 && (
-            <ul className="m-0 mb-5 pl-5 flex flex-col gap-1.5">
+            <ul className="m-0 mb-5 pl-5 flex flex-col gap-2">
               {selectedExtension.highlights.map((h, idx) => (
                 <li key={idx} className="text-[0.8125rem] text-[var(--nim-text-muted)] leading-relaxed">{h}</li>
               ))}
@@ -994,7 +994,7 @@ export function ExtensionMarketplacePanel({
         </div>
         {onViewInstalled && (
           <button
-            className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3 border border-[var(--nim-border)] rounded-md bg-transparent text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 hover:border-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
+            className="shrink-0 inline-flex items-center gap-2 py-2 px-3 border border-[var(--nim-border)] rounded-md bg-transparent text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 hover:border-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
             onClick={onViewInstalled}
             data-testid="marketplace-view-installed"
           >

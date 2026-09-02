@@ -48,7 +48,7 @@ export function MergeConflictDialog({
   return (
     <div className="merge-conflict-dialog-overlay nim-overlay" onClick={onCancel}>
       <div
-        className="merge-conflict-dialog w-full max-w-[760px] max-h-[calc(100vh-2rem)] mx-4 flex flex-col rounded-xl outline-none bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.24)]"
+        className="merge-conflict-dialog w-full max-w-[760px] max-h-[calc(100vh-2rem)] mx-4 flex flex-col rounded-ui-lg outline-none bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.24)]"
         ref={dialogRef}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
@@ -68,7 +68,7 @@ export function MergeConflictDialog({
               <MaterialSymbol icon="description" size={16} />
               <span>Conflicted Files:</span>
             </div>
-            <ul className="merge-conflict-dialog-files-list list-none m-0 p-0 flex flex-col gap-1.5">
+            <ul className="merge-conflict-dialog-files-list list-none m-0 p-0 flex flex-col gap-2">
               {conflictedFiles.map((file) => (
                 <li key={file} className="merge-conflict-dialog-file flex items-center gap-2 text-[13px] text-[var(--nim-text-muted)]">
                   <MaterialSymbol icon="error" size={14} className="merge-conflict-dialog-file-icon text-[var(--nim-error)] shrink-0" />
@@ -78,14 +78,14 @@ export function MergeConflictDialog({
             </ul>
           </div>
 
-          <div className="merge-conflict-dialog-info flex items-start gap-2.5 p-3 mb-4 rounded-lg bg-[var(--nim-info-light)] text-[var(--nim-info)] text-[13px] leading-snug">
+          <div className="merge-conflict-dialog-info flex items-start gap-3 p-3 mb-4 rounded-lg bg-[var(--nim-info-light)] text-[var(--nim-info)] text-[13px] leading-snug">
             <MaterialSymbol icon="info" size={16} />
             <p className="m-0 text-[var(--nim-info)]">
               You must resolve these conflicts in the main repository before the worktree can be merged.
             </p>
           </div>
 
-          <div className="merge-conflict-dialog-suggestion flex items-start gap-2.5 p-3 mb-4 rounded-lg bg-[var(--nim-success-light)] text-[var(--nim-success)] text-[13px] leading-snug">
+          <div className="merge-conflict-dialog-suggestion flex items-start gap-3 p-3 mb-4 rounded-lg bg-[var(--nim-success-light)] text-[var(--nim-success)] text-[13px] leading-snug">
             <MaterialSymbol icon="smart_toy" size={16} />
             <p className="m-0 text-[var(--nim-success)]">
               An AI agent can help you resolve these conflicts automatically, or you can resolve them manually.

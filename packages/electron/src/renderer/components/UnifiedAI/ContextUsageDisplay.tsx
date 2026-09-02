@@ -211,12 +211,12 @@ export function ContextUsageDisplay({
 
       {shouldShowTooltip && (
         <div
-          className="context-usage-tooltip absolute right-0 bottom-[calc(100%+8px)] w-[280px] max-w-[calc(100vw-32px)] p-3 rounded-[10px] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_12px_32px_rgba(0,0,0,0.35)] z-10 text-[var(--nim-text)] overflow-hidden box-border"
+          className="context-usage-tooltip absolute right-0 bottom-[calc(100%+8px)] w-[280px] max-w-[calc(100vw-32px)] p-3 rounded-ui-lg bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_12px_32px_rgba(0,0,0,0.35)] z-10 text-[var(--nim-text)] overflow-hidden box-border"
           id={tooltipId}
           role="tooltip"
         >
           <div className="tooltip-header flex justify-between items-center text-xs mb-2 text-[var(--nim-text-muted)]">
-            <div className="tooltip-header-left flex items-center gap-1.5">
+            <div className="tooltip-header-left flex items-center gap-2">
               <span>{hasContextWindow ? 'Context Breakdown' : 'Token Usage'}</span>
               {helpContent && (
                 <button
@@ -284,12 +284,12 @@ export function ContextUsageDisplay({
                 </div>
               </div>
 
-              <div className="tooltip-categories flex flex-col gap-1.5">
+              <div className="tooltip-categories flex flex-col gap-2">
                 {formattedCategories.map((cat, index) => {
                   const isFreeSpace = cat.name.toLowerCase().includes('free');
                   return (
                     <div
-                      className="tooltip-category-row grid grid-cols-[10px_1fr_auto_auto] items-center gap-1.5 text-[11px]"
+                      className="tooltip-category-row grid grid-cols-[10px_1fr_auto_auto] items-center gap-2 text-[11px]"
                       key={`${cat.name}-${index}`}
                     >
                       <span

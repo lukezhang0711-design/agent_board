@@ -49,7 +49,7 @@ const STATUS_CONFIG: Record<TeamSyncStatus, { label: string; dotClass: string }>
 const TeamSyncStatusLabel: React.FC<{ status: TeamSyncStatus }> = ({ status }) => {
   const { label, dotClass } = STATUS_CONFIG[status];
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center gap-2">
       <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
       <span>{label}</span>
     </span>
@@ -795,7 +795,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
             <>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover"
                 onClick={() => setIsCreateDocumentOpen(true)}
               >
                 <MaterialSymbol icon="note_add" size={18} />
@@ -803,7 +803,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               </button>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover"
                 onClick={() => setIsCreateFolderOpen(true)}
               >
                 <MaterialSymbol icon="create_new_folder" size={18} />
@@ -814,7 +814,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
             <>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover"
                 onClick={() => {
                   if (!contextDocument) return;
                   onDocumentSelect(contextDocument);
@@ -826,7 +826,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               </button>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!teamOrgId}
                 title={teamOrgId ? undefined : 'No team is connected to this workspace'}
                 onClick={() => {
@@ -840,7 +840,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               </button>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!teamOrgId}
                 title={teamOrgId ? undefined : 'No team is connected to this workspace'}
                 onClick={() => {
@@ -858,7 +858,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               </button>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover"
                 onClick={() => {
                   if (!contextDocument) return;
                   setDocumentToRename(contextDocument);
@@ -870,7 +870,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               </button>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!contextLocalOrigin.hasResolvedBinding || contextLocalOrigin.busyAction !== null}
                 onClick={() => {
                   setContextMenu(null);
@@ -882,7 +882,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               </button>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!contextLocalOrigin.binding || contextLocalOrigin.busyAction !== null}
                 onClick={() => {
                   setContextMenu(null);
@@ -894,7 +894,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               </button>
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={contextLocalOrigin.busyAction !== null}
                 onClick={() => {
                   setContextMenu(null);
@@ -907,7 +907,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               {contextLocalOrigin.binding && (
                 <button
                   type="button"
-                  className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={contextLocalOrigin.busyAction !== null}
                   onClick={() => {
                     setContextMenu(null);
@@ -920,7 +920,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
               )}
               <button
                 type="button"
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim-error hover:bg-nim-hover"
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded border-none bg-transparent cursor-pointer transition-colors text-left text-nim-error hover:bg-nim-hover"
                 onClick={handleDelete}
               >
                 <MaterialSymbol icon="delete" size={18} />

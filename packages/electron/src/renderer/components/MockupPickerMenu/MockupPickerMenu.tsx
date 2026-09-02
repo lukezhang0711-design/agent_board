@@ -386,7 +386,7 @@ function MockupPickerMenu({ onClose }: MockupPickerMenuProps): JSX.Element {
                 options.map((option, index) => (
                   <div
                     key={option.id}
-                    className={`mockup-picker-item flex flex-col gap-0.5 px-3 py-2 rounded cursor-pointer text-[var(--nim-text)] ${
+                    className={`mockup-picker-item flex flex-col gap-1 px-3 py-2 rounded cursor-pointer text-[var(--nim-text)] ${
                       index === selectedIndex ? 'selected bg-[var(--nim-bg-hover)]' : ''
                     } ${
                       option.isNew

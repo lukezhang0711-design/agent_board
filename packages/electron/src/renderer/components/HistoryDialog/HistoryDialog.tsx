@@ -488,15 +488,15 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
 
   return (
     <div className="history-dialog-overlay fixed inset-0 flex items-center justify-center z-[10000] bg-black/50" onClick={onClose}>
-      <div className="history-dialog flex flex-col overflow-hidden rounded-xl bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[90vw] max-w-[1200px] h-[80vh] max-h-[800px]" onClick={(e) => e.stopPropagation()}>
+      <div className="history-dialog flex flex-col overflow-hidden rounded-ui-lg bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[90vw] max-w-[1200px] h-[80vh] max-h-[800px]" onClick={(e) => e.stopPropagation()}>
         <div className="history-dialog-header flex items-center justify-between py-3 px-4 border-b border-[var(--nim-border)]">
-          <div className="history-dialog-title flex flex-col gap-0.5 min-w-0 flex-1">
+          <div className="history-dialog-title flex flex-col gap-1 min-w-0 flex-1">
             <h2 className="m-0 text-base font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis">{filePath ? getFileName(filePath) : 'Document History'}</h2>
             {filePath && <span className="history-dialog-path text-[11px] text-[var(--nim-text-muted)] whitespace-nowrap overflow-hidden text-ellipsis">{filePath}</span>}
           </div>
           <div className="history-dialog-header-right flex items-center gap-3">
             {fileType === 'markdown' && (
-              <div className="view-variant-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md p-0.5 gap-0.5">
+              <div className="view-variant-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md p-0.5 gap-1">
                 <button
                   className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                   onClick={() => setRichView(true)}
@@ -513,7 +513,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                 </button>
               </div>
             )}
-            <div className="view-mode-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md p-0.5 gap-0.5">
+            <div className="view-mode-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-md p-0.5 gap-1">
               <button
                 className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${viewMode === 'changes' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                 onClick={() => setViewMode('changes')}
@@ -590,7 +590,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                     <div className="history-item-content py-1.5 px-2 flex items-center justify-between">
                       <div className="history-item-main flex items-center gap-2 flex-1 min-w-0">
                         <span className={`history-item-icon material-symbols-outlined text-lg shrink-0 ${isSelected ? 'text-white' : 'text-[var(--nim-text-muted)]'}`}>{getSnapshotIcon(snapshot.type)}</span>
-                        <div className="history-item-info flex flex-col gap-0.5 min-w-0 flex-1">
+                        <div className="history-item-info flex flex-col gap-1 min-w-0 flex-1">
                           <div className="history-item-type-row flex items-center justify-between gap-2">
                             <span className={`history-item-type text-xs font-medium capitalize whitespace-nowrap ${isSelected ? 'text-white' : 'text-[var(--nim-text)]'}`}>{snapshot.type.replace('-', ' ')}</span>
                             <span className={`history-item-time text-[11px] whitespace-nowrap shrink-0 ${isSelected ? 'text-white' : 'text-[var(--nim-text-faint)]'}`}>{relativeTime}</span>

@@ -383,7 +383,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
               {extensions.map((ext) => (
                 <div
                   key={ext.id}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer border-b border-[var(--nim-border)] transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer border-b border-[var(--nim-border)] transition-colors ${
                     selectedId === ext.id
                       ? 'bg-[rgba(38,139,210,0.15)] border-l-2 border-l-[var(--nim-primary)] pl-2.5'
                       : 'hover:bg-[var(--nim-bg-hover)]'
@@ -391,13 +391,13 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   onClick={() => setSelectedId(ext.id)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm font-medium text-[var(--nim-text)] truncate">{ext.manifest.name}</span>
                       {ext.availableUpdate && ext.registryEntry && (
                         <MaterialSymbol icon="upgrade" size={14} className="text-[var(--nim-primary)] shrink-0" />
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-2 mt-0.5">
                       <span className={`inline-flex items-center px-1.5 py-0 rounded text-[0.625rem] font-semibold uppercase tracking-tight ${sourcePillClasses(ext.source)}`}>
                         {sourceLabel(ext.source)}
                       </span>
@@ -519,7 +519,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                       <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">Claude Agent Plugin</div>
                       <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--nim-text)]">
+                          <div className="flex items-center gap-2 text-xs font-medium text-[var(--nim-text)]">
                             <span className="material-symbols-outlined text-base text-[var(--nim-primary)]">smart_toy</span>
                             {selectedExtension.manifest.contributions.claudePlugin.displayName || 'Claude Plugin'}
                           </div>
@@ -555,7 +555,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                       <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">Agent Workflows</div>
                       <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--nim-text)]">
+                          <div className="flex items-center gap-2 text-xs font-medium text-[var(--nim-text)]">
                             <span className="material-symbols-outlined text-base text-[var(--nim-primary)]">hub</span>
                             {selectedExtension.manifest.contributions.agentWorkflows.displayName || 'Agent Workflows'}
                           </div>
@@ -581,7 +581,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   {selectedExtension.manifest.contributions && (
                     <div className="mb-5">
                       <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-2.5">Contributions</div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-2">
                         {selectedExtension.manifest.contributions.customEditors?.map((editor, idx) => (
                           <span key={`editor-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                             <span className="material-symbols-outlined text-sm">edit_document</span>

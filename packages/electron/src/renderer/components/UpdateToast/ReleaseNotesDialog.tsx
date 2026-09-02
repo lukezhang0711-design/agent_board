@@ -66,7 +66,7 @@ export function ReleaseNotesDialog({
       data-testid="release-notes-dialog-backdrop"
     >
       <div
-        className="update-dialog relative flex flex-col w-[600px] max-w-[90vw] max-h-[80vh] p-6 rounded-2xl border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4)] animate-[scaleIn_0.2s_ease-out]"
+        className="update-dialog relative flex flex-col w-[600px] max-w-[90vw] max-h-[80vh] p-6 rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4)] animate-[scaleIn_0.2s_ease-out]"
         ref={dialogRef}
         role="dialog"
         aria-modal="true"

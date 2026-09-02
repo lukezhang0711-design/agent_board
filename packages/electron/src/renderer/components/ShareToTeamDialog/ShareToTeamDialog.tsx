@@ -355,7 +355,7 @@ export function ShareToTeamDialog({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="share-to-team-dialog w-[460px] max-w-[92%] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-xl shadow-2xl overflow-hidden"
+        className="share-to-team-dialog w-[460px] max-w-[92%] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Share to Team"
@@ -388,7 +388,7 @@ export function ShareToTeamDialog({
           <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-1.5">
             Source file
           </div>
-          <div className="flex items-center gap-2.5 px-3 py-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-md mb-4">
+          <div className="flex items-center gap-3 px-3 py-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-md mb-4">
             <MaterialSymbol icon="description" size={20} className="text-[var(--nim-primary)] shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-medium text-[var(--nim-text)] truncate">{fileName}</div>
@@ -399,7 +399,7 @@ export function ShareToTeamDialog({
           <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-1.5">
             Shared name
           </div>
-          <div className="flex items-center gap-1.5 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-md mb-4 focus-within:border-[var(--nim-primary)]">
+          <div className="flex items-center gap-2 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-md mb-4 focus-within:border-[var(--nim-primary)]">
             <MaterialSymbol icon="edit" size={14} className="text-[var(--nim-text-faint)]" />
             <input
               type="text"
@@ -519,7 +519,7 @@ export function ShareToTeamDialog({
             type="button"
             onClick={handleConfirm}
             disabled={!sharedName.trim()}
-            className={`px-3.5 py-1.5 rounded-md text-[13px] font-medium inline-flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-md text-[13px] font-medium inline-flex items-center gap-2 ${
               sharedName.trim()
                 ? 'bg-[var(--nim-primary)] text-[#0f1115] hover:bg-[var(--nim-primary-hover)] hover:text-white cursor-pointer'
                 : 'bg-[var(--nim-primary)] text-[#0f1115] opacity-50 cursor-not-allowed'

@@ -131,13 +131,13 @@ const TaskRow: React.FC<TaskRowProps> = React.memo(({ task, openIds }) => {
         {(isBlocked || task.owner) && (
           <div className="task-list-item-meta flex items-center gap-2 mt-0.5 text-[10px] text-[var(--nim-text-muted)]">
             {isBlocked && (
-              <span className="task-list-item-blocked inline-flex items-center gap-0.5">
+              <span className="task-list-item-blocked inline-flex items-center gap-1">
                 <MaterialSymbol icon="lock" size={11} className="shrink-0" />
                 blocked by {blockedBy.map(id => `#${id}`).join(', ')}
               </span>
             )}
             {task.owner && (
-              <span className="task-list-item-owner inline-flex items-center gap-0.5">
+              <span className="task-list-item-owner inline-flex items-center gap-1">
                 <MaterialSymbol icon="person" size={11} className="shrink-0" />
                 {task.owner}
               </span>

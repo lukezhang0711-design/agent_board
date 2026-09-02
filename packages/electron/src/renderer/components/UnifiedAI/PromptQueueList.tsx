@@ -31,7 +31,7 @@ function AttachmentIndicator({ attachments }: { attachments: QueuedPromptAttachm
   return (
     <span className="prompt-queue-attachments shrink-0 flex items-center gap-1 text-[11px] text-nim-muted" title={label}>
       {imageCount > 0 && (
-        <span className="flex items-center gap-0.5">
+        <span className="flex items-center gap-1">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
             <circle cx="5.5" cy="6.5" r="1" stroke="currentColor" strokeWidth="1"/>
@@ -41,7 +41,7 @@ function AttachmentIndicator({ attachments }: { attachments: QueuedPromptAttachm
         </span>
       )}
       {fileCount > 0 && (
-        <span className="flex items-center gap-0.5">
+        <span className="flex items-center gap-1">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 2H4.5A1.5 1.5 0 003 3.5v9A1.5 1.5 0 004.5 14h7a1.5 1.5 0 001.5-1.5V6L9 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M9 2v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

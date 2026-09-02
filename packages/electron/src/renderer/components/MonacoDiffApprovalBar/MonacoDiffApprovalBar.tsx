@@ -80,7 +80,7 @@ export const MonacoDiffApprovalBar: React.FC<MonacoDiffApprovalBarProps> = ({
       return (
         <div className="monaco-diff-approval-bar-session flex items-center gap-2">
           <MaterialSymbol icon="smart_toy" size={18} className="monaco-diff-approval-bar-session-icon text-[var(--nim-primary)]" />
-          <div className="monaco-diff-approval-bar-session-details flex flex-col gap-0.5">
+          <div className="monaco-diff-approval-bar-session-details flex flex-col gap-1">
             <span className="monaco-diff-approval-bar-label text-[13px] font-medium text-[var(--nim-text)]">
               <span className="monaco-diff-approval-bar-session-name font-semibold text-[var(--nim-primary)]">{sessionInfo.sessionTitle}</span>
               {' '}edited {fileName || 'file'}

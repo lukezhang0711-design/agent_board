@@ -81,7 +81,7 @@ function CreateTeamDialogWrapper({
       }}
     >
       <div
-        className="w-[400px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-xl shadow-2xl overflow-hidden"
+        className="w-[400px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -143,7 +143,7 @@ function CreateTeamDialogWrapper({
             <div className="w-full px-3 py-2 border border-[var(--nim-bg-tertiary)] rounded-md bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] text-[12px] font-mono">
               {data.gitRemote}
             </div>
-            <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex items-center gap-2 mt-1">
               <div className="w-1.5 h-1.5 rounded-full bg-[var(--nim-success)]" />
               <span className="text-[11px] text-[var(--nim-success)]">
                 Detected from git remote origin

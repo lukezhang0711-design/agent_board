@@ -457,7 +457,7 @@ export function WorkspaceHistoryDialog({
                     snapshots.map((snapshot, index) => (
                       <div
                         key={`${snapshot.timestamp}-${index}`}
-                        className={`workspace-history-snapshot-item flex items-center gap-2.5 px-4 py-2 cursor-pointer border-b border-[var(--nim-border)] last:border-b-0 transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] ${selectedSnapshotTimestamp === snapshot.timestamp ? 'selected bg-[var(--nim-bg-tertiary)] border-l-[3px] border-l-[var(--nim-primary)] pl-[13px]' : ''}`}
+                        className={`workspace-history-snapshot-item flex items-center gap-3 px-4 py-2 cursor-pointer border-b border-[var(--nim-border)] last:border-b-0 transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] ${selectedSnapshotTimestamp === snapshot.timestamp ? 'selected bg-[var(--nim-bg-tertiary)] border-l-[3px] border-l-[var(--nim-primary)] pl-[13px]' : ''}`}
                         onClick={() => handleSnapshotSelect(snapshot.timestamp, index)}
                       >
                         <div className={`workspace-history-snapshot-icon w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${getSnapshotIconBgClass(snapshot.type)}`}>
@@ -484,7 +484,7 @@ export function WorkspaceHistoryDialog({
                         {formatVersionLabel(versionBMeta.type, versionBMeta.timestamp)}
                       </span>
                       {fileType === 'markdown' && (
-                        <div className="workspace-history-diff-mode-toggle flex bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md p-0.5 gap-0.5 ml-auto">
+                        <div className="workspace-history-diff-mode-toggle flex bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-md p-0.5 gap-1 ml-auto">
                           <button
                             className={`workspace-history-diff-mode-button px-3 py-1 text-[11px] font-medium border-none rounded cursor-pointer transition-all duration-200 ${diffViewMode === 'rich' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                             onClick={() => setDiffViewMode('rich')}

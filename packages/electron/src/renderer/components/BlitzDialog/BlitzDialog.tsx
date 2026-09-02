@@ -216,7 +216,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
             aria-hidden="true"
           />
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-xl bg-nim-primary/15 text-nim-primary flex items-center justify-center border border-nim">
+            <div className="h-10 w-10 rounded-ui-lg bg-nim-primary/15 text-nim-primary flex items-center justify-center border border-nim">
               <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 2L4 9h4l-1 5 5-7H8l1-5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15"/>
               </svg>
@@ -241,7 +241,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
         {/* Body */}
         <div className="nim-modal-body flex flex-col gap-5">
           {/* Prompt */}
-          <div className="flex flex-col gap-2 rounded-xl border border-nim bg-nim-secondary p-4">
+          <div className="flex flex-col gap-2 rounded-ui-lg border border-nim bg-nim-secondary p-4">
             <div className="flex items-center justify-between gap-2">
               <label className="text-[13px] font-medium text-nim">Prompt</label>
               <span className="text-[11px] text-nim-faint">Cmd+Enter to start</span>
@@ -261,7 +261,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
           </div>
 
           {/* Models */}
-          <div className="flex flex-col gap-3 rounded-xl border border-nim bg-nim-secondary p-4">
+          <div className="flex flex-col gap-3 rounded-ui-lg border border-nim bg-nim-secondary p-4">
             <div className="flex items-center justify-between gap-2">
               <label className="text-[13px] font-medium text-nim">Models</label>
               {selectedModels.length > 0 && (
@@ -277,7 +277,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
               <div className="text-[13px] text-nim-faint py-3">No agent models available. Configure API keys in Settings.</div>
             ) : (
               <div className="max-h-[260px] overflow-y-auto pr-1">
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   {modelSelections.map(model => (
                     <label
                       key={model.id}
@@ -318,7 +318,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
           </div>
 
           {/* Analysis Model */}
-          <div className="flex flex-col gap-2 rounded-xl border border-nim bg-nim-secondary p-4">
+          <div className="flex flex-col gap-2 rounded-ui-lg border border-nim bg-nim-secondary p-4">
             <label className="text-[13px] font-medium text-nim">Analysis Model</label>
             <p className="m-0 text-[11px] text-nim-muted">
               When all sessions complete, an analysis session compares the results.

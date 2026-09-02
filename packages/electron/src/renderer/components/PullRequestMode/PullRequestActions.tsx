@@ -312,7 +312,7 @@ export function PullRequestActions({
       )}
 
       {showMerge && pendingMethod !== null && (
-        <div className="flex items-center gap-1.5" data-testid="pr-merge-confirm">
+        <div className="flex items-center gap-2" data-testid="pr-merge-confirm">
           <span className="text-[11px] text-nim-muted">
             {METHOD_LABEL[pendingMethod]} into <span className="font-mono text-nim">{pr.baseRef}</span>?
           </span>

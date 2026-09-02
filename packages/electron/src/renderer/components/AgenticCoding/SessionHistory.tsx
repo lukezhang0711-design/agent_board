@@ -2789,7 +2789,7 @@ const SessionHistoryComponent: React.FC = () => {
             </button>
           )}
         </div>
-        <div className="session-history-filters flex items-center px-3 py-2 border-b border-[var(--nim-border)] gap-1.5 shrink-0">
+        <div className="session-history-filters flex items-center px-3 py-2 border-b border-[var(--nim-border)] gap-2 shrink-0">
           <div className="session-history-sort-dropdown ml-auto relative">
             <button
               className="session-history-sort-button flex items-center justify-center px-1.5 py-1 text-xs rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-150 outline-none hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] [&_svg]:block"
@@ -3394,7 +3394,7 @@ const SessionHistoryComponent: React.FC = () => {
           </div>
         )}
       </div>
-      <div className="session-history-filters flex items-center px-3 py-2 border-b border-[var(--nim-border)] gap-1.5 shrink-0">
+      <div className="session-history-filters flex items-center px-3 py-2 border-b border-[var(--nim-border)] gap-2 shrink-0">
         <button
           className={`session-history-archive-filter flex items-center justify-center px-1.5 py-1 text-xs rounded border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 outline-none hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] [&_svg]:block ${showArchived ? 'bg-[var(--nim-primary)] border-[var(--nim-primary)] text-white hover:opacity-90' : ''}`}
           onClick={toggleShowArchived}
@@ -3469,7 +3469,7 @@ const SessionHistoryComponent: React.FC = () => {
       {(selectedSessionIds.size > 0 || selectedGroupIds.size > 0) && (
         <div className="session-history-bulk-actions flex items-center justify-between px-3 py-2 bg-[var(--nim-bg-selected)] border-b border-[var(--nim-border)] gap-2">
           <span className="session-history-bulk-count text-xs font-medium text-[var(--nim-text)]">{selectedSessionIds.size + selectedGroupIds.size} selected</span>
-          <div className="session-history-bulk-buttons flex gap-1.5">
+          <div className="session-history-bulk-buttons flex gap-2">
             {showArchived ? (
               <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] [&_svg]:shrink-0" onClick={handleBulkUnarchive} title="Unarchive selected">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

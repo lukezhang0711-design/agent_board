@@ -301,7 +301,7 @@ export function GenericTypeahead({
                       </span>
                     )
                   )}
-                  <div className="generic-typeahead-option-text flex-1 min-w-0 flex flex-col gap-0.5">
+                  <div className="generic-typeahead-option-text flex-1 min-w-0 flex flex-col gap-1">
                     <div className="generic-typeahead-option-label text-sm text-nim-primary whitespace-nowrap overflow-hidden text-ellipsis">
                       {option.label}
                     </div>

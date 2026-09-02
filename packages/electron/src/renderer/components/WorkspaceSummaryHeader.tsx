@@ -45,7 +45,7 @@ export function WorkspaceSummaryHeader({
         className={`workspace-summary-header px-3 pt-2.5 pb-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg)] gap-2 min-h-14 shrink-0 ${headerClassName}`.trim()}
       >
         <div className="workspace-summary-header-top flex items-start gap-2">
-          <div className="workspace-summary-header-title-row flex items-baseline gap-2.5 min-w-0 flex-1">
+          <div className="workspace-summary-header-title-row flex items-baseline gap-3 min-w-0 flex-1">
             <h3 className="workspace-summary-header-name m-0 text-[15px] font-bold text-[var(--nim-text)] overflow-hidden text-ellipsis whitespace-nowrap tracking-tight leading-tight">
               {displayName}
             </h3>
@@ -56,7 +56,7 @@ export function WorkspaceSummaryHeader({
             ) : null}
           </div>
           {actions ? (
-            <div className={`workspace-summary-header-actions flex items-center gap-1.5 shrink-0 ${actionsClassName}`.trim()}>
+            <div className={`workspace-summary-header-actions flex items-center gap-2 shrink-0 ${actionsClassName}`.trim()}>
               {actions}
             </div>
           ) : null}

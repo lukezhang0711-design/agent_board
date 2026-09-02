@@ -1046,7 +1046,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               })}
             {isNativeItem(item) && (
               <span
-                className="text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5 bg-gray-500/[0.125] text-gray-400"
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1 bg-gray-500/[0.125] text-gray-400"
                 title="Stored in database — not backed by a file"
                 data-testid="tracker-source-db-badge"
               >
@@ -1071,7 +1071,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
               : externalOrigin.externalId;
             return (
               <div
-                className="flex items-center gap-1.5 mt-1.5 text-[11px]"
+                className="flex items-center gap-2 mt-1.5 text-[11px]"
                 data-testid="tracker-source-chip"
                 title={installed ? undefined : 'Install the importer to refresh this item'}
               >
@@ -1097,7 +1097,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
                 )}
                 <button
                   type="button"
-                  className="ml-1 inline-flex items-center gap-0.5 text-nim-muted hover:text-nim-accent"
+                  className="ml-1 inline-flex items-center gap-1 text-nim-muted hover:text-nim-accent"
                   title="Open original"
                   data-testid="tracker-source-open"
                   onClick={() => {
@@ -1529,7 +1529,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             {/* Author identity */}
             {item.system.authorIdentity && (
-              <div className="col-span-2 flex items-center gap-1.5">
+              <div className="col-span-2 flex items-center gap-2">
                 <span className="text-nim-faint shrink-0">Created by</span>
                 <UserAvatar identity={item.system.authorIdentity} showName size={16} />
                 {item.system.createdByAgent && (
@@ -1539,7 +1539,7 @@ export const TrackerItemDetail: React.FC<TrackerItemDetailProps> = ({
             )}
             {/* Last modifier */}
             {item.system.lastModifiedBy && item.system.lastModifiedBy.displayName !== item.system.authorIdentity?.displayName && (
-              <div className="col-span-2 flex items-center gap-1.5">
+              <div className="col-span-2 flex items-center gap-2">
                 <span className="text-nim-faint shrink-0">Modified by</span>
                 <UserAvatar identity={item.system.lastModifiedBy} showName size={16} />
               </div>
@@ -1625,7 +1625,7 @@ const ReadOnlyField: React.FC<{ field: FieldDefinition; value: any }> = ({ field
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-medium text-[var(--nim-text-muted)] uppercase tracking-[0.5px]">{label}</span>
           <span
-            className="inline-block self-start px-2 py-0.5 rounded-[10px] text-[11px] font-medium border"
+            className="inline-block self-start px-2 py-0.5 rounded-ui-lg text-[11px] font-medium border"
             style={{
               backgroundColor: `${color}20`,
               color,

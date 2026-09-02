@@ -152,7 +152,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
       onClick={onClose}
     >
       <div
-        className="qr-modal-content bg-nim rounded-xl w-[400px] max-h-[90vh] overflow-y-auto shadow-2xl my-auto"
+        className="qr-modal-content bg-nim rounded-ui-lg w-[400px] max-h-[90vh] overflow-y-auto shadow-2xl my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="qr-modal-header flex items-center justify-between px-5 py-4 border-b border-nim sticky top-0 bg-nim z-10">
@@ -245,7 +245,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
               {/* Prevent sleep suggestion */}
               {onPreventSleepModeChange && (
                 <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <span className="text-[13px] font-medium text-nim">Prevent sleep while syncing</span>
                       <p className="text-[11px] text-nim-muted mt-1 mb-0">
@@ -283,7 +283,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
               {qrPayload && (
                 <div className="qr-dev-copy">
                   <button
-                    className={`qr-dev-copy-button w-full mt-3 px-4 py-2 border border-nim rounded-md text-[13px] font-medium cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`qr-dev-copy-button w-full mt-3 px-4 py-2 border border-nim rounded-md text-[13px] font-medium cursor-pointer flex items-center justify-center gap-2 ${
                       copied
                         ? 'bg-green-500 text-white border-green-500'
                         : 'bg-nim-tertiary text-nim-muted hover:bg-nim-hover'

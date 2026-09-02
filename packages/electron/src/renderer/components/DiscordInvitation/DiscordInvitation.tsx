@@ -119,7 +119,7 @@ export const DiscordInvitation: React.FC<DiscordInvitationProps> = ({
       onClick={handleRemindLater}
     >
       <div
-        className="discord-invitation relative p-0 w-[420px] max-w-[90vw] rounded-2xl overflow-hidden border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.4)] animate-[nim-slide-up_0.3s_ease-out]"
+        className="discord-invitation relative p-0 w-[420px] max-w-[90vw] rounded-ui-lg overflow-hidden border border-[var(--nim-border)] bg-[var(--nim-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.4)] animate-[nim-slide-up_0.3s_ease-out]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -147,7 +147,7 @@ export const DiscordInvitation: React.FC<DiscordInvitationProps> = ({
 
           <div className="discord-invitation-buttons flex justify-center mb-6">
             <button
-              className="discord-invitation-button discord-invitation-button-primary w-full max-w-[320px] px-8 py-3.5 rounded-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center justify-center gap-2.5 text-white bg-[var(--nim-primary)] shadow-[0_4px_12px_rgba(0,0,0,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--nim-primary-hover)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.3)] active:translate-y-0"
+              className="discord-invitation-button discord-invitation-button-primary w-full max-w-[320px] px-8 py-3.5 rounded-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center justify-center gap-3 text-white bg-[var(--nim-primary)] shadow-[0_4px_12px_rgba(0,0,0,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--nim-primary-hover)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.3)] active:translate-y-0"
               onClick={() => handleOpenLink('https://discord.gg/ubZDt4esEn', 'Discord')}
             >
               <DiscordIcon className="w-5 h-auto text-white" />

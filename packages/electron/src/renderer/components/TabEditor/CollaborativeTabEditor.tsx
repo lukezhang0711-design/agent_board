@@ -884,7 +884,7 @@ export const CollaborativeTabEditor: React.FC<CollaborativeTabEditorProps> = ({
         lexicalEditor={documentType === 'markdown' ? (lexicalEditor ?? undefined) : undefined}
         breadcrumbContent={
           localOrigin.binding?.resolvedPath ? (
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex min-w-0 items-center gap-2">
               <span className="shrink-0 text-[var(--nim-text-faint)] text-[12px] uppercase tracking-wide">
                 Uploaded from
               </span>
@@ -895,7 +895,7 @@ export const CollaborativeTabEditor: React.FC<CollaborativeTabEditorProps> = ({
               />
             </div>
           ) : localOrigin.binding ? (
-            <div className="flex min-w-0 items-center gap-1.5 text-[13px]">
+            <div className="flex min-w-0 items-center gap-2 text-[13px]">
               <span className="shrink-0 text-[var(--nim-text-faint)] text-[12px] uppercase tracking-wide">
                 Uploaded from
               </span>
@@ -904,7 +904,7 @@ export const CollaborativeTabEditor: React.FC<CollaborativeTabEditorProps> = ({
               </span>
             </div>
           ) : (
-            <div className="flex min-w-0 items-center gap-1.5 text-[13px]">
+            <div className="flex min-w-0 items-center gap-2 text-[13px]">
               <span className="shrink-0 text-[var(--nim-text-faint)] text-[12px] uppercase tracking-wide">
                 Shared doc
               </span>

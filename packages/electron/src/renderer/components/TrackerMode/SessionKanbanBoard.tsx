@@ -111,7 +111,7 @@ function ChildRunStateBar({ sessionId }: { sessionId: string }) {
   return (
     <div className="flex items-center gap-2 py-0.5">
       {active.map(s => (
-        <div key={s.key} className="flex items-center gap-0.5">
+        <div key={s.key} className="flex items-center gap-1">
           <div
             className="w-[5px] h-[5px] rounded-full shrink-0"
             style={{ background: s.color }}
@@ -279,7 +279,7 @@ function useCardState(sessionId: string, cardType: KanbanCardType): CardStateInf
 function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'running') {
     return (
-      <span className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-blue-400/10" style={{ color: info.badgeColor }}>
+      <span className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-blue-400/10" style={{ color: info.badgeColor }}>
         <span className={`material-symbols-outlined text-ui-compact ${info.spinIcon ? 'animate-spin' : ''}`}>{info.badgeIcon}</span>
         {info.badgeLabel}
       </span>
@@ -287,7 +287,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   }
   if (info.state === 'waiting') {
     return (
-      <span className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-orange-500/10" style={{ color: info.badgeColor }}>
+      <span className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-orange-500/10" style={{ color: info.badgeColor }}>
         <MaterialSymbol icon="help_outline" size={12} />
         {info.badgeLabel}
       </span>
@@ -296,7 +296,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'queued') {
     return (
       <span
-        className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-slate-400/10"
+        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-slate-400/10"
         style={{ color: info.badgeColor }}
         title="等待 Head 调度槽位"
       >
@@ -308,7 +308,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'interrupted') {
     return (
       <span
-        className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-orange-500/10"
+        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-orange-500/10"
         style={{ color: info.badgeColor }}
         title="已被 Head 中断"
       >
@@ -320,7 +320,7 @@ function CardStatusBadge({ info }: { info: CardStateInfo }) {
   if (info.state === 'failed') {
     return (
       <span
-        className="flex items-center gap-0.5 text-ui-micro px-1 py-px rounded bg-red-500/10"
+        className="flex items-center gap-1 text-ui-micro px-1 py-px rounded bg-red-500/10"
         style={{ color: info.badgeColor }}
         title="工单失败"
       >
@@ -650,7 +650,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
         data-work-order-failed={workOrderFailed ? 'true' : undefined}
       >
         {/* Title row: type/provider icon + title + unread dot */}
-        <div className="flex items-start gap-1.5 mb-1.5">
+        <div className="flex items-start gap-2 mb-1.5">
           <CardTypeIcon type={cardType} provider={session.provider} />
           <div className="flex-1 min-w-0">
             {isRenaming ? (
@@ -717,7 +717,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
 
         {/* Footer: open-in-agent + uncommitted + peek + time */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {/* Only a Head-dispatched card has a session to jump into. This is
                 the board's replacement for the retired Delegated Sessions
                 panel, so it stays a quiet text link, not a second CTA. */}
@@ -737,13 +737,13 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
               </button>
             )}
             {session.uncommittedCount > 0 && (
-              <span className="flex items-center gap-0.5 text-ui-micro text-nim-faint" title={`${session.uncommittedCount} 个未提交文件`}>
+              <span className="flex items-center gap-1 text-ui-micro text-nim-faint" title={`${session.uncommittedCount} 个未提交文件`}>
                 <MaterialSymbol icon="edit_note" size={12} />
                 {session.uncommittedCount}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <span
               ref={peekIconRef}
               className="w-4 h-4 rounded flex items-center justify-center text-nim-disabled hover:text-nim-muted transition-colors"
@@ -1067,7 +1067,7 @@ function UnphasedColumn({ sessions, onSelect, onArchive, onRename, onDropToPhase
             </span>
             {queuedCount > 0 && (
               <span
-                className="flex items-center gap-0.5 rounded bg-nim-warning-subtle px-1 py-px text-ui-micro font-semibold text-[var(--nim-warning)]"
+                className="flex items-center gap-1 rounded bg-nim-warning-subtle px-1 py-px text-ui-micro font-semibold text-[var(--nim-warning)]"
                 title={`${queuedCount} 个派发正在等待 Head 调度槽位`}
               >
                 <MaterialSymbol icon="schedule" size={11} />
@@ -1276,7 +1276,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 border-b border-nim bg-nim shrink-0" data-testid="kanban-toolbar">
       {/* Scope Title with PageHeader styling */}
-      <div className="flex items-center gap-1.5 shrink-0 pr-2 border-r border-nim" data-testid="kanban-scope-header">
+      <div className="flex items-center gap-2 shrink-0 pr-2 border-r border-nim" data-testid="kanban-scope-header">
         <span className="text-xs font-semibold text-nim">看板</span>
         <span className="text-ui-caption text-nim-faint">本次派发相关</span>
       </div>

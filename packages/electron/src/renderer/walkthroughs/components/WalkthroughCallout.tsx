@@ -232,7 +232,7 @@ export function WalkthroughCallout({
   const callout = (
     <div
       ref={calloutRef}
-      className={`walkthrough-callout fixed ${widthClass} bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-[10px] z-[10001] overflow-visible animate-[walkthrough-fade-in_0.2s_ease-out_forwards] shadow-[0_8px_32px_rgba(0,0,0,0.25),0_2px_8px_rgba(0,0,0,0.15)]`}
+      className={`walkthrough-callout fixed ${widthClass} bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg z-[10001] overflow-visible animate-[walkthrough-fade-in_0.2s_ease-out_forwards] shadow-[0_8px_32px_rgba(0,0,0,0.25),0_2px_8px_rgba(0,0,0,0.15)]`}
       style={{
         top: position.top,
         left: position.left,
@@ -253,7 +253,7 @@ export function WalkthroughCallout({
 
       {/* Content */}
       <div className="walkthrough-callout-content px-5 py-4">
-        <div className="walkthrough-callout-title-row flex items-center gap-2.5 mb-2">
+        <div className="walkthrough-callout-title-row flex items-center gap-3 mb-2">
           <div
             id="walkthrough-title"
             className="walkthrough-callout-title text-[15px] font-semibold text-[var(--nim-text)] leading-tight"
@@ -292,7 +292,7 @@ export function WalkthroughCallout({
         {step.action && (
           <div className="walkthrough-callout-action mt-3">
             <button
-              className="walkthrough-callout-action-btn inline-flex items-center gap-1.5 px-3.5 py-2 bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] hover:border-[color-mix(in_srgb,var(--nim-primary)_30%,transparent)]"
+              className="walkthrough-callout-action-btn inline-flex items-center gap-2 px-3.5 py-2 bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] hover:border-[color-mix(in_srgb,var(--nim-primary)_30%,transparent)]"
               onClick={handleActionClick}
             >
               {step.action.label}

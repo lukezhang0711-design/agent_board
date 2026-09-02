@@ -1,0 +1,583 @@
+{
+  "_root": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 5
+  },
+  "components/AIChat": {
+    "pxFonts": 13,
+    "rawColors": 8,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 4
+  },
+  "components/AIUsageReport": {
+    "pxFonts": 22,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 7
+  },
+  "components/AgentMode": {
+    "pxFonts": 86,
+    "rawColors": 14,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 23
+  },
+  "components/AgenticCoding": {
+    "pxFonts": 75,
+    "rawColors": 29,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 19
+  },
+  "components/ApiKeyDialog": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/BackgroundTaskIndicator": {
+    "pxFonts": 13,
+    "rawColors": 10,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/BlitzDialog": {
+    "pxFonts": 19,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/ChatSidebar": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/ClaudeUsageIndicator": {
+    "pxFonts": 8,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "components/CodexUsageIndicator": {
+    "pxFonts": 7,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "components/CollabMode": {
+    "pxFonts": 2,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 4
+  },
+  "components/ConfirmDialog": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/CustomEditors": {
+    "pxFonts": 4,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 4
+  },
+  "components/DatabaseBrowser": {
+    "pxFonts": 28,
+    "rawColors": 6,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/DeveloperDashboard": {
+    "pxFonts": 18,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/DiffPreview": {
+    "pxFonts": 3,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/DiscordInvitation": {
+    "pxFonts": 5,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/EditorMode": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/EmbedFrame": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "components/ErrorDialog": {
+    "pxFonts": 12,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/ErrorToast": {
+    "pxFonts": 1,
+    "rawColors": 6,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/ExtensionDevIndicator": {
+    "pxFonts": 10,
+    "rawColors": 4,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "components/ExtensionPermissions": {
+    "pxFonts": 2,
+    "rawColors": 2,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/ExtensionProjectIntroModal": {
+    "pxFonts": 5,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/Feedback": {
+    "pxFonts": 15,
+    "rawColors": 2,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/FloatingEditorActions": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/GeminiUsageIndicator": {
+    "pxFonts": 12,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "components/GlobalSettings": {
+    "pxFonts": 88,
+    "rawColors": 134,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 18
+  },
+  "components/HistoryDialog": {
+    "pxFonts": 26,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 9
+  },
+  "components/KeyboardShortcutsDialog": {
+    "pxFonts": 2,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/MetaAgentMode": {
+    "pxFonts": 7,
+    "rawColors": 2,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 4
+  },
+  "components/MockupPickerMenu": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/MonacoDiffApprovalBar": {
+    "pxFonts": 5,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/NavigationGutter": {
+    "pxFonts": 4,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 4
+  },
+  "components/PlansPanel": {
+    "pxFonts": 6,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 4
+  },
+  "components/ProjectSelectionDialog": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/ProjectTrustToast": {
+    "pxFonts": 17,
+    "rawColors": 9,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/PullRequestMode": {
+    "pxFonts": 29,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 15
+  },
+  "components/RosettaWarning": {
+    "pxFonts": 5,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/Settings": {
+    "pxFonts": 137,
+    "rawColors": 71,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 18
+  },
+  "components/ShareDialog": {
+    "pxFonts": 1,
+    "rawColors": 1,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/ShareToTeamDialog": {
+    "pxFonts": 18,
+    "rawColors": 2,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/SyncStatusButton": {
+    "pxFonts": 5,
+    "rawColors": 15,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/TabContent": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/TabEditor": {
+    "pxFonts": 42,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 6
+  },
+  "components/TabEditorErrorBoundary": {
+    "pxFonts": 6,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/TabManager": {
+    "pxFonts": 14,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/Terminal": {
+    "pxFonts": 8,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 5
+  },
+  "components/TerminalBottomPanel": {
+    "pxFonts": 3,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 4
+  },
+  "components/ThemeToggleButton": {
+    "pxFonts": 1,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/TrackerMode": {
+    "pxFonts": 84,
+    "rawColors": 4,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 14
+  },
+  "components/TrustIndicator": {
+    "pxFonts": 6,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/Typeahead": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "components/UnifiedAI": {
+    "pxFonts": 62,
+    "rawColors": 16,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 28
+  },
+  "components/UnifiedDiffHeader": {
+    "pxFonts": 13,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 5
+  },
+  "components/UnifiedOnboarding": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/UnifiedQuickOpen": {
+    "pxFonts": 2,
+    "rawColors": 3,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "components/UpdateToast": {
+    "pxFonts": 10,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 6
+  },
+  "components/UsageIndicator": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/WelcomeModal": {
+    "pxFonts": 16,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/WindowsClaudeCodeWarning": {
+    "pxFonts": 5,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/WorkspaceHistoryDialog": {
+    "pxFonts": 14,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "components/WorkspaceManager": {
+    "pxFonts": 38,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "components/WorktreeOnboardingModal": {
+    "pxFonts": 5,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 2
+  },
+  "components/_root": {
+    "pxFonts": 61,
+    "rawColors": 3,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 20
+  },
+  "components/common": {
+    "pxFonts": 9,
+    "rawColors": 2,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 5
+  },
+  "components/editors": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "contexts": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "dialogs": {
+    "pxFonts": 16,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 8
+  },
+  "extensions": {
+    "pxFonts": 2,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 13
+  },
+  "help": {
+    "pxFonts": 2,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "hooks": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 30
+  },
+  "plugins": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 7
+  },
+  "services": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 29
+  },
+  "store": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 106
+  },
+  "stores": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "styles": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  },
+  "tips": {
+    "pxFonts": 14,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 30
+  },
+  "types": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 3
+  },
+  "utils": {
+    "pxFonts": 0,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 24
+  },
+  "walkthroughs": {
+    "pxFonts": 5,
+    "rawColors": 1,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 22
+  },
+  "windows": {
+    "pxFonts": 2,
+    "rawColors": 0,
+    "nonStdRounded": 0,
+    "halfGap": 0,
+    "fileCount": 1
+  }
+}

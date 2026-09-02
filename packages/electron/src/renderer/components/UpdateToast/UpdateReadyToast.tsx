@@ -20,7 +20,7 @@ export function UpdateReadyToast({
   if (waitingForSessions) {
     return (
       <div
-        className="update-toast relative w-[380px] rounded-xl p-4 px-5 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
+        className="update-toast relative w-[380px] rounded-ui-lg p-4 px-5 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
         data-testid="update-ready-toast"
       >
         {/* Dismiss button */}
@@ -70,7 +70,7 @@ export function UpdateReadyToast({
 
   return (
     <div
-      className="update-toast relative w-[380px] rounded-xl p-4 px-5 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
+      className="update-toast relative w-[380px] rounded-ui-lg p-4 px-5 border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3),0_4px_10px_-2px_rgba(0,0,0,0.2)]"
       data-testid="update-ready-toast"
     >
       {/* Dismiss button */}

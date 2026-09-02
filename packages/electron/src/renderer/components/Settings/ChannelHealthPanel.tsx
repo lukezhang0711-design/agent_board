@@ -144,7 +144,7 @@ export function ChannelHealthRow({
           )}
           {result.failureKind === 'not_logged_in' && (
             <div
-              className="mt-2.5 flex flex-col gap-1.5 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] p-2.5 text-xs"
+              className="mt-2.5 flex flex-col gap-2 rounded border border-[var(--nim-border)] bg-[var(--nim-bg)] p-2.5 text-xs"
               data-testid={`channel-health-relogin-exit-${result.id}`}
             >
               {result.rawOutput && (
@@ -153,7 +153,7 @@ export function ChannelHealthRow({
                 </div>
               )}
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-[var(--nim-text)]">
+                <div className="flex items-center gap-2 text-[var(--nim-text)]">
                   <span className="text-[var(--nim-text-muted)]">重登命令：</span>
                   <code
                     className="rounded bg-[var(--nim-bg-secondary)] px-1.5 py-0.5 font-mono text-ui-caption text-[var(--nim-text)] border border-[var(--nim-border)]"
