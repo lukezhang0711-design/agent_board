@@ -453,20 +453,6 @@ export class SkillTaxonomyCacheManager {
     }
 
     const generated = generator(name, description, content);
-
-    // If it's a table-outside English skill that failed (untranslated), trigger background AI generation
-    const trimmedDesc = (description ?? '').trim();
-    if (
-      generated.enrichmentFailed &&
-      trimmedDesc &&
-      !this.inFlightHashes.has(hash)
-    ) {
-      this.inFlightHashes.add(hash);
-      void this.enrichAsync(name, description, content, hash).finally(() => {
-        this.inFlightHashes.delete(hash);
-      });
-    }
-
     if (!cached) {
       this.set(hash, generated);
       this.save();
@@ -474,7 +460,7 @@ export class SkillTaxonomyCacheManager {
     return cached ?? generated;
   }
 
-  public async enrichAsync(
+  public async enrichAndCacheAsync(
     name: string,
     description?: string,
     content?: string,
@@ -523,12 +509,21 @@ export class SkillTaxonomyCacheManager {
       };
     }
 
+    if (this.inFlightHashes.has(hash)) {
+      return cached ?? {
+        category,
+        summaryZh: trimmedDesc,
+        enrichmentFailed: true,
+      };
+    }
+
     // Table-outside English description
     let cleanDesc = trimmedDesc.replace(/^A\s+/i, '').replace(/^An\s+/i, '');
     const firstSentence = cleanDesc.split(/\.|\n/)[0].trim();
     const rawSummary = firstSentence || trimmedDesc;
 
     const generator = customGenerator ?? this.aiGenerator;
+    this.inFlightHashes.add(hash);
     try {
       const generatedRaw = await generator(trimmedDesc);
       const trimmedGen = generatedRaw.trim().replace(/^["'“”]+|["'“”]+$/g, '');
@@ -554,8 +549,14 @@ export class SkillTaxonomyCacheManager {
       this.set(hash, fallback);
       this.save();
       return fallback;
+    } finally {
+      this.inFlightHashes.delete(hash);
     }
   }
+
+  // Alias for backward compatibility
+  public enrichAsync = this.enrichAndCacheAsync.bind(this);
 }
 
 export const skillTaxonomyCacheManager = new SkillTaxonomyCacheManager();
+

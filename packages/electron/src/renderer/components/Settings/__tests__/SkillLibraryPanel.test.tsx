@@ -9,6 +9,7 @@ import {
   type DispatchSkillSettings,
 } from '../../../utils/dispatchSkillLibrary';
 import * as dispatchSkillLibraryModule from '../../../utils/dispatchSkillLibrary';
+import { initDispatchSkillListeners } from '../../../store/listeners/dispatchSkillListeners';
 import { SkillLibraryPanel } from '../SkillLibraryPanel';
 
 const invoke = vi.fn();
@@ -143,6 +144,7 @@ describe('SkillLibraryPanel', () => {
         },
       },
     });
+    const cleanupListeners = initDispatchSkillListeners();
     render(<SkillLibraryPanel workspacePath="/workspace" />);
     expect(await screen.findByText('开发实现')).toBeTruthy();
 
@@ -164,6 +166,7 @@ describe('SkillLibraryPanel', () => {
 
     expect(await screen.findByText('批准后的分类')).toBeTruthy();
     expect(screen.queryByText('开发实现')).toBeNull();
+    cleanupListeners();
   });
 
   it('绿②: 包为空时显示引导与新建入口，且不渲染任何包标签', async () => {

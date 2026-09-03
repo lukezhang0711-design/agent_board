@@ -124,6 +124,7 @@ import { initBlitzListeners } from './store/listeners/blitzListeners';
 import { initUpdateListeners } from './store/listeners/updateListeners';
 import { initWalkthroughListeners } from './store/listeners/walkthroughListeners';
 import { initWakeupListeners } from './store/listeners/wakeupListener';
+import { initDispatchSkillListeners } from './store/listeners/dispatchSkillListeners';
 import { TrackerMode } from './components/TrackerMode';
 import { PullRequestMode } from './components/PullRequestMode';
 import { CollabMode, type CollabModeRef } from './components/CollabMode';
@@ -333,6 +334,7 @@ export default function App() {
     const cleanupWalkthrough = initWalkthroughListeners();
     const cleanupWakeup = initWakeupListeners();
     const cleanupNetworkAvailability = initNetworkAvailabilityListeners();
+    const cleanupDispatchSkill = initDispatchSkillListeners();
     return () => {
       cleanupActionPrompts?.();
       cleanupAiCommands?.();
@@ -363,6 +365,7 @@ export default function App() {
       cleanupWalkthrough?.();
       cleanupWakeup?.();
       cleanupNetworkAvailability?.();
+      cleanupDispatchSkill?.();
     };
   }, []);
 
