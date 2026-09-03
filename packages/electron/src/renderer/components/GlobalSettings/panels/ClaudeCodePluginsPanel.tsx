@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePostHog } from 'posthog-js/react';
+import { PageHeader } from '../../common/PageHeader';
 import { ErrorBoundary } from '../../ErrorBoundary';
 import { useTheme } from '../../../hooks/useTheme';
 
@@ -369,7 +370,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
   if (error) {
     return (
       <div className="provider-panel flex flex-col">
-        <div className="plugin-error p-8 text-center text-[#e74c3c]">
+        <div className="plugin-error p-8 text-center text-[var(--nim-error)]">
           Error: {error}
           <button onClick={loadData} className="plugin-retry-button ml-4 px-4 py-2 bg-[var(--nim-primary)] text-white border-none rounded-ui-base cursor-pointer">Retry</button>
         </div>
@@ -418,7 +419,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                 return (
                   <div
                     key={plugin.name}
-                    className={`plugin-card flex flex-col p-4 border rounded-ui-lg cursor-pointer transition-all duration-150 ${installed ? 'installed border-[rgba(39,174,96,0.3)] bg-[rgba(39,174,96,0.05)]' : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]'} hover:border-[var(--nim-primary)] hover:bg-[var(--nim-bg-hover)]`}
+                    className={`plugin-card flex flex-col p-4 border rounded-ui-lg cursor-pointer transition-all duration-150 ${installed ? 'installed border-nim-success-subtle bg-nim-success-subtle' : 'border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]'} hover:border-[var(--nim-primary)] hover:bg-[var(--nim-bg-hover)]`}
                     onClick={() => setSelectedPlugin(plugin)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -434,13 +435,13 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                       <div className="plugin-card-icon w-8 h-8 rounded-ui-base bg-[var(--nim-bg-tertiary)] flex items-center justify-center text-base shrink-0 overflow-hidden" aria-hidden="true">
                         <PluginIcon pluginName={plugin.name} category={plugin.category} isDark={isDark} />
                       </div>
-                      <div className="plugin-card-name font-semibold text-[0.9375rem] text-[var(--nim-text)]">{plugin.name}</div>
+                      <div className="plugin-card-name font-semibold text-ui-subhead text-[var(--nim-text)]">{plugin.name}</div>
                     </div>
-                    <div className="plugin-card-description text-[0.8125rem] text-[var(--nim-text-muted)] leading-relaxed mb-3 flex-1 line-clamp-2">{plugin.description}</div>
+                    <div className="plugin-card-description text-ui-body text-[var(--nim-text-muted)] leading-relaxed mb-3 flex-1 line-clamp-2">{plugin.description}</div>
                     <div className="plugin-card-footer flex items-center justify-between gap-2">
                       <span className="plugin-card-author text-xs text-[var(--nim-text-faint)]">by {plugin.author}</span>
                       {installed ? (
-                        <span className="plugin-card-badge installed inline-flex items-center px-2 py-1 rounded-ui-base text-[0.6875rem] font-semibold uppercase tracking-tight bg-[rgba(39,174,96,0.15)] text-[#27ae60]">Installed</span>
+                        <span className="plugin-card-badge installed inline-flex items-center px-2 py-1 rounded-ui-base text-ui-caption font-semibold uppercase tracking-tight bg-nim-success-subtle text-[var(--nim-success)]">Installed</span>
                       ) : (
                         <button
                           className={`plugin-install-button py-2 px-3 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-xs font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed ${status === 'installing' ? 'installing bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]' : ''}`}
@@ -502,9 +503,9 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                         <span className="plugin-installed-source text-xs text-[var(--nim-text-faint)] font-normal">@{plugin.source}</span>
                       )}
                       <span
-                        className={`plugin-installed-scope inline-flex items-center px-2 py-0.5 rounded-ui-base text-[0.6875rem] font-semibold uppercase tracking-tight ${
+                        className={`plugin-installed-scope inline-flex items-center px-2 py-0.5 rounded-ui-base text-ui-caption font-semibold uppercase tracking-tight ${
                           isProjectScope
-                            ? 'bg-[rgba(52,152,219,0.15)] text-[#3498db]'
+                            ? 'bg-nim-primary-subtle text-[var(--nim-primary)]'
                             : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]'
                         }`}
                         title={isProjectScope ? plugin.projectPath : 'Available in every workspace'}
@@ -512,7 +513,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                         {isProjectScope ? 'Project' : 'User'}
                       </span>
                       {!plugin.enabled && (
-                        <span className="plugin-installed-disabled inline-flex items-center px-2 py-0.5 rounded-ui-base text-[0.6875rem] font-semibold uppercase tracking-tight bg-[rgba(231,76,60,0.12)] text-[#e74c3c]" title="Disabled for this scope">
+                        <span className="plugin-installed-disabled inline-flex items-center px-2 py-0.5 rounded-ui-base text-ui-caption font-semibold uppercase tracking-tight bg-nim-error-subtle text-[var(--nim-error)]" title="Disabled for this scope">
                           Disabled
                         </span>
                       )}
@@ -522,7 +523,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                 </div>
                 <div className="plugin-installed-actions flex gap-2">
                   <button
-                    className="plugin-uninstall-button py-2 px-3 border border-[#e74c3c] rounded-ui-base bg-transparent text-[#e74c3c] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[#e74c3c] hover:text-white"
+                    className="plugin-uninstall-button py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
                     onClick={() => handleUninstall({
                       name: plugin.name,
                       source: plugin.source,
@@ -595,9 +596,9 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
           <div className="plugin-details-actions flex items-center gap-3">
             {installed ? (
               <>
-                <span className="plugin-details-installed-badge inline-flex items-center py-2 px-3 rounded-ui-base bg-[rgba(39,174,96,0.15)] text-[#27ae60] text-[0.8125rem] font-medium">Installed</span>
+                <span className="plugin-details-installed-badge inline-flex items-center py-2 px-3 rounded-ui-base bg-nim-success-subtle text-[var(--nim-success)] text-ui-body font-medium">Installed</span>
                 <button
-                  className="plugin-uninstall-button py-2 px-3 border border-[#e74c3c] rounded-ui-base bg-transparent text-[#e74c3c] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[#e74c3c] hover:text-white"
+                  className="plugin-uninstall-button py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
                   onClick={() => {
                     // Modal originates from a marketplace card, so we only
                     // know name+derived source. The server-side uninstall
@@ -616,7 +617,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
               </>
             ) : (
               <button
-                className={`plugin-details-install-button flex-1 py-3 px-6 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-[0.9375rem] font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed ${status === 'installing' ? 'installing bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]' : ''}`}
+                className={`plugin-details-install-button flex-1 py-3 px-6 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-ui-subhead font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed ${status === 'installing' ? 'installing bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]' : ''}`}
                 onClick={() => handleInstall(selectedPlugin)}
                 disabled={status === 'installing'}
               >
@@ -631,12 +632,11 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">Claude Code Plugins</h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Discover and install plugins to extend Claude Code's capabilities.
-        </p>
-      </div>
+      <PageHeader
+        icon="extension"
+        title="Claude Code Plugins"
+        count={installedPlugins.length}
+      />
 
       {/* View Switcher */}
       <div className="plugin-view-switcher flex gap-1 mb-4 p-1 bg-[var(--nim-bg-tertiary)] rounded-ui-lg w-fit">
@@ -664,7 +664,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
 
       {/* Status Message */}
       {installMessage && (
-        <div className="plugin-status-message py-3 px-4 mb-4 bg-[rgba(52,152,219,0.1)] border border-[rgba(52,152,219,0.3)] rounded-ui-base text-sm text-[var(--nim-text)]" role="status" aria-live="polite">
+        <div className="plugin-status-message py-3 px-4 mb-4 bg-nim-primary-subtle border border-nim-primary-subtle rounded-ui-base text-sm text-[var(--nim-text)]" role="status" aria-live="polite">
           {installMessage}
         </div>
       )}

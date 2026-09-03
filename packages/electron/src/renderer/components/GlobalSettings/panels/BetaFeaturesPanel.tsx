@@ -2,6 +2,7 @@ import React from 'react';
 import { useAtom } from 'jotai';
 import { usePostHog } from 'posthog-js/react';
 import { SettingsToggle } from '../SettingsToggle';
+import { PageHeader } from '../../common/PageHeader';
 import {
   advancedSettingsAtom,
   setAdvancedSettingsAtom,
@@ -28,11 +29,7 @@ export function BetaFeaturesPanel() {
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-          Beta Features
-        </h3>
-      </div>
+      <PageHeader icon="science" title="Beta Features" />
 
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <div className="p-3 bg-nim-secondary rounded-ui-base border border-nim">
@@ -91,7 +88,7 @@ export function BetaFeaturesPanel() {
             </div>
           ))}
         </div>
-        <p className="mt-3 p-2 text-[13px] text-[var(--nim-text-muted)] bg-nim-secondary rounded-ui-base border border-nim">
+        <p className="mt-3 p-2 text-ui-body text-[var(--nim-text-muted)] bg-nim-secondary rounded-ui-base border border-nim">
           Some beta features may require restarting Nimbalyst to take effect.
         </p>
       </div>

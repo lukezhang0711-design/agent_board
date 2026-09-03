@@ -363,7 +363,7 @@ Best for quick edits and tasks that do not require multi-file operations.`,
       <div className="settings-sidebar-content p-3">
         {filteredGroups.map((group) => (
           <div key={group.title} className="settings-sidebar-group mb-4">
-            <div className="settings-sidebar-group-title flex items-center gap-2 px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-muted)]">
+            <div className="settings-sidebar-group-title flex items-center gap-2 px-2 py-2 text-ui-caption font-semibold uppercase tracking-wider text-[var(--nim-text-muted)]">
               {group.title}
               {group.infoTooltip && (
                 <span
@@ -391,7 +391,7 @@ Best for quick edits and tasks that do not require multi-file operations.`,
                   <span className="settings-sidebar-item-name flex-1 truncate">{item.name}</span>
                   {item.isAlpha && <AlphaBadge size="xs" tooltip={SETTINGS_ALPHA_TOOLTIP} />}
                   {item.badge && (
-                    <span className="settings-sidebar-item-badge text-[10px] font-medium px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                    <span className="settings-sidebar-item-badge text-ui-micro font-medium px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
                       {item.badge}
                     </span>
                   )}

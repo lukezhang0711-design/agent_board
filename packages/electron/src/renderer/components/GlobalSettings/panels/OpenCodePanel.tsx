@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ProviderConfig } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../../common/AlphaBadge';
+import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import { OPENCODE_PRESET_MODELS } from '@nimbalyst/runtime/ai/modelConstants';
 import type { OpenCodeFileConfig } from '@nimbalyst/runtime/ai/server';
 
@@ -19,6 +21,14 @@ interface OpenCodePanelProps {
 }
 
 type CLIStatus = 'checking' | 'installed' | 'not-installed' | 'installing' | 'install-error';
+
+const CLI_STATUS_LABEL: Record<CLIStatus, string> = {
+  checking: 'Checking',
+  installed: 'Installed',
+  'not-installed': 'Not Installed',
+  installing: 'Installing',
+  'install-error': 'Install Failed',
+};
 type LMStudioStatus = 'idle' | 'configuring' | 'success' | 'error';
 
 interface OpenCodeConfigReadResponse {
@@ -233,27 +243,26 @@ export function OpenCodePanel({
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
-          OpenCode
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Open source coding agent with multi-model support. Works with Claude, OpenAI, Gemini,
-          and local models through a unified interface.
-        </p>
-      </div>
+      <PageHeader
+        icon="terminal"
+        title={
+          <span className="flex items-center gap-2">
+            OpenCode
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }
+        subtitle={CLI_STATUS_LABEL[cliStatus]}
+      />
 
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">OpenCode CLI</h4>
+      <SettingsSection title="OpenCode CLI">
 
         {cliStatus === 'checking' && (
-          <p className="text-[13px] text-[var(--nim-text-muted)]">Checking for OpenCode CLI...</p>
+          <p className="text-ui-body text-[var(--nim-text-muted)]">Checking for OpenCode CLI...</p>
         )}
 
         {(cliStatus === 'not-installed' || cliStatus === 'install-error') && (
           <div>
-            <p className="text-[13px] text-[var(--nim-text-muted)] mb-3 leading-relaxed">
+            <p className="text-ui-body text-[var(--nim-text-muted)] mb-3 leading-relaxed">
               The OpenCode CLI is required to run the agent.
             </p>
             <button
@@ -275,11 +284,11 @@ export function OpenCodePanel({
 
         {cliStatus === 'installing' && (
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-[var(--nim-text-muted)]">Installing OpenCode CLI...</span>
+            <span className="text-ui-body text-[var(--nim-text-muted)]">Installing OpenCode CLI...</span>
           </div>
         )}
 
-        <p className="text-[13px] text-[var(--nim-text-muted)] mt-3 leading-relaxed">
+        <p className="text-ui-body text-[var(--nim-text-muted)] mt-3 leading-relaxed">
           See the{' '}
           <a
             href="https://github.com/sst/opencode"
@@ -291,7 +300,7 @@ export function OpenCodePanel({
           </a>
           {' '}for more details.
         </p>
-      </div>
+      </SettingsSection>
 
       <SettingsToggle
         variant="enable"
@@ -302,8 +311,7 @@ export function OpenCodePanel({
 
       {config.enabled && (
         <>
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Default model</h4>
+          <SettingsSection title="Default model">
             <select
               data-testid="opencode-model-select"
               value={selectedModel}
@@ -331,10 +339,9 @@ export function OpenCodePanel({
                 </optgroup>
               )}
             </select>
-          </div>
+          </SettingsSection>
 
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">LM Studio integration</h4>
+          <SettingsSection title="LM Studio integration">
             <div className="flex items-center gap-2 flex-wrap mb-2">
               <input
                 data-testid="opencode-lmstudio-base-url"
@@ -374,20 +381,25 @@ export function OpenCodePanel({
                 {lmStudioMessage}
               </div>
             )}
-          </div>
+          </SettingsSection>
 
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Updates</h4>
+          <SettingsSection title="Updates">
             <SettingsToggle
               variant="enable"
               name="Disable OpenCode auto-update"
               checked={autoUpdateOptedOut}
               onChange={(checked) => handleAutoUpdateToggle(!checked)}
             />
-          </div>
+          </SettingsSection>
 
-          <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">API Configuration <span className="text-xs font-normal text-[var(--nim-text-muted)]">(optional)</span></h4>
+          <SettingsSection
+            title={
+              <span className="flex items-baseline gap-2">
+                API Configuration
+                <span className="text-ui-compact font-normal text-[var(--nim-text-muted)]">(optional)</span>
+              </span>
+            }
+          >
             <div className="api-key-section mt-4">
               <div className="api-key-row flex gap-2 items-center">
                 <input
@@ -416,7 +428,7 @@ export function OpenCodePanel({
                 <div className="test-error text-xs mt-2 text-[var(--nim-error)]">{config.testMessage}</div>
               )}
             </div>
-          </div>
+          </SettingsSection>
 
           {configError && (
             <div className="provider-panel-section py-2 text-xs text-[var(--nim-error)]">

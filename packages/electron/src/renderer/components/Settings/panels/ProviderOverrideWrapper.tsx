@@ -108,7 +108,7 @@ export function ProviderOverrideWrapper({
       >
         {isOverriding && (
           <div className="override-info flex-1 min-w-0">
-            <div className="override-status flex items-center gap-2 text-[13px] text-[var(--nim-primary)]">
+            <div className="override-status flex items-center gap-2 text-ui-body text-[var(--nim-primary)]">
               <MaterialSymbol icon="tune" size={16} className="shrink-0" />
               <span>
                 Project override active for{' '}

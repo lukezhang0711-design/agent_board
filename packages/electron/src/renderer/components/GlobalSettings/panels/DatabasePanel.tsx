@@ -15,6 +15,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../../common/PageHeader';
 
 type Backend = 'pglite' | 'sqlite';
 
@@ -349,15 +350,11 @@ export function DatabasePanel(): React.ReactElement {
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-          Database Storage
-        </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Local storage engine for sessions, trackers, and document history.
-          PGLite is the current default; a faster SQLite backend is in alpha.
-        </p>
-      </div>
+      <PageHeader
+        icon="database"
+        title="Database Storage"
+        subtitle={backendLabel}
+      />
 
       {/* Current backend section ----------------------------------------- */}
       <div className="provider-panel-section mb-6">
@@ -365,7 +362,7 @@ export function DatabasePanel(): React.ReactElement {
           Active backend
         </h4>
         {statusError ? (
-          <div className="p-3 rounded-ui-base bg-[rgba(220,38,38,0.1)] border border-[rgba(220,38,38,0.3)] text-sm text-[var(--nim-text)]">
+          <div className="p-3 rounded-ui-base bg-nim-error-subtle border border-nim-error-subtle text-sm text-[var(--nim-text)]">
             Failed to read status: {statusError}
           </div>
         ) : (
@@ -413,7 +410,7 @@ export function DatabasePanel(): React.ReactElement {
         )}
 
         {dryRunError && (
-          <div className="mt-3 p-3 rounded-ui-base bg-[rgba(220,38,38,0.1)] border border-[rgba(220,38,38,0.3)] text-sm text-[var(--nim-text)] nim-database-dry-run-error">
+          <div className="mt-3 p-3 rounded-ui-base bg-nim-error-subtle border border-nim-error-subtle text-sm text-[var(--nim-text)] nim-database-dry-run-error">
             Dry run failed: {dryRunError}
           </div>
         )}
@@ -594,7 +591,7 @@ function MigrationModal(props: {
         </div>
 
         {preflightError && (
-          <div className="rounded-ui-base border border-[rgba(220,38,38,0.3)] bg-[rgba(220,38,38,0.1)] p-3 text-sm text-[var(--nim-text)]">
+          <div className="rounded-ui-base border border-nim-error-subtle bg-nim-error-subtle p-3 text-sm text-[var(--nim-text)]">
             Pre-flight failed: {preflightError}
           </div>
         )}
@@ -671,7 +668,7 @@ function MigrationModal(props: {
 
         {failure && (
           <div className="space-y-4">
-            <div className="rounded-ui-base border border-[rgba(220,38,38,0.3)] bg-[rgba(220,38,38,0.1)] p-4 text-sm text-[var(--nim-text)]">
+            <div className="rounded-ui-base border border-nim-error-subtle bg-nim-error-subtle p-4 text-sm text-[var(--nim-text)]">
               <div className="font-medium">Migration didn&apos;t complete</div>
               <div className="mt-2">Phase: {failure.phase}</div>
               <div className="mt-1">{failure.message}</div>
@@ -805,7 +802,7 @@ function AdoptDryRunSection({
       )}
 
       {error && (
-        <div className="mt-3 p-3 rounded-ui-base bg-[rgba(220,38,38,0.1)] border border-[rgba(220,38,38,0.3)] text-sm text-[var(--nim-text)]">
+        <div className="mt-3 p-3 rounded-ui-base bg-nim-error-subtle border border-nim-error-subtle text-sm text-[var(--nim-text)]">
           Switch failed: {error}
         </div>
       )}

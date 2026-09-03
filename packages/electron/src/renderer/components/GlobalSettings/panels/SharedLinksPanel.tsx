@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { MaterialSymbol, copyToClipboard } from '@nimbalyst/runtime';
 import { buildShareUrl } from '../../../store/atoms/sessionShares';
+import { PageHeader } from '../../common/PageHeader';
 
 interface SharedLink {
   shareId: string;
@@ -112,23 +113,21 @@ export const SharedLinksPanel: React.FC = () => {
 
   return (
     <div className="provider-panel max-w-2xl">
-      <div className="provider-panel-header flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-[var(--nim-text)] m-0">Shared Links</h3>
-          <p className="text-[0.8125rem] text-[var(--nim-text-muted)] mt-1 mb-0">
-            Manage links you've shared for files and sessions. Anyone with a link can view the content.
-          </p>
-        </div>
-        {state === 'loaded' && shares.length > 0 && (
+      <PageHeader
+        icon="link"
+        title="Shared Links"
+        count={state === 'loaded' ? shares.length : undefined}
+        className="mb-4"
+        actions={state === 'loaded' && shares.length > 0 ? (
           <button
-            className="flex items-center gap-2 px-3 py-2 text-[0.8125rem] text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+            className="flex items-center gap-2 px-3 py-2 text-ui-body text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
             onClick={fetchShares}
           >
             <MaterialSymbol icon="refresh" size={14} />
             Refresh
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {/* Loading state */}
       {state === 'loading' && (

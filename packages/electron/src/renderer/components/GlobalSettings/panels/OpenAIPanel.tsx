@@ -1,6 +1,7 @@
 import React from 'react';
 import { ProviderConfig, Model } from '../../Settings/SettingsView';
 import { SettingsToggle } from '../SettingsToggle';
+import { PageHeader } from '../../common/PageHeader';
 
 interface OpenAIPanelProps {
   config: ProviderConfig;
@@ -29,9 +30,11 @@ export function OpenAIPanel({
 }: OpenAIPanelProps) {
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">OpenAI</h3>
-      </div>
+      <PageHeader
+        icon="auto_awesome"
+        title="OpenAI"
+        subtitle={config.enabled ? 'Enabled' : 'Disabled'}
+      />
 
       <SettingsToggle
         variant="enable"

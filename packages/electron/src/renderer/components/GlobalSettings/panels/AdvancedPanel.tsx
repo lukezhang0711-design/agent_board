@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { usePostHog } from 'posthog-js/react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import { SettingsToggle } from '../SettingsToggle';
 import { ClaudeCliChannelToggle } from './ClaudeCliChannelToggle';
 import { HelpTooltip } from '../../../help';
@@ -193,18 +195,14 @@ export function AdvancedPanel() {
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-          Advanced Settings
-        </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Advanced configuration options for AI features.
-        </p>
-      </div>
+      <PageHeader
+        icon="tune"
+        title="Advanced Settings"
+        subtitle={developerMode ? 'Developer Mode' : 'Standard Mode'}
+      />
 
       {/* Application Mode - Always shown at the top */}
-      <div className="provider-panel-section">
-          <h4 className="provider-panel-section-title" onClick={handleModeClick}>Application Mode</h4>
+      <SettingsSection title="Application Mode">
           <p className="provider-panel-hint">
             Choose between a simplified experience or full developer features for this project.
           </p>
@@ -227,12 +225,12 @@ export function AdvancedPanel() {
               />
               <div className="p-4 w-full flex flex-col items-center text-center">
                 <div className="flex flex-col items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-nim-primary text-[32px]">
+                  <span className="material-symbols-outlined text-nim-primary text-ui-display">
                     edit_note
                   </span>
                   <span className="text-base font-semibold text-nim">Standard Mode</span>
                 </div>
-                <p className="m-0 text-[13px] leading-snug text-nim-muted">
+                <p className="m-0 text-ui-body leading-snug text-nim-muted">
                   Simplified interface focused on writing, editing, and AI assistance
                 </p>
               </div>
@@ -255,25 +253,22 @@ export function AdvancedPanel() {
               />
               <div className="p-4 w-full flex flex-col items-center text-center">
                 <div className="flex flex-col items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-nim-primary text-[32px]">
+                  <span className="material-symbols-outlined text-nim-primary text-ui-display">
                     terminal
                   </span>
                   <span className="text-base font-semibold text-nim">Developer Mode</span>
                 </div>
-                <p className="m-0 text-[13px] leading-snug text-nim-muted">
+                <p className="m-0 text-ui-body leading-snug text-nim-muted">
                   Full development environment with git worktrees, terminal access, development specific features
                 </p>
               </div>
             </label>
           </div>
-        </div>
+        </SettingsSection>
 
       {/* Secret Features Menu - Cmd+Click on "Application Mode" title to show */}
       {showFeaturesMenu && (
-        <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">
-            Feature Availability
-          </h4>
+        <SettingsSection title="Feature Availability">
           <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
             See which features are available based on your current mode settings.
           </p>
@@ -331,8 +326,8 @@ export function AdvancedPanel() {
                         <span
                           className={`text-xs px-2 py-0.5 rounded-ui-base ${
                             isAvailable
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
+                              ? 'bg-nim-success-subtle text-[var(--nim-success)]'
+                              : 'bg-nim-error-subtle text-[var(--nim-error)]'
                           }`}
                         >
                           {isAvailable ? 'Available' : 'Hidden'}
@@ -349,12 +344,11 @@ export function AdvancedPanel() {
           <p className="text-xs text-[var(--nim-text-faint)] mt-3">
             Developer mode: {developerMode ? 'ON' : 'OFF'}
           </p>
-        </div>
+        </SettingsSection>
       )}
 
       {/* ── Release Channel ── */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Release Channel</h4>
+      <SettingsSection title="Release Channel">
         <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
           Choose which release stream Nimbalyst pulls auto-updates from. Alpha and beta features are configured separately on each feature&apos;s settings page.
         </p>
@@ -382,16 +376,15 @@ export function AdvancedPanel() {
         {releaseChannel === 'alpha' && (
           <div className="mt-3 flex items-start gap-2 p-3 rounded-ui-base border border-[var(--nim-warning)]/30 bg-[var(--nim-warning)]/10">
             <MaterialSymbol icon="warning" size={16} className="text-[var(--nim-warning)] shrink-0 mt-1" />
-            <p className="m-0 text-[13px] text-[var(--nim-text)] leading-snug">
+            <p className="m-0 text-ui-body text-[var(--nim-text)] leading-snug">
               The alpha channel ships rough developer releases that may be unstable or contain unfinished work. Switch back to Stable if you encounter problems.
             </p>
           </div>
         )}
-      </div>
+      </SettingsSection>
 
       {/* ── General ── */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-2 text-[var(--nim-text)]">General</h4>
+      <SettingsSection title="General">
 
         <MultiProjectModeToggle />
 
@@ -425,13 +418,17 @@ export function AdvancedPanel() {
             </button>
           </div>
         )}
-      </div>
+      </SettingsSection>
 
       {/* ── Tracker Automation ── */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0" data-testid="tracker-automation-section">
-        <HelpTooltip testId="tracker-automation-section">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-2 text-[var(--nim-text)] inline-block">Tracker Automation</h4>
-        </HelpTooltip>
+      <SettingsSection
+        title={
+          <HelpTooltip testId="tracker-automation-section">
+            <span className="inline-block">Tracker Automation</span>
+          </HelpTooltip>
+        }
+        testId="tracker-automation-section"
+      >
 
         <SettingsToggle
           checked={trackerAutomation.enabled}
@@ -448,11 +445,10 @@ export function AdvancedPanel() {
             description="Change tracker item status to done when a commit message uses a closing keyword."
           />
         )}
-      </div>
+      </SettingsSection>
 
       {/* ── Tools & Environment ── */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-base font-semibold mb-2 text-[var(--nim-text)]">Tools & Environment</h4>
+      <SettingsSection title="Tools & Environment">
 
         <ClaudeCliChannelToggle />
 
@@ -613,7 +609,7 @@ export function AdvancedPanel() {
             )}
           </div>
         </div>
-      </div>
+      </SettingsSection>
 
     </div>
   );

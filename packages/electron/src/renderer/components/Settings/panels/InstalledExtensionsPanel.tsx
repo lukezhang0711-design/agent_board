@@ -7,6 +7,7 @@ import { ExtensionConfigPanel } from './ExtensionConfigPanel';
 import { ExtensionBackendModulesSection } from '../../ExtensionPermissions/ExtensionBackendModulesSection';
 import { useTheme } from '../../../hooks/useTheme';
 import { ToggleSwitch } from '../../GlobalSettings/SettingsToggle';
+import { PageHeader } from '../../common/PageHeader';
 
 interface InstalledExtension {
   id: string;
@@ -319,9 +320,9 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
 
   const sourcePillClasses = (s: ExtensionSource) => {
     switch (s) {
-      case 'marketplace': return 'bg-[rgba(96,165,250,0.15)] text-[var(--nim-primary)]';
+      case 'marketplace': return 'bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] text-[var(--nim-primary)]';
       case 'github': return 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]';
-      case 'local': return 'bg-[rgba(251,191,36,0.15)] text-[var(--nim-warning)]';
+      case 'local': return 'bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)] text-[var(--nim-warning)]';
       case 'built-in': return 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]';
     }
   };
@@ -348,13 +349,14 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
       data-source="packages/electron/src/renderer/components/Settings/panels/InstalledExtensionsPanel.tsx"
     >
       {/* Header */}
-      <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)] flex-shrink-0">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">Installed Extensions</h3>
-
-      </div>
+      <PageHeader
+        icon="extension"
+        title="Installed Extensions"
+        className="mb-5 flex-shrink-0"
+      />
 
       {error && (
-        <div className="flex items-center gap-2 p-3 mb-4 rounded-ui-lg bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[var(--nim-error)] flex-shrink-0">
+        <div className="flex items-center gap-2 p-3 mb-4 rounded-ui-lg bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-error)_30%,transparent)] text-[var(--nim-error)] flex-shrink-0">
           <span className="material-symbols-outlined">error</span>
           <span>{error}</span>
         </div>
@@ -385,7 +387,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   key={ext.id}
                   className={`flex items-center gap-3 px-3 py-3 cursor-pointer border-b border-[var(--nim-border)] transition-colors ${
                     selectedId === ext.id
-                      ? 'bg-[rgba(38,139,210,0.15)] border-l-2 border-l-[var(--nim-primary)] pl-3'
+                      ? 'bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] border-l-2 border-l-[var(--nim-primary)] pl-3'
                       : 'hover:bg-[var(--nim-bg-hover)]'
                   } ${!ext.enabled ? 'opacity-50' : ''}`}
                   onClick={() => setSelectedId(ext.id)}

@@ -4,6 +4,7 @@ import { useDialogState } from '../../../contexts/DialogContext';
 import { DIALOG_IDS } from '../../../dialogs/registry';
 import type { CreateTeamData } from '../../../dialogs/teamDialogs';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../../common/AlphaBadge';
+import { PageHeader } from '../../common/PageHeader';
 
 // ============================================================================
 // Types
@@ -74,7 +75,7 @@ function MemberAvatar({ name, email, color, isPending }: {
   const initial = (name?.[0] || email[0] || '?').toUpperCase();
   return (
     <div
-      className="w-8 h-8 rounded-ui-full flex items-center justify-center shrink-0 text-[13px] font-semibold text-white"
+      className="w-8 h-8 rounded-ui-full flex items-center justify-center shrink-0 text-ui-body font-semibold text-white"
       style={{ background: color }}
     >
       {initial}
@@ -107,7 +108,7 @@ function TrustStatusIcon({ status, onClick }: { status: TrustStatus; onClick?: (
     );
   }
   return (
-    <span className="flex items-center text-[#f97316]" title="Not verified" {...clickProps}>
+    <span className="flex items-center text-[var(--nim-warning)]" title="Not verified" {...clickProps}>
       <MaterialSymbol icon="shield" size={14} />
     </span>
   );
@@ -115,15 +116,15 @@ function TrustStatusIcon({ status, onClick }: { status: TrustStatus; onClick?: (
 
 function RoleBadge({ role, editable, onChange }: { role: 'admin' | 'member'; editable?: boolean; onChange?: (newRole: 'admin' | 'member') => void }) {
   const colorClass = role === 'admin'
-    ? 'bg-[rgba(96,165,250,0.15)] text-[var(--nim-primary)]'
-    : 'bg-[rgba(180,180,180,0.1)] text-[var(--nim-text-faint)]';
+    ? 'bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] text-[var(--nim-primary)]'
+    : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]';
 
   if (editable && onChange) {
     return (
       <select
         value={role}
         onChange={(e) => onChange(e.target.value as 'admin' | 'member')}
-        className={`${colorClass} px-[5px] py-[2px] rounded-ui-lg text-[10px] font-semibold border-none cursor-pointer outline-none hover:ring-1 hover:ring-[var(--nim-primary)]`}
+        className={`${colorClass} px-1 py-0.5 rounded-ui-lg text-ui-micro font-semibold border-none cursor-pointer outline-none hover:ring-1 hover:ring-[var(--nim-primary)]`}
       >
         <option value="admin">Admin</option>
         <option value="member">Member</option>
@@ -132,7 +133,7 @@ function RoleBadge({ role, editable, onChange }: { role: 'admin' | 'member'; edi
   }
 
   return (
-    <span className={`${colorClass} px-[7px] py-[2px] rounded-ui-lg text-[10px] font-semibold`}>
+    <span className={`${colorClass} px-1 py-0.5 rounded-ui-lg text-ui-micro font-semibold`}>
       {role === 'admin' ? 'Admin' : 'Member'}
     </span>
   );
@@ -140,7 +141,7 @@ function RoleBadge({ role, editable, onChange }: { role: 'admin' | 'member'; edi
 
 function PendingBadge() {
   return (
-    <span className="inline-flex items-center gap-1 px-[7px] py-[2px] rounded-ui-lg text-[10px] font-semibold bg-[rgba(251,191,36,0.15)] text-[var(--nim-warning)]">
+    <span className="inline-flex items-center gap-1 px-1 py-0.5 rounded-ui-lg text-ui-micro font-semibold bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)] text-[var(--nim-warning)]">
       <MaterialSymbol icon="schedule" size={8} />
       Pending
     </span>
@@ -149,8 +150,8 @@ function PendingBadge() {
 
 function TeamPricingNotice() {
   return (
-    <div className="mt-3 flex items-start gap-2 text-[12px] leading-relaxed text-[var(--nim-text-faint)]">
-      <MaterialSymbol icon="info" size={13} className="mt-[2px] shrink-0" />
+    <div className="mt-3 flex items-start gap-2 text-ui-compact leading-relaxed text-[var(--nim-text-faint)]">
+      <MaterialSymbol icon="info" size={13} className="mt-px shrink-0" />
       <span>
         Nimbalyst Teams is <span className="text-[var(--nim-text-muted)]">free during alpha</span>. We plan to introduce a paid subscription tier for teams in the future; existing teams will get advance notice before any pricing change.
       </span>
@@ -163,14 +164,14 @@ function EncryptionCard() {
     <div className="p-3 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg">
       <div className="flex items-center gap-2 mb-2">
         <MaterialSymbol icon="lock" size={16} className="text-[var(--nim-success)]" />
-        <span className="text-[13px] font-semibold text-[var(--nim-success)]">
+        <span className="text-ui-body font-semibold text-[var(--nim-success)]">
           End-to-End Encryption
         </span>
       </div>
-      <p className="m-0 mb-2 text-[12px] text-[var(--nim-text-muted)] leading-relaxed">
+      <p className="m-0 mb-2 text-ui-compact text-[var(--nim-text-muted)] leading-relaxed">
         Team data is encrypted with keys shared via ECDH key exchange. The server never sees your data.
       </p>
-      <ul className="m-0 pl-5 text-[12px] text-[var(--nim-text)] leading-7">
+      <ul className="m-0 pl-5 text-ui-compact text-[var(--nim-text)] leading-7">
         <li>Encryption keys are shared directly between team members</li>
         <li>Only verified team members can decrypt shared data</li>
         <li>Removing a member rotates the encryption key</li>
@@ -181,9 +182,9 @@ function EncryptionCard() {
 
 function ErrorBanner({ error, onDismiss }: { error: string; onDismiss: () => void }) {
   return (
-    <div className="flex items-center gap-2 p-3 mb-3 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-ui-base">
+    <div className="flex items-center gap-2 p-3 mb-3 bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-error)_30%,transparent)] rounded-ui-base">
       <MaterialSymbol icon="error" size={14} className="text-[var(--nim-error)] shrink-0" />
-      <span className="flex-1 text-[12px] text-[var(--nim-error)]">{error}</span>
+      <span className="flex-1 text-ui-compact text-[var(--nim-error)]">{error}</span>
       <button
         onClick={onDismiss}
         className="shrink-0 bg-transparent border-none cursor-pointer text-[var(--nim-text-faint)]"
@@ -208,7 +209,7 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
 }) {
   if (!fingerprint) {
     return (
-      <div className="px-3 py-3 bg-[var(--nim-bg)] text-[12px] text-[var(--nim-text-faint)]">
+      <div className="px-3 py-3 bg-[var(--nim-bg)] text-ui-compact text-[var(--nim-text-faint)]">
         Loading fingerprint...
       </div>
     );
@@ -219,9 +220,9 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
   return (
     <div className="px-3 py-3 bg-[var(--nim-bg)] border-b border-[var(--nim-bg-secondary)]">
       {fingerprint.trustStatus === 'fingerprint-changed' && (
-        <div className="flex items-center gap-2 p-2 mb-3 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-ui-base">
+        <div className="flex items-center gap-2 p-2 mb-3 bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-error)_30%,transparent)] rounded-ui-base">
           <MaterialSymbol icon="warning" size={14} className="text-[var(--nim-error)] shrink-0" />
-          <span className="text-[11px] text-[var(--nim-error)]">
+          <span className="text-ui-caption text-[var(--nim-error)]">
             This member's identity key has changed since you last verified it.
             Verify their new fingerprint before trusting data from them.
           </span>
@@ -229,13 +230,13 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
       )}
 
       <div className="mb-2">
-        <div className="text-[11px] text-[var(--nim-text-faint)] mb-1">Identity Key Fingerprint</div>
-        <div className="px-3 py-2 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-[11px] text-[var(--nim-text-muted)] leading-relaxed break-all select-text">
+        <div className="text-ui-caption text-[var(--nim-text-faint)] mb-1">Identity Key Fingerprint</div>
+        <div className="px-3 py-2 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-ui-caption text-[var(--nim-text-muted)] leading-relaxed break-all select-text">
           {shortFingerprint}
         </div>
       </div>
 
-      <p className="text-[11px] text-[var(--nim-text-faint)] leading-relaxed mb-3 m-0">
+      <p className="text-ui-caption text-[var(--nim-text-faint)] leading-relaxed mb-3 m-0">
         Compare this fingerprint with {member.name || member.email} out-of-band
         (e.g., in person or via a secure channel) to verify their identity.
       </p>
@@ -244,14 +245,14 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
         {fingerprint.trustStatus === 'verified' ? (
           <button
             onClick={onRevoke}
-            className="px-3 py-1 text-[11px] bg-transparent border border-[rgba(239,68,68,0.4)] rounded-ui-base text-[var(--nim-error)] cursor-pointer hover:bg-[rgba(239,68,68,0.1)]"
+            className="px-3 py-1 text-ui-caption bg-transparent border border-[color-mix(in_srgb,var(--nim-error)_40%,transparent)] rounded-ui-base text-[var(--nim-error)] cursor-pointer hover:bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)]"
           >
             Revoke Trust
           </button>
         ) : (
           <button
             onClick={onVerify}
-            className="px-3 py-1 text-[11px] bg-[var(--nim-success)] border-none rounded-ui-base text-white cursor-pointer hover:opacity-90"
+            className="px-3 py-1 text-ui-caption bg-[var(--nim-success)] border-none rounded-ui-base text-white cursor-pointer hover:opacity-90"
           >
             Mark as Verified
           </button>
@@ -259,7 +260,7 @@ function MemberFingerprintDetail({ member, fingerprint, onVerify, onRevoke, onRe
         {isAdmin && onReshareKey && (
           <button
             onClick={onReshareKey}
-            className="px-3 py-1 text-[11px] bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+            className="px-3 py-1 text-ui-caption bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
             title="Re-share the encryption key with this member (e.g., after they changed devices)"
           >
             Re-share Key
@@ -284,16 +285,16 @@ function NoTeamState({ gitRemote, onCreateTeam, loading }: {
       {/* CTA Card */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-ui-lg text-center">
-          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(96,165,250,0.15)] rounded-ui-lg flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-3 bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="group" size={24} className="text-[var(--nim-primary)]" />
           </div>
-          <p className="text-[13px] text-[var(--nim-text-muted)] mb-4 leading-relaxed">
+          <p className="text-ui-body text-[var(--nim-text-muted)] mb-4 leading-relaxed">
             This project is personal. Create a team to share tracker items, documents, and collaborate in real time.
           </p>
           <button
             onClick={onCreateTeam}
             disabled={loading}
-            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-[13px] font-medium ${
+            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-ui-body font-medium ${
               loading ? 'cursor-wait opacity-70' : 'cursor-pointer'
             }`}
           >
@@ -305,15 +306,15 @@ function NoTeamState({ gitRemote, onCreateTeam, loading }: {
 
       {/* Project Identity */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-[15px] font-semibold mb-2 text-[var(--nim-text)]">
+        <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-2 text-[var(--nim-text)]">
           Project Identity
         </h4>
-        <p className="text-[13px] leading-relaxed text-[var(--nim-text-muted)] mb-3">
+        <p className="text-ui-body leading-relaxed text-[var(--nim-text-muted)] mb-3">
           Teams are linked to a git remote, so any member who opens a clone of the same repo is automatically connected.
         </p>
         <div className="flex items-center gap-2 px-3 py-3 bg-[var(--nim-bg-secondary)] rounded-ui-base">
           <MaterialSymbol icon="commit" size={16} className="text-[var(--nim-text-faint)]" />
-          <span className="text-[12px] font-mono text-[var(--nim-text-muted)]">
+          <span className="text-ui-compact font-mono text-[var(--nim-text-muted)]">
             {gitRemote || 'No git remote detected'}
           </span>
         </div>
@@ -372,8 +373,8 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
             <MaterialSymbol icon="group" size={18} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[14px] font-semibold text-[var(--nim-text)]">{team.name}</div>
-            <div className="text-[11px] text-[var(--nim-text-faint)] font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+            <div className="text-ui-body font-semibold text-[var(--nim-text)]">{team.name}</div>
+            <div className="text-ui-caption text-[var(--nim-text-faint)] font-mono overflow-hidden text-ellipsis whitespace-nowrap">
               {team.gitRemote || 'No project linked'}
             </div>
           </div>
@@ -382,24 +383,24 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
 
       {/* Project Identity */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-[15px] font-semibold mb-2 text-[var(--nim-text)]">
+        <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-2 text-[var(--nim-text)]">
           Project Identity
         </h4>
-        <p className="text-[12px] text-[var(--nim-text-muted)] mb-3 leading-relaxed">
+        <p className="text-ui-compact text-[var(--nim-text-muted)] mb-3 leading-relaxed">
           Teams are linked to a git remote. Members who open a clone of the same repo are automatically connected.
         </p>
         {team.gitRemoteHash ? (
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2 px-3 py-3 bg-[var(--nim-bg-secondary)] rounded-ui-base">
               <MaterialSymbol icon="link" size={14} className="text-[var(--nim-success)] shrink-0" />
-              <span className="text-[12px] font-mono text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
+              <span className="text-ui-compact font-mono text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
                 {localGitRemote || `${team.gitRemoteHash.slice(0, 12)}...`}
               </span>
             </div>
             {isAdmin && (
               <button
                 onClick={onUnlinkProject}
-                className="px-3 py-2 text-[11px] bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-faint)] cursor-pointer hover:bg-[var(--nim-bg-hover)] shrink-0"
+                className="px-3 py-2 text-ui-caption bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-faint)] cursor-pointer hover:bg-[var(--nim-bg-hover)] shrink-0"
               >
                 Unlink
               </button>
@@ -408,13 +409,13 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
         ) : (
           <div className="flex items-center gap-2 px-3 py-3 bg-[var(--nim-bg-secondary)] rounded-ui-base">
             <MaterialSymbol icon="link_off" size={14} className="text-[var(--nim-text-faint)] shrink-0" />
-            <span className="flex-1 text-[12px] text-[var(--nim-text-faint)]">
+            <span className="flex-1 text-ui-compact text-[var(--nim-text-faint)]">
               No project linked
             </span>
             {isAdmin && localGitRemote && (
               <button
                 onClick={onLinkProject}
-                className="px-3 py-1 text-[11px] bg-[var(--nim-primary)] border-none rounded-ui-base text-white cursor-pointer"
+                className="px-3 py-1 text-ui-caption bg-[var(--nim-primary)] border-none rounded-ui-base text-white cursor-pointer"
               >
                 Link This Project
               </button>
@@ -425,9 +426,9 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
 
       {/* Members Section */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-[15px] font-semibold mb-2 text-[var(--nim-text)] flex items-center justify-between">
+        <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-2 text-[var(--nim-text)] flex items-center justify-between">
           <span>Members</span>
-          <span className="text-[11px] font-normal text-[var(--nim-text-faint)]">
+          <span className="text-ui-caption font-normal text-[var(--nim-text-faint)]">
             {team.members.length} {team.members.length === 1 ? 'member' : 'members'}
           </span>
         </h4>
@@ -460,18 +461,18 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
                     isPending={member.trustStatus === 'pending'}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium text-[var(--nim-text)] flex items-center gap-2">
+                    <div className="text-ui-body font-medium text-[var(--nim-text)] flex items-center gap-2">
                       {member.trustStatus === 'pending' ? member.email : (member.name || member.email)}
                       {member.isYou && (
-                        <span className="text-[10px] text-[var(--nim-text-faint)] font-normal">(you)</span>
+                        <span className="text-ui-micro text-[var(--nim-text-faint)] font-normal">(you)</span>
                       )}
                     </div>
                     {member.trustStatus === 'pending' ? (
-                      <div className="text-[11px] text-[var(--nim-text-faint)]">
+                      <div className="text-ui-caption text-[var(--nim-text-faint)]">
                         Invited {member.invitedAt || 'recently'}
                       </div>
                     ) : (
-                      <div className="text-[11px] text-[var(--nim-text-faint)]">{member.email}</div>
+                      <div className="text-ui-caption text-[var(--nim-text-faint)]">{member.email}</div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -495,10 +496,10 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
                     <div className="shrink-0">
                       <button
                         onClick={() => onRemoveMember(member.id)}
-                        className={`px-3 py-1 text-[11px] bg-transparent border rounded-ui-base cursor-pointer ${
+                        className={`px-3 py-1 text-ui-caption bg-transparent border rounded-ui-base cursor-pointer ${
                           member.trustStatus === 'pending'
                             ? 'border-[var(--nim-border)] text-[var(--nim-text-disabled)] hover:bg-[var(--nim-bg-hover)]'
-                            : 'border-[rgba(239,68,68,0.4)] text-[var(--nim-error)] hover:bg-[rgba(239,68,68,0.1)]'
+                            : 'border-[color-mix(in_srgb,var(--nim-error)_40%,transparent)] text-[var(--nim-error)] hover:bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)]'
                         }`}
                       >
                         {member.trustStatus === 'pending' ? 'Revoke' : 'Remove'}
@@ -524,7 +525,7 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
 
           {/* Invite Input Row (admin only) */}
           {isAdmin && (
-            <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--nim-bg)] bg-[rgba(255,255,255,0.02)]">
+            <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--nim-bg)] bg-[var(--nim-bg-hover)]">
               <MaterialSymbol icon="add" size={14} className="text-[var(--nim-text-disabled)] shrink-0" />
               <input
                 type="email"
@@ -532,12 +533,12 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
                 onChange={(e) => setInviteEmail(e.target.value)}
                 onKeyDown={handleInviteKeyDown}
                 placeholder="Invite by email address..."
-                className="flex-1 py-2 px-3 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-[12px] outline-none placeholder:text-[var(--nim-text-disabled)]"
+                className="flex-1 py-2 px-3 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-compact outline-none placeholder:text-[var(--nim-text-disabled)]"
               />
               <button
                 onClick={handleInvite}
                 disabled={!inviteEmail.trim()}
-                className={`px-3 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-[12px] font-medium whitespace-nowrap ${
+                className={`px-3 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-ui-compact font-medium whitespace-nowrap ${
                   inviteEmail.trim()
                     ? 'cursor-pointer opacity-100'
                     : 'cursor-not-allowed opacity-50'
@@ -553,13 +554,13 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
       {/* Your Fingerprint */}
       {myFingerprint && (
         <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-          <h4 className="provider-panel-section-title text-[15px] font-semibold mb-2 text-[var(--nim-text)]">
+          <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-2 text-[var(--nim-text)]">
             Your Fingerprint
           </h4>
-          <p className="text-[12px] text-[var(--nim-text-muted)] mb-2 leading-relaxed">
+          <p className="text-ui-compact text-[var(--nim-text-muted)] mb-2 leading-relaxed">
             Share this fingerprint with your team members so they can verify your identity.
           </p>
-          <div className="px-3 py-2 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-[11px] text-[var(--nim-text-muted)] leading-relaxed break-all select-text">
+          <div className="px-3 py-2 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-ui-caption text-[var(--nim-text-muted)] leading-relaxed break-all select-text">
             {myFingerprint.split(':').slice(0, 16).join(':')}
           </div>
         </div>
@@ -573,12 +574,12 @@ function TeamExistsState({ team, onInvite, onRemoveMember, onDeleteTeam, onLinkP
       {/* Danger Zone */}
       {isAdmin && (
         <div className="provider-panel-section py-4">
-          <h4 className="provider-panel-section-title text-[13px] font-semibold mb-2 text-[var(--nim-text-muted)]">
+          <h4 className="provider-panel-section-title text-ui-body font-semibold mb-2 text-[var(--nim-text-muted)]">
             Danger Zone
           </h4>
           <button
             onClick={onDeleteTeam}
-            className="px-3 py-2 text-[12px] bg-transparent border border-[rgba(239,68,68,0.4)] rounded-ui-base text-[var(--nim-error)] cursor-pointer hover:bg-[rgba(239,68,68,0.1)]"
+            className="px-3 py-2 text-ui-compact bg-transparent border border-[color-mix(in_srgb,var(--nim-error)_40%,transparent)] rounded-ui-base text-[var(--nim-error)] cursor-pointer hover:bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)]"
           >
             Delete Team
           </button>
@@ -603,19 +604,19 @@ function InvitePendingState({ invite, onAccept, loading, gitRemote }: {
       {/* Invite Card */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-ui-lg text-center">
-          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(251,191,36,0.15)] rounded-ui-lg flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-3 bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="mail" size={24} className="text-[var(--nim-warning)]" />
           </div>
-          <div className="text-[15px] font-semibold text-[var(--nim-text)] mb-1">
+          <div className="text-ui-subhead font-semibold text-[var(--nim-text)] mb-1">
             {invite.name}
           </div>
-          <p className="text-[13px] text-[var(--nim-text-muted)] mb-4 leading-relaxed">
+          <p className="text-ui-body text-[var(--nim-text-muted)] mb-4 leading-relaxed">
             You have been invited to join this team. Accept to collaborate on shared tracker items and documents with end-to-end encryption.
           </p>
           <button
             onClick={onAccept}
             disabled={loading}
-            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-[13px] font-medium ${
+            className={`inline-flex items-center gap-2 px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-ui-body font-medium ${
               loading ? 'cursor-wait opacity-70' : 'cursor-pointer'
             }`}
           >
@@ -627,15 +628,15 @@ function InvitePendingState({ invite, onAccept, loading, gitRemote }: {
 
       {/* Project Identity */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-[15px] font-semibold mb-2 text-[var(--nim-text)]">
+        <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-2 text-[var(--nim-text)]">
           Project Identity
         </h4>
-        <p className="text-[13px] leading-relaxed text-[var(--nim-text-muted)] mb-3">
+        <p className="text-ui-body leading-relaxed text-[var(--nim-text-muted)] mb-3">
           Teams are linked to a git remote, so any member who opens a clone of the same repo is automatically connected.
         </p>
         <div className="flex items-center gap-2 px-3 py-3 bg-[var(--nim-bg-secondary)] rounded-ui-base">
           <MaterialSymbol icon="commit" size={16} className="text-[var(--nim-text-faint)]" />
-          <span className="text-[12px] font-mono text-[var(--nim-text-muted)]">
+          <span className="text-ui-compact font-mono text-[var(--nim-text-muted)]">
             {gitRemote || 'No git remote detected'}
           </span>
         </div>
@@ -1088,7 +1089,7 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
   if (initialLoading) {
     return (
       <div className="provider-panel flex flex-col items-center justify-center py-12">
-        <span className="text-[13px] text-[var(--nim-text-muted)]">Loading team data...</span>
+        <span className="text-ui-body text-[var(--nim-text-muted)]">Loading team data...</span>
       </div>
     );
   }
@@ -1097,24 +1098,28 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
   if (!stytchAuth.isAuthenticated) {
     return (
       <div className="provider-panel flex flex-col">
-        <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)]">
-          <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
-            Team
-            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-          </h3>
-          <p className="provider-panel-description text-[13px] leading-relaxed text-[var(--nim-text-muted)]">
-            Create a team to collaborate on shared tracker items and documents with end-to-end encryption.
-          </p>
+        <PageHeader
+          icon="group"
+          title={
+            <span className="flex items-center gap-2">
+              Team
+              <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+            </span>
+          }
+          subtitle="Not signed in"
+          className="mb-3"
+        />
+        <div className="mb-5">
           <TeamPricingNotice />
         </div>
         <div className="p-6 bg-[var(--nim-bg-secondary)] rounded-ui-lg text-center">
-          <div className="w-12 h-12 mx-auto mb-3 bg-[rgba(96,165,250,0.15)] rounded-ui-lg flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-3 bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] rounded-ui-lg flex items-center justify-center">
             <MaterialSymbol icon="account_circle" size={24} className="text-[var(--nim-primary)]" />
           </div>
-          <p className="text-[13px] text-[var(--nim-text-muted)] mb-2 leading-relaxed">
+          <p className="text-ui-body text-[var(--nim-text-muted)] mb-2 leading-relaxed">
             Sign in to create or join a team.
           </p>
-          <p className="text-[12px] text-[var(--nim-text-faint)] m-0">
+          <p className="text-ui-compact text-[var(--nim-text-faint)] m-0">
             Go to <strong className="text-[var(--nim-text-muted)]">Account & Sync</strong> in the sidebar to sign in.
           </p>
         </div>
@@ -1130,21 +1135,19 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
   return (
     <div className="provider-panel flex flex-col">
       {/* Header */}
-      <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)] flex items-center gap-2">
-          Team
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </h3>
-        <p className="provider-panel-description text-[13px] leading-relaxed text-[var(--nim-text-muted)]">
-          Create a team to collaborate on shared tracker items and documents with end-to-end encryption.
-        </p>
+      <PageHeader
+        icon="group"
+        title={
+          <span className="flex items-center gap-2">
+            Team
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }
+        subtitle={userEmail && team ? (userName || userEmail) : undefined}
+        className="mb-3"
+      />
+      <div className="mb-5">
         <TeamPricingNotice />
-        {userEmail && team && (
-          <div className="flex items-center gap-2 mt-2 text-[12px] text-[var(--nim-text-faint)]">
-            <MaterialSymbol icon="person" size={13} />
-            <span>Signed in as <span className="text-[var(--nim-text-muted)]">{userName || userEmail}</span></span>
-          </div>
-        )}
       </div>
 
       {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}

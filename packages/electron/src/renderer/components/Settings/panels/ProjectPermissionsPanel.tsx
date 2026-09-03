@@ -16,6 +16,7 @@ import {
   loadWorkspacePermissions,
   type PermissionMode,
 } from '../../../store/atoms/appSettings';
+import { PageHeader } from '../../common/PageHeader';
 
 interface ProjectPermissionsPanelProps {
   workspacePath: string;
@@ -271,12 +272,7 @@ export const ProjectPermissionsPanel: React.FC<ProjectPermissionsPanelProps> = (
 
   return (
     <div className="settings-panel-content flex flex-col p-6">
-      <div className="settings-panel-header mb-6">
-        <h2 className="text-xl font-semibold text-[var(--nim-text)] mb-2">Agent Permissions</h2>
-        <p className="text-sm text-[var(--nim-text-muted)] leading-relaxed">
-          Manage which commands the AI agent can run in this project.
-        </p>
-      </div>
+      <PageHeader icon="shield" title="Agent Permissions" className="mb-6" />
 
       {(error || loadError) && (
         <div className="settings-message error flex items-center gap-2 p-3 mb-4 rounded-ui-base bg-[var(--nim-error)]/10 text-[var(--nim-error)] text-sm">

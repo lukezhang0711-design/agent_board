@@ -162,7 +162,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
 
   if (loading) {
     return (
-      <div className="org-settings-panel p-4 text-[13px] text-[var(--nim-text-muted)]">
+      <div className="org-settings-panel p-4 text-ui-body text-[var(--nim-text-muted)]">
         Loading organization…
       </div>
     );
@@ -173,7 +173,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
       <div className="org-settings-panel p-4">
         <div className="flex items-start gap-3 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-lg">
           <MaterialSymbol icon="corporate_fare" size={18} className="text-[var(--nim-text-muted)] mt-1" />
-          <div className="text-[13px] text-[var(--nim-text-muted)] leading-relaxed">
+          <div className="text-ui-body text-[var(--nim-text-muted)] leading-relaxed">
             This workspace isn’t linked to an organization yet. Create or join a team
             from the <span className="font-semibold text-[var(--nim-text)]">Team</span> panel.
           </div>
@@ -185,7 +185,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
   return (
     <div className="org-settings-panel p-1">
       {error && (
-        <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-[var(--nim-error-bg,#3b1f1f)] text-[var(--nim-error,#f87171)] rounded-ui-base text-[12px]">
+        <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-[var(--nim-error-bg,#3b1f1f)] text-[var(--nim-error,#f87171)] rounded-ui-base text-ui-compact">
           <MaterialSymbol icon="error" size={14} />
           <span className="flex-1">{error}</span>
           <button className="opacity-70 hover:opacity-100" onClick={() => setError(null)}>
@@ -201,8 +201,8 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
             <MaterialSymbol icon="corporate_fare" size={18} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[14px] font-semibold text-[var(--nim-text)]">{org.name}</div>
-            <div className="text-[11px] text-[var(--nim-text-faint)]">
+            <div className="text-ui-body font-semibold text-[var(--nim-text)]">{org.name}</div>
+            <div className="text-ui-caption text-[var(--nim-text-faint)]">
               Your role: <span className="font-mono">{org.callerRole}</span>
             </div>
           </div>
@@ -211,7 +211,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
 
       {/* Members + roles + project access */}
       <div className="py-3">
-        <h4 className="text-[15px] font-semibold mb-1 text-[var(--nim-text)]">Members &amp; access</h4>
+        <h4 className="text-ui-subhead font-semibold mb-1 text-[var(--nim-text)]">Members &amp; access</h4>
 
         <div className="flex flex-col gap-2">
           {members.map((m) => {
@@ -225,16 +225,16 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
                 className="org-member-row flex items-center gap-3 px-3 py-2 bg-[var(--nim-bg-secondary)] rounded-ui-base"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-[var(--nim-text)] truncate">{m.email || m.name || m.memberId}</div>
+                  <div className="text-ui-body text-[var(--nim-text)] truncate">{m.email || m.name || m.memberId}</div>
                   {m.status && m.status !== 'active' && (
-                    <div className="text-[10px] text-[var(--nim-text-faint)] uppercase tracking-wide">{m.status}</div>
+                    <div className="text-ui-micro text-[var(--nim-text-faint)] uppercase tracking-wide">{m.status}</div>
                   )}
                 </div>
 
                 {/* Org role */}
                 {isAdmin ? (
                   <select
-                    className="text-[12px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-2 py-1 text-[var(--nim-text)]"
+                    className="text-ui-compact bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-2 py-1 text-[var(--nim-text)]"
                     value={orgRole}
                     disabled={busy}
                     onChange={(e) => handleUpdateRole(m.memberId, e.target.value as OrgRole)}
@@ -242,16 +242,16 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
                     {ORG_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 ) : (
-                  <span className="text-[12px] font-mono text-[var(--nim-text-muted)]">{orgRole}</span>
+                  <span className="text-ui-compact font-mono text-[var(--nim-text-muted)]">{orgRole}</span>
                 )}
 
                 {/* Project grant */}
                 {org.teamProjectId && (
                   implicitAdmin ? (
-                    <span className="text-[11px] text-[var(--nim-text-faint)] italic w-[120px] text-right">implicit admin</span>
+                    <span className="text-ui-caption text-[var(--nim-text-faint)] italic w-[120px] text-right">implicit admin</span>
                   ) : isAdmin ? (
                     <select
-                      className="text-[12px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-2 py-1 text-[var(--nim-text)] w-[120px]"
+                      className="text-ui-compact bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-2 py-1 text-[var(--nim-text)] w-[120px]"
                       value={grant ?? 'none'}
                       disabled={busy}
                       onChange={(e) => handleSetGrant(m.memberId, e.target.value as ProjectRole | 'none')}
@@ -260,7 +260,7 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
                       {PROJECT_ROLES.map((r) => <option key={r} value={r}>{r.replace('project-', '')}</option>)}
                     </select>
                   ) : (
-                    <span className="text-[11px] text-[var(--nim-text-muted)] w-[120px] text-right">
+                    <span className="text-ui-caption text-[var(--nim-text-muted)] w-[120px] text-right">
                       {grant ? grant.replace('project-', '') : 'no access'}
                     </span>
                   )
@@ -288,13 +288,13 @@ export function OrgPanel({ workspacePath }: { workspacePath?: string }) {
             <input
               type="email"
               placeholder="Invite by email…"
-              className="flex-1 text-[13px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-3 py-2 text-[var(--nim-text)]"
+              className="flex-1 text-ui-body bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base px-3 py-2 text-[var(--nim-text)]"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void handleInvite(); }}
             />
             <button
-              className="text-[13px] px-3 py-2 bg-[var(--nim-accent,#3b82f6)] text-white rounded-ui-base disabled:opacity-40"
+              className="text-ui-body px-3 py-2 bg-[var(--nim-accent,#3b82f6)] text-white rounded-ui-base disabled:opacity-40"
               disabled={!inviteEmail.trim()}
               onClick={() => void handleInvite()}
             >

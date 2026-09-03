@@ -11,6 +11,8 @@ import { autoCommitEnabledAtom, setAutoCommitEnabledAtom } from '../../store/ato
 import { ALPHA_FEATURES, type AlphaFeatureTag } from '../../../shared/alphaFeatures';
 import { AlphaBadge, SETTINGS_ALPHA_TOOLTIP } from '../common/AlphaBadge';
 import { SettingsToggle } from '../GlobalSettings/SettingsToggle';
+import { PageHeader } from '../common/PageHeader';
+import { SettingsSection } from '../common/SettingsSection';
 
 const AGENT_FEATURE_TAGS: AlphaFeatureTag[] = [
   'super-loops',
@@ -225,16 +227,9 @@ export function AgentFeaturesPanel() {
 
   return (
     <div className="provider-panel flex flex-col">
-      <div className="provider-panel-header mb-6 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">
-          Agent Features
-        </h3>
-        <p className="provider-panel-description text-sm leading-relaxed text-[var(--nim-text-muted)]">
-          Settings that control how agent sessions behave.
-        </p>
-      </div>
+      <PageHeader icon="tune" title="Agent Features" className="mb-6" />
 
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
+      <SettingsSection title="General">
         <SettingsToggle
           checked={autoCommitEnabled}
           onChange={(checked) => {
@@ -263,13 +258,14 @@ export function AgentFeaturesPanel() {
             data-testid="preferred-agent-language-input"
           />
         </div>
-      </div>
+      </SettingsSection>
 
-      <div className="provider-panel-section">
-        <div className="flex items-center gap-2 mb-2">
-          <h4 className="provider-panel-section-title text-base font-semibold text-[var(--nim-text)] m-0">Experimental</h4>
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </div>
+      <SettingsSection title={
+          <span className="flex items-center gap-2">
+            Experimental
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }>
 
         <div className="mb-4 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] p-3">
           <h5 className="text-sm font-semibold mb-2 text-[var(--nim-text)]">
@@ -378,11 +374,10 @@ export function AgentFeaturesPanel() {
           onChange={(checked) => updateAIDebugSettings({ chatShowToolCalls: checked })}
           name="Show Tool Calls in Chat"
         />
-      </div>
+      </SettingsSection>
 
       {isDevelopment && (
-        <div className="provider-panel-section py-4 mt-4 border-t border-[var(--nim-border)]">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-2 text-[var(--nim-text)]">Developer Options</h4>
+        <SettingsSection title="Developer Options">
           <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-2">
             Only available in development mode.
           </p>
@@ -407,7 +402,7 @@ export function AgentFeaturesPanel() {
             name="Show Prompt Additions"
             description="Display system prompt additions and context that Nimbalyst appends to Claude Code requests."
           />
-        </div>
+        </SettingsSection>
       )}
     </div>
   );

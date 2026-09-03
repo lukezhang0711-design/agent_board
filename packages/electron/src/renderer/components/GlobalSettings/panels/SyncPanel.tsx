@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePostHog } from 'posthog-js/react';
 import { useAtom, useAtomValue } from 'jotai';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { PageHeader } from '../../common/PageHeader';
+import { SettingsSection } from '../../common/SettingsSection';
 import { QRPairingModal } from './QRPairingModal';
 import {
   syncConfigAtom,
@@ -83,7 +85,7 @@ function SharingCallout() {
           <MaterialSymbol icon="share" size={18} className="text-[var(--nim-primary)] shrink-0 mt-1" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[13px] font-semibold text-[var(--nim-text)]">
+              <span className="text-ui-body font-semibold text-[var(--nim-text)]">
                 Sharing Sessions & Documents
               </span>
               <button
@@ -98,7 +100,7 @@ function SharingCallout() {
         </div>
         {expanded && (
           <div className="mt-3 pt-3 border-t border-nim-primary/15">
-            <ul className="m-0 pl-5 text-[12px] text-[var(--nim-text-muted)] leading-7 list-disc">
+            <ul className="m-0 pl-5 text-ui-compact text-[var(--nim-text-muted)] leading-7 list-disc">
               <li>In <strong className="text-[var(--nim-text)]">Agent mode</strong>, right-click a session in the sidebar and select &quot;Share link&quot;</li>
               <li>In <strong className="text-[var(--nim-text)]">Files mode</strong>, right-click a document in the file tree and select &quot;Share Link&quot;</li>
               <li>Links are end-to-end encrypted and you choose the expiration (1, 7, or 30 days)</li>
@@ -501,21 +503,19 @@ export function SyncPanel() {
   return (
     <div className="provider-panel flex flex-col">
       {/* Header */}
-      <div className="provider-panel-header mb-5 pb-4 border-b border-[var(--nim-border)]">
-        <h3 className="provider-panel-title text-xl font-semibold leading-tight mb-2 text-[var(--nim-text)]">Account & Sync</h3>
-        <p className="provider-panel-description text-[13px] leading-relaxed text-[var(--nim-text-muted)]">
-          Access and control Nimbalyst from the mobile app.
-          Share sessions and documents via encrypted share links.
-          All data is end-to-end encrypted.
-        </p>
-      </div>
+      <PageHeader
+        icon="sync"
+        title="Account & Sync"
+        subtitle={stytchAuth.isAuthenticated && stytchAuth.user ? (stytchAuth.user.emails[0]?.email || 'Signed in') : 'Not signed in'}
+      />
 
       {/* Team Collaboration (alpha) */}
-      <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-        <div className="flex items-center gap-2 mb-2">
-          <h4 className="provider-panel-section-title text-base font-semibold text-[var(--nim-text)] m-0">Team Collaboration</h4>
-          <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
-        </div>
+      <SettingsSection title={
+          <span className="flex items-center gap-2">
+            Team Collaboration
+            <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
+          </span>
+        }>
         <SettingsToggle
           variant="enable"
           name="Enable team collaboration"
@@ -535,13 +535,12 @@ export function SyncPanel() {
             });
           }}
         />
-      </div>
+      </SettingsSection>
 
       {/* Environment Toggle - Dev Only */}
       {/*{isDevelopment && (*/}
       {false && (
-        <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Environment (Dev Only)</h4>
+        <SettingsSection title="Environment (Dev Only)">
           <div className="flex gap-2">
             <button
               onClick={() => handleEnvironmentSwitch('development')}
@@ -564,12 +563,12 @@ export function SyncPanel() {
               Production
             </button>
           </div>
-          <p className="text-[11px] text-nim-faint mt-2 mb-0">
+          <p className="text-ui-caption text-nim-faint mt-2 mb-0">
             {currentEnvironment === 'development'
               ? 'Using test Stytch + localhost:8790'
               : 'Using live Stytch + sync.nimbalyst.com'}
           </p>
-        </div>
+        </SettingsSection>
       )}
 
       {/* Account Section */}
@@ -588,10 +587,10 @@ export function SyncPanel() {
                       {(acct.email?.[0] || '?').toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-nim text-[13px] truncate">
+                      <div className="font-medium text-nim text-ui-body truncate">
                         {acct.email || 'Unknown'}
                       </div>
-                      <div className="text-[11px] text-nim-faint">
+                      <div className="text-ui-caption text-nim-faint">
                         {isSyncAccount ? 'Sync account' : (
                           <button
                             onClick={async () => {
@@ -605,7 +604,7 @@ export function SyncPanel() {
                                 console.error('Failed to switch sync account:', err);
                               }
                             }}
-                            className="text-nim-primary hover:underline cursor-pointer bg-transparent border-none p-0 text-[11px]"
+                            className="text-nim-primary hover:underline cursor-pointer bg-transparent border-none p-0 text-ui-caption"
                           >
                             Use for sync
                           </button>
@@ -627,12 +626,12 @@ export function SyncPanel() {
                   {(stytchAuth.user.name?.first_name?.[0] || stytchAuth.user.emails[0]?.email[0] || '?').toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-nim text-[13px]">
+                  <div className="font-medium text-nim text-ui-body">
                     {stytchAuth.user.name?.first_name
                       ? `${stytchAuth.user.name.first_name} ${stytchAuth.user.name.last_name || ''}`.trim()
                       : stytchAuth.user.emails[0]?.email}
                   </div>
-                  <div className="text-[11px] text-nim-faint">
+                  <div className="text-ui-caption text-nim-faint">
                     {stytchAuth.user.emails[0]?.email}
                   </div>
                 </div>
@@ -667,10 +666,10 @@ export function SyncPanel() {
                     <path d="M22 6l-10 7L2 6" />
                   </svg>
                 </div>
-                <h4 className="m-0 mb-2 text-nim text-[15px]">
+                <h4 className="m-0 mb-2 text-nim text-ui-subhead">
                   Check your email
                 </h4>
-                <p className="m-0 mb-4 text-nim-muted text-[13px]">
+                <p className="m-0 mb-4 text-nim-muted text-ui-body">
                   We sent a sign-in link to <strong>{email}</strong>
                 </p>
                 <button
@@ -679,7 +678,7 @@ export function SyncPanel() {
                     setEmail('');
                     setShowAuthForm(false);
                   }}
-                  className="px-4 py-2 bg-transparent border border-nim rounded-ui-base text-nim-muted text-[13px] cursor-pointer hover:bg-nim-hover"
+                  className="px-4 py-2 bg-transparent border border-nim rounded-ui-base text-nim-muted text-ui-body cursor-pointer hover:bg-nim-hover"
                 >
                   Done
                 </button>
@@ -690,7 +689,7 @@ export function SyncPanel() {
                 <button
                   onClick={handleGoogleSignIn}
                   disabled={authLoading || !isStytchAvailable}
-                  className={`w-full px-4 py-3 flex items-center justify-center gap-3 bg-white border border-nim rounded-ui-base text-[#333] font-medium text-[13px] ${
+                  className={`w-full px-4 py-3 flex items-center justify-center gap-3 bg-white border border-nim rounded-ui-base text-[var(--nim-text)] font-medium text-ui-body ${
                     authLoading ? 'cursor-wait opacity-70' : 'cursor-pointer opacity-100'
                   }`}
                 >
@@ -717,12 +716,12 @@ export function SyncPanel() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
                     disabled={!isStytchAvailable || authLoading}
-                    className="w-full px-3 py-2 mb-3 border border-nim rounded-ui-base bg-nim text-nim text-[13px]"
+                    className="w-full px-3 py-2 mb-3 border border-nim rounded-ui-base bg-nim text-nim text-ui-body"
                   />
                   <button
                     type="submit"
                     disabled={authLoading || !isStytchAvailable || !email}
-                    className={`w-full px-4 py-3 bg-nim-primary border-none rounded-ui-base text-nim-on-primary font-medium text-[13px] ${
+                    className={`w-full px-4 py-3 bg-nim-primary border-none rounded-ui-base text-nim-on-primary font-medium text-ui-body ${
                       authLoading ? 'cursor-wait' : 'cursor-pointer'
                     } ${(authLoading || !email) ? 'opacity-70' : 'opacity-100'}`}
                   >
@@ -751,20 +750,20 @@ export function SyncPanel() {
           </div>
         ) : (
           <div className="p-4 bg-nim-secondary rounded-ui-lg text-center">
-            <p className="text-[13px] text-nim-muted m-0 mb-3">
+            <p className="text-ui-body text-nim-muted m-0 mb-3">
               Sign in to sync sessions across all your devices.
             </p>
             <button
               onClick={() => setShowAuthForm(true)}
               disabled={!isStytchAvailable}
-              className={`px-5 py-2 bg-nim-primary border-none rounded-ui-base text-nim-on-primary font-medium text-[13px] ${
+              className={`px-5 py-2 bg-nim-primary border-none rounded-ui-base text-nim-on-primary font-medium text-ui-body ${
                 isStytchAvailable ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-50'
               }`}
             >
               Sign In or Create Account
             </button>
             {!isStytchAvailable && (
-              <p className="text-[11px] text-nim-faint mt-2 mb-0">
+              <p className="text-ui-caption text-nim-faint mt-2 mb-0">
                 Restart the app to enable authentication.
               </p>
             )}
@@ -781,7 +780,7 @@ export function SyncPanel() {
       {/* Mobile App - compact card combining app info + QR pairing */}
       {stytchAuth.isAuthenticated && (
           <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-            <h4 className="provider-panel-section-title text-[15px] font-semibold mb-3 text-[var(--nim-text)]">Mobile App</h4>
+            <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-3 text-[var(--nim-text)]">Mobile App</h4>
             <div className="flex gap-3 p-3 bg-nim-secondary rounded-ui-lg">
               <div className="w-11 h-11 rounded-ui-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -790,16 +789,16 @@ export function SyncPanel() {
                 </svg>
               </div>
               <div className="flex-1">
-                <div className="text-[13px] font-semibold text-nim mb-1">
+                <div className="text-ui-body font-semibold text-nim mb-1">
                   Nimbalyst for iOS
                 </div>
-                <div className="text-[11px] text-nim-faint mb-2">
+                <div className="text-ui-caption text-nim-faint mb-2">
                   View and respond to AI sessions from your phone
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                       onClick={() => window.electronAPI.openExternal('https://apps.apple.com/app/id6756393105')}
-                      className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-ui-base text-[11px] font-medium text-gray-900 border-none cursor-pointer hover:bg-gray-100"
+                      className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-ui-base text-ui-caption font-medium text-gray-900 border-none cursor-pointer hover:bg-gray-100"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
@@ -810,7 +809,7 @@ export function SyncPanel() {
               </div>
               {/* Pair Device button - right side of card */}
               <button
-                  className="self-center flex flex-col items-center gap-2 px-4 py-3 bg-nim-primary border-none rounded-ui-lg text-nim-on-primary text-[14px] font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  className="self-center flex flex-col items-center gap-2 px-4 py-3 bg-nim-primary border-none rounded-ui-lg text-nim-on-primary text-ui-body font-medium cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   onClick={() => {
                     if (enabledProjectCount === 0) {
                       setPairError('Enable at least one project to sync before pairing your device.');
@@ -837,7 +836,7 @@ export function SyncPanel() {
           </div>
       )}
       {pairError && (
-          <p className="mt-2 text-[12px] text-nim-error">
+          <p className="mt-2 text-ui-compact text-nim-error">
             {pairError}
           </p>
       )}
@@ -847,8 +846,8 @@ export function SyncPanel() {
         <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
           <div className="flex items-center justify-between">
             <div className="flex-1 mr-3">
-              <h4 className="text-[13px] font-medium text-nim m-0">Prevent sleep while syncing</h4>
-              <p className="text-[11px] text-nim-muted mt-1 mb-0">
+              <h4 className="text-ui-body font-medium text-nim m-0">Prevent sleep while syncing</h4>
+              <p className="text-ui-caption text-nim-muted mt-1 mb-0">
                 Keeps your computer awake so you can send prompts from your phone. Display can still turn off.
               </p>
             </div>
@@ -859,7 +858,7 @@ export function SyncPanel() {
                 updateConfig({ preventSleepMode: mode, preventSleepWhenSyncing: undefined });
                 window.electronAPI.invoke('sync:set-prevent-sleep', mode);
               }}
-              className="bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-[12px] text-nim cursor-pointer shrink-0"
+              className="bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-ui-compact text-nim cursor-pointer shrink-0"
             >
               <option value="off">Off</option>
               <option value="always">Always</option>
@@ -867,7 +866,7 @@ export function SyncPanel() {
             </select>
           </div>
           {(config.preventSleepMode ?? (config.preventSleepWhenSyncing ? 'always' : 'off')) === 'off' && enabledProjectCount > 0 && (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-ui-lg text-[11px] text-amber-500">
+            <div className="flex items-center gap-2 mt-2 p-2 bg-nim-warning-subtle border border-nim-warning-subtle rounded-ui-lg text-ui-caption text-[var(--nim-warning)]">
               <svg className="shrink-0" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
               </svg>
@@ -880,11 +879,11 @@ export function SyncPanel() {
       {/* Synced Projects */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="provider-panel-section-title text-[15px] font-semibold text-[var(--nim-text)] m-0">Projects accessible on mobile</h4>
+          <h4 className="provider-panel-section-title text-ui-subhead font-semibold text-[var(--nim-text)] m-0">Projects accessible on mobile</h4>
           {availableProjects.length > 0 && !showAddProject && (
             <button
               onClick={() => setShowAddProject(true)}
-              className="flex items-center gap-1 px-2 py-0.5 text-[11px] bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover hover:text-nim"
+              className="flex items-center gap-1 px-2 py-0.5 text-ui-caption bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover hover:text-nim"
             >
               <MaterialSymbol icon="add" size={14} />
               Add
@@ -896,7 +895,7 @@ export function SyncPanel() {
           <button
             onClick={() => setShowAddProject(true)}
             disabled={availableProjects.length === 0}
-            className={`flex items-center gap-2 px-3 py-2 text-[12px] bg-transparent border border-dashed border-nim rounded-ui-lg w-full ${
+            className={`flex items-center gap-2 px-3 py-2 text-ui-compact bg-transparent border border-dashed border-nim rounded-ui-lg w-full ${
               availableProjects.length === 0
                 ? 'text-nim-disabled cursor-not-allowed'
                 : 'text-nim-muted cursor-pointer hover:bg-nim-hover hover:text-nim'
@@ -911,7 +910,7 @@ export function SyncPanel() {
               const docSyncEnabled = (config.docSyncEnabledProjects ?? []).includes(project.path);
               return (
                 <div key={project.path} className="flex items-center gap-2 px-3 py-2 border-b border-[var(--nim-border)] last:border-b-0 group">
-                  <span className="text-[13px] text-nim truncate flex-1">{project.name}</span>
+                  <span className="text-ui-body text-nim truncate flex-1">{project.name}</span>
                   {isAlpha && (
                     <label className="flex items-center gap-1 cursor-pointer shrink-0" title="Sync .md files to mobile">
                       <input
@@ -920,7 +919,7 @@ export function SyncPanel() {
                         onChange={(e) => handleDocSyncToggle(project.path, e.target.checked)}
                         className="w-3 h-3 cursor-pointer accent-[var(--nim-primary)]"
                       />
-                      <span className="text-[10px] text-nim-faint">Docs</span>
+                      <span className="text-ui-micro text-nim-faint">Docs</span>
                     </label>
                   )}
                   <button
@@ -940,13 +939,13 @@ export function SyncPanel() {
                 className="flex items-center gap-2 px-3 py-2 w-full bg-transparent border-none border-b border-[var(--nim-border)] last:border-b-0 cursor-pointer hover:bg-nim-hover text-left"
               >
                 <MaterialSymbol icon="add" size={14} className="text-[var(--nim-primary)] shrink-0" />
-                <span className="text-[13px] text-nim-muted truncate">{project.name}</span>
+                <span className="text-ui-body text-nim-muted truncate">{project.name}</span>
               </button>
             ))}
             {showAddProject && (
               <button
                 onClick={() => setShowAddProject(false)}
-                className="w-full py-1 text-[11px] text-nim-faint bg-transparent border-none border-t border-[var(--nim-border)] cursor-pointer hover:bg-nim-hover"
+                className="w-full py-1 text-ui-caption text-nim-faint bg-transparent border-none border-t border-[var(--nim-border)] cursor-pointer hover:bg-nim-hover"
               >
                 Done
               </button>
@@ -956,11 +955,11 @@ export function SyncPanel() {
 
         {/* Idle timeout */}
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[11px] text-nim-faint">Push notification delay</span>
+          <span className="text-ui-caption text-nim-faint">Push notification delay</span>
           <select
             value={config.idleTimeoutMinutes ?? 5}
             onChange={(e) => handleFieldChange('idleTimeoutMinutes', Number(e.target.value))}
-            className="px-2 py-0.5 text-[11px] bg-nim-secondary border border-nim rounded-ui-base text-nim-muted cursor-pointer"
+            className="px-2 py-0.5 text-ui-caption bg-nim-secondary border border-nim rounded-ui-base text-nim-muted cursor-pointer"
           >
             <option value={1}>1 min</option>
             <option value={2}>2 min</option>
@@ -974,12 +973,12 @@ export function SyncPanel() {
 
       {/* Paired Devices */}
       <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-        <h4 className="provider-panel-section-title text-[15px] font-semibold mb-3 text-[var(--nim-text)]">
+        <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-3 text-[var(--nim-text)]">
           Devices
           <button
             onClick={loadDevices}
             disabled={devicesLoading}
-            className={`ml-2 px-2 py-0.5 text-[10px] bg-nim-secondary border border-nim rounded-ui-base text-nim-faint ${
+            className={`ml-2 px-2 py-0.5 text-ui-micro bg-nim-secondary border border-nim rounded-ui-base text-nim-faint ${
               devicesLoading ? 'cursor-wait' : 'cursor-pointer hover:bg-nim-hover'
             }`}
           >
@@ -988,7 +987,7 @@ export function SyncPanel() {
         </h4>
         <div className="mt-2">
           {connectedDevices.length === 0 && !devicesLoading && (
-            <div className="text-[12px] text-nim-faint px-3 py-2">
+            <div className="text-ui-compact text-nim-faint px-3 py-2">
               No paired devices. Use &quot;Pair Device&quot; to connect a mobile device.
             </div>
           )}
@@ -997,12 +996,12 @@ export function SyncPanel() {
               key={device.deviceId}
               className="flex items-center gap-3 px-3 py-2 bg-nim-secondary rounded-ui-base mb-2 last:mb-0"
             >
-              <div className={`w-2 h-2 rounded-ui-full ${device.isOnline ? 'bg-green-500' : 'bg-neutral-500'}`} />
+              <div className={`w-2 h-2 rounded-ui-full ${device.isOnline ? 'bg-[var(--nim-success)]' : 'bg-[var(--nim-text-faint)]'}`} />
               <div className="flex-1">
-                <div className="text-[13px] text-nim">
+                <div className="text-ui-body text-nim">
                   {device.name}
                 </div>
-                <div className="text-[11px] text-nim-faint">
+                <div className="text-ui-caption text-nim-faint">
                   {device.platform}
                   {device.isOnline
                     ? ` - connected ${formatRelativeTime(device.connectedAt)}`
@@ -1024,11 +1023,11 @@ export function SyncPanel() {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0110 0v4" />
             </svg>
-            <span className="text-[13px] font-semibold text-nim-success">
+            <span className="text-ui-body font-semibold text-nim-success">
               End-to-End Encryption
             </span>
           </div>
-          <ul className="m-0 pl-5 text-[12px] text-nim leading-7">
+          <ul className="m-0 pl-5 text-ui-compact text-nim leading-7">
             <li>Your encryption keys never touch our servers</li>
             <li>Only your devices can decrypt your data</li>
             <li>Sign in with the same account on both devices</li>
@@ -1039,7 +1038,7 @@ export function SyncPanel() {
       {/* Delete Account */}
       {stytchAuth.isAuthenticated && (
         <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-          <h4 className="provider-panel-section-title text-[15px] font-semibold mb-2 text-[var(--nim-text)]">Danger Zone</h4>
+          <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-2 text-[var(--nim-text)]">Danger Zone</h4>
           {!showDeleteConfirm ? (
             <button
               onClick={() => {
@@ -1047,16 +1046,16 @@ export function SyncPanel() {
                 setShowDeleteConfirm(true);
                 setDeleteError(null);
               }}
-              className="px-4 py-2 text-[13px] bg-transparent border border-red-500/40 rounded-ui-base text-red-500 cursor-pointer hover:bg-red-500/10"
+              className="px-4 py-2 text-ui-body bg-transparent border border-nim-error-subtle rounded-ui-base text-[var(--nim-error)] cursor-pointer hover:bg-nim-error-subtle"
             >
               Delete Account
             </button>
           ) : (
-            <div className="p-4 bg-nim-secondary rounded-ui-lg border border-red-500/30">
-              <p className="text-[13px] text-nim-muted m-0 mb-3">
+            <div className="p-4 bg-nim-secondary rounded-ui-lg border border-nim-error-subtle">
+              <p className="text-ui-body text-nim-muted m-0 mb-3">
                 This will permanently delete your account and all synced data, including sessions, shared links, and device pairings. This cannot be undone.
               </p>
-              <p className="text-[12px] text-nim-faint m-0 mb-2">
+              <p className="text-ui-compact text-nim-faint m-0 mb-2">
                 Type <strong className="text-nim">DELETE</strong> to confirm:
               </p>
               <input
@@ -1064,21 +1063,21 @@ export function SyncPanel() {
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 placeholder="DELETE"
-                className="w-full px-3 py-2 mb-3 border border-nim rounded-ui-base bg-nim text-nim text-[13px]"
+                className="w-full px-3 py-2 mb-3 border border-nim rounded-ui-base bg-nim text-nim text-ui-body"
                 disabled={deleteLoading}
                 autoFocus
               />
               {deleteError && (
-                <p className="text-red-500 text-xs mb-3 m-0">{deleteError}</p>
+                <p className="text-[var(--nim-error)] text-xs mb-3 m-0">{deleteError}</p>
               )}
               <div className="flex gap-2">
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
-                  className={`px-4 py-2 text-[13px] border-none rounded-ui-base text-white font-medium ${
+                  className={`px-4 py-2 text-ui-body border-none rounded-ui-base text-white font-medium ${
                     deleteConfirmText === 'DELETE' && !deleteLoading
-                      ? 'bg-red-600 cursor-pointer hover:bg-red-700'
-                      : 'bg-red-600/40 cursor-not-allowed'
+                      ? 'bg-[var(--nim-error)] cursor-pointer hover:opacity-90'
+                      : 'bg-nim-error-subtle cursor-not-allowed'
                   }`}
                 >
                   {deleteLoading ? 'Deleting...' : 'Delete Account'}
@@ -1090,7 +1089,7 @@ export function SyncPanel() {
                     setDeleteError(null);
                   }}
                   disabled={deleteLoading}
-                  className="px-4 py-2 text-[13px] bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover"
+                  className="px-4 py-2 text-ui-body bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover"
                 >
                   Cancel
                 </button>

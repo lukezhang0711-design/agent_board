@@ -7,10 +7,14 @@ const mocks = vi.hoisted(() => ({
   legacyAcpConfig: { enabled: false },
 }));
 
-vi.mock('jotai', () => ({
-  useAtomValue: () => ({ enabled: true }),
-  useSetAtom: () => vi.fn(),
-}));
+vi.mock('jotai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('jotai')>();
+  return {
+    ...actual,
+    useAtomValue: () => ({ enabled: true }),
+    useSetAtom: () => vi.fn(),
+  };
+});
 vi.mock('../../../../hooks/useSetting', () => ({
   useSetting: (key: string) => key === 'ai.provider.openai-codex-acp' ? mocks.legacyAcpConfig : true,
   useSetSetting: () => vi.fn(),
