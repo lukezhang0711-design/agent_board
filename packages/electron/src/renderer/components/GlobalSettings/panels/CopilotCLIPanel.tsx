@@ -93,13 +93,13 @@ export function CopilotCLIPanel({
               npm install -g @github/copilot
             </code>
             <button
-              className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90"
+              className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90"
               onClick={handleInstall}
             >
               Install Copilot CLI
             </button>
             {installError && (
-              <div className="text-xs mt-2 text-[var(--nim-error)]">
+              <div className="text-ui-compact mt-2 text-[var(--nim-error)]">
                 {installError}
                 <p className="mt-1 text-[var(--nim-text-muted)]">
                   Try running manually: <code className="text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 rounded-ui-base">npm install -g @github/copilot</code>

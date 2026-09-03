@@ -57,7 +57,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
 
   if (loading) {
     return (
-      <div className="activity-heatmap-loading flex items-center justify-center min-h-[200px] text-[var(--nim-text-muted)] text-sm">
+      <div className="activity-heatmap-loading flex items-center justify-center min-h-[200px] text-[var(--nim-text-muted)] text-ui-body">
         Loading...
       </div>
     );
@@ -89,10 +89,10 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
     <div className="activity-heatmap flex flex-col gap-3">
       <div className="heatmap-header-section flex justify-between items-start gap-4">
         <div>
-          <h3 className="m-0 text-base font-semibold text-[var(--nim-text)]">
+          <h3 className="m-0 text-ui-subhead font-semibold text-[var(--nim-text)]">
             {currentMetricLabels.title}
           </h3>
-          <p className="heatmap-description mt-1 mb-0 text-xs text-[var(--nim-text-muted)]">
+          <p className="heatmap-description mt-1 mb-0 text-ui-compact text-[var(--nim-text-muted)]">
             {currentMetricLabels.description}
           </p>
         </div>
@@ -100,7 +100,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
           {(['messages', 'edits', 'sessions'] as ActivityMetric[]).map((m) => (
             <button
               key={m}
-              className={`metric-button border-none px-3 py-2 text-xs font-medium text-[var(--nim-text-muted)] cursor-pointer rounded-ui-base transition-all duration-200 whitespace-nowrap hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${metric === m ? 'active bg-[var(--nim-bg)] text-[var(--nim-text)] shadow-sm' : ''}`}
+              className={`metric-button border-none px-3 py-2 text-ui-compact font-medium text-[var(--nim-text-muted)] cursor-pointer rounded-ui-base transition-all duration-200 whitespace-nowrap hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] ${metric === m ? 'active bg-[var(--nim-bg)] text-[var(--nim-text)] shadow-sm' : ''}`}
               onClick={() => setMetric(m)}
             >
               {METRIC_LABELS[m].title.replace(/^(AI |Documents )/g, '')}
@@ -113,11 +113,11 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
         <div className="heatmap-grid inline-block min-w-[800px]">
           {/* Header row with hour labels */}
           <div className="heatmap-header grid grid-cols-[40px_repeat(24,1fr)] gap-1 mb-1">
-            <div className="day-label text-[10px] font-semibold text-[var(--nim-text)] text-right pr-2 flex items-center justify-end"></div>
+            <div className="day-label text-ui-micro font-semibold text-[var(--nim-text)] text-right pr-2 flex items-center justify-end"></div>
             {hours.map((hour) => (
               <div
                 key={hour}
-                className="hour-label text-[9px] text-[var(--nim-text-faint)] text-center flex items-center justify-center"
+                className="hour-label text-ui-micro text-[var(--nim-text-faint)] text-center flex items-center justify-center"
               >
                 {hour.toString().padStart(2, '0')}
               </div>
@@ -127,7 +127,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
           {/* Data rows - one per day */}
           {days.map((day, dayIndex) => (
             <div key={dayIndex} className="heatmap-row grid grid-cols-[40px_repeat(24,1fr)] gap-1 mb-1">
-              <div className="day-label text-[10px] font-semibold text-[var(--nim-text)] text-right pr-2 flex items-center justify-end">
+              <div className="day-label text-ui-micro font-semibold text-[var(--nim-text)] text-right pr-2 flex items-center justify-end">
                 {day}
               </div>
               {hours.map((hour) => {
@@ -148,7 +148,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
                     data-tooltip={`${day} ${hour}:00 - ${tooltipText}`}
                   >
                     {count > 0 && (
-                      <span className="cell-count text-[7px] font-semibold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+                      <span className="cell-count text-ui-micro font-semibold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
                         {count}
                       </span>
                     )}
@@ -159,7 +159,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ workspaceId })
           ))}
         </div>
 
-        <div className="heatmap-legend flex items-center gap-2 mt-2 justify-center text-[10px] text-[var(--nim-text-muted)]">
+        <div className="heatmap-legend flex items-center gap-2 mt-2 justify-center text-ui-micro text-[var(--nim-text-muted)]">
           <span>Less</span>
           <div
             className="legend-gradient w-[100px] h-2 rounded-ui-base"

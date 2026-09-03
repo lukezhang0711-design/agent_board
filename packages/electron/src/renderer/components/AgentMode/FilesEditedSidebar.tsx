@@ -574,7 +574,7 @@ export const FilesEditedSidebar: React.FC<FilesEditedSidebarProps> = React.memo(
         <div className="files-edited-sidebar__keep-all-banner flex items-center justify-between px-3 py-2 bg-[color-mix(in_srgb,var(--nim-warning)_10%,var(--nim-bg))] border-b border-[color-mix(in_srgb,var(--nim-warning)_30%,transparent)] shrink-0">
           <div className="files-edited-sidebar__keep-all-info flex items-center gap-2">
             <MaterialSymbol icon="rate_review" size={16} className="files-edited-sidebar__keep-all-icon text-[var(--nim-warning)]" />
-            <span className="files-edited-sidebar__keep-all-text text-xs text-[var(--nim-warning)] font-medium">
+            <span className="files-edited-sidebar__keep-all-text text-ui-compact text-[var(--nim-warning)] font-medium">
               <span className="files-edited-sidebar__keep-all-count font-semibold">{pendingReviewFiles.size}</span>
               {' '}file{pendingReviewFiles.size !== 1 ? 's' : ''} pending review
             </span>

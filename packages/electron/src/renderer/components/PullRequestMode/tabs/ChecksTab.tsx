@@ -91,20 +91,20 @@ export function ChecksTab({ workspaceId, remote, pr, refreshToken }: ChecksTabPr
   return (
     <div className="pr-checks-tab flex flex-col flex-1 min-h-0 overflow-y-auto" data-testid="pr-checks-tab">
       {loading && checks.length === 0 ? (
-        <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-sm">
+        <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-ui-body">
           <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin" />
           Loading checks…
         </div>
       ) : error ? (
-        <div className="text-nim-error text-sm p-4">{error}</div>
+        <div className="text-nim-error text-ui-body p-4">{error}</div>
       ) : checks.length === 0 ? (
-        <div className="text-nim-faint text-sm text-center py-6">No checks reported.</div>
+        <div className="text-nim-faint text-ui-body text-center py-6">No checks reported.</div>
       ) : (
         GROUP_ORDER.filter((g) => grouped[g].length > 0).map((group) => {
           const meta = GROUP_META[group];
           return (
             <div key={group}>
-              <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-nim-faint bg-nim-secondary border-b border-nim">
+              <div className="px-4 py-2 text-ui-micro font-semibold uppercase tracking-wider text-nim-faint bg-nim-secondary border-b border-nim">
                 {meta.label} ({grouped[group].length})
               </div>
               {grouped[group].map((check) => (
@@ -114,10 +114,10 @@ export function ChecksTab({ workspaceId, remote, pr, refreshToken }: ChecksTabPr
                   data-testid="pr-check-row"
                 >
                   <MaterialSymbol icon={meta.icon} size={16} className={`${meta.className} shrink-0`} />
-                  <span className="flex-1 min-w-0 truncate text-sm text-nim">{check.checkName}</span>
+                  <span className="flex-1 min-w-0 truncate text-ui-body text-nim">{check.checkName}</span>
                   {check.detailsUrl && (
                     <button
-                      className="text-xs text-nim-accent hover:underline shrink-0"
+                      className="text-ui-compact text-nim-accent hover:underline shrink-0"
                       onClick={() => openExternal(check.detailsUrl)}
                     >
                       Details

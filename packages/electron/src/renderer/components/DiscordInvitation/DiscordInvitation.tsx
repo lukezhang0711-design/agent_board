@@ -127,7 +127,7 @@ export const DiscordInvitation: React.FC<DiscordInvitationProps> = ({
         aria-describedby="discord-invitation-description"
       >
         <button
-          className="absolute top-4 right-4 w-8 h-8 p-0 flex items-center justify-center bg-transparent border-none text-[24px] leading-none cursor-pointer rounded-ui-base z-[1] text-[var(--nim-text-muted)] transition-[color,transform] duration-200 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:scale-110"
+          className="absolute top-4 right-4 w-8 h-8 p-0 flex items-center justify-center bg-transparent border-none text-ui-headline leading-none cursor-pointer rounded-ui-base z-[1] text-[var(--nim-text-muted)] transition-[color,transform] duration-200 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:scale-110"
           onClick={handleRemindLater}
           aria-label="Close"
         >
@@ -137,17 +137,17 @@ export const DiscordInvitation: React.FC<DiscordInvitationProps> = ({
         <div className="px-8 pt-10 pb-8 text-center">
           <img src={logoSrc} alt="Nimbalyst" className="mx-auto mb-5 h-12 w-auto object-contain" />
 
-          <h2 id="discord-invitation-title" className="discord-invitation-title m-0 mb-3 text-2xl font-bold tracking-[-0.5px] text-[var(--nim-text)]">
+          <h2 id="discord-invitation-title" className="discord-invitation-title m-0 mb-3 text-ui-headline font-bold tracking-[-0.5px] text-[var(--nim-text)]">
             Join the Community
           </h2>
 
-          <p id="discord-invitation-description" className="discord-invitation-message mb-6 text-[15px] leading-[1.6] max-w-[340px] mx-auto text-[var(--nim-text-muted)]">
+          <p id="discord-invitation-description" className="discord-invitation-message mb-6 text-ui-subhead leading-[1.6] max-w-[340px] mx-auto text-[var(--nim-text-muted)]">
             Get faster help, share feedback with the team, and stay up to date on new releases.
           </p>
 
           <div className="discord-invitation-buttons flex justify-center mb-6">
             <button
-              className="discord-invitation-button discord-invitation-button-primary w-full max-w-[320px] px-8 py-3 rounded-ui-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center justify-center gap-3 text-white bg-[var(--nim-primary)] shadow-[0_4px_12px_rgba(0,0,0,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--nim-primary-hover)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.3)] active:translate-y-0"
+              className="discord-invitation-button discord-invitation-button-primary w-full max-w-[320px] px-8 py-3 rounded-ui-lg border-none text-ui-subhead font-semibold cursor-pointer whitespace-nowrap flex items-center justify-center gap-3 text-white bg-[var(--nim-primary)] shadow-[0_4px_12px_rgba(0,0,0,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--nim-primary-hover)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.3)] active:translate-y-0"
               onClick={() => handleOpenLink('https://discord.gg/ubZDt4esEn', 'Discord')}
             >
               <DiscordIcon className="w-5 h-auto text-white" />
@@ -156,7 +156,7 @@ export const DiscordInvitation: React.FC<DiscordInvitationProps> = ({
           </div>
 
           <div className="mb-6 px-4">
-            <p className="m-0 mb-4 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--nim-text-muted)]">
+            <p className="m-0 mb-4 text-ui-body font-semibold uppercase tracking-[0.08em] text-[var(--nim-text-muted)]">
               Follow Nimbalyst
             </p>
             <div className="flex items-center justify-center gap-3">
@@ -176,14 +176,14 @@ export const DiscordInvitation: React.FC<DiscordInvitationProps> = ({
 
           <div className="discord-invitation-footer pt-4 flex items-center justify-center gap-2 border-t border-[var(--nim-border)]">
             <button
-              className="bg-transparent border-none text-[13px] cursor-pointer px-2 py-1 no-underline text-[var(--nim-text-muted)] transition-colors duration-200 hover:text-[var(--nim-text)] hover:underline"
+              className="bg-transparent border-none text-ui-body cursor-pointer px-2 py-1 no-underline text-[var(--nim-text-muted)] transition-colors duration-200 hover:text-[var(--nim-text)] hover:underline"
               onClick={handleRemindLater}
             >
               Remind Me Later
             </button>
-            <span className="text-[13px] select-none text-[var(--nim-text-faint)]">•</span>
+            <span className="text-ui-body select-none text-[var(--nim-text-faint)]">•</span>
             <button
-              className="bg-transparent border-none text-[13px] cursor-pointer px-2 py-1 no-underline text-[var(--nim-text-muted)] transition-colors duration-200 hover:text-[var(--nim-text)] hover:underline"
+              className="bg-transparent border-none text-ui-body cursor-pointer px-2 py-1 no-underline text-[var(--nim-text-muted)] transition-colors duration-200 hover:text-[var(--nim-text)] hover:underline"
               onClick={handleDontRemind}
             >
               Don't Show Again

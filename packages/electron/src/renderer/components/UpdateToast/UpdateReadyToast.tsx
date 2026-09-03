@@ -37,12 +37,12 @@ export function UpdateReadyToast({
         </button>
 
         {/* Header */}
-        <div className="update-toast-title text-sm font-semibold text-[var(--nim-text)] mb-1 pr-7">
+        <div className="update-toast-title text-ui-body font-semibold text-[var(--nim-text)] mb-1 pr-7">
           Update ready
         </div>
         <div className="flex items-center gap-2 mb-4">
           <div className="w-4 h-4 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin shrink-0" />
-          <div className="update-toast-subtitle text-xs text-[var(--nim-text-muted)] leading-normal">
+          <div className="update-toast-subtitle text-ui-compact text-[var(--nim-text-muted)] leading-normal">
             Update will apply when all AI sessions are finished
           </div>
         </div>
@@ -50,14 +50,14 @@ export function UpdateReadyToast({
         {/* Action buttons */}
         <div className="update-toast-actions flex gap-2 flex-wrap">
           <button
-            className="update-toast-btn update-toast-btn-primary py-2 px-3 border-none rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-primary)] text-white hover:brightness-110"
+            className="update-toast-btn update-toast-btn-primary py-2 px-3 border-none rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-primary)] text-white hover:brightness-110"
             onClick={onForceRestart}
             data-testid="force-restart-btn"
           >
             Restart Now
           </button>
           <button
-            className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+            className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
             onClick={onDoItLater}
             data-testid="do-it-later-btn"
           >
@@ -87,24 +87,24 @@ export function UpdateReadyToast({
       </button>
 
       {/* Header */}
-      <div className="update-toast-title text-sm font-semibold text-[var(--nim-text)] mb-1 pr-7">
+      <div className="update-toast-title text-ui-body font-semibold text-[var(--nim-text)] mb-1 pr-7">
         Nimbalyst update is ready
       </div>
-      <div className="update-toast-subtitle text-xs text-[var(--nim-text-muted)] leading-normal mb-4">
+      <div className="update-toast-subtitle text-ui-compact text-[var(--nim-text-muted)] leading-normal mb-4">
         The app needs to be restarted to apply the update
       </div>
 
       {/* Action buttons */}
       <div className="update-toast-actions flex gap-2 flex-wrap">
         <button
-          className="update-toast-btn update-toast-btn-primary py-2 px-3 border-none rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-primary)] text-white hover:brightness-110"
+          className="update-toast-btn update-toast-btn-primary py-2 px-3 border-none rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-primary)] text-white hover:brightness-110"
           onClick={onRelaunch}
           data-testid="relaunch-btn"
         >
           Relaunch
         </button>
         <button
-          className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           onClick={onDoItLater}
           data-testid="do-it-later-btn"
         >

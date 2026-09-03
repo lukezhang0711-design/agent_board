@@ -277,6 +277,10 @@ FX 遗留的 `rounded-ui-none` (0px) 仅作为直角接缝过渡档保留。原 
 10. **Do**: 极淡色 `var(--nim-text-subtle)` 仅用于分隔线、折叠箭头、大空态图标。
     **Don't**: 将极淡非文字记号色赋给可读正文或副标题，导致暗色模式对比度彻底失效。
     *反例*: `packages/electron/src/renderer/components/common/PageHeader.tsx:75`（副标题极度调淡导致几乎不可读）
+11. **Do**: 严格保留陈述安全、隐私事实（谁能看到内容）、权限如实告知（授予了什么能力）、数据是否端到端加密、降级出错如实告知的说明，统一置于页头副信息位（`subtitle`）。
+    *正例*: `packages/electron/src/renderer/components/Settings/panels/PrivilegedExtensionsPanel.tsx` (`Extensions that have been granted permission to run code outside the app`)
+    **Don't**: 在常驻界面放置解释产品内部怎么运作的、介绍功能是干嘛的、或解释默认值的说明书式文案，一律清理。
+    *反例*: `packages/electron/src/renderer/components/GlobalSettings/panels/SyncPanel.tsx` (历史说明: `Access and control Nimbalyst from the mobile app.`)
 
 ---
 

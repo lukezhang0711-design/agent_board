@@ -177,21 +177,21 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
         <div
           className="extension-error-console-header flex items-center gap-4 px-5 py-4 rounded-ui-lg-t border-b border-nim bg-nim-secondary"
         >
-          <h2 className="m-0 text-base font-semibold text-nim">
+          <h2 className="m-0 text-ui-subhead font-semibold text-nim">
             Extension Logs
           </h2>
           <div className="extension-error-console-stats flex gap-3 ml-auto">
             {stats && (
               <>
-                <span className="stat stat-error flex items-center gap-1 text-xs font-medium text-nim-error">
+                <span className="stat stat-error flex items-center gap-1 text-ui-compact font-medium text-nim-error">
                   <MaterialSymbol icon="error" size={14} />
                   {stats.byLevel.error}
                 </span>
-                <span className="stat stat-warn flex items-center gap-1 text-xs font-medium text-nim-warning">
+                <span className="stat stat-warn flex items-center gap-1 text-ui-compact font-medium text-nim-warning">
                   <MaterialSymbol icon="warning" size={14} />
                   {stats.byLevel.warn}
                 </span>
-                <span className="stat stat-info flex items-center gap-1 text-xs font-medium text-nim-info">
+                <span className="stat stat-info flex items-center gap-1 text-ui-compact font-medium text-nim-info">
                   <MaterialSymbol icon="info" size={14} />
                   {stats.byLevel.info}
                 </span>
@@ -212,7 +212,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
         >
           <div className="extension-error-console-filters flex gap-2">
             <select
-              className="px-2 py-2 text-xs rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
+              className="px-2 py-2 text-ui-compact rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
               value={filter.logLevel}
               onChange={(e) =>
                 setFilter((f) => ({
@@ -230,7 +230,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
             </select>
 
             <select
-              className="px-2 py-2 text-xs rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
+              className="px-2 py-2 text-ui-compact rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
               value={filter.source}
               onChange={(e) =>
                 setFilter((f) => ({
@@ -247,7 +247,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
             </select>
 
             <select
-              className="px-2 py-2 text-xs rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
+              className="px-2 py-2 text-ui-compact rounded-ui-base cursor-pointer border border-nim bg-nim text-nim hover:border-[var(--nim-border-hover)]"
               value={filter.extensionId}
               onChange={(e) =>
                 setFilter((f) => ({ ...f, extensionId: e.target.value }))
@@ -264,7 +264,7 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
           </div>
 
           <div className="extension-error-console-actions flex items-center gap-2">
-            <label className="auto-refresh-toggle flex items-center gap-2 text-xs cursor-pointer text-nim-muted">
+            <label className="auto-refresh-toggle flex items-center gap-2 text-ui-compact cursor-pointer text-nim-muted">
               <input
                 type="checkbox"
                 className="cursor-pointer"
@@ -292,13 +292,13 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
         </div>
 
         <div
-          className="extension-error-console-logs flex-1 overflow-y-auto p-2 font-mono text-xs"
+          className="extension-error-console-logs flex-1 overflow-y-auto p-2 font-mono text-ui-compact"
         >
           {logs.length === 0 ? (
             <div className="extension-error-console-empty flex flex-col items-center justify-center h-full text-center text-nim-faint">
               <MaterialSymbol icon="check_circle" size={48} />
               <p className="mt-2 mb-0">No logs to display</p>
-              <p className="hint text-xs max-w-[300px]">
+              <p className="hint text-ui-compact max-w-[300px]">
                 Extension logs will appear here when extensions emit console
                 messages or errors.
               </p>
@@ -367,12 +367,12 @@ export const ExtensionErrorConsole: React.FC<ExtensionErrorConsoleProps> = ({
                   )}
                 </div>
                 {expandedLogs.has(index) && log.stack && (
-                  <pre className="log-stack mt-2 ml-6 p-2 rounded-ui-base overflow-x-auto text-[11px] whitespace-pre-wrap break-words bg-nim border border-nim text-nim-muted">
+                  <pre className="log-stack mt-2 ml-6 p-2 rounded-ui-base overflow-x-auto text-ui-caption whitespace-pre-wrap break-words bg-nim border border-nim text-nim-muted">
                     {log.stack}
                   </pre>
                 )}
                 {log.sourceFile && log.line && (
-                  <div className="log-location mt-1 ml-6 text-[11px] text-nim-faint">
+                  <div className="log-location mt-1 ml-6 text-ui-caption text-nim-faint">
                     {log.sourceFile}:{log.line}
                   </div>
                 )}

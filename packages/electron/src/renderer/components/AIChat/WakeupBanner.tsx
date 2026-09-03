@@ -93,8 +93,8 @@ export function WakeupBanner({ sessionId }: WakeupBannerProps) {
     ? 'flex items-center justify-between gap-3 px-3 py-2 bg-amber-400/10 border-b border-amber-400/30'
     : 'flex items-center justify-between gap-3 px-3 py-2 bg-blue-400/10 border-b border-blue-400/30';
   const textClass = isOverdue
-    ? 'text-xs font-medium text-nim-warning truncate'
-    : 'text-xs font-medium text-nim-primary truncate';
+    ? 'text-ui-compact font-medium text-nim-warning truncate'
+    : 'text-ui-compact font-medium text-nim-primary truncate';
   const iconColor = isOverdue ? 'text-nim-warning' : 'text-nim-primary';
 
   return (
@@ -112,7 +112,7 @@ export function WakeupBanner({ sessionId }: WakeupBannerProps) {
             type="button"
             onClick={handleRunNow}
             disabled={busy}
-            className="flex items-center gap-1 px-3 py-1 bg-transparent border border-current rounded-ui-base text-[11px] font-medium cursor-pointer transition-all duration-200 hover:enabled:bg-current/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-3 py-1 bg-transparent border border-current rounded-ui-base text-ui-caption font-medium cursor-pointer transition-all duration-200 hover:enabled:bg-current/10 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="wakeup-banner-run-now"
             title="Fire this wakeup right now"
           >
@@ -124,7 +124,7 @@ export function WakeupBanner({ sessionId }: WakeupBannerProps) {
           type="button"
           onClick={handleCancel}
           disabled={busy}
-          className="flex items-center gap-1 px-3 py-1 bg-transparent border border-nim-border rounded-ui-base text-nim-text-muted text-[11px] font-medium cursor-pointer transition-all duration-200 hover:enabled:bg-nim-bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-3 py-1 bg-transparent border border-nim-border rounded-ui-base text-nim-text-muted text-ui-caption font-medium cursor-pointer transition-all duration-200 hover:enabled:bg-nim-bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="wakeup-banner-cancel"
           title="Cancel the scheduled wakeup"
         >

@@ -56,7 +56,7 @@ export const RosettaWarning: React.FC<RosettaWarningProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          className="absolute top-4 right-4 bg-transparent border-none text-[28px] cursor-pointer p-0 w-8 h-8 flex items-center justify-center leading-none z-[1] rounded-ui-base transition-all duration-200 hover:scale-110 text-nim-muted hover:text-nim hover:bg-nim-hover"
+          className="absolute top-4 right-4 bg-transparent border-none text-ui-headline cursor-pointer p-0 w-8 h-8 flex items-center justify-center leading-none z-[1] rounded-ui-base transition-all duration-200 hover:scale-110 text-nim-muted hover:text-nim hover:bg-nim-hover"
           onClick={handleRemindLater}
           aria-label="Close"
         >
@@ -68,18 +68,18 @@ export const RosettaWarning: React.FC<RosettaWarningProps> = ({
             <WarningIcon />
           </div>
 
-          <h2 className="m-0 mb-3 text-2xl font-bold tracking-tight text-nim">
+          <h2 className="m-0 mb-3 text-ui-headline font-bold tracking-tight text-nim">
             Running via Rosetta Translation
           </h2>
 
-          <p className="mb-8 text-[15px] leading-relaxed max-w-[380px] mx-auto text-nim-muted">
+          <p className="mb-8 text-ui-subhead leading-relaxed max-w-[380px] mx-auto text-nim-muted">
             You're running the Intel (x64) build on an Apple Silicon Mac.
             Download the native Apple Silicon build for significantly better performance.
           </p>
 
           <div className="flex justify-center mb-6">
             <button
-              className="py-3 px-8 rounded-ui-lg border-none text-base font-semibold cursor-pointer whitespace-nowrap flex items-center gap-3 text-white transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 bg-gradient-to-br from-amber-500 to-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.4)] hover:shadow-[0_6px_16px_rgba(245,158,11,0.5)]"
+              className="py-3 px-8 rounded-ui-lg border-none text-ui-subhead font-semibold cursor-pointer whitespace-nowrap flex items-center gap-3 text-white transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 bg-gradient-to-br from-amber-500 to-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.4)] hover:shadow-[0_6px_16px_rgba(245,158,11,0.5)]"
               onClick={handleDownload}
             >
               Download Apple Silicon Build
@@ -88,16 +88,16 @@ export const RosettaWarning: React.FC<RosettaWarningProps> = ({
 
           <div className="pt-4 flex items-center justify-center gap-2 border-t border-nim">
             <button
-              className="bg-transparent border-none text-[13px] cursor-pointer py-1 px-2 no-underline transition-colors duration-200 hover:underline text-nim-muted hover:text-nim"
+              className="bg-transparent border-none text-ui-body cursor-pointer py-1 px-2 no-underline transition-colors duration-200 hover:underline text-nim-muted hover:text-nim"
               onClick={handleRemindLater}
             >
               Remind Me Later
             </button>
-            <span className="text-[13px] select-none text-nim-faint">
+            <span className="text-ui-body select-none text-nim-faint">
               &bull;
             </span>
             <button
-              className="bg-transparent border-none text-[13px] cursor-pointer py-1 px-2 no-underline transition-colors duration-200 hover:underline text-nim-muted hover:text-nim"
+              className="bg-transparent border-none text-ui-body cursor-pointer py-1 px-2 no-underline transition-colors duration-200 hover:underline text-nim-muted hover:text-nim"
               onClick={handleDontRemind}
             >
               Don't Show Again

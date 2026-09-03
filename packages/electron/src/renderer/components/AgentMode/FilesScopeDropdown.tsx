@@ -112,7 +112,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
       >
         <div className="files-scope-dropdown__title-row flex items-center gap-1 max-w-full">
           <MaterialSymbol icon="description" size={16} className="text-[var(--nim-text-muted)] shrink-0" />
-          <span className="files-scope-dropdown__title text-sm font-medium text-[var(--nim-text)] truncate min-w-0">
+          <span className="files-scope-dropdown__title text-ui-body font-medium text-[var(--nim-text)] truncate min-w-0">
             {currentLabel.title}
           </span>
           <MaterialSymbol
@@ -123,7 +123,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
             }`}
           />
         </div>
-        <span className="files-scope-dropdown__subtitle text-xs text-[var(--nim-text-muted)] pl-5">
+        <span className="files-scope-dropdown__subtitle text-ui-compact text-[var(--nim-text-muted)] pl-5">
           {contextSubtitle}
         </span>
       </button>
@@ -164,7 +164,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
                         className="cursor-pointer mt-1"
                       />
                       <div className="files-scope-dropdown__option-content flex flex-col">
-                        <span className="files-scope-dropdown__option-title text-xs font-medium text-[var(--nim-text)]">
+                        <span className="files-scope-dropdown__option-title text-ui-compact font-medium text-[var(--nim-text)]">
                           {title}
                         </span>
                         <span className="files-scope-dropdown__option-description text-ui-micro text-[var(--nim-text-muted)]">
@@ -191,7 +191,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
                     onChange={() => onFilterToCurrentSessionChange(false)}
                     className="cursor-pointer"
                   />
-                  <span className="text-xs text-[var(--nim-text)]">
+                  <span className="text-ui-compact text-[var(--nim-text)]">
                     All sessions ({workstreamSessionCount})
                   </span>
                 </label>
@@ -203,7 +203,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
                     onChange={() => onFilterToCurrentSessionChange(true)}
                     className="cursor-pointer"
                   />
-                  <span className="text-xs text-[var(--nim-text)]">
+                  <span className="text-ui-compact text-[var(--nim-text)]">
                     Current session only
                   </span>
                 </label>
@@ -222,7 +222,7 @@ export const FilesScopeDropdown: React.FC<FilesScopeDropdownProps> = ({
                   onChange={(e) => onGroupByDirectoryChange(e.target.checked)}
                   className="cursor-pointer"
                 />
-                <span className="text-xs text-[var(--nim-text)]">Group by directory</span>
+                <span className="text-ui-compact text-[var(--nim-text)]">Group by directory</span>
               </label>
             </div>
           </div>

@@ -29,8 +29,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         className="confirm-dialog nim-modal min-w-[400px] max-w-[500px] p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="confirm-dialog-title m-0 mb-3 text-lg font-semibold text-nim">{title}</h2>
-        <p className="confirm-dialog-message m-0 mb-6 text-sm text-nim-muted leading-relaxed">{message}</p>
+        <h2 className="confirm-dialog-title m-0 mb-3 text-ui-title font-semibold text-nim">{title}</h2>
+        <p className="confirm-dialog-message m-0 mb-6 text-ui-body text-nim-muted leading-relaxed">{message}</p>
         <div className="confirm-dialog-buttons flex gap-3 justify-end">
           <button className="confirm-dialog-button-cancel nim-btn-secondary" onClick={onCancel}>
             {cancelLabel}

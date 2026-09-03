@@ -7,14 +7,14 @@
     "fileCount": 5
   },
   "components/AIChat": {
-    "pxFonts": 13,
+    "pxFonts": 0,
     "rawColors": 8,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 4
   },
   "components/AIUsageReport": {
-    "pxFonts": 22,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -28,14 +28,14 @@
     "fileCount": 2
   },
   "components/BackgroundTaskIndicator": {
-    "pxFonts": 13,
+    "pxFonts": 0,
     "rawColors": 10,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/BlitzDialog": {
-    "pxFonts": 19,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -49,21 +49,21 @@
     "fileCount": 2
   },
   "components/ClaudeUsageIndicator": {
-    "pxFonts": 8,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 3
   },
   "components/CodexUsageIndicator": {
-    "pxFonts": 7,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 3
   },
   "components/CollabMode": {
-    "pxFonts": 2,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -77,35 +77,35 @@
     "fileCount": 1
   },
   "components/CustomEditors": {
-    "pxFonts": 4,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 4
   },
   "components/DatabaseBrowser": {
-    "pxFonts": 28,
+    "pxFonts": 0,
     "rawColors": 6,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/DeveloperDashboard": {
-    "pxFonts": 18,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 3
   },
   "components/DiffPreview": {
-    "pxFonts": 3,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
   "components/DiscordInvitation": {
-    "pxFonts": 5,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -126,42 +126,42 @@
     "fileCount": 3
   },
   "components/ErrorDialog": {
-    "pxFonts": 12,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/ErrorToast": {
-    "pxFonts": 1,
+    "pxFonts": 0,
     "rawColors": 6,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
   "components/ExtensionDevIndicator": {
-    "pxFonts": 10,
+    "pxFonts": 0,
     "rawColors": 4,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 3
   },
   "components/ExtensionPermissions": {
-    "pxFonts": 2,
+    "pxFonts": 0,
     "rawColors": 2,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/ExtensionProjectIntroModal": {
-    "pxFonts": 5,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
   "components/Feedback": {
-    "pxFonts": 15,
+    "pxFonts": 0,
     "rawColors": 2,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -175,35 +175,28 @@
     "fileCount": 2
   },
   "components/GeminiUsageIndicator": {
-    "pxFonts": 12,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 3
   },
-  "components/GlobalSettings": {
-    "pxFonts": 88,
-    "rawColors": 134,
-    "nonStdRounded": 0,
-    "halfGap": 0,
-    "fileCount": 18
-  },
   "components/HistoryDialog": {
-    "pxFonts": 26,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 9
   },
   "components/KeyboardShortcutsDialog": {
-    "pxFonts": 2,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
   "components/MetaAgentMode": {
-    "pxFonts": 7,
+    "pxFonts": 0,
     "rawColors": 2,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -217,21 +210,21 @@
     "fileCount": 2
   },
   "components/MonacoDiffApprovalBar": {
-    "pxFonts": 5,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/NavigationGutter": {
-    "pxFonts": 4,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 4
   },
   "components/PlansPanel": {
-    "pxFonts": 6,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -245,49 +238,42 @@
     "fileCount": 1
   },
   "components/ProjectTrustToast": {
-    "pxFonts": 17,
+    "pxFonts": 0,
     "rawColors": 9,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/PullRequestMode": {
-    "pxFonts": 29,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 15
   },
   "components/RosettaWarning": {
-    "pxFonts": 5,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
-  "components/Settings": {
-    "pxFonts": 137,
-    "rawColors": 71,
-    "nonStdRounded": 0,
-    "halfGap": 0,
-    "fileCount": 18
-  },
   "components/ShareDialog": {
-    "pxFonts": 1,
+    "pxFonts": 0,
     "rawColors": 1,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
   "components/ShareToTeamDialog": {
-    "pxFonts": 18,
+    "pxFonts": 0,
     "rawColors": 2,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/SyncStatusButton": {
-    "pxFonts": 5,
+    "pxFonts": 0,
     "rawColors": 15,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -301,42 +287,42 @@
     "fileCount": 1
   },
   "components/TabEditor": {
-    "pxFonts": 42,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 6
   },
   "components/TabEditorErrorBoundary": {
-    "pxFonts": 6,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/TabManager": {
-    "pxFonts": 14,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/Terminal": {
-    "pxFonts": 8,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 5
   },
   "components/TerminalBottomPanel": {
-    "pxFonts": 3,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 4
   },
   "components/ThemeToggleButton": {
-    "pxFonts": 1,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -350,7 +336,7 @@
     "fileCount": 14
   },
   "components/TrustIndicator": {
-    "pxFonts": 6,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -364,7 +350,7 @@
     "fileCount": 3
   },
   "components/UnifiedDiffHeader": {
-    "pxFonts": 13,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -378,14 +364,14 @@
     "fileCount": 2
   },
   "components/UnifiedQuickOpen": {
-    "pxFonts": 2,
+    "pxFonts": 0,
     "rawColors": 3,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 3
   },
   "components/UpdateToast": {
-    "pxFonts": 10,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -399,49 +385,49 @@
     "fileCount": 1
   },
   "components/WelcomeModal": {
-    "pxFonts": 16,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
   "components/WindowsClaudeCodeWarning": {
-    "pxFonts": 5,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
   "components/WorkspaceHistoryDialog": {
-    "pxFonts": 14,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 3
   },
   "components/WorkspaceManager": {
-    "pxFonts": 38,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 1
   },
   "components/WorktreeOnboardingModal": {
-    "pxFonts": 5,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 2
   },
   "components/_root": {
-    "pxFonts": 61,
+    "pxFonts": 0,
     "rawColors": 3,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 20
   },
   "components/common": {
-    "pxFonts": 6,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -462,21 +448,21 @@
     "fileCount": 3
   },
   "dialogs": {
-    "pxFonts": 16,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 8
   },
   "extensions": {
-    "pxFonts": 2,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 13
   },
   "help": {
-    "pxFonts": 2,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -517,15 +503,8 @@
     "halfGap": 0,
     "fileCount": 1
   },
-  "styles": {
-    "pxFonts": 0,
-    "rawColors": 0,
-    "nonStdRounded": 0,
-    "halfGap": 0,
-    "fileCount": 1
-  },
   "tips": {
-    "pxFonts": 14,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,
@@ -546,14 +525,14 @@
     "fileCount": 24
   },
   "walkthroughs": {
-    "pxFonts": 5,
+    "pxFonts": 0,
     "rawColors": 1,
     "nonStdRounded": 0,
     "halfGap": 0,
     "fileCount": 22
   },
   "windows": {
-    "pxFonts": 2,
+    "pxFonts": 0,
     "rawColors": 0,
     "nonStdRounded": 0,
     "halfGap": 0,

@@ -132,7 +132,7 @@ export function ProviderOverrideWrapper({
             }`}
           ></span>
           <span
-            className={`toggle-label text-xs font-medium uppercase tracking-[0.03em] ${
+            className={`toggle-label text-ui-compact font-medium uppercase tracking-[0.03em] ${
               isOverriding ? 'text-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)]'
             }`}
           >

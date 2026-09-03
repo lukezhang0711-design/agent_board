@@ -54,15 +54,15 @@ function DropdownRow({
     <div className="setting-item py-2">
       <div className="flex items-center justify-between gap-4">
         <div className="setting-text flex flex-col gap-0 min-w-0">
-          <span className="setting-name text-sm font-medium text-[var(--nim-text)]">{name}</span>
-          <span className="setting-description text-xs leading-snug text-[var(--nim-text-muted)]">
+          <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">{name}</span>
+          <span className="setting-description text-ui-compact leading-snug text-[var(--nim-text-muted)]">
             {description}
           </span>
         </div>
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="setting-select shrink-0 py-2 px-2 pr-7 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M3%204.5L6%207.5L9%204.5%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] focus:border-[var(--nim-primary)]"
+          className="setting-select shrink-0 py-2 px-2 pr-7 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M3%204.5L6%207.5L9%204.5%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] focus:border-[var(--nim-primary)]"
         >
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -228,7 +228,7 @@ export function AdvancedPanel() {
                   <span className="material-symbols-outlined text-nim-primary text-ui-display">
                     edit_note
                   </span>
-                  <span className="text-base font-semibold text-nim">Standard Mode</span>
+                  <span className="text-ui-subhead font-semibold text-nim">Standard Mode</span>
                 </div>
                 <p className="m-0 text-ui-body leading-snug text-nim-muted">
                   Simplified interface focused on writing, editing, and AI assistance
@@ -256,7 +256,7 @@ export function AdvancedPanel() {
                   <span className="material-symbols-outlined text-nim-primary text-ui-display">
                     terminal
                   </span>
-                  <span className="text-base font-semibold text-nim">Developer Mode</span>
+                  <span className="text-ui-subhead font-semibold text-nim">Developer Mode</span>
                 </div>
                 <p className="m-0 text-ui-body leading-snug text-nim-muted">
                   Full development environment with git worktrees, terminal access, development specific features
@@ -269,7 +269,7 @@ export function AdvancedPanel() {
       {/* Secret Features Menu - Cmd+Click on "Application Mode" title to show */}
       {showFeaturesMenu && (
         <SettingsSection title="Feature Availability">
-          <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
+          <p className="text-ui-body leading-relaxed text-[var(--nim-text-muted)] mb-4">
             See which features are available based on your current mode settings.
           </p>
 
@@ -320,11 +320,11 @@ export function AdvancedPanel() {
                     <div className="setting-text">
                       <span className="setting-name flex items-center gap-2">
                         {feature.icon && (
-                          <span className="material-symbols-outlined text-sm">{feature.icon}</span>
+                          <span className="material-symbols-outlined text-ui-body">{feature.icon}</span>
                         )}
                         {feature.name}
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-ui-base ${
+                          className={`text-ui-compact px-2 py-0.5 rounded-ui-base ${
                             isAvailable
                               ? 'bg-nim-success-subtle text-[var(--nim-success)]'
                               : 'bg-nim-error-subtle text-[var(--nim-error)]'
@@ -341,7 +341,7 @@ export function AdvancedPanel() {
             })}
           </div>
 
-          <p className="text-xs text-[var(--nim-text-faint)] mt-3">
+          <p className="text-ui-compact text-[var(--nim-text-faint)] mt-3">
             Developer mode: {developerMode ? 'ON' : 'OFF'}
           </p>
         </SettingsSection>
@@ -349,13 +349,13 @@ export function AdvancedPanel() {
 
       {/* ── Release Channel ── */}
       <SettingsSection title="Release Channel">
-        <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-4">
+        <p className="text-ui-body leading-relaxed text-[var(--nim-text-muted)] mb-4">
           Choose which release stream Nimbalyst pulls auto-updates from. Alpha and beta features are configured separately on each feature&apos;s settings page.
         </p>
 
         <div className="setting-item py-3">
           <div className="setting-text flex flex-col gap-1">
-            <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Update Channel</span>
+            <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Update Channel</span>
           </div>
           <select
             value={releaseChannel}
@@ -366,7 +366,7 @@ export function AdvancedPanel() {
                 channel: newChannel,
               });
             }}
-            className="setting-select mt-2 w-full py-2 px-3 pr-9 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M3%204.5L6%207.5L9%204.5%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_12px_center] focus:border-[var(--nim-primary)]"
+            className="setting-select mt-2 w-full py-2 px-3 pr-9 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M3%204.5L6%207.5L9%204.5%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_12px_center] focus:border-[var(--nim-primary)]"
           >
             <option value="stable">Stable</option>
             <option value="alpha">Alpha (Developer Releases)</option>
@@ -413,7 +413,7 @@ export function AdvancedPanel() {
 
         {walkthroughsViewedCount > 0 && (
           <div className="py-1 pl-7">
-            <button onClick={() => resetWalkthroughs()} className="nim-btn-secondary text-xs">
+            <button onClick={() => resetWalkthroughs()} className="nim-btn-secondary text-ui-compact">
               Reset All Guides
             </button>
           </div>
@@ -476,7 +476,7 @@ export function AdvancedPanel() {
               value={externalEditorCustomPath || ''}
               onChange={(e) => updateExternalEditorSettings({ customPath: e.target.value })}
               placeholder={process.platform === 'win32' ? 'C:\\Program Files\\Editor\\editor.exe' : '/usr/local/bin/myeditor'}
-              className="w-full py-2 px-3 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] font-mono"
+              className="w-full py-2 px-3 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] font-mono"
             />
           </div>
         )}
@@ -515,10 +515,10 @@ export function AdvancedPanel() {
 
             <div className="setting-item py-2">
               <div className="setting-text flex flex-col gap-0 mb-2">
-                <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Detected Terminal Shells</span>
+                <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Detected Terminal Shells</span>
               </div>
 
-              <div className="select-text p-2 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono">
+              <div className="select-text p-2 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono">
                 {availableTerminalShells.length === 0 ? (
                   <div>No supported terminal shells detected.</div>
                 ) : (
@@ -566,8 +566,8 @@ export function AdvancedPanel() {
         {/* Custom PATH */}
         <div className="setting-item py-2">
           <div className="setting-text flex flex-col gap-0 mb-2">
-            <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Custom PATH Directories</span>
-            <span className="setting-description text-xs leading-snug text-[var(--nim-text-muted)]">
+            <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Custom PATH Directories</span>
+            <span className="setting-description text-ui-compact leading-snug text-[var(--nim-text-muted)]">
               Additional directories for MCP server installation, CLI tool detection, and agent SDK operations.
             </span>
           </div>
@@ -578,12 +578,12 @@ export function AdvancedPanel() {
               ? 'C:\\MyTools;C:\\Programs\\bin'
               : '/opt/mytools/bin:/usr/local/custom/bin'}
             rows={2}
-            className="w-full py-2 px-3 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] font-mono resize-none"
+            className="w-full py-2 px-3 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)] font-mono resize-none"
           />
           <div className="mt-1">
             <button
               onClick={() => setShowEnhancedPath(!showEnhancedPath)}
-              className="text-xs text-[var(--nim-link)] hover:text-[var(--nim-link-hover)] cursor-pointer"
+              className="text-ui-compact text-[var(--nim-link)] hover:text-[var(--nim-link-hover)] cursor-pointer"
             >
               {showEnhancedPath ? 'Hide current PATH' : 'Show current PATH'}
             </button>
@@ -591,7 +591,7 @@ export function AdvancedPanel() {
             {showEnhancedPath && enhancedPath && (
               <div className="mt-2">
                 <div
-                  className="p-2 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono overflow-x-auto"
+                  className="p-2 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono overflow-x-auto"
                   style={{
                     maxHeight: '200px',
                     overflowY: 'auto',

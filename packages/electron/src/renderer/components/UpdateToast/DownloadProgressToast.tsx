@@ -56,7 +56,7 @@ export function DownloadProgressToast({
       data-testid="download-progress-toast"
     >
       {/* Header */}
-      <div className="update-toast-title text-sm font-semibold text-[var(--nim-text)] mb-3 pr-7">
+      <div className="update-toast-title text-ui-body font-semibold text-[var(--nim-text)] mb-3 pr-7">
         Downloading Nimbalyst {version}...
       </div>
 
@@ -71,7 +71,7 @@ export function DownloadProgressToast({
 
         {/* Progress details */}
         <div className="update-toast-progress-details flex-1">
-          <div className="update-toast-progress-text text-xs text-[var(--nim-text)] mb-2" data-testid="download-progress-text">
+          <div className="update-toast-progress-text text-ui-compact text-[var(--nim-text)] mb-2" data-testid="download-progress-text">
             {progress ? `${formatBytes(progress.transferred)} of ${formatBytes(progress.total)}` : 'Preparing...'}
           </div>
           <div className="update-toast-progress-bar h-1.5 bg-[var(--nim-bg-tertiary)] rounded-ui-base overflow-hidden">
@@ -86,14 +86,14 @@ export function DownloadProgressToast({
       </div>
 
       {/* Time remaining */}
-      <div className="update-toast-time-remaining text-[11px] text-[var(--nim-text-faint)] mb-3" data-testid="download-time-remaining">
+      <div className="update-toast-time-remaining text-ui-caption text-[var(--nim-text-faint)] mb-3" data-testid="download-time-remaining">
         {timeRemaining}
       </div>
 
       {/* Action buttons */}
       <div className="update-toast-actions flex gap-2 flex-wrap">
         <button
-          className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           onClick={onCancel}
           data-testid="download-cancel-btn"
         >

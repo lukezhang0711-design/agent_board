@@ -33,12 +33,12 @@ export const ExtensionProjectIntroModal: React.FC<ExtensionProjectIntroModalProp
       >
         <div className="px-7 pt-7 pb-5">
           <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-ui-lg border border-[color:color-mix(in_srgb,var(--nim-primary)_32%,var(--nim-border))] bg-[color:color-mix(in_srgb,var(--nim-primary)_14%,transparent)] text-[var(--nim-primary)]">
-            <span className="material-symbols-outlined text-[26px]">extension</span>
+            <span className="material-symbols-outlined text-ui-headline">extension</span>
           </div>
-          <h2 className="m-0 text-xl font-semibold tracking-[-0.02em] text-nim">
+          <h2 className="m-0 text-ui-title font-semibold tracking-[-0.02em] text-nim">
             Build with Extensions
           </h2>
-          <p className="mt-2 text-[14px] leading-6 text-nim-muted">
+          <p className="mt-2 text-ui-body leading-6 text-nim-muted">
             Extensions add custom editors, AI tools, commands, panels, and more.
             Nimbalyst loads your extension live while you develop.
           </p>
@@ -47,35 +47,35 @@ export const ExtensionProjectIntroModal: React.FC<ExtensionProjectIntroModalProp
         <div className="flex flex-col gap-3 px-7 pb-5">
           {capabilities.map((cap) => (
             <div key={cap.icon} className="flex items-start gap-3">
-              <span className="material-symbols-outlined mt-1 text-[18px] text-[var(--nim-primary)]">
+              <span className="material-symbols-outlined mt-1 text-ui-title text-[var(--nim-primary)]">
                 {cap.icon}
               </span>
-              <span className="text-[13px] leading-5 text-nim-muted">{cap.text}</span>
+              <span className="text-ui-body leading-5 text-nim-muted">{cap.text}</span>
             </div>
           ))}
         </div>
 
         <div className="mx-7 mb-5 rounded-ui-lg bg-nim-secondary px-4 py-3">
-          <span className="text-[13px] leading-5 text-nim-muted">
+          <span className="text-ui-body leading-5 text-nim-muted">
             Describe what you want to the agent, and it will scaffold, build, and install the extension for you.
           </span>
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-nim px-7 py-4">
           <button
-            className="nim-btn-secondary rounded-ui-lg px-4 py-2 text-sm font-medium"
+            className="nim-btn-secondary rounded-ui-lg px-4 py-2 text-ui-body font-medium"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="rounded-ui-lg border border-nim bg-transparent px-4 py-2 text-sm font-medium text-nim-muted transition-colors hover:bg-nim-secondary hover:text-nim"
+            className="rounded-ui-lg border border-nim bg-transparent px-4 py-2 text-ui-body font-medium text-nim-muted transition-colors hover:bg-nim-secondary hover:text-nim"
             onClick={onDontShowAgain}
           >
             Don&apos;t Show Again
           </button>
           <button
-            className="nim-btn-primary rounded-ui-lg px-5 py-2 text-sm font-semibold"
+            className="nim-btn-primary rounded-ui-lg px-5 py-2 text-ui-body font-semibold"
             onClick={onContinue}
           >
             Continue

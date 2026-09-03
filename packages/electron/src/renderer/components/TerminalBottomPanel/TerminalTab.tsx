@@ -114,7 +114,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
   // - isActive: the terminal tab that is currently selected
   // - isActiveWorktree: the terminal belongs to the worktree currently being viewed
   // - isFocusFlashing: brief animation when terminal is focused via worktree button
-  const baseClasses = 'terminal-tab group flex items-center gap-1 px-2 py-1 border-none text-xs cursor-pointer rounded-ui-base whitespace-nowrap max-w-[200px] transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]';
+  const baseClasses = 'terminal-tab group flex items-center gap-1 px-2 py-1 border-none text-ui-compact cursor-pointer rounded-ui-base whitespace-nowrap max-w-[200px] transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]';
   const activeClasses = isActive
     ? 'active bg-[var(--nim-bg)] text-[var(--nim-text)] font-medium'
     : 'bg-transparent text-[var(--nim-text-muted)]';
@@ -150,7 +150,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
       )}
       <span className="terminal-tab-title overflow-hidden text-ellipsis shrink min-w-0">{getDisplayName()}</span>
       {!terminal.worktreeId && (
-        <span className={`terminal-tab-cwd text-[10px] overflow-hidden text-ellipsis shrink min-w-0 ${isActive ? 'text-[var(--nim-text-muted)]' : 'text-[var(--nim-text-faint)]'}`}>{getAbbreviatedCwd(terminal.cwd)}</span>
+        <span className={`terminal-tab-cwd text-ui-micro overflow-hidden text-ellipsis shrink min-w-0 ${isActive ? 'text-[var(--nim-text-muted)]' : 'text-[var(--nim-text-faint)]'}`}>{getAbbreviatedCwd(terminal.cwd)}</span>
       )}
       <button
         className="terminal-tab-close hidden group-hover:flex items-center justify-center w-4 h-4 p-0 bg-transparent border-none text-[var(--nim-text-faint)] cursor-pointer rounded-ui-base shrink-0 ml-1 transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"

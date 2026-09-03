@@ -142,20 +142,20 @@ function PluginIcon({ pluginName, category, isDark }: { pluginName: string; cate
             if (fallback) fallback.style.display = 'flex';
           }}
         />
-        <span className="plugin-icon-fallback text-sm font-semibold text-[var(--nim-text-muted)] items-center justify-center w-full h-full hidden">{pluginName[0]}</span>
+        <span className="plugin-icon-fallback text-ui-body font-semibold text-[var(--nim-text-muted)] items-center justify-center w-full h-full hidden">{pluginName[0]}</span>
       </>
     );
   }
 
   if (config.type === 'material-symbol') {
     return (
-      <span className="material-symbols-outlined plugin-icon-material text-xl text-[var(--nim-text-muted)]">
+      <span className="material-symbols-outlined plugin-icon-material text-ui-title text-[var(--nim-text-muted)]">
         {config.icon}
       </span>
     );
   }
 
-  return <span className="plugin-icon-fallback text-sm font-semibold text-[var(--nim-text-muted)] flex items-center justify-center w-full h-full">{pluginName[0]}</span>;
+  return <span className="plugin-icon-fallback text-ui-body font-semibold text-[var(--nim-text-muted)] flex items-center justify-center w-full h-full">{pluginName[0]}</span>;
 }
 
 interface ClaudeCodePluginsPanelProps {
@@ -387,13 +387,13 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search plugins..."
-          className="plugin-search-input w-full py-3 pl-4 pr-10 border border-[var(--nim-border)] rounded-ui-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.9375rem] outline-none focus:border-[var(--nim-primary)] placeholder:text-[var(--nim-text-faint)]"
+          className="plugin-search-input w-full py-3 pl-4 pr-10 border border-[var(--nim-border)] rounded-ui-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-subhead outline-none focus:border-[var(--nim-primary)] placeholder:text-[var(--nim-text-faint)]"
           aria-label="Search Claude Code plugins"
           autoFocus
         />
         {searchQuery && (
           <button
-            className="plugin-search-clear absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-xs cursor-pointer flex items-center justify-center hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
+            className="plugin-search-clear absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-ui-compact cursor-pointer flex items-center justify-center hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
             onClick={() => setSearchQuery('')}
             aria-label="Clear search"
             title="Clear search"
@@ -410,7 +410,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
 
         return (
           <div key={category} className="plugin-category mb-6">
-            <h4 className="plugin-category-title text-xs font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] m-0 mb-3 pb-2 border-b border-[var(--nim-border)]">{CATEGORY_LABELS[category] || category}</h4>
+            <h4 className="plugin-category-title text-ui-compact font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] m-0 mb-3 pb-2 border-b border-[var(--nim-border)]">{CATEGORY_LABELS[category] || category}</h4>
             <div className="plugin-grid grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 @container" role="list" aria-label={CATEGORY_LABELS[category] || category}>
               {plugins.map((plugin) => {
                 const installed = isPluginInstalled(plugin);
@@ -432,19 +432,19 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                     aria-label={`${plugin.name} by ${plugin.author} - ${plugin.description}`}
                   >
                     <div className="plugin-card-header flex items-center gap-3 mb-2">
-                      <div className="plugin-card-icon w-8 h-8 rounded-ui-base bg-[var(--nim-bg-tertiary)] flex items-center justify-center text-base shrink-0 overflow-hidden" aria-hidden="true">
+                      <div className="plugin-card-icon w-8 h-8 rounded-ui-base bg-[var(--nim-bg-tertiary)] flex items-center justify-center text-ui-subhead shrink-0 overflow-hidden" aria-hidden="true">
                         <PluginIcon pluginName={plugin.name} category={plugin.category} isDark={isDark} />
                       </div>
                       <div className="plugin-card-name font-semibold text-ui-subhead text-[var(--nim-text)]">{plugin.name}</div>
                     </div>
                     <div className="plugin-card-description text-ui-body text-[var(--nim-text-muted)] leading-relaxed mb-3 flex-1 line-clamp-2">{plugin.description}</div>
                     <div className="plugin-card-footer flex items-center justify-between gap-2">
-                      <span className="plugin-card-author text-xs text-[var(--nim-text-faint)]">by {plugin.author}</span>
+                      <span className="plugin-card-author text-ui-compact text-[var(--nim-text-faint)]">by {plugin.author}</span>
                       {installed ? (
                         <span className="plugin-card-badge installed inline-flex items-center px-2 py-1 rounded-ui-base text-ui-caption font-semibold uppercase tracking-tight bg-nim-success-subtle text-[var(--nim-success)]">Installed</span>
                       ) : (
                         <button
-                          className={`plugin-install-button py-2 px-3 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-xs font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed ${status === 'installing' ? 'installing bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]' : ''}`}
+                          className={`plugin-install-button py-2 px-3 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-ui-compact font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed ${status === 'installing' ? 'installing bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]' : ''}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleInstall(plugin);
@@ -465,7 +465,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
 
       {/* No results */}
       {filteredPlugins.length === 0 && searchQuery && (
-        <div className="plugin-no-results p-8 text-center text-[var(--nim-text-faint)] text-[0.9375rem]" role="status" aria-live="polite">
+        <div className="plugin-no-results p-8 text-center text-[var(--nim-text-faint)] text-ui-subhead" role="status" aria-live="polite">
           No plugins match "{searchQuery}"
         </div>
       )}
@@ -476,10 +476,10 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
     <div className="plugin-installed-view" role="main" aria-label="Installed plugins">
       {installedPlugins.length === 0 ? (
         <div className="plugin-empty-state flex flex-col items-center justify-center py-12 px-6 text-center text-[var(--nim-text-faint)]">
-          <span className="plugin-empty-icon material-symbols-outlined text-5xl mb-4 opacity-50">extension_off</span>
-          <p className="m-0 mb-6 text-[0.9375rem]">No plugins installed yet</p>
+          <span className="plugin-empty-icon material-symbols-outlined text-ui-display mb-4 opacity-50">extension_off</span>
+          <p className="m-0 mb-6 text-ui-subhead">No plugins installed yet</p>
           <button
-            className="plugin-empty-cta py-3 px-5 rounded-ui-base border-none bg-[var(--nim-primary)] text-white text-sm font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
+            className="plugin-empty-cta py-3 px-5 rounded-ui-base border-none bg-[var(--nim-primary)] text-white text-ui-body font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
             onClick={() => setViewState('discover')}
           >
             Browse Plugins
@@ -497,10 +497,10 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                     <PluginIcon pluginName={plugin.name} category="external" isDark={isDark} />
                   </div>
                   <div className="plugin-installed-details flex-1 min-w-0">
-                    <div className="plugin-installed-name flex items-center gap-2 font-medium text-[0.9375rem] text-[var(--nim-text)] mb-1">
+                    <div className="plugin-installed-name flex items-center gap-2 font-medium text-ui-subhead text-[var(--nim-text)] mb-1">
                       <span>{plugin.name}</span>
                       {plugin.source && (
-                        <span className="plugin-installed-source text-xs text-[var(--nim-text-faint)] font-normal">@{plugin.source}</span>
+                        <span className="plugin-installed-source text-ui-compact text-[var(--nim-text-faint)] font-normal">@{plugin.source}</span>
                       )}
                       <span
                         className={`plugin-installed-scope inline-flex items-center px-2 py-0.5 rounded-ui-base text-ui-caption font-semibold uppercase tracking-tight ${
@@ -518,12 +518,12 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
                         </span>
                       )}
                     </div>
-                    <div className="plugin-installed-path text-xs text-[var(--nim-text-faint)] overflow-hidden text-ellipsis whitespace-nowrap">{plugin.path}</div>
+                    <div className="plugin-installed-path text-ui-compact text-[var(--nim-text-faint)] overflow-hidden text-ellipsis whitespace-nowrap">{plugin.path}</div>
                   </div>
                 </div>
                 <div className="plugin-installed-actions flex gap-2">
                   <button
-                    className="plugin-uninstall-button py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
+                    className="plugin-uninstall-button py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-ui-compact font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
                     onClick={() => handleUninstall({
                       name: plugin.name,
                       source: plugin.source,
@@ -553,7 +553,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
       <div className="plugin-details-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => setSelectedPlugin(null)}>
         <div className="plugin-details-modal bg-[var(--nim-bg)] rounded-ui-lg p-6 max-w-[500px] w-full max-h-[80vh] overflow-y-auto relative shadow-[0_20px_40px_rgba(0,0,0,0.3)]" onClick={(e) => e.stopPropagation()}>
           <button
-            className="plugin-details-close absolute top-4 right-4 w-7 h-7 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-base cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
+            className="plugin-details-close absolute top-4 right-4 w-7 h-7 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-ui-subhead cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
             onClick={() => setSelectedPlugin(null)}
             aria-label="Close"
           >
@@ -565,20 +565,20 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
               <PluginIcon pluginName={selectedPlugin.name} category={selectedPlugin.category} isDark={isDark} />
             </div>
             <div className="plugin-details-title">
-              <h3 className="m-0 mb-1 text-lg font-semibold text-[var(--nim-text)]">{selectedPlugin.name}</h3>
-              <span className="plugin-details-author text-[0.8125rem] text-[var(--nim-text-faint)]">by {selectedPlugin.author}</span>
+              <h3 className="m-0 mb-1 text-ui-title font-semibold text-[var(--nim-text)]">{selectedPlugin.name}</h3>
+              <span className="plugin-details-author text-ui-body text-[var(--nim-text-faint)]">by {selectedPlugin.author}</span>
             </div>
           </div>
 
-          <p className="plugin-details-description text-[0.9375rem] text-[var(--nim-text-muted)] leading-relaxed m-0 mb-5">{selectedPlugin.description}</p>
+          <p className="plugin-details-description text-ui-subhead text-[var(--nim-text-muted)] leading-relaxed m-0 mb-5">{selectedPlugin.description}</p>
 
           <div className="plugin-details-meta flex flex-col gap-2 mb-6 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-lg">
-            <div className="plugin-details-meta-item flex items-center gap-2 text-[0.8125rem]">
+            <div className="plugin-details-meta-item flex items-center gap-2 text-ui-body">
               <span className="plugin-details-meta-label text-[var(--nim-text-faint)]">Category:</span>
               <span className="plugin-details-meta-value text-[var(--nim-text)] font-medium">{CATEGORY_LABELS[selectedPlugin.category.toLowerCase()] || selectedPlugin.category}</span>
             </div>
             {selectedPlugin.homepage && (
-              <div className="plugin-details-meta-item flex items-center gap-2 text-[0.8125rem]">
+              <div className="plugin-details-meta-item flex items-center gap-2 text-ui-body">
                 <span className="plugin-details-meta-label text-[var(--nim-text-faint)]">Homepage:</span>
                 <a
                   href={selectedPlugin.homepage}
@@ -598,7 +598,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
               <>
                 <span className="plugin-details-installed-badge inline-flex items-center py-2 px-3 rounded-ui-base bg-nim-success-subtle text-[var(--nim-success)] text-ui-body font-medium">Installed</span>
                 <button
-                  className="plugin-uninstall-button py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
+                  className="plugin-uninstall-button py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-ui-compact font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white"
                   onClick={() => {
                     // Modal originates from a marketplace card, so we only
                     // know name+derived source. The server-side uninstall
@@ -641,7 +641,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
       {/* View Switcher */}
       <div className="plugin-view-switcher flex gap-1 mb-4 p-1 bg-[var(--nim-bg-tertiary)] rounded-ui-lg w-fit">
         <button
-          className={`plugin-view-button py-2 px-4 border-none rounded-ui-base text-sm font-medium cursor-pointer transition-all duration-150 ${
+          className={`plugin-view-button py-2 px-4 border-none rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 ${
             viewState === 'discover'
               ? 'bg-[var(--nim-primary)] text-white shadow-sm'
               : 'bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -651,7 +651,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
           Discover
         </button>
         <button
-          className={`plugin-view-button py-2 px-4 border-none rounded-ui-base text-sm font-medium cursor-pointer transition-all duration-150 ${
+          className={`plugin-view-button py-2 px-4 border-none rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 ${
             viewState === 'installed'
               ? 'bg-[var(--nim-primary)] text-white shadow-sm'
               : 'bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -664,7 +664,7 @@ function ClaudeCodePluginsPanelInner({ scope = 'user', workspacePath }: ClaudeCo
 
       {/* Status Message */}
       {installMessage && (
-        <div className="plugin-status-message py-3 px-4 mb-4 bg-nim-primary-subtle border border-nim-primary-subtle rounded-ui-base text-sm text-[var(--nim-text)]" role="status" aria-live="polite">
+        <div className="plugin-status-message py-3 px-4 mb-4 bg-nim-primary-subtle border border-nim-primary-subtle rounded-ui-base text-ui-body text-[var(--nim-text)]" role="status" aria-live="polite">
           {installMessage}
         </div>
       )}

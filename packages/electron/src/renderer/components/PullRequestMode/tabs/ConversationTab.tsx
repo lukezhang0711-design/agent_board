@@ -115,12 +115,12 @@ export function ConversationTab({
       {/* ---- Description (the PR body) ---- */}
       <SectionHeader label="Description" icon="description" />
       <div className="border border-nim rounded-ui-base overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2 bg-nim-secondary border-b border-nim text-xs text-nim-muted">
+        <div className="flex items-center gap-2 px-3 py-2 bg-nim-secondary border-b border-nim text-ui-compact text-nim-muted">
           {pr.authorLogin && <span className="font-medium text-nim">{pr.authorLogin}</span>}
           <span>opened this pull request</span>
           <span className="ml-auto">{formatRelative(pr.createdAt)}</span>
         </div>
-        <div className="px-3 py-2 text-sm text-nim select-text">
+        <div className="px-3 py-2 text-ui-body text-nim select-text">
           {pr.body?.trim() ? (
             <MarkdownRenderer content={pr.body} />
           ) : (
@@ -142,7 +142,7 @@ export function ConversationTab({
             <ReviewThreadCard key={thread.id} thread={thread} />
           ))}
           {threadsTruncated && (
-            <div className="text-nim-faint text-[11px] italic">
+            <div className="text-nim-faint text-ui-caption italic">
               Showing the first page of review threads.
             </div>
           )}
@@ -157,7 +157,7 @@ export function ConversationTab({
       />
 
       <div className="border border-nim rounded-ui-base bg-nim-secondary">
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-nim text-xs text-nim-muted">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-nim text-ui-compact text-nim-muted">
           <MaterialSymbol icon="add_comment" size={14} />
           Add comment
         </div>
@@ -168,10 +168,10 @@ export function ConversationTab({
             placeholder="Leave a comment on this pull request"
             rows={4}
             data-testid="pr-comment-input"
-            className="nim-input w-full resize-y text-sm min-h-[96px]"
+            className="nim-input w-full resize-y text-ui-body min-h-[96px]"
           />
           {submitError && (
-            <div className="text-nim-error text-sm flex items-center gap-2">
+            <div className="text-nim-error text-ui-body flex items-center gap-2">
               <MaterialSymbol icon="error" size={16} />
               {submitError}
             </div>
@@ -181,7 +181,7 @@ export function ConversationTab({
               type="button"
               onClick={() => void handleSubmitComment()}
               disabled={submitting || draftComment.trim().length === 0}
-              className="flex items-center gap-1 px-3 py-2 rounded-ui-base bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="flex items-center gap-1 px-3 py-2 rounded-ui-base bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-ui-body"
               data-testid="pr-comment-submit"
             >
               {submitting ? (
@@ -196,21 +196,21 @@ export function ConversationTab({
       </div>
 
       {error && (
-        <div className="text-nim-error text-sm flex items-center gap-2">
+        <div className="text-nim-error text-ui-body flex items-center gap-2">
           <MaterialSymbol icon="error" size={16} />
           {error}
         </div>
       )}
 
       {loading && timeline.length === 0 ? (
-        <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-sm">
+        <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-ui-body">
           <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin" />
           Loading conversation…
         </div>
       ) : (
         timeline.map((entry) => (
           <div key={entry.id} className="border border-nim rounded-ui-base overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 bg-nim-secondary border-b border-nim text-xs text-nim-muted">
+            <div className="flex items-center gap-2 px-3 py-2 bg-nim-secondary border-b border-nim text-ui-compact text-nim-muted">
               {entry.authorLogin && <span className="font-medium text-nim">{entry.authorLogin}</span>}
               <span>
                 {entry.type === 'review'
@@ -220,7 +220,7 @@ export function ConversationTab({
               <span className="ml-auto">{formatRelative(entry.createdAt)}</span>
             </div>
             {entry.body.trim() && (
-              <div className="px-3 py-2 text-sm text-nim select-text">
+              <div className="px-3 py-2 text-ui-body text-nim select-text">
                 <MarkdownRenderer content={entry.body} />
               </div>
             )}
@@ -229,7 +229,7 @@ export function ConversationTab({
       )}
 
       {!loading && timeline.length === 0 && !error && (
-        <div className="text-nim-faint text-sm text-center py-4">No comments yet.</div>
+        <div className="text-nim-faint text-ui-body text-center py-4">No comments yet.</div>
       )}
     </div>
   );
@@ -251,7 +251,7 @@ function ReviewThreadCard({ thread }: { thread: ReviewThread }): JSX.Element {
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-2 px-3 py-2 bg-nim-secondary border-b border-nim text-xs text-nim-muted text-left hover:text-nim transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 bg-nim-secondary border-b border-nim text-ui-compact text-nim-muted text-left hover:text-nim transition-colors"
         data-testid="pr-review-thread-header"
       >
         <MaterialSymbol icon={expanded ? 'expand_more' : 'chevron_right'} size={14} />
@@ -276,12 +276,12 @@ function ReviewThreadCard({ thread }: { thread: ReviewThread }): JSX.Element {
         <div>
           {thread.comments.map((c) => (
             <div key={c.id} className="px-3 py-2 border-b border-nim last:border-b-0">
-              <div className="flex items-center gap-2 text-[11px] text-nim-muted mb-1">
+              <div className="flex items-center gap-2 text-ui-caption text-nim-muted mb-1">
                 {c.authorLogin && <span className="font-medium text-nim">{c.authorLogin}</span>}
                 <span className="ml-auto">{formatRelative(c.createdAt)}</span>
               </div>
               {c.body.trim() && (
-                <div className="text-sm text-nim select-text">
+                <div className="text-ui-body text-nim select-text">
                   <MarkdownRenderer content={c.body} />
                 </div>
               )}
@@ -305,7 +305,7 @@ function SectionHeader({
   note?: string;
 }): JSX.Element {
   return (
-    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-nim-faint mt-1 first:mt-0">
+    <div className="flex items-center gap-2 text-ui-caption font-semibold uppercase tracking-wider text-nim-faint mt-1 first:mt-0">
       <MaterialSymbol icon={icon} size={14} />
       <span>{label}</span>
       {count !== undefined && (

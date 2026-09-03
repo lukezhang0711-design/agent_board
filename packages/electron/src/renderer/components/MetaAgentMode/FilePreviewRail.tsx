@@ -334,10 +334,10 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
       <header className="relative shrink-0 border-b border-nim px-3 py-2">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-[var(--nim-text)]" data-testid="file-preview-title">
+            <div className="truncate text-ui-body font-medium text-[var(--nim-text)]" data-testid="file-preview-title">
               {filePath ? fileName(filePath) : '本会话产物架'}
             </div>
-            <div className="flex min-w-0 items-center gap-1 text-[11px] text-[var(--nim-text-faint)]" data-testid="file-preview-path-row">
+            <div className="flex min-w-0 items-center gap-1 text-ui-caption text-[var(--nim-text-faint)]" data-testid="file-preview-path-row">
               {filePath ? (
                 <>
                   <button
@@ -395,7 +395,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
             )}
             {copyState !== 'idle' && (
               <span
-                className="pointer-events-none absolute right-14 top-9 z-10 rounded-ui-base border border-nim bg-[var(--nim-bg)] px-2 py-0.5 text-[11px] text-[var(--nim-text)] shadow"
+                className="pointer-events-none absolute right-14 top-9 z-10 rounded-ui-base border border-nim bg-[var(--nim-bg)] px-2 py-0.5 text-ui-caption text-[var(--nim-text)] shadow"
                 data-testid="file-preview-copy-feedback"
               >
                 {copyState === 'copied' ? '已复制' : '复制失败'}
@@ -422,13 +422,13 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
             <input
               ref={findInputRef}
               type="search"
-              className="min-w-0 flex-1 rounded-ui-base border border-nim bg-[var(--nim-bg)] px-2 py-1 text-xs text-[var(--nim-text)] outline-none focus:border-[var(--nim-border-focus)]"
+              className="min-w-0 flex-1 rounded-ui-base border border-nim bg-[var(--nim-bg)] px-2 py-1 text-ui-compact text-[var(--nim-text)] outline-none focus:border-[var(--nim-border-focus)]"
               placeholder="查找文件内容"
               value={findQuery}
               onChange={(event) => setFindQuery(event.currentTarget.value)}
               data-testid="file-preview-find-input"
             />
-            <span className="w-10 text-center text-[11px] text-[var(--nim-text-faint)]" data-testid="file-preview-find-count">
+            <span className="w-10 text-center text-ui-caption text-[var(--nim-text-faint)]" data-testid="file-preview-find-count">
               {searchCountLabel}
             </span>
             <PreviewIconButton
@@ -472,7 +472,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
         ) : (
           <div className="file-preview-shelf select-text p-3" data-testid="file-preview-shelf">
             {shelfLoading && shelfItems.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-shelf-loading">
+              <div className="px-3 py-4 text-ui-body text-[var(--nim-text-muted)]" data-testid="file-preview-shelf-loading">
                 正在读取本会话的产物…
               </div>
             ) : shelfItems.length === 0 ? (
@@ -488,7 +488,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
                   <MaterialSymbol icon="search" size={15} className="shrink-0 text-[var(--nim-text-faint)]" />
                   <input
                     type="search"
-                    className="min-w-0 flex-1 bg-transparent text-xs text-[var(--nim-text)] outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-ui-compact text-[var(--nim-text)] outline-none"
                     placeholder="按文件名搜索"
                     value={shelfSearchQuery}
                     onChange={(event) => setShelfSearchQuery(event.currentTarget.value)}
@@ -513,9 +513,9 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
                           data-testid="file-preview-shelf-item"
                           data-file-path={item.relativePath}
                         >
-                          <div className="truncate text-xs text-[var(--nim-text)]">{item.relativePath}</div>
+                          <div className="truncate text-ui-compact text-[var(--nim-text)]">{item.relativePath}</div>
                           {item.sessionTitles.length > 0 && (
-                            <div className="truncate text-[11px] text-[var(--nim-text-faint)]">
+                            <div className="truncate text-ui-caption text-[var(--nim-text-faint)]">
                               {item.sessionTitles.join(' · ')}
                             </div>
                           )}
@@ -530,7 +530,7 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
         )}
       </div>
 
-      <footer className="shrink-0 border-t border-nim px-3 py-1 text-[10px] text-[var(--nim-text-faint)]">
+      <footer className="shrink-0 border-t border-nim px-3 py-1 text-ui-micro text-[var(--nim-text-faint)]">
         宽度 {clampPreviewRailWidth(width)}px（{PREVIEW_RAIL_MIN_WIDTH}–{PREVIEW_RAIL_MAX_WIDTH}）· Esc 收起
       </footer>
     </aside>

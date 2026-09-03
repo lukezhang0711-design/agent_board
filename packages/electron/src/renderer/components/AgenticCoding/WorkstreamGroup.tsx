@@ -562,7 +562,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
     >
       {/* Header */}
       <div
-        className={`workstream-group-header flex items-center gap-0 text-[0.8125rem] text-[var(--nim-text)] transition-colors duration-150 rounded-ui-base mx-2 w-[calc(100%-1rem)] ${
+        className={`workstream-group-header flex items-center gap-0 text-ui-body text-[var(--nim-text)] transition-colors duration-150 rounded-ui-base mx-2 w-[calc(100%-1rem)] ${
           isSelected ? 'bg-[var(--nim-bg-selected)]' : isActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
         } ${isValidDropTarget ? 'bg-[var(--nim-bg-hover)] border-2 border-dashed border-[var(--nim-primary)]' : ''}`}
         onContextMenu={handleContextMenu}
@@ -628,7 +628,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
                 <input
                   ref={worktreeRenameInputRef}
                   type="text"
-                  className="workstream-group-rename-input flex-1 min-w-0 px-1 py-0 text-[0.8125rem] font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
+                  className="workstream-group-rename-input flex-1 min-w-0 px-1 py-0 text-ui-body font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
                   value={worktreeRenameValue}
                   onChange={(e) => setWorktreeRenameValue(e.target.value)}
                   onKeyDown={handleWorktreeRenameKeyDown}
@@ -639,7 +639,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
                 <input
                   ref={workstreamRenameInputRef}
                   type="text"
-                  className="workstream-group-rename-input flex-1 min-w-0 px-1 py-0 text-[0.8125rem] font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
+                  className="workstream-group-rename-input flex-1 min-w-0 px-1 py-0 text-ui-body font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
                   value={workstreamRenameValue}
                   onChange={(e) => setWorkstreamRenameValue(e.target.value)}
                   onKeyDown={handleWorkstreamRenameKeyDown}
@@ -653,7 +653,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
                 <MaterialSymbol icon="push_pin" size={12} className="workstream-group-pin-icon shrink-0 text-[var(--nim-text-faint)] opacity-70" />
               )}
               {displayIsArchived && !isRenamingWorktree && (
-                <span className="workstream-group-badge archived text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">archived</span>
+                <span className="workstream-group-badge archived text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">archived</span>
               )}
               {/* Status indicator for child sessions (processing/pending/unread) */}
               {!isRenamingWorktree && (
@@ -665,17 +665,17 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
               {type === 'worktree' && gitStatus && (
                 <>
                   {gitStatus.ahead && gitStatus.ahead > 0 && (
-                    <span className="workstream-group-badge ahead text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-primary-subtle text-[var(--nim-primary)]">
+                    <span className="workstream-group-badge ahead text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-primary-subtle text-[var(--nim-primary)]">
                       {gitStatus.ahead} ahead
                     </span>
                   )}
                   {gitStatus.behind && gitStatus.behind > 0 && (
-                    <span className="workstream-group-badge behind text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]">
+                    <span className="workstream-group-badge behind text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]">
                       {gitStatus.behind} behind
                     </span>
                   )}
                   {gitStatus.uncommitted && (
-                    <span className="workstream-group-badge uncommitted text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]">
+                    <span className="workstream-group-badge uncommitted text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]">
                       uncommitted
                     </span>
                   )}
@@ -684,13 +684,13 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
               {/* Show total uncommitted count for workstreams */}
               {type === 'workstream' && totalUncommittedCount > 0 && (
                 <span
-                  className="workstream-group-badge uncommitted text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]"
+                  className="workstream-group-badge uncommitted text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-nim-warning-subtle text-[var(--nim-warning)]"
                   title={`${totalUncommittedCount} uncommitted change${totalUncommittedCount !== 1 ? 's' : ''} across all sessions`}
                 >
                   {totalUncommittedCount} uncommitted
                 </span>
               )}
-              <span className="workstream-group-count shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)]">
+              <span className="workstream-group-count shrink-0 text-ui-caption text-[var(--nim-text-faint)]">
                 {sessionCount} session{sessionCount !== 1 ? 's' : ''}
               </span>
             </div>
@@ -774,7 +774,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           {/* Worktree menu items */}
           {type === 'worktree' && onWorktreeRename && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleRenameClick}
             >
               <MaterialSymbol icon="edit" size={14} />
@@ -783,7 +783,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'worktree' && onWorktreePinToggle && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handlePinToggle}
             >
               <MaterialSymbol icon="push_pin" size={14} />
@@ -792,7 +792,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'worktree' && onAddSession && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleAddSession}
             >
               <MaterialSymbol icon="add" size={14} />
@@ -801,7 +801,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'worktree' && onAddTerminal && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleAddTerminal}
             >
               <MaterialSymbol icon="terminal" size={14} />
@@ -810,7 +810,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'worktree' && onAddSuperLoop && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleAddSuperLoop}
             >
               <MaterialSymbol icon="sync" size={14} />
@@ -819,7 +819,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'worktree' && onWorktreeCleanGitignored && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleCleanGitignored}
             >
               <MaterialSymbol icon="delete_sweep" size={14} />
@@ -830,7 +830,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
             <>
               <div className="workstream-group-context-menu-divider h-px my-1 bg-[var(--nim-border)]" />
               <button
-                className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
+                className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
                 onClick={handleArchive}
               >
                 <MaterialSymbol icon="archive" size={14} />
@@ -842,7 +842,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           {/* Workstream menu items */}
           {type === 'workstream' && onSessionRename && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleRenameClick}
             >
               <MaterialSymbol icon="edit" size={14} />
@@ -851,7 +851,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'workstream' && onWorkstreamPinToggle && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handlePinToggle}
             >
               <MaterialSymbol icon="push_pin" size={14} />
@@ -860,7 +860,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'workstream' && onSessionBranch && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleWorkstreamBranch}
             >
               <MaterialSymbol icon="fork_right" size={14} />
@@ -869,7 +869,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'workstream' && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleWorkstreamCopySessionId}
             >
               <MaterialSymbol icon="content_copy" size={14} />
@@ -879,14 +879,14 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           {type === 'workstream' && workstreamShareInfo ? (
             <>
               <button
-                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                 onClick={handleWorkstreamCopyShareLink}
               >
                 <MaterialSymbol icon="content_copy" size={14} />
                 Copy share link
               </button>
               <button
-                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                 onClick={handleWorkstreamUnshare}
               >
                 <MaterialSymbol icon="link_off" size={14} />
@@ -895,7 +895,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
             </>
           ) : type === 'workstream' ? (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleWorkstreamShareLink}
             >
               <MaterialSymbol icon="link" size={14} />
@@ -904,7 +904,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           ) : null}
           {type === 'workstream' && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleWorkstreamExportHtml}
             >
               <MaterialSymbol icon="download" size={14} />
@@ -913,7 +913,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'workstream' && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleWorkstreamCopyTranscript}
             >
               <MaterialSymbol icon="assignment" size={14} />
@@ -922,7 +922,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'workstream' && onWorkstreamArchive && (
             <button
-              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-group-context-menu-item flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleArchive}
             >
               <MaterialSymbol icon={isArchived ? 'unarchive' : 'archive'} size={14} />
@@ -931,7 +931,7 @@ export const WorkstreamGroup: React.FC<WorkstreamGroupProps> = ({
           )}
           {type === 'workstream' && onSessionDelete && (
             <button
-              className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
+              className="workstream-group-context-menu-item destructive flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-error)] text-left rounded-ui-base transition-colors duration-150 hover:bg-nim-error-subtle"
               onClick={handleWorkstreamDelete}
             >
               <MaterialSymbol icon="delete" size={14} />
@@ -1014,7 +1014,7 @@ const WorkstreamSessionStatusIndicator = memo<{ sessionId: string; uncommittedCo
   if (uncommittedCount && uncommittedCount > 0) {
     return (
       <span
-        className="workstream-session-item-badge uncommitted text-[0.625rem] py-[0.0625rem] px-1 rounded-ui-lg font-medium text-[var(--nim-warning)] bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)]"
+        className="workstream-session-item-badge uncommitted text-ui-micro py-[0.0625rem] px-1 rounded-ui-lg font-medium text-[var(--nim-warning)] bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)]"
         title={`${uncommittedCount} uncommitted change${uncommittedCount !== 1 ? 's' : ''}`}
       >
         {uncommittedCount}
@@ -1162,7 +1162,7 @@ const WorkstreamSessionItem: React.FC<WorkstreamSessionItemProps> = ({
         <input
           ref={renameInputRef}
           type="text"
-          className="workstream-session-item-rename-input flex-1 min-w-0 py-0.5 px-2 text-xs font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none box-border"
+          className="workstream-session-item-rename-input flex-1 min-w-0 py-0.5 px-2 text-ui-compact font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none box-border"
           value={renameValue}
           onChange={(e) => setRenameValue(e.target.value)}
           onKeyDown={handleRenameKeyDown}
@@ -1171,10 +1171,10 @@ const WorkstreamSessionItem: React.FC<WorkstreamSessionItemProps> = ({
         />
       ) : (
         <>
-          <span className={`workstream-session-item-title flex-1 text-xs text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis ${
+          <span className={`workstream-session-item-title flex-1 text-ui-compact text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis ${
             isActive ? 'font-medium' : ''
           }`}>{displayTitle}</span>
-          <span className="workstream-session-item-timestamp shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)] ml-2">
+          <span className="workstream-session-item-timestamp shrink-0 text-ui-caption text-[var(--nim-text-faint)] ml-2">
             <SessionRelativeTime sessionId={session.id} fallbackTimestamp={session.updatedAt || session.createdAt} />
           </span>
         </>

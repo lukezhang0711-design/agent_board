@@ -62,7 +62,7 @@ export function PullRequestRow({ pr, selected, onSelect }: PullRequestRowProps):
     >
       <span className="flex-1 min-w-0 overflow-hidden">
         <span className="flex items-center gap-2 min-w-0">
-          <span className="truncate text-sm text-nim">{pr.title}</span>
+          <span className="truncate text-ui-body text-nim">{pr.title}</span>
           {conflicting && (
             <MaterialSymbol
               icon="merge_type"
@@ -71,7 +71,7 @@ export function PullRequestRow({ pr, selected, onSelect }: PullRequestRowProps):
             />
           )}
         </span>
-        <span className="flex items-center gap-2 mt-1 text-[11px] text-nim-faint min-w-0">
+        <span className="flex items-center gap-2 mt-1 text-ui-caption text-nim-faint min-w-0">
           <span className="font-bold font-mono">#{pr.number}</span>
           {pr.authorLogin && <span className="truncate max-w-[120px]">{pr.authorLogin}</span>}
           <span className="truncate min-w-0 font-mono" title={pr.headRef}>
@@ -89,7 +89,7 @@ export function PullRequestRow({ pr, selected, onSelect }: PullRequestRowProps):
             )}
             {badge && (
               <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-ui-base text-[10px] font-semibold ${badge.className}`}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-ui-base text-ui-micro font-semibold ${badge.className}`}
               >
                 <MaterialSymbol icon={badge.icon} size={12} />
                 {badge.label}

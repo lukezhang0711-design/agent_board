@@ -39,7 +39,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ workspaceId })
 
   if (loading) {
     return (
-      <div className="model-comparison-loading flex items-center justify-center min-h-[400px] text-base text-nim-muted">
+      <div className="model-comparison-loading flex items-center justify-center min-h-[400px] text-ui-subhead text-nim-muted">
         Loading...
       </div>
     );
@@ -59,7 +59,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ workspaceId })
 
   return (
     <div className="model-comparison flex flex-col gap-6">
-      <h3 className="m-0 text-lg font-semibold text-nim">Usage by Model</h3>
+      <h3 className="m-0 text-ui-title font-semibold text-nim">Usage by Model</h3>
 
       {chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={400}>
@@ -83,12 +83,12 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ workspaceId })
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <div className="no-data flex items-center justify-center min-h-[400px] text-base text-nim-muted">
+        <div className="no-data flex items-center justify-center min-h-[400px] text-ui-subhead text-nim-muted">
           No model usage data available
         </div>
       )}
       {cacheDataIncomplete && (
-        <div className="text-[11px] text-[var(--nim-text-muted)]">
+        <div className="text-ui-caption text-[var(--nim-text-muted)]">
           Some engines did not report cache usage; gaps are unavailable data, not zero cache use.
         </div>
       )}

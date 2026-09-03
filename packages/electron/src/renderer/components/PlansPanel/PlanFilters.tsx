@@ -47,19 +47,19 @@ export function PlanFilters({
   return (
     <div className="plan-filters p-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg)]">
       <div className="plan-search-container relative mb-3">
-        <span className="plan-search-icon material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-lg text-[var(--nim-text-faint)] pointer-events-none">
+        <span className="plan-search-icon material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-ui-title text-[var(--nim-text-faint)] pointer-events-none">
           search
         </span>
         <input
           type="text"
-          className="plan-search-input w-full py-2 pr-8 pl-9 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-[13px] outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-border-focus)]"
+          className="plan-search-input w-full py-2 pr-8 pl-9 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-border-focus)]"
           placeholder="Search plans..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
         />
         {searchTerm && (
           <button
-            className="plan-search-clear absolute right-1.5 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer p-1 flex items-center justify-center text-[var(--nim-text-faint)] rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-base"
+            className="plan-search-clear absolute right-1.5 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer p-1 flex items-center justify-center text-[var(--nim-text-faint)] rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_.material-symbols-outlined]:text-ui-subhead"
             onClick={() => onSearchChange('')}
             aria-label="Clear search"
           >
@@ -70,7 +70,7 @@ export function PlanFilters({
 
       <div className="plan-filter-controls flex gap-2 mb-3">
         <select
-          className="plan-filter-select flex-1 py-2 px-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
+          className="plan-filter-select flex-1 py-2 px-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-compact outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
           value={statusFilter}
           onChange={(e) => onStatusChange(e.target.value)}
         >
@@ -82,7 +82,7 @@ export function PlanFilters({
         </select>
 
         <select
-          className="plan-filter-select flex-1 py-2 px-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
+          className="plan-filter-select flex-1 py-2 px-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-compact outline-none cursor-pointer transition-colors duration-150 hover:border-[var(--nim-primary)] focus:border-[var(--nim-border-focus)]"
           value={priorityFilter}
           onChange={(e) => onPriorityChange(e.target.value)}
         >
@@ -95,7 +95,7 @@ export function PlanFilters({
       </div>
 
       <div className="plan-filter-options flex items-center">
-        <label className="plan-filter-checkbox flex items-center gap-2 text-xs text-[var(--nim-text-muted)] cursor-pointer select-none hover:text-[var(--nim-text)] [&_input]:cursor-pointer">
+        <label className="plan-filter-checkbox flex items-center gap-2 text-ui-compact text-[var(--nim-text-muted)] cursor-pointer select-none hover:text-[var(--nim-text)] [&_input]:cursor-pointer">
           <input
             type="checkbox"
             checked={hideCompleted}

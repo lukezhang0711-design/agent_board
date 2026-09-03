@@ -185,7 +185,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-nim shrink-0">
           <MaterialSymbol icon="cloud_download" size={18} className="text-nim-muted" />
-          <span className="text-sm font-semibold text-nim">Import from {providerLabel}</span>
+          <span className="text-ui-body font-semibold text-nim">Import from {providerLabel}</span>
           <div className="flex-1" />
           <button
             className="p-1 rounded-ui-base hover:bg-nim-tertiary text-nim-muted"
@@ -200,7 +200,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
         <div className="flex items-center gap-2 px-4 py-2 border-b border-nim shrink-0 flex-wrap">
           {bindings && bindings.length > 1 && (
             <select
-              className="text-xs bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
+              className="text-ui-compact bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
               value={bindingId ?? ''}
               onChange={(e) => setBindingId(e.target.value)}
             >
@@ -212,10 +212,10 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
             </select>
           )}
           {bindings && bindings.length === 1 && (
-            <span className="text-xs text-nim-muted font-mono">{bindings[0].label}</span>
+            <span className="text-ui-compact text-nim-muted font-mono">{bindings[0].label}</span>
           )}
           <select
-            className="text-xs bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
+            className="text-ui-compact bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
             value={stateFilter}
             onChange={(e) => setStateFilter(e.target.value as StateFilter)}
           >
@@ -234,13 +234,13 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
-              className="w-full pl-7 pr-2 py-1 text-xs bg-nim-secondary border border-nim rounded-ui-base text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
+              className="w-full pl-7 pr-2 py-1 text-ui-compact bg-nim-secondary border border-nim rounded-ui-base text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
             />
           </div>
-          <label className="flex items-center gap-1 text-xs text-nim-muted">
+          <label className="flex items-center gap-1 text-ui-compact text-nim-muted">
             Import as
             <select
-              className="text-xs bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
+              className="text-ui-compact bg-nim-secondary border border-nim rounded-ui-base px-2 py-1 text-nim"
               value={primaryType}
               onChange={(e) => setPrimaryType(e.target.value)}
             >
@@ -256,26 +256,26 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
         {/* Item list */}
         <div className="flex-1 overflow-y-auto min-h-[200px]">
           {error && (
-            <div className="px-4 py-2 text-xs text-nim-error bg-nim-error/10">{error}</div>
+            <div className="px-4 py-2 text-ui-compact text-nim-error bg-nim-error/10">{error}</div>
           )}
           {bindings && bindings.length === 0 && !loading && (
-            <div className="px-4 py-8 text-center text-sm text-nim-faint">
+            <div className="px-4 py-8 text-center text-ui-body text-nim-faint">
               No {providerLabel} repositories found for this workspace.
-              <div className="text-xs mt-1">
+              <div className="text-ui-compact mt-1">
                 Open a project whose git remote points at GitHub, and sign in with{' '}
                 <span className="font-mono">gh auth login</span>.
               </div>
             </div>
           )}
           {loading && (
-            <div className="px-4 py-8 text-center text-sm text-nim-faint">Loading...</div>
+            <div className="px-4 py-8 text-center text-ui-body text-nim-faint">Loading...</div>
           )}
           {!loading && bindings && bindings.length > 0 && items.length === 0 && !error && (
-            <div className="px-4 py-8 text-center text-sm text-nim-faint">No items found.</div>
+            <div className="px-4 py-8 text-center text-ui-body text-nim-faint">No items found.</div>
           )}
           {items.length > 0 && (
             <>
-              <label className="flex items-center gap-2 px-4 py-2 border-b border-nim text-xs text-nim-muted sticky top-0 bg-nim">
+              <label className="flex items-center gap-2 px-4 py-2 border-b border-nim text-ui-compact text-nim-muted sticky top-0 bg-nim">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} />
                 Select all ({items.length})
               </label>
@@ -291,7 +291,7 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
                     onChange={() => toggle(item.externalId)}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-nim truncate">{item.title}</div>
+                    <div className="text-ui-compact text-nim truncate">{item.title}</div>
                     <div className="text-ui-micro text-nim-faint font-mono">
                       {item.externalId} · {item.state}
                     </div>
@@ -304,20 +304,20 @@ export const ImportFromSourceDialog: React.FC<ImportFromSourceDialogProps> = ({
 
         {/* Footer */}
         <div className="flex items-center gap-2 px-4 py-3 border-t border-nim shrink-0">
-          <span className="text-xs text-nim-faint">
+          <span className="text-ui-compact text-nim-faint">
             {selected.size > 0 ? `${selected.size} selected` : ''}
             {progress ? ` · imported ${progress.done}/${progress.total}` : ''}
           </span>
           <div className="flex-1" />
           <button
-            className="px-3 py-1 text-xs text-nim-muted border border-nim rounded-ui-base hover:bg-nim-tertiary"
+            className="px-3 py-1 text-ui-compact text-nim-muted border border-nim rounded-ui-base hover:bg-nim-tertiary"
             onClick={onClose}
             disabled={importing}
           >
             Cancel
           </button>
           <button
-            className="px-3 py-1 text-xs font-medium text-white bg-[var(--nim-primary)] rounded-ui-base hover:opacity-90 disabled:opacity-50"
+            className="px-3 py-1 text-ui-compact font-medium text-white bg-[var(--nim-primary)] rounded-ui-base hover:opacity-90 disabled:opacity-50"
             onClick={runImport}
             disabled={importing || selected.size === 0}
             data-testid="import-from-source-confirm"

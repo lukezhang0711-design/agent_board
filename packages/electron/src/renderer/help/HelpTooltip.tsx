@@ -350,14 +350,14 @@ export function HelpTooltip({
             role="tooltip"
           >
             <div className="help-tooltip-header flex items-center gap-2 mb-1">
-              <span className="help-tooltip-title text-[13px] font-semibold text-[var(--nim-text)]">{helpContent.title}</span>
+              <span className="help-tooltip-title text-ui-body font-semibold text-[var(--nim-text)]">{helpContent.title}</span>
               {helpContent.shortcut && (
-                <kbd className="help-tooltip-shortcut inline-flex items-center justify-center h-5 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[11px] font-medium text-[var(--nim-text-muted)] ml-auto shrink-0 font-sans">
+                <kbd className="help-tooltip-shortcut inline-flex items-center justify-center h-5 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-ui-caption font-medium text-[var(--nim-text-muted)] ml-auto shrink-0 font-sans">
                   {getShortcutDisplay(helpContent.shortcut)}
                 </kbd>
               )}
             </div>
-            <div className="help-tooltip-body text-xs leading-normal text-[var(--nim-text-muted)]">{renderedBody}</div>
+            <div className="help-tooltip-body text-ui-compact leading-normal text-[var(--nim-text-muted)]">{renderedBody}</div>
             {extraContent && <div className="help-tooltip-extra mt-2 pt-2 border-t border-[var(--nim-border)]">{extraContent}</div>}
           </div>,
           document.body

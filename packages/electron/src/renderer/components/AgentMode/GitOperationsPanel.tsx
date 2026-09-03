@@ -1343,7 +1343,7 @@ Please proceed with this strategy.`;
     return (
       <div ref={panelRef} className="git-operations-panel min-w-[200px] border-t border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]">
         {/* Header */}
-        <div className="git-operations-panel__header flex items-center justify-between py-2 px-3 select-none text-xs font-medium text-[var(--nim-text)] border-b border-[var(--nim-border)]">
+        <div className="git-operations-panel__header flex items-center justify-between py-2 px-3 select-none text-ui-compact font-medium text-[var(--nim-text)] border-b border-[var(--nim-border)]">
           <div
             className="git-operations-panel__header-left flex items-center gap-2 flex-1 cursor-pointer hover:opacity-80"
             onClick={() => setIsExpanded(!isExpanded)}
@@ -1406,7 +1406,7 @@ Please proceed with this strategy.`;
                       rows={3}
                     />
                     <button
-                      className="w-full p-2 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-xs font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full p-2 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-ui-compact font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleManualCommit}
                       disabled={isCommitting || !commitMessage?.trim() || stagedFiles.size === 0}
                     >
@@ -1418,12 +1418,12 @@ Please proceed with this strategy.`;
                 {/* Smart commit workflow - AI proposes commit in transcript */}
                 {commitMode === 'smart' && (
                   <div className="flex flex-col gap-2" data-testid="git-operations-smart-mode">
-                    <p className="text-xs text-[var(--nim-text-muted)] m-0 leading-normal">
+                    <p className="text-ui-compact text-[var(--nim-text-muted)] m-0 leading-normal">
                       Let AI analyze your changes and propose a commit message.
                     </p>
                     <HelpTooltip testId="git-operations-commit-with-ai-button">
                       <button
-                        className="w-full p-2 border-none rounded-ui-base text-white text-xs font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-br from-[var(--nim-primary)] to-[var(--nim-primary-hover)]"
+                        className="w-full p-2 border-none rounded-ui-base text-white text-ui-compact font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-br from-[var(--nim-primary)] to-[var(--nim-primary-hover)]"
                         onClick={handleSmartCommit}
                         disabled={!hasChanges}
                         data-testid="git-operations-commit-with-ai-button"
@@ -1527,7 +1527,7 @@ Please proceed with this strategy.`;
                 {/* Smart commit workflow - AI proposes commit in transcript */}
                 {worktreeCommitMode === 'smart' && (
                   <div className="flex flex-col gap-2" data-testid="git-operations-smart-mode">
-                    <p className="text-xs text-[var(--nim-text-muted)] m-0 leading-normal">
+                    <p className="text-ui-compact text-[var(--nim-text-muted)] m-0 leading-normal">
                       Let AI analyze your changes and propose a commit message.
                     </p>
                   </div>
@@ -1538,7 +1538,7 @@ Please proceed with this strategy.`;
                   {worktreeCommitMode === 'manual' ? (
                     <button
                       type="button"
-                      className="w-full p-2 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-xs font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full p-2 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-ui-compact font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleWorktreeCommit}
                       disabled={!worktreeCanCommit}
                       title={worktreeStagedCount === 0 ? 'Stage files to commit' : !worktreeCommitMessage.trim() ? 'Enter commit message' : 'Commit staged changes'}
@@ -1559,7 +1559,7 @@ Please proceed with this strategy.`;
                     <HelpTooltip testId="git-operations-commit-with-ai-button">
                       <button
                         type="button"
-                        className="w-full p-2 border-none rounded-ui-base text-white text-xs font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-br from-[var(--nim-primary)] to-[var(--nim-primary-hover)]"
+                        className="w-full p-2 border-none rounded-ui-base text-white text-ui-compact font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-br from-[var(--nim-primary)] to-[var(--nim-primary-hover)]"
                         onClick={handleSmartCommit}
                         disabled={!worktreeHasUncommittedChanges}
                         data-testid="git-operations-commit-with-ai-button"
@@ -1571,7 +1571,7 @@ Please proceed with this strategy.`;
                   )}
                   <button
                     type="button"
-                    className={`w-full p-2 border-none rounded-ui-base text-white text-xs font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={`w-full p-2 border-none rounded-ui-base text-white text-ui-compact font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed ${
                       worktreeCommitsBehind > 0
                         ? 'bg-[var(--nim-warning)]'
                         : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]'
@@ -1600,7 +1600,7 @@ Please proceed with this strategy.`;
                   </button>
                   <button
                     type="button"
-                    className="w-full p-2 border-none rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] text-xs font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full p-2 border-none rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] text-ui-compact font-semibold cursor-pointer flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleWorktreeMerge}
                     disabled={!worktreeCanMerge}
                     title={

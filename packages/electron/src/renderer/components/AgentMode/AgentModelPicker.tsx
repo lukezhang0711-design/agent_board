@@ -108,7 +108,7 @@ export function AgentModelPicker({
         <span>Model</span>
       </div>
       <select
-        className="w-full border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-xs px-2 py-2 focus:outline-none focus:border-[var(--nim-primary)]"
+        className="w-full border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-compact px-2 py-2 focus:outline-none focus:border-[var(--nim-primary)]"
         value={selectValue}
         onChange={(e) => onModelChange(e.target.value)}
         disabled={isDisabled}

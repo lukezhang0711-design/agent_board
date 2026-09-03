@@ -79,11 +79,11 @@ export function ClaudeCommandsLearnMoreDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="claude-commands-learn-more-header flex items-center justify-between px-6 py-5 border-b border-[var(--nim-border)]">
-          <h2 className="m-0 text-lg font-semibold text-[var(--nim-text)]">
+          <h2 className="m-0 text-ui-title font-semibold text-[var(--nim-text)]">
             Claude Commands for Nimbalyst
           </h2>
           <button
-            className="claude-commands-learn-more-close nim-btn-icon w-8 h-8 text-[28px] leading-none rounded-ui-base transition-all duration-200"
+            className="claude-commands-learn-more-close nim-btn-icon w-8 h-8 text-ui-headline leading-none rounded-ui-base transition-all duration-200"
             onClick={onClose}
             aria-label="Close"
           >
@@ -94,7 +94,7 @@ export function ClaudeCommandsLearnMoreDialog({
         <div className="claude-commands-learn-more-content overflow-y-auto p-6 flex flex-col gap-6">
           {/* Introduction */}
           <section className="claude-commands-learn-more-section">
-            <p className="claude-commands-learn-more-intro m-0 text-sm text-[var(--nim-text)]">
+            <p className="claude-commands-learn-more-intro m-0 text-ui-body text-[var(--nim-text)]">
               Installing Claude Commands adds slash commands that help Claude
               work better with Nimbalyst. These commands enable structured
               planning, visual mockups, issue tracking, and more.
@@ -103,19 +103,19 @@ export function ClaudeCommandsLearnMoreDialog({
 
           {/* nimbalyst-local folder */}
           <section className="claude-commands-learn-more-section">
-            <h3 className="m-0 mb-1 text-sm font-semibold text-[var(--nim-text)]">
+            <h3 className="m-0 mb-1 text-ui-body font-semibold text-[var(--nim-text)]">
               The nimbalyst-local Folder
             </h3>
-            <p className="m-0 mb-3 text-[13px] leading-relaxed text-[var(--nim-text-muted)]">
+            <p className="m-0 mb-3 text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
               A{' '}
-              <code className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-2 py-0.5 font-mono text-xs text-[var(--nim-text)]">
+              <code className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-2 py-0.5 font-mono text-ui-compact text-[var(--nim-text)]">
                 nimbalyst-local
               </code>{' '}
               folder will be created in your project root to store working
               documents:
             </p>
             <div className="claude-commands-folder-structure bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg px-4 py-3 my-3">
-              <pre className="m-0 font-mono text-xs leading-relaxed text-[var(--nim-text-muted)] whitespace-pre">
+              <pre className="m-0 font-mono text-ui-compact leading-relaxed text-[var(--nim-text-muted)] whitespace-pre">
                 {`nimbalyst-local/
 ├── plans/        # Plan documents (.md)
 ├── tracker/      # Bugs, ideas, tasks (.md)
@@ -123,9 +123,9 @@ export function ClaudeCommandsLearnMoreDialog({
 └── existing-screens/  # UI references`}
               </pre>
             </div>
-            <p className="claude-commands-learn-more-note m-0 text-xs italic text-[var(--nim-text-faint)]">
+            <p className="claude-commands-learn-more-note m-0 text-ui-compact italic text-[var(--nim-text-faint)]">
               This folder is automatically added to{' '}
-              <code className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-2 py-0.5 font-mono text-xs text-[var(--nim-text)]">
+              <code className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-2 py-0.5 font-mono text-ui-compact text-[var(--nim-text)]">
                 .gitignore
               </code>{' '}
               to keep your repository clean and avoid merge conflicts.
@@ -138,10 +138,10 @@ export function ClaudeCommandsLearnMoreDialog({
               key={group.title}
               className="claude-commands-learn-more-section"
             >
-              <h3 className="m-0 mb-1 text-sm font-semibold text-[var(--nim-text)]">
+              <h3 className="m-0 mb-1 text-ui-body font-semibold text-[var(--nim-text)]">
                 {group.title}
               </h3>
-              <p className="claude-commands-group-subtitle m-0 mb-3 text-xs text-[var(--nim-text-faint)]">
+              <p className="claude-commands-group-subtitle m-0 mb-3 text-ui-compact text-[var(--nim-text-faint)]">
                 {group.packageName}
               </p>
               <div className="claude-commands-list flex flex-col gap-3">
@@ -151,11 +151,11 @@ export function ClaudeCommandsLearnMoreDialog({
                     className="claude-commands-item bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg px-3 py-3"
                   >
                     <div className="claude-commands-item-header mb-2">
-                      <code className="claude-commands-item-name text-[13px] font-semibold text-[var(--nim-primary)]">
+                      <code className="claude-commands-item-name text-ui-body font-semibold text-[var(--nim-primary)]">
                         {cmd.name}
                       </code>
                     </div>
-                    <p className="claude-commands-item-description m-0 text-xs text-[var(--nim-text-muted)]">
+                    <p className="claude-commands-item-description m-0 text-ui-compact text-[var(--nim-text-muted)]">
                       {cmd.description}
                     </p>
                   </div>
@@ -166,7 +166,7 @@ export function ClaudeCommandsLearnMoreDialog({
 
           {/* Additional info */}
           <section className="claude-commands-learn-more-section">
-            <p className="claude-commands-learn-more-note m-0 text-xs italic text-[var(--nim-text-faint)]">
+            <p className="claude-commands-learn-more-note m-0 text-ui-compact italic text-[var(--nim-text-faint)]">
               Commands work with Claude Code (the agentic coding feature). You
               can manage installed packages in{' '}
               <button
@@ -185,7 +185,7 @@ export function ClaudeCommandsLearnMoreDialog({
 
         <div className="claude-commands-learn-more-footer flex justify-end px-6 py-4 border-t border-[var(--nim-border)]">
           <button
-            className="claude-commands-learn-more-btn nim-btn-primary px-5 py-3 rounded-ui-base text-sm font-medium"
+            className="claude-commands-learn-more-btn nim-btn-primary px-5 py-3 rounded-ui-base text-ui-body font-medium"
             onClick={onClose}
           >
             Got it

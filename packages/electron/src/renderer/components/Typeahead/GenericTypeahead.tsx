@@ -273,7 +273,7 @@ export function GenericTypeahead({
         {groupedOptions.map(({ section, options: sectionOptions }, groupIndex) => (
           <div key={section || groupIndex} className="generic-typeahead-section py-0.5 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-nim">
             {section && (
-              <div className="generic-typeahead-section-header px-3 pt-2 pb-1 text-[0.6875rem] font-semibold text-nim-faint uppercase tracking-wide">{section}</div>
+              <div className="generic-typeahead-section-header px-3 pt-2 pb-1 text-ui-caption font-semibold text-nim-faint uppercase tracking-wide">{section}</div>
             )}
             {sectionOptions.map((option) => {
               // Calculate visual index based on flat ordered list (matches navigation order)
@@ -292,21 +292,21 @@ export function GenericTypeahead({
                 >
                   {option.icon && (
                     typeof option.icon === 'string' ? (
-                      <span className="material-symbols-outlined generic-typeahead-option-icon text-lg shrink-0 text-nim-muted">
+                      <span className="material-symbols-outlined generic-typeahead-option-icon text-ui-title shrink-0 text-nim-muted">
                         {option.icon}
                       </span>
                     ) : (
-                      <span className="generic-typeahead-option-icon text-lg shrink-0 text-nim-muted">
+                      <span className="generic-typeahead-option-icon text-ui-title shrink-0 text-nim-muted">
                         {option.icon}
                       </span>
                     )
                   )}
                   <div className="generic-typeahead-option-text flex-1 min-w-0 flex flex-col gap-1">
-                    <div className="generic-typeahead-option-label text-sm text-nim-primary whitespace-nowrap overflow-hidden text-ellipsis">
+                    <div className="generic-typeahead-option-label text-ui-body text-nim-primary whitespace-nowrap overflow-hidden text-ellipsis">
                       {option.label}
                     </div>
                     {option.description && (
-                      <div className="generic-typeahead-option-description text-xs text-nim-faint break-words leading-snug">
+                      <div className="generic-typeahead-option-description text-ui-compact text-nim-faint break-words leading-snug">
                         {option.description}
                       </div>
                     )}

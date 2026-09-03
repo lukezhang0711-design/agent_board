@@ -74,7 +74,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
 
   if (loading) {
     return (
-      <div className="overview-loading flex items-center justify-center min-h-[300px] text-[var(--nim-text-muted)] text-base">
+      <div className="overview-loading flex items-center justify-center min-h-[300px] text-[var(--nim-text-muted)] text-ui-subhead">
         Loading...
       </div>
     );
@@ -82,7 +82,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
 
   if (!overallStats) {
     return (
-      <div className="overview-empty flex items-center justify-center min-h-[300px] text-[var(--nim-text-muted)] text-base">
+      <div className="overview-empty flex items-center justify-center min-h-[300px] text-[var(--nim-text-muted)] text-ui-subhead">
         No usage data available
       </div>
     );
@@ -95,76 +95,76 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
     <div className="overview-dashboard flex flex-col gap-4">
       <div className="stats-grid grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
         <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
-          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+          <div className="stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Total Sessions
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">
+          <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1">
             {allSessionCount.toLocaleString()}
           </div>
           {overallStats.sessionCount < allSessionCount && (
-            <div className="stat-detail text-[11px] text-[var(--nim-text-muted)]">
+            <div className="stat-detail text-ui-caption text-[var(--nim-text-muted)]">
               {overallStats.sessionCount.toLocaleString()} with token data
             </div>
           )}
         </div>
 
         <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
-          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+          <div className="stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Total Tokens
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">
+          <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1">
             {overallStats.totalTokens.toLocaleString()}
           </div>
-          <div className="stat-detail text-[11px] text-[var(--nim-text-muted)]">
+          <div className="stat-detail text-ui-caption text-[var(--nim-text-muted)]">
             {overallStats.totalInputTokens.toLocaleString()} normal in / {overallStats.totalOutputTokens.toLocaleString()} out
           </div>
         </div>
 
         <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
-          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+          <div className="stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Normal Input
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1" data-testid="normal-input-tokens">
+          <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1" data-testid="normal-input-tokens">
             {formatTokens(overallStats.totalInputTokens)}
           </div>
         </div>
 
         <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
-          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+          <div className="stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Read
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-read-input-tokens">
+          <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-read-input-tokens">
             {formatTokens(overallStats.totalCacheReadInputTokens)}
           </div>
         </div>
 
         <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
-          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+          <div className="stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Creation
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-creation-input-tokens">
+          <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-creation-input-tokens">
             {formatTokens(overallStats.totalCacheCreationInputTokens)}
           </div>
         </div>
 
         <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
-          <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+          <div className="stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
             Cache Hit Rate
           </div>
-          <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-hit-rate">
+          <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1" data-testid="cache-hit-rate">
             {formatRate(overallStats.cacheHitRate)}
           </div>
         </div>
 
         {mostUsedProvider && (
           <div className="stat-card bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-4 py-3">
-            <div className="stat-label text-[11px] text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
+            <div className="stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-1 font-medium">
               Most Used
             </div>
-            <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">
+            <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1">
               {mostUsedProvider.provider}
             </div>
-            <div className="stat-detail text-[11px] text-[var(--nim-text-muted)]">
+            <div className="stat-detail text-ui-caption text-[var(--nim-text-muted)]">
               {mostUsedProvider.model || 'Default model'} - {mostUsedProvider.sessionCount} sessions
             </div>
           </div>
@@ -174,14 +174,14 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
       {(overallStats.cacheDataIncomplete
         || overallStats.totalCacheReadInputTokens == null
         || overallStats.totalCacheCreationInputTokens == null) && (
-        <div className="text-[11px] text-[var(--nim-text-muted)]" data-testid="cache-data-note">
+        <div className="text-ui-caption text-[var(--nim-text-muted)]" data-testid="cache-data-note">
           Some engines did not report cache usage; a blank cache value is unavailable data, not no cache.
         </div>
       )}
 
       {providerStats.length > 0 && (
         <div className="provider-breakdown mt-2">
-          <h3 className="m-0 mb-3 text-sm font-semibold text-[var(--nim-text)]">
+          <h3 className="m-0 mb-3 text-ui-body font-semibold text-[var(--nim-text)]">
             Usage by Provider
           </h3>
           <div className="provider-bars flex flex-col gap-2">
@@ -194,10 +194,10 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
               return (
                 <div key={index} className="provider-bar-item flex flex-col gap-1">
                   <div className="provider-bar-label flex justify-between items-center">
-                    <span className="provider-bar-name text-xs font-medium text-[var(--nim-text)]">
+                    <span className="provider-bar-name text-ui-compact font-medium text-[var(--nim-text)]">
                       {displayName}
                     </span>
-                    <span className="provider-bar-tokens text-[11px] text-[var(--nim-text-muted)]">
+                    <span className="provider-bar-tokens text-ui-caption text-[var(--nim-text-muted)]">
                       {provider.totalTokens.toLocaleString()}
                     </span>
                   </div>
@@ -207,10 +207,10 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ workspaceI
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
-                  <div className="text-[11px] text-[var(--nim-text-muted)]">
+                  <div className="text-ui-caption text-[var(--nim-text-muted)]">
                     Normal {formatTokens(provider.totalInputTokens)} · Cache read {formatTokens(provider.totalCacheReadInputTokens)} · Cache creation {formatTokens(provider.totalCacheCreationInputTokens)} · Hit {formatRate(provider.cacheHitRate)}
                   </div>
-                  <div className="text-[11px] text-[var(--nim-text-muted)]">
+                  <div className="text-ui-caption text-[var(--nim-text-muted)]">
                     Avg first response {formatDuration(provider.averageFirstResponseMs)} · Avg total {formatDuration(provider.averageTotalDurationMs)}
                   </div>
                 </div>

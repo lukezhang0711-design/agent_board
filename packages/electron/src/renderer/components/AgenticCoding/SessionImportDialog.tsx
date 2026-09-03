@@ -248,19 +248,19 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
           <>
             <div className="session-import-dialog-stats flex gap-4 px-5 py-4 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]">
               <div className="session-import-stat flex flex-col items-center gap-1">
-                <span className="session-import-stat-value text-lg font-semibold text-[var(--nim-text)]">{totalSessions}</span>
+                <span className="session-import-stat-value text-ui-title font-semibold text-[var(--nim-text)]">{totalSessions}</span>
                 <span className="session-import-stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">Total</span>
               </div>
               <div className="session-import-stat flex flex-col items-center gap-1">
-                <span className="session-import-stat-value text-lg font-semibold text-[var(--nim-text)]">{newSessions}</span>
+                <span className="session-import-stat-value text-ui-title font-semibold text-[var(--nim-text)]">{newSessions}</span>
                 <span className="session-import-stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">New</span>
               </div>
               <div className="session-import-stat flex flex-col items-center gap-1">
-                <span className="session-import-stat-value text-lg font-semibold text-[var(--nim-text)]">{needsUpdate}</span>
+                <span className="session-import-stat-value text-ui-title font-semibold text-[var(--nim-text)]">{needsUpdate}</span>
                 <span className="session-import-stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">Updates</span>
               </div>
               <div className="session-import-stat flex flex-col items-center gap-1">
-                <span className="session-import-stat-value text-lg font-semibold text-[var(--nim-text)]">{inSync}</span>
+                <span className="session-import-stat-value text-ui-title font-semibold text-[var(--nim-text)]">{inSync}</span>
                 <span className="session-import-stat-label text-ui-caption text-[var(--nim-text-faint)] uppercase tracking-[0.5px]">In Sync</span>
               </div>
             </div>
@@ -268,7 +268,7 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
             <div className="session-import-dialog-search px-5 py-3 border-b border-[var(--nim-border)]">
               <input
                 type="text"
-                className="session-import-search-input nim-input text-sm"
+                className="session-import-search-input nim-input text-ui-body"
                 placeholder="Search sessions by title..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -341,8 +341,8 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
                           onChange={() => toggleWorkspace(workspacePath)}
                           aria-label={`Select all sessions in ${workspaceName}`}
                         />
-                        <span className="session-import-workspace-name flex-1 font-medium text-[var(--nim-text)] text-sm">{workspaceName}</span>
-                        <span className="session-import-workspace-count text-xs text-[var(--nim-text-faint)]">
+                        <span className="session-import-workspace-name flex-1 font-medium text-[var(--nim-text)] text-ui-body">{workspaceName}</span>
+                        <span className="session-import-workspace-count text-ui-compact text-[var(--nim-text-faint)]">
                           ({workspaceSessions.length})
                         </span>
                       </div>
@@ -363,8 +363,8 @@ export const SessionImportDialog: React.FC<SessionImportDialogProps> = ({
                                 className="mt-1 cursor-pointer"
                               />
                               <div className="session-import-session-info flex-1 min-w-0">
-                                <div className="session-import-session-title text-sm text-[var(--nim-text)] font-medium mb-1">{session.title}</div>
-                                <div className="session-import-session-meta text-xs text-[var(--nim-text-muted)] flex items-center gap-2">
+                                <div className="session-import-session-title text-ui-body text-[var(--nim-text)] font-medium mb-1">{session.title}</div>
+                                <div className="session-import-session-meta text-ui-compact text-[var(--nim-text-muted)] flex items-center gap-2">
                                   <span>{getRelativeTimeString(session.updatedAt)}</span>
                                   <span>•</span>
                                   <span>{session.messageCount} messages</span>

@@ -313,7 +313,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
                   fill={contentMode === button.contentMode && !activeExtensionPanel}
                 />
                 {button.badge !== undefined && button.badge > 0 && (
-                  <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
+                  <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-ui-micro font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
                 )}
               </button>
             </HelpTooltip>
@@ -352,7 +352,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
                   fill={contentMode === button.contentMode && !activeExtensionPanel}
                 />
                 {button.badge !== undefined && button.badge > 0 && (
-                  <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
+                  <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-ui-micro font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
                 )}
               </button>
             </HelpTooltip>
@@ -501,7 +501,7 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
           >
             <MaterialSymbol icon={button.icon} size={20} />
             {button.badge !== undefined && button.badge > 0 && (
-              <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-[10px] font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
+              <span className="nav-badge absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-nim-error text-white rounded-ui-full text-ui-micro font-semibold flex items-center justify-center leading-none pointer-events-none">{button.badge}</span>
             )}
           </button>
         ))}

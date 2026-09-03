@@ -189,10 +189,10 @@ export const SkillTaxonomyProposalWidget: React.FC<CustomToolWidgetProps> = (pro
     >
       <div className="flex items-center justify-between gap-3 border-b border-nim bg-nim-tertiary px-4 py-3">
         <div>
-          <div className="text-sm font-semibold text-nim">技能分类方案</div>
-          <div className="mt-1 text-xs text-nim-muted">{args.incremental ? '新增技能' : '全部技能'}</div>
+          <div className="text-ui-body font-semibold text-nim">技能分类方案</div>
+          <div className="mt-1 text-ui-compact text-nim-muted">{args.incremental ? '新增技能' : '全部技能'}</div>
         </div>
-        <span className="text-xs text-nim-muted">
+        <span className="text-ui-compact text-nim-muted">
           {completedResult ? (completedResult.approved ? '已批准' : '已拒绝') : '待确认'}
         </span>
       </div>
@@ -212,9 +212,9 @@ export const SkillTaxonomyProposalWidget: React.FC<CustomToolWidgetProps> = (pro
                   value={category}
                   disabled={!isPending || submitting}
                   onChange={(event) => renameCategory(index, event.target.value)}
-                  className="min-w-0 flex-1 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-sm text-nim focus:border-nim-focus focus:outline-none disabled:opacity-60"
+                  className="min-w-0 flex-1 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-body text-nim focus:border-nim-focus focus:outline-none disabled:opacity-60"
                 />
-                <span className="rounded-ui-base bg-nim-tertiary px-2 py-1 text-xs text-nim-muted">
+                <span className="rounded-ui-base bg-nim-tertiary px-2 py-1 text-ui-compact text-nim-muted">
                   {categorySkills.length}
                 </span>
                 <button
@@ -222,19 +222,19 @@ export const SkillTaxonomyProposalWidget: React.FC<CustomToolWidgetProps> = (pro
                   data-testid={`skill-taxonomy-delete-category-${index}`}
                   disabled={!isPending || submitting || categories.length <= 1}
                   onClick={() => deleteCategory(index)}
-                  className="rounded-ui-base border border-nim px-2 py-1 text-xs text-nim-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-ui-base border border-nim px-2 py-1 text-ui-compact text-nim-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   删除
                 </button>
               </div>
               <details className="mt-2" data-testid={`skill-taxonomy-details-${index}`}>
-                <summary className="cursor-pointer text-xs text-nim-muted">查看归类</summary>
+                <summary className="cursor-pointer text-ui-compact text-nim-muted">查看归类</summary>
                 <div className="mt-2 space-y-2">
                   {categorySkills.map((skill) => (
                     <div key={skill.name} className="flex flex-wrap items-center gap-2 rounded-ui-base bg-nim-tertiary px-2 py-2">
                       <div className="min-w-0 flex-1">
-                        <div className="break-words text-xs font-medium text-nim">{skill.name}</div>
-                        <div className="mt-1 break-words text-xs text-nim-muted">
+                        <div className="break-words text-ui-compact font-medium text-nim">{skill.name}</div>
+                        <div className="mt-1 break-words text-ui-compact text-nim-muted">
                           {skill.summaryZh || '[未翻译]'}
                         </div>
                       </div>
@@ -247,7 +247,7 @@ export const SkillTaxonomyProposalWidget: React.FC<CustomToolWidgetProps> = (pro
                             ? { ...candidate, category: event.target.value }
                             : candidate
                         )))}
-                        className="rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim disabled:opacity-60"
+                        className="rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim disabled:opacity-60"
                       >
                         {categories.map((option) => <option key={option} value={option}>{option}</option>)}
                       </select>
@@ -265,14 +265,14 @@ export const SkillTaxonomyProposalWidget: React.FC<CustomToolWidgetProps> = (pro
             data-testid="skill-taxonomy-add-category"
             disabled={submitting}
             onClick={() => setCategories((current) => [...current, nextCategoryName(current)])}
-            className="rounded-ui-base border border-dashed border-nim px-3 py-2 text-xs text-nim-muted disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-ui-base border border-dashed border-nim px-3 py-2 text-ui-compact text-nim-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             + 添加分类
           </button>
         )}
 
         {submitError && (
-          <div data-testid="skill-taxonomy-submit-error" className="rounded-ui-base border border-red-500/40 px-3 py-2 text-xs text-red-600">
+          <div data-testid="skill-taxonomy-submit-error" className="rounded-ui-base border border-red-500/40 px-3 py-2 text-ui-compact text-red-600">
             {submitError}
           </div>
         )}
@@ -284,7 +284,7 @@ export const SkillTaxonomyProposalWidget: React.FC<CustomToolWidgetProps> = (pro
               data-testid="skill-taxonomy-reject"
               disabled={submitting}
               onClick={() => void submitDecision(false)}
-              className="rounded-ui-base border border-nim px-3 py-2 text-xs font-medium text-nim disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base border border-nim px-3 py-2 text-ui-compact font-medium text-nim disabled:cursor-not-allowed disabled:opacity-50"
             >
               拒绝
             </button>
@@ -293,7 +293,7 @@ export const SkillTaxonomyProposalWidget: React.FC<CustomToolWidgetProps> = (pro
               data-testid="skill-taxonomy-approve"
               disabled={submitting || !effectiveWorkspacePath || !canApprove}
               onClick={() => void submitDecision(true)}
-              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-ui-compact font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               批准
             </button>

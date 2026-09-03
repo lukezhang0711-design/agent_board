@@ -136,7 +136,7 @@ const CollabAvatars: React.FC<{ filePath: string }> = ({ filePath }) => {
         return (
           <div
             key={userId}
-            className="w-5 h-5 rounded-ui-full flex items-center justify-center text-[9px] font-medium"
+            className="w-5 h-5 rounded-ui-full flex items-center justify-center text-ui-micro font-medium"
             style={{
               backgroundColor: user.color,
               color: '#fff',
@@ -190,7 +190,7 @@ const CollabStatusBar: React.FC<{
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1 text-xs"
+      className="flex items-center gap-2 px-3 py-1 text-ui-compact"
       style={{
         borderBottom: '1px solid var(--nim-border)',
         color: 'var(--nim-text-muted)',
@@ -201,7 +201,7 @@ const CollabStatusBar: React.FC<{
       <span>{statusLabel}</span>
       <CollabAvatars filePath={filePath} />
       <span className="mx-1">|</span>
-      <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>group</span>
+      <span className="material-symbols-outlined text-ui-body">group</span>
       <span>{fileName}</span>
     </div>
   );
@@ -885,7 +885,7 @@ export const CollaborativeTabEditor: React.FC<CollaborativeTabEditorProps> = ({
         breadcrumbContent={
           localOrigin.binding?.resolvedPath ? (
             <div className="flex min-w-0 items-center gap-2">
-              <span className="shrink-0 text-[var(--nim-text-faint)] text-[12px] uppercase tracking-wide">
+              <span className="shrink-0 text-[var(--nim-text-faint)] text-ui-compact uppercase tracking-wide">
                 Uploaded from
               </span>
               <FilePathBreadcrumb
@@ -895,8 +895,8 @@ export const CollaborativeTabEditor: React.FC<CollaborativeTabEditorProps> = ({
               />
             </div>
           ) : localOrigin.binding ? (
-            <div className="flex min-w-0 items-center gap-2 text-[13px]">
-              <span className="shrink-0 text-[var(--nim-text-faint)] text-[12px] uppercase tracking-wide">
+            <div className="flex min-w-0 items-center gap-2 text-ui-body">
+              <span className="shrink-0 text-[var(--nim-text-faint)] text-ui-compact uppercase tracking-wide">
                 Uploaded from
               </span>
               <span className="truncate text-[var(--nim-warning)]">
@@ -904,8 +904,8 @@ export const CollaborativeTabEditor: React.FC<CollaborativeTabEditorProps> = ({
               </span>
             </div>
           ) : (
-            <div className="flex min-w-0 items-center gap-2 text-[13px]">
-              <span className="shrink-0 text-[var(--nim-text-faint)] text-[12px] uppercase tracking-wide">
+            <div className="flex min-w-0 items-center gap-2 text-ui-body">
+              <span className="shrink-0 text-[var(--nim-text-faint)] text-ui-compact uppercase tracking-wide">
                 Shared doc
               </span>
               <span className="truncate text-[var(--nim-text)] font-medium">{fileName}</span>

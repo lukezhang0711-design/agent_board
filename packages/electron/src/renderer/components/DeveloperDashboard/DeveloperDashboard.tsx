@@ -12,6 +12,9 @@ import {
 import { summarizeDatabaseQueryStats } from './dashboardStats';
 import { ComponentShowcase } from './ComponentShowcase';
 
+const CHART_TICK_FONT_SIZE = 11;
+const CHART_TOOLTIP_FONT_SIZE = 12;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -215,18 +218,18 @@ function OverviewPanel({
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={history}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--nim-border)" />
-                <XAxis dataKey="time" stroke="var(--nim-text-muted)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--nim-text-muted)" tick={{ fontSize: 11 }} unit=" MB" />
+                <XAxis dataKey="time" stroke="var(--nim-text-muted)" tick={{ fontSize: CHART_TICK_FONT_SIZE }} />
+                <YAxis stroke="var(--nim-text-muted)" tick={{ fontSize: CHART_TICK_FONT_SIZE }} unit=" MB" />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'var(--nim-surface)',
                     border: '1px solid var(--nim-border)',
                     borderRadius: 6,
                     color: 'var(--nim-text)',
-                    fontSize: 12,
+                    fontSize: CHART_TOOLTIP_FONT_SIZE,
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: CHART_TOOLTIP_FONT_SIZE }} />
                 <Line type="monotone" dataKey="memoryRssMB" name="Main RSS" stroke={CHART_COLORS.rss} dot={false} strokeWidth={2} />
                 <Line type="monotone" dataKey="heapUsedMB" name="Main Heap" stroke={CHART_COLORS.heap} dot={false} strokeWidth={2} />
                 <Line type="monotone" dataKey="rendererHeapMB" name="Renderer Heap" stroke={CHART_COLORS.rendererHeap} dot={false} strokeWidth={2} />
@@ -238,18 +241,18 @@ function OverviewPanel({
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={history}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--nim-border)" />
-                <XAxis dataKey="time" stroke="var(--nim-text-muted)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--nim-text-muted)" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="time" stroke="var(--nim-text-muted)" tick={{ fontSize: CHART_TICK_FONT_SIZE }} />
+                <YAxis stroke="var(--nim-text-muted)" tick={{ fontSize: CHART_TICK_FONT_SIZE }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'var(--nim-surface)',
                     border: '1px solid var(--nim-border)',
                     borderRadius: 6,
                     color: 'var(--nim-text)',
-                    fontSize: 12,
+                    fontSize: CHART_TOOLTIP_FONT_SIZE,
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: CHART_TOOLTIP_FONT_SIZE }} />
                 <Line type="monotone" dataKey="activeHandles" name="Active Handles" stroke={CHART_COLORS.handles} dot={false} strokeWidth={2} />
                 <Line type="monotone" dataKey="ipcHandlers" name="IPC Handlers" stroke={CHART_COLORS.ipcHandlers} dot={false} strokeWidth={2} />
                 <Line type="monotone" dataKey="activeWorkspaces" name="Workspaces" stroke={CHART_COLORS.workspaces} dot={false} strokeWidth={2} />
@@ -262,18 +265,18 @@ function OverviewPanel({
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={history}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--nim-border)" />
-                <XAxis dataKey="time" stroke="var(--nim-text-muted)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--nim-text-muted)" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="time" stroke="var(--nim-text-muted)" tick={{ fontSize: CHART_TICK_FONT_SIZE }} />
+                <YAxis stroke="var(--nim-text-muted)" tick={{ fontSize: CHART_TICK_FONT_SIZE }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'var(--nim-surface)',
                     border: '1px solid var(--nim-border)',
                     borderRadius: 6,
                     color: 'var(--nim-text)',
-                    fontSize: 12,
+                    fontSize: CHART_TOOLTIP_FONT_SIZE,
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: CHART_TOOLTIP_FONT_SIZE }} />
                 <Line type="monotone" dataKey="atomFamilies" name="Active Families" stroke={CHART_COLORS.families} dot={false} strokeWidth={2} />
                 <Line type="monotone" dataKey="atomInstances" name="Live Instances" stroke={CHART_COLORS.instances} dot={false} strokeWidth={2} />
               </LineChart>
@@ -284,18 +287,18 @@ function OverviewPanel({
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={history}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--nim-border)" />
-                <XAxis dataKey="time" stroke="var(--nim-text-muted)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--nim-text-muted)" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="time" stroke="var(--nim-text-muted)" tick={{ fontSize: CHART_TICK_FONT_SIZE }} />
+                <YAxis stroke="var(--nim-text-muted)" tick={{ fontSize: CHART_TICK_FONT_SIZE }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'var(--nim-surface)',
                     border: '1px solid var(--nim-border)',
                     borderRadius: 6,
                     color: 'var(--nim-text)',
-                    fontSize: 12,
+                    fontSize: CHART_TOOLTIP_FONT_SIZE,
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: CHART_TOOLTIP_FONT_SIZE }} />
                 <Line type="monotone" dataKey="dbReads" name="Reads (5m)" stroke={CHART_COLORS.dbReads} dot={false} strokeWidth={2} />
                 <Line type="monotone" dataKey="dbWrites" name="Writes (5m)" stroke={CHART_COLORS.dbWrites} dot={false} strokeWidth={2} />
               </LineChart>
@@ -307,9 +310,9 @@ function OverviewPanel({
       {/* Database query performance table */}
       {dbStats.legacyRows.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-[var(--nim-text)] mb-2">Database Query Performance (5m window)</h3>
+          <h3 className="text-ui-body font-medium text-[var(--nim-text)] mb-2">Database Query Performance (5m window)</h3>
           <div className="overflow-auto">
-            <table className="w-full text-xs font-mono border-collapse">
+            <table className="w-full text-ui-compact font-mono border-collapse">
               <thead>
                 <tr className="text-left text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
                   <th className="px-2 py-2">Table</th>
@@ -371,9 +374,9 @@ function OverviewPanel({
 
       {dbStats.sqliteRows.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-[var(--nim-text)] mb-2">Database Query Activity (5m window)</h3>
+          <h3 className="text-ui-body font-medium text-[var(--nim-text)] mb-2">Database Query Activity (5m window)</h3>
           <div className="overflow-auto">
-            <table className="w-full text-xs font-mono border-collapse">
+            <table className="w-full text-ui-compact font-mono border-collapse">
               <thead>
                 <tr className="text-left text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
                   <th className="px-2 py-2">Table</th>
@@ -403,9 +406,9 @@ function OverviewPanel({
 
       {ipc.channelStats.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-[var(--nim-text)] mb-2">IPC Channels</h3>
+          <h3 className="text-ui-body font-medium text-[var(--nim-text)] mb-2">IPC Channels</h3>
           <div className="overflow-auto">
-            <table className="w-full text-xs font-mono border-collapse">
+            <table className="w-full text-ui-compact font-mono border-collapse">
               <thead>
                 <tr className="text-left text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
                   <th className="px-2 py-2">Channel</th>
@@ -449,12 +452,12 @@ function OverviewPanel({
       {/* File watcher detail */}
       {fileWatchers.workspaces.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-[var(--nim-text)] mb-2">Watched Workspaces</h3>
+          <h3 className="text-ui-body font-medium text-[var(--nim-text)] mb-2">Watched Workspaces</h3>
           <div className="space-y-1">
             {fileWatchers.workspaces.map(ws => (
               <div
                 key={ws.workspacePath}
-                className="text-xs font-mono px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)]"
+                className="text-ui-compact font-mono px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)]"
               >
                 <div className="text-[var(--nim-text)]">{ws.workspacePath}</div>
                 <div className="text-[var(--nim-text-muted)] mt-1">
@@ -469,12 +472,12 @@ function OverviewPanel({
       {/* Window state detail */}
       {systemStats.windows.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-[var(--nim-text)] mb-2">Windows</h3>
+          <h3 className="text-ui-body font-medium text-[var(--nim-text)] mb-2">Windows</h3>
           <div className="space-y-1">
             {systemStats.windows.map(win => (
               <div
                 key={win.id}
-                className="text-xs font-mono px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)] flex items-center gap-3"
+                className="text-ui-compact font-mono px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)] flex items-center gap-3"
               >
                 <span className="text-[var(--nim-text-muted)]">#{win.id}</span>
                 <span className="text-[var(--nim-text)]">{win.mode}</span>
@@ -482,7 +485,7 @@ function OverviewPanel({
                   {win.workspacePath || win.filePath || '(none)'}
                 </span>
                 {win.documentEdited && (
-                  <span className="text-[var(--nim-warning)] text-[10px]">edited</span>
+                  <span className="text-[var(--nim-warning)] text-ui-micro">edited</span>
                 )}
               </div>
             ))}
@@ -491,7 +494,7 @@ function OverviewPanel({
       )}
 
       {/* System info */}
-      <div className="text-xs text-[var(--nim-text-muted)] pb-2">
+      <div className="text-ui-compact text-[var(--nim-text-muted)] pb-2">
         {proc.platform} | Node {proc.nodeVersion} | Electron {proc.electronVersion}
       </div>
     </div>
@@ -501,8 +504,8 @@ function OverviewPanel({
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="px-3 py-2 rounded-ui-base bg-[var(--nim-surface-hover)] border border-[var(--nim-border)]">
-      <div className="text-[10px] uppercase tracking-wider text-[var(--nim-text-muted)] mb-1">{label}</div>
-      <div className="text-sm font-mono text-[var(--nim-text)]">{value}</div>
+      <div className="text-ui-micro uppercase tracking-wider text-[var(--nim-text-muted)] mb-1">{label}</div>
+      <div className="text-ui-body font-mono text-[var(--nim-text)]">{value}</div>
     </div>
   );
 }
@@ -510,7 +513,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 function ChartSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="text-sm font-medium text-[var(--nim-text)] mb-2">{title}</h3>
+      <h3 className="text-ui-body font-medium text-[var(--nim-text)] mb-2">{title}</h3>
       {children}
     </div>
   );
@@ -531,7 +534,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
   return (
     <div className="flex flex-col h-full">
       {/* Summary bar */}
-      <div className="flex items-center gap-4 px-4 py-3 border-b border-[var(--nim-border)] text-sm">
+      <div className="flex items-center gap-4 px-4 py-3 border-b border-[var(--nim-border)] text-ui-body">
         <span className="text-[var(--nim-text-muted)]">
           {stats.length} families registered
         </span>
@@ -552,7 +555,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
         <button
           onClick={refresh}
           disabled={loading}
-          className="px-3 py-1 rounded-ui-base text-xs bg-[var(--nim-surface-hover)] text-[var(--nim-text)] hover:bg-[var(--nim-surface-active)] transition-colors disabled:opacity-50"
+          className="px-3 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-surface-hover)] text-[var(--nim-text)] hover:bg-[var(--nim-surface-active)] transition-colors disabled:opacity-50"
         >
           {loading ? 'Loading...' : 'Refresh'}
         </button>
@@ -560,7 +563,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-ui-body border-collapse">
           <thead className="sticky top-0 bg-[var(--nim-surface)] z-10">
             <tr className="text-left text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
               <th className="px-4 py-2 font-medium">Name</th>
@@ -579,7 +582,7 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
                     onClick={() => setExpandedRow(isExpanded ? null : key)}
                   >
                     <td className="px-4 py-2 font-mono text-[var(--nim-text)]">
-                      <span className="mr-2 text-[var(--nim-text-muted)] text-xs">
+                      <span className="mr-2 text-[var(--nim-text-muted)] text-ui-compact">
                         {isExpanded ? '\u25BC' : '\u25B6'}
                       </span>
                       {s.name}
@@ -592,14 +595,14 @@ function AtomFamilyPanel({ stats, loading, refresh }: { stats: AtomFamilyStat[];
                   {isExpanded && s.params.length > 0 && (
                     <tr className="bg-[var(--nim-surface)]">
                       <td colSpan={3} className="px-8 py-2">
-                        <div className="text-xs text-[var(--nim-text-muted)] mb-1">
+                        <div className="text-ui-compact text-[var(--nim-text-muted)] mb-1">
                           Live params ({s.params.length}):
                         </div>
                         <div className="flex flex-wrap gap-2 max-h-40 overflow-auto">
                           {s.params.map((p, i) => (
                             <span
                               key={i}
-                              className="px-2 py-0.5 rounded-ui-base text-xs font-mono bg-[var(--nim-surface-hover)] text-[var(--nim-text)]"
+                              className="px-2 py-0.5 rounded-ui-base text-ui-compact font-mono bg-[var(--nim-surface-hover)] text-[var(--nim-text)]"
                               title={p}
                             >
                               {p.length > 40 ? p.slice(0, 37) + '...' : p}
@@ -721,7 +724,7 @@ export function DeveloperDashboard() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-2 text-sm transition-colors border-b-2 ${
+            className={`px-3 py-2 text-ui-body transition-colors border-b-2 ${
               activeTab === tab.id
                 ? 'border-[var(--nim-accent)] text-[var(--nim-text)]'
                 : 'border-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)]'
@@ -731,7 +734,7 @@ export function DeveloperDashboard() {
           </button>
         ))}
         <div className="flex-1" />
-        <div className="flex items-center gap-2 text-xs text-[var(--nim-text-muted)]">
+        <div className="flex items-center gap-2 text-ui-compact text-[var(--nim-text-muted)]">
           {loading && <span className="animate-pulse">Refreshing...</span>}
           {lastRefresh && !loading && (
             <span>Last: {formatTime(lastRefresh)}</span>

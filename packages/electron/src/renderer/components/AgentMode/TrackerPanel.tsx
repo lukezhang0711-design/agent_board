@@ -104,7 +104,7 @@ export const TrackerPanel: React.FC<TrackerPanelProps> = React.memo(({
           size={16}
           className="text-[var(--nim-text-muted)] shrink-0"
         />
-        <span className="tracker-panel-title text-xs font-medium text-[var(--nim-text)]">
+        <span className="tracker-panel-title text-ui-compact font-medium text-[var(--nim-text)]">
           Trackers
         </span>
         <span className="tracker-panel-count ml-auto text-ui-caption text-[var(--nim-text-muted)] font-mono">
@@ -164,7 +164,7 @@ const TrackerItemRow: React.FC<TrackerItemRowProps> = React.memo(({ itemId, onNa
         className="shrink-0"
         style={{ color }}
       />
-      <span className="flex-1 text-xs text-[var(--nim-text)] truncate">
+      <span className="flex-1 text-ui-compact text-[var(--nim-text)] truncate">
         {title}
       </span>
       {status && (

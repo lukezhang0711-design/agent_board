@@ -1172,7 +1172,7 @@ const QuickAddOverlay: React.FC<QuickAddOverlayProps> = ({ type, tracker, onSubm
   return (
     <div className="absolute top-0 left-0 right-0 bg-nim-secondary border-b border-nim shadow-sm z-20">
       <form onSubmit={handleSubmit} className="flex items-center gap-3 px-4 py-2">
-        <span className="material-symbols-outlined text-lg shrink-0" style={{ color }}>
+        <span className="material-symbols-outlined text-ui-title shrink-0" style={{ color }}>
           {icon}
         </span>
 
@@ -1186,14 +1186,14 @@ const QuickAddOverlay: React.FC<QuickAddOverlayProps> = ({ type, tracker, onSubm
             e.stopPropagation();
           }}
           placeholder={`New ${displayName.toLowerCase()}...`}
-          className="flex-1 min-w-0 px-3 py-2 bg-nim border border-nim rounded-ui-base text-sm text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
+          className="flex-1 min-w-0 px-3 py-2 bg-nim border border-nim rounded-ui-base text-ui-body text-nim placeholder:text-nim-faint focus:outline-none focus:border-[var(--nim-primary)]"
           data-testid="tracker-quick-add-input"
         />
 
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value)}
-          className="px-2 py-2 bg-nim border border-nim rounded-ui-base text-sm text-nim focus:outline-none focus:border-[var(--nim-primary)] shrink-0"
+          className="px-2 py-2 bg-nim border border-nim rounded-ui-base text-ui-body text-nim focus:outline-none focus:border-[var(--nim-primary)] shrink-0"
         >
           <option value="low">Low</option>
           <option value="medium">Medium</option>
@@ -1204,7 +1204,7 @@ const QuickAddOverlay: React.FC<QuickAddOverlayProps> = ({ type, tracker, onSubm
         <button
           type="submit"
           disabled={!title.trim()}
-          className="px-3 py-2 rounded-ui-base text-sm font-medium text-white border-none cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 shrink-0"
+          className="px-3 py-2 rounded-ui-base text-ui-body font-medium text-white border-none cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 shrink-0"
           style={{ backgroundColor: color }}
         >
           Add

@@ -156,7 +156,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
         onClick={(e) => e.stopPropagation()}
       >
         <div className="qr-modal-header flex items-center justify-between px-5 py-4 border-b border-nim sticky top-0 bg-nim z-10">
-          <h2 className="qr-modal-title text-lg font-semibold text-nim m-0">Pair Mobile Device</h2>
+          <h2 className="qr-modal-title text-ui-title font-semibold text-nim m-0">Pair Mobile Device</h2>
           <button
             className="qr-modal-close p-1 bg-transparent border-none cursor-pointer text-nim-muted hover:text-nim"
             onClick={onClose}
@@ -171,13 +171,13 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
           {/* Local dev server notice */}
           {isLocalServer && localIP && (
             <div className="qr-dev-notice mb-4 p-3 rounded-ui-lg bg-nim-warning-subtle border border-nim-warning-subtle">
-              <div className="qr-dev-notice-header flex items-center gap-2 text-[var(--nim-warning)] font-medium text-sm mb-2">
+              <div className="qr-dev-notice-header flex items-center gap-2 text-[var(--nim-warning)] font-medium text-ui-body mb-2">
                 <svg className="qr-dev-notice-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
                 </svg>
                 <span>Local Development Server</span>
               </div>
-              <p className="qr-dev-notice-text text-xs text-nim-muted mb-2">
+              <p className="qr-dev-notice-text text-ui-compact text-nim-muted mb-2">
                 Your phone needs to connect via your local network IP instead of localhost.
               </p>
               <label className="qr-dev-toggle flex items-center gap-2 cursor-pointer">
@@ -186,11 +186,11 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                   checked={useLocalIP}
                   onChange={(e) => setUseLocalIP(e.target.checked)}
                 />
-                <span className="qr-dev-toggle-text text-xs text-nim">
+                <span className="qr-dev-toggle-text text-ui-compact text-nim">
                   Use LAN IP: <code className="bg-nim-secondary px-1 py-0.5 rounded-ui-base">{localIP}</code>
                 </span>
               </label>
-              <p className="qr-dev-notice-url text-xs text-nim-faint mt-2 mb-0">
+              <p className="qr-dev-notice-url text-ui-compact text-nim-faint mt-2 mb-0">
                 Server URL in QR: <code className="bg-nim-secondary px-1 py-0.5 rounded-ui-base">{effectiveUrl}</code>
               </p>
             </div>
@@ -200,7 +200,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
             <div className="qr-error text-center py-8">
               <p className="text-nim-error mb-4">{error}</p>
               <button
-                className="qr-regenerate-button px-4 py-2 bg-nim-primary text-nim-on-primary rounded-ui-base text-sm font-medium cursor-pointer hover:bg-nim-primary-hover"
+                className="qr-regenerate-button px-4 py-2 bg-nim-primary text-nim-on-primary rounded-ui-base text-ui-body font-medium cursor-pointer hover:bg-nim-primary-hover"
                 onClick={generateQR}
               >
                 Try Again
@@ -222,7 +222,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                 />
               </div>
 
-              <div className="qr-instructions text-sm text-nim-muted space-y-1 mb-4">
+              <div className="qr-instructions text-ui-body text-nim-muted space-y-1 mb-4">
                 <p className="qr-step">1. Open Nimbalyst on your mobile device</p>
                 <p className="qr-step">2. Go to Settings and tap "Scan QR Code"</p>
                 <p className="qr-step">3. Point your camera at this QR code</p>
@@ -265,7 +265,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
                 </div>
               )}
 
-              <div className="qr-warning flex items-center gap-2 mt-3 p-3 bg-nim-warning-subtle border border-nim-warning-subtle rounded-ui-lg text-xs text-[var(--nim-warning)]">
+              <div className="qr-warning flex items-center gap-2 mt-3 p-3 bg-nim-warning-subtle border border-nim-warning-subtle rounded-ui-lg text-ui-compact text-[var(--nim-warning)]">
                 <svg className="qr-warning-icon shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
                 </svg>
@@ -273,7 +273,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
               </div>
 
               <button
-                className="qr-regenerate-button w-full mt-4 px-4 py-2 bg-nim-secondary text-nim-muted border border-nim rounded-ui-base text-sm font-medium cursor-pointer hover:bg-nim-hover"
+                className="qr-regenerate-button w-full mt-4 px-4 py-2 bg-nim-secondary text-nim-muted border border-nim rounded-ui-base text-ui-body font-medium cursor-pointer hover:bg-nim-hover"
                 onClick={generateQR}
               >
                 Regenerate QR Code
@@ -311,7 +311,7 @@ export function QRPairingModal({ isOpen, onClose, serverUrl, preventSleepMode, o
           ) : (
             <div className="qr-loading flex flex-col items-center justify-center py-8">
               <div className="qr-spinner w-8 h-8 border-2 border-nim-primary border-t-transparent rounded-ui-full animate-spin mb-3" />
-              <p className="text-nim-muted text-sm">Generating QR code...</p>
+              <p className="text-nim-muted text-ui-body">Generating QR code...</p>
             </div>
           )}
         </div>

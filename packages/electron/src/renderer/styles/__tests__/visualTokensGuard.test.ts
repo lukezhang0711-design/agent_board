@@ -141,12 +141,20 @@ const REPO_ROOT = path.resolve(RENDERER_ROOT, '../../../../');
 const BASELINE_PATH = path.resolve(__dirname, '../visualTokensBaseline.json');
 
 const ALLOWED_ROUNDED = /^rounded-ui-(?:base|lg|full|none)(?:-[tblr])?$/;
+const ALLOWED_FONT_SIZES = /^text-ui-(?:micro|caption|compact|body|subhead|title|headline|display)$/;
+const fontClassRegex = /(?<![a-zA-Z0-9_\-])(?:[a-zA-Z0-9_-]+:)*(?:text-(?:xs|sm|base|lg|xl|[2-9]xl|\d+xl|ui-[a-zA-Z0-9_-]+)|text-\[(?!\s*(?:#|rgba?\(|hsla?\(|var\(--nim-))[^\]]+\])/g;
 
 export function scanFileViolations(content: string, isExempt = false) {
-  const pxFontRegex = /text-\[\d+(?:\.\d+)?px\]/g;
   const pxSpacingRegex = /(?:p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|gap-x|gap-y)-\[\d+(?:\.\d+)?px\]/g;
   const rawColorRegex = /(?:bg|text|border|ring)-\[#(?:[0-9a-fA-F]+)\]|(?:bg|text|border|ring)-\[rgb[a]?\([^)]+\)\]/g;
   const inlineFontSizeRegex = /fontSize:\s*['"]?\d+(?:\.\d+)?(?:px)?['"]?/g;
+
+  const rawFonts = content.match(fontClassRegex) ?? [];
+  const nonStdFonts = rawFonts.filter(cls => {
+    const baseCls = cls.includes(':') ? cls.split(':').pop()! : cls;
+    return !ALLOWED_FONT_SIZES.test(baseCls);
+  });
+  const inlineFonts = content.match(inlineFontSizeRegex) ?? [];
 
   let nonStdRounded: string[] = [];
   let halfGap: string[] = [];
@@ -161,10 +169,10 @@ export function scanFileViolations(content: string, isExempt = false) {
   }
 
   return {
-    pxFonts: [...(content.match(pxFontRegex) ?? []), ...(content.match(inlineFontSizeRegex) ?? [])],
+    pxFonts: [...nonStdFonts, ...inlineFonts],
     pxSpacings: content.match(pxSpacingRegex) ?? [],
     rawColors: content.match(rawColorRegex) ?? [],
-    inlineFontSizes: content.match(inlineFontSizeRegex) ?? [],
+    inlineFontSizes: inlineFonts,
     nonStdRounded,
     halfGap,
   };
@@ -628,6 +636,171 @@ describe('Visual Token Guard & Single Truth Table (施工单 FX & GA)', () => {
     });
   });
 
+  describe('施工单 GI: 字号判定改白名单 + 被误删的披露复原', () => {
+    describe('绿①: 守门字号判定为白名单式——注入夹具被拦截', () => {
+      it('catches text-sm fixture', () => {
+        const result = scanFileViolations('<div className="text-sm" />');
+        expect(result.pxFonts).toContain('text-sm');
+      });
+
+      it('catches text-[9px] fixture', () => {
+        const result = scanFileViolations('<div className="text-[9px]" />');
+        expect(result.pxFonts).toContain('text-[9px]');
+      });
+
+      it('catches sm:text-lg fixture', () => {
+        const result = scanFileViolations('<div className="sm:text-lg" />');
+        expect(result.pxFonts).toContain('sm:text-lg');
+      });
+
+      it('catches style={{ fontSize: 17 }} fixture', () => {
+        const result = scanFileViolations('<div style={{ fontSize: 17 }} />');
+        expect(result.pxFonts.some(f => f.includes('fontSize: 17'))).toBe(true);
+      });
+    });
+
+    describe('绿②: 守门与基线产出脚本两处字号正则逐字完全相同', () => {
+      it('asserts guard test font regex and baseline script font regex are identical word-for-word', () => {
+        const guardContent = fs.readFileSync(__filename, 'utf8');
+        const baselineScriptPath = path.resolve(REPO_ROOT, 'packages/electron/scripts/generate-visual-tokens-baseline.js');
+        const baselineContent = fs.readFileSync(baselineScriptPath, 'utf8');
+
+        const guardMatch = guardContent.match(/const fontClassRegex = (\/.+?\/[a-z]*);/);
+        const baselineMatch = baselineContent.match(/const fontClassRegex = (\/.+?\/[a-z]*);/);
+
+        expect(guardMatch, 'guard test must define fontClassRegex').not.toBeNull();
+        expect(baselineMatch, 'baseline script must define fontClassRegex').not.toBeNull();
+        expect(guardMatch![1]).toBe(baselineMatch![1]);
+      });
+    });
+
+    describe('绿④: 四句披露各自出现在对应面板上（逐句断言，逐字比对关键信息）', () => {
+      it('asserts PrivilegedExtensionsPanel contains "run code outside the app"', () => {
+        const fp = path.resolve(RENDERER_ROOT, 'components/Settings/panels/PrivilegedExtensionsPanel.tsx');
+        const content = fs.readFileSync(fp, 'utf8');
+        expect(content).toContain('Extensions that have been granted permission to run code outside the app');
+      });
+
+      it('asserts SharedLinksPanel contains "Anyone with a link can view the content."', () => {
+        const fp = path.resolve(RENDERER_ROOT, 'components/GlobalSettings/panels/SharedLinksPanel.tsx');
+        const content = fs.readFileSync(fp, 'utf8');
+        expect(content).toContain('Anyone with a link can view the content.');
+      });
+
+      it('asserts SyncPanel contains "All data is end-to-end encrypted."', () => {
+        const fp = path.resolve(RENDERER_ROOT, 'components/GlobalSettings/panels/SyncPanel.tsx');
+        const content = fs.readFileSync(fp, 'utf8');
+        expect(content).toContain('All data is end-to-end encrypted.');
+      });
+
+      it('asserts TeamPanel contains "with end-to-end encryption"', () => {
+        const fp = path.resolve(RENDERER_ROOT, 'components/Settings/panels/TeamPanel.tsx');
+        const content = fs.readFileSync(fp, 'utf8');
+        expect(content).toContain('with end-to-end encryption');
+      });
+    });
+
+    describe('绿⑤: 反向断言——那五句"删得对"的没有被复原（逐句断言不存在）', () => {
+      const allFiles = walkRendererFiles(RENDERER_ROOT);
+      const fiveDeletedPhrases = [
+        'Access and control Nimbalyst from the mobile app.',
+        'Settings that control how agent sessions behave.',
+        "Use OpenAI's Advanced Voice Mode to control your coding agent with your voice.",
+        'Share sessions and documents via encrypted share links.',
+        'Advanced configuration options for AI features.',
+      ];
+
+      for (const phrase of fiveDeletedPhrases) {
+        it(`asserts "${phrase}" does not exist in any renderer file`, () => {
+          const matchingFiles: string[] = [];
+          allFiles.forEach(f => {
+            const content = fs.readFileSync(f, 'utf8');
+            if (content.includes(phrase)) {
+              matchingFiles.push(path.relative(RENDERER_ROOT, f));
+            }
+          });
+          expect(matchingFiles, `Found deleted phrase "${phrase}" in: ${matchingFiles.join(', ')}`).toEqual([]);
+        });
+      }
+    });
+
+    describe('绿⑥: DESIGN.md 新增文案边界条款，含正反例各一', () => {
+      const designMdPath = path.resolve(REPO_ROOT, 'DESIGN.md');
+
+      it('asserts DESIGN.md includes rule 11 on copy boundary with criteria for deleting and keeping', () => {
+        const content = fs.readFileSync(designMdPath, 'utf8');
+        expect(content).toMatch(/11\.\s+\*\*Do\*\*:/);
+        expect(content).toMatch(/安全|隐私|权限|如实告知|能力/);
+        expect(content).toMatch(/内部怎么运作|说明书|解释机制|功能介绍/);
+      });
+
+      it('asserts DESIGN.md contains positive and negative examples from ticket GI', () => {
+        const content = fs.readFileSync(designMdPath, 'utf8');
+        expect(content).toMatch(/Extensions that have been granted permission to run code outside the app/);
+        expect(content).toMatch(/Access and control Nimbalyst from the mobile app/);
+      });
+    });
+
+    describe('绿③: 全渲染层 Tailwind 自带字号七类各自为 0（逐类断言）；响应式前缀写法也为 0', () => {
+      const allFiles = walkRendererFiles(RENDERER_ROOT).filter(
+        f => !path.relative(RENDERER_ROOT, f).startsWith('styles/')
+      );
+
+      const sevenCategories = [
+        'text-xs',
+        'text-sm',
+        'text-base',
+        'text-lg',
+        'text-xl',
+        'text-2xl',
+        'text-3xl',
+      ];
+
+      for (const cls of sevenCategories) {
+        it(`asserts ${cls} has zero occurrences across renderer`, () => {
+          const regex = new RegExp(`(?<![a-zA-Z0-9_\\-])${cls}(?![a-zA-Z0-9_\\-])`, 'g');
+          const matchingFiles: string[] = [];
+          allFiles.forEach(f => {
+            const content = fs.readFileSync(f, 'utf8');
+            if (regex.test(content)) {
+              matchingFiles.push(path.relative(RENDERER_ROOT, f));
+            }
+          });
+          expect(matchingFiles, `Found ${cls} in: ${matchingFiles.join(', ')}`).toEqual([]);
+        });
+      }
+
+      it('asserts responsive/prefixed Tailwind font sizes have zero occurrences across renderer', () => {
+        const prefixedRegex = /(?<![a-zA-Z0-9_\-])(?:[a-zA-Z0-9_-]+:)+(?:text-(?:xs|sm|base|lg|xl|2xl|3xl))\b/g;
+        const matchingFiles: string[] = [];
+        allFiles.forEach(f => {
+          const content = fs.readFileSync(f, 'utf8');
+          if (prefixedRegex.test(content)) {
+            matchingFiles.push(path.relative(RENDERER_ROOT, f));
+          }
+        });
+        expect(matchingFiles, `Found prefixed font class in: ${matchingFiles.join(', ')}`).toEqual([]);
+      });
+    });
+
+    describe('绿⑦: 基线由脚本重新产出，全产品字号违例基线为 0', () => {
+      it('asserts pxFonts is 0 across all directories in visualTokensBaseline.json', () => {
+        expect(fs.existsSync(BASELINE_PATH), `Baseline JSON must exist at ${BASELINE_PATH}`).toBe(true);
+        const baselineData = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8')) as Record<
+          string,
+          { pxFonts: number; rawColors: number; nonStdRounded: number; halfGap: number; fileCount: number }
+        >;
+
+        let totalFonts = 0;
+        for (const [group, data] of Object.entries(baselineData)) {
+          totalFonts += data.pxFonts;
+          expect(data.pxFonts, `Directory [${group}] pxFonts must be 0`).toBe(0);
+        }
+        expect(totalFonts).toBe(0);
+      });
+    });
+  });
+
   describe('防倒退检查（已迁移名单零违规 + 其余目录欠账天花板）', () => {
     describe('段 1: 已迁移名单零违规（硬字号、硬颜色、表外圆角、半档间距全部为 0）', () => {
       for (const relativePath of TARGET_FILES) {
@@ -678,6 +851,7 @@ describe('Visual Token Guard & Single Truth Table (施工单 FX & GA)', () => {
         allFiles.forEach(f => {
           const rel = path.relative(RENDERER_ROOT, f);
           if (TARGET_FILES.includes(rel)) return;
+          if (rel.startsWith('styles/')) return;
 
           let group = 'other';
           const parts = rel.split(path.sep);

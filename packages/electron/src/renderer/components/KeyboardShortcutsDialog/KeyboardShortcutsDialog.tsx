@@ -263,11 +263,11 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
         onClick={(e) => e.stopPropagation()}
       >
         <div className="keyboard-shortcuts-dialog-header flex items-center justify-between px-6 py-5 border-b border-[var(--nim-border)]">
-          <h2 className="m-0 text-xl font-semibold text-[var(--nim-text)]">
+          <h2 className="m-0 text-ui-title font-semibold text-[var(--nim-text)]">
             Keyboard Shortcuts
           </h2>
           <button
-            className="keyboard-shortcuts-dialog-close flex items-center justify-center w-8 h-8 p-0 bg-transparent border-none text-[32px] leading-none text-[var(--nim-text-muted)] cursor-pointer rounded-ui-base transition-all duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+            className="keyboard-shortcuts-dialog-close flex items-center justify-center w-8 h-8 p-0 bg-transparent border-none text-ui-display leading-none text-[var(--nim-text-muted)] cursor-pointer rounded-ui-base transition-all duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
             onClick={onClose}
             aria-label="Close"
           >
@@ -281,7 +281,7 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium rounded-ui-base-t transition-colors ${
+              className={`px-4 py-2 text-ui-body font-medium rounded-ui-base-t transition-colors ${
                 activeTab === tab
                   ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border-b-2 border-[var(--nim-primary)]'
                   : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -294,13 +294,13 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
 
         <div className="keyboard-shortcuts-dialog-content overflow-y-auto flex-1 p-6 grid grid-cols-[repeat(auto-fit,minmax(350px,1fr))] gap-8 max-[900px]:grid-cols-1 max-[600px]:p-5 max-[600px]:gap-6">
           {shortcutGroups.length === 0 && activeTab === 'extensions' ? (
-            <div className="text-[var(--nim-text-muted)] text-sm">
+            <div className="text-[var(--nim-text-muted)] text-ui-body">
               No extension keybindings registered. Extensions can contribute keybindings via their manifest.json.
             </div>
           ) : (
             shortcutGroups.map((group) => (
               <div key={group.title} className="keyboard-shortcuts-group flex flex-col gap-3">
-                <h3 className="keyboard-shortcuts-group-title m-0 text-sm font-semibold text-[var(--nim-text-muted)] uppercase tracking-[0.5px]">
+                <h3 className="keyboard-shortcuts-group-title m-0 text-ui-body font-semibold text-[var(--nim-text-muted)] uppercase tracking-[0.5px]">
                   {group.title}
                 </h3>
                 <div className="keyboard-shortcuts-list flex flex-col gap-1">
@@ -309,10 +309,10 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
                       key={item.label}
                       className="keyboard-shortcut-item flex items-center justify-between py-2 gap-4"
                     >
-                      <span className="keyboard-shortcut-label text-[var(--nim-text)] text-sm flex-1">
+                      <span className="keyboard-shortcut-label text-[var(--nim-text)] text-ui-body flex-1">
                         {item.label}
                       </span>
-                      <kbd className="keyboard-shortcut-key bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-3 py-1 font-sans text-[13px] font-medium text-[var(--nim-text)] whitespace-nowrap shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] min-w-[60px] text-center">
+                      <kbd className="keyboard-shortcut-key bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-3 py-1 font-sans text-ui-body font-medium text-[var(--nim-text)] whitespace-nowrap shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] min-w-[60px] text-center">
                         {getShortcutDisplay(item.shortcut)}
                       </kbd>
                     </div>
@@ -323,7 +323,7 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
           )}
         </div>
 
-        <div className="px-6 py-3 border-t border-[var(--nim-border)] text-[var(--nim-text-muted)] text-xs">
+        <div className="px-6 py-3 border-t border-[var(--nim-border)] text-[var(--nim-text-muted)] text-ui-compact">
           Press <kbd className="bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base px-2 py-0.5 mx-1">Esc</kbd> to close
         </div>
       </div>

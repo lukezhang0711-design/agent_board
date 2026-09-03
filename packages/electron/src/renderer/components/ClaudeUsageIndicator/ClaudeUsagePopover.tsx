@@ -74,7 +74,7 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
             >
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
-            <span className="text-[14px] font-semibold text-nim">Claude Usage</span>
+            <span className="text-ui-body font-semibold text-nim">Claude Usage</span>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -97,16 +97,16 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
 
         <div className="px-4 py-3">
           {usage.error && !hasPools ? (
-            <div className="text-[13px] text-nim-error">
+            <div className="text-ui-body text-nim-error">
               <div>{usage.error}</div>
               {authorizationHint && (
-                <div className="mt-1 text-[11px] text-nim-muted">{authorizationHint}</div>
+                <div className="mt-1 text-ui-caption text-nim-muted">{authorizationHint}</div>
               )}
             </div>
           ) : (
             <>
               {usage.error && (
-                <div className="mb-3 text-[11px] text-nim-warning">
+                <div className="mb-3 text-ui-caption text-nim-warning">
                   <div>Refresh failed: {usage.error}</div>
                   {authorizationHint && <div className="mt-1">{authorizationHint}</div>}
                 </div>
@@ -122,7 +122,7 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
         <div className="flex flex-col gap-2 border-t border-nim px-4 py-2">
           <div className="flex items-center justify-between">
             {usage.lastUpdated !== null && (
-              <span className="text-[10px] text-nim-faint">
+              <span className="text-ui-micro text-nim-faint">
                 Last updated {formatUsageLastUpdated(usage.lastUpdated)}
               </span>
             )}
@@ -131,14 +131,14 @@ export const ClaudeUsagePopover: React.FC<ClaudeUsagePopoverProps> = ({
                 setUsageIndicatorEnabled(false);
                 onClose();
               }}
-              className="text-[11px] text-nim-muted transition-colors hover:text-nim"
+              className="text-ui-caption text-nim-muted transition-colors hover:text-nim"
             >
               Disable
             </button>
           </div>
           <button
             onClick={() => window.electronAPI.openExternal('https://status.anthropic.com')}
-            className="flex items-center gap-1 text-[11px] text-nim-muted transition-colors hover:text-nim"
+            className="flex items-center gap-1 text-ui-caption text-nim-muted transition-colors hover:text-nim"
           >
             <MaterialSymbol icon="open_in_new" size={12} />
             <span>Anthropic Status Page</span>

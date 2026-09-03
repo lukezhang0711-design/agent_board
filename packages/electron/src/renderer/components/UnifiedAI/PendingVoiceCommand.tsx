@@ -171,7 +171,7 @@ export function PendingVoiceCommand({ sessionId, onSubmit }: PendingVoiceCommand
             isComposingRef.current = false;
           }}
           onKeyDown={handleKeyDown}
-          className="w-full min-h-[60px] py-3 px-3 border border-nim rounded-ui-base bg-nim-secondary text-nim font-inherit text-sm leading-normal resize-none transition-[border-color] duration-150"
+          className="w-full min-h-[60px] py-3 px-3 border border-nim rounded-ui-base bg-nim-secondary text-nim font-inherit text-ui-body leading-normal resize-none transition-[border-color] duration-150"
           placeholder="Voice command..."
         />
       </div>

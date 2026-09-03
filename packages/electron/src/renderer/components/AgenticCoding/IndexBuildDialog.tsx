@@ -32,12 +32,12 @@ export const IndexBuildDialog: React.FC<IndexBuildDialogProps> = ({
           className="p-0 mb-3 border-none"
           testId="index-build-dialog-header"
         />
-        <p className="index-build-dialog-message m-0 mb-6 text-sm leading-relaxed text-[var(--nim-text-muted)] [&_strong]:text-[var(--nim-text)]">
+        <p className="index-build-dialog-message m-0 mb-6 text-ui-body leading-relaxed text-[var(--nim-text-muted)] [&_strong]:text-[var(--nim-text)]">
           Your session history contains <strong>{messageCount.toLocaleString()}</strong> messages.
           Building a search index will make searches much faster, but may take a few minutes.
         </p>
         {isBuilding ? (
-          <div className="index-build-dialog-progress flex items-center gap-3 p-3 rounded-ui-base bg-[var(--nim-bg-secondary)] text-sm text-[var(--nim-text-muted)]">
+          <div className="index-build-dialog-progress flex items-center gap-3 p-3 rounded-ui-base bg-[var(--nim-bg-secondary)] text-ui-body text-[var(--nim-text-muted)]">
             <div className="index-build-dialog-spinner w-5 h-5 rounded-ui-full border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] animate-spin" />
             <span>Building index... This may take a few minutes.</span>
           </div>

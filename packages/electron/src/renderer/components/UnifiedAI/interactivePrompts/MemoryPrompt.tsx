@@ -63,11 +63,11 @@ export function MemoryPromptIndicator({
         <div className="memory-prompt-icon flex items-center justify-center text-[var(--nim-primary)]">
           <MemoryIcon />
         </div>
-        <span className="memory-prompt-label text-xs text-[var(--nim-text-muted)]">
+        <span className="memory-prompt-label text-ui-compact text-[var(--nim-text-muted)]">
           {isSaving ? 'Saving...' : 'Adding to memory'}
         </span>
         <button
-          className="memory-prompt-target-button nim-btn-secondary gap-1 px-2 py-1 text-xs font-medium"
+          className="memory-prompt-target-button nim-btn-secondary gap-1 px-2 py-1 text-ui-compact font-medium"
           onClick={toggleTarget}
           disabled={isSaving}
           title="Use arrow keys to switch"

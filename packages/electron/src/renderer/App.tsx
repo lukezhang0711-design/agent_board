@@ -2232,7 +2232,7 @@ export default function App() {
                 <div className="flex-1 flex items-center justify-center text-nim-muted">
                   <div className="text-center">
                     <p>Agent mode requires a workspace</p>
-                    <p className="mt-2 text-sm">Open a workspace to use agent features</p>
+                    <p className="mt-2 text-ui-body">Open a workspace to use agent features</p>
                   </div>
                 </div>
               )}

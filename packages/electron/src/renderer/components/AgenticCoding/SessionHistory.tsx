@@ -2792,7 +2792,7 @@ const SessionHistoryComponent: React.FC = () => {
         <div className="session-history-filters flex items-center px-3 py-2 border-b border-[var(--nim-border)] gap-2 shrink-0">
           <div className="session-history-sort-dropdown ml-auto relative">
             <button
-              className="session-history-sort-button flex items-center justify-center px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-150 outline-none hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] [&_svg]:block"
+              className="session-history-sort-button flex items-center justify-center px-2 py-1 text-ui-compact rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-150 outline-none hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] [&_svg]:block"
               onClick={toggleSortDropdown}
               title={`Sorted by: ${sortBy === 'updated' ? 'Last Updated' : 'Created'}`}
               aria-label="Sort sessions"
@@ -3063,7 +3063,7 @@ const SessionHistoryComponent: React.FC = () => {
         <div className="session-history-section-label px-3 py-2 text-ui-caption font-semibold text-[var(--nim-text-faint)] uppercase tracking-wider border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] shrink-0">Agent Sessions</div>
         <div className="session-history-empty flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-text-faint)] text-ui-body">
           <p className="my-1">No sessions yet</p>
-          <p className="session-history-empty-hint my-1 text-xs text-[var(--nim-text-faint)]">
+          <p className="session-history-empty-hint my-1 text-ui-compact text-[var(--nim-text-faint)]">
             Create a new session to get started
           </p>
         </div>
@@ -3286,13 +3286,13 @@ const SessionHistoryComponent: React.FC = () => {
           </div>
         )}
         {isSearching && (
-          <div className="session-history-search-status absolute right-12 top-1/2 -translate-y-1/2 text-xs text-[var(--nim-text-faint)] pointer-events-none">
+          <div className="session-history-search-status absolute right-12 top-1/2 -translate-y-1/2 text-ui-compact text-[var(--nim-text-faint)] pointer-events-none">
             {contentSearchTriggered ? 'Searching messages...' : 'Searching...'}
           </div>
         )}
         {!isSearching && searchQuery && !contentSearchTriggered && (
           <button
-            className="session-history-content-search-hint absolute right-12 top-1/2 -translate-y-1/2 text-xs text-[var(--nim-text-muted)] bg-transparent border-none cursor-pointer flex items-center gap-1 px-2 py-1 rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-primary)]"
+            className="session-history-content-search-hint absolute right-12 top-1/2 -translate-y-1/2 text-ui-compact text-[var(--nim-text-muted)] bg-transparent border-none cursor-pointer flex items-center gap-1 px-2 py-1 rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-primary)]"
             onClick={searchMessageContents}
             title="Press Tab to search message contents"
           >
@@ -3326,13 +3326,13 @@ const SessionHistoryComponent: React.FC = () => {
             </button>
             {showSearchFilters && (
               <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg shadow-lg overflow-hidden">
-                <div className="px-3 py-2 text-xs font-medium text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
+                <div className="px-3 py-2 text-ui-compact font-medium text-[var(--nim-text-muted)] border-b border-[var(--nim-border)]">
                   Time Range
                 </div>
                 {(Object.entries(TIME_RANGE_LABELS) as [SearchTimeRange, string][]).map(([value, label]) => (
                   <button
                     key={value}
-                    className={`w-full px-3 py-2 text-left text-sm transition-colors ${
+                    className={`w-full px-3 py-2 text-left text-ui-body transition-colors ${
                       searchFilters.timeRange === value
                         ? 'bg-[var(--nim-bg-selected)] text-[var(--nim-primary)]'
                         : 'text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -3347,13 +3347,13 @@ const SessionHistoryComponent: React.FC = () => {
                     {searchFilters.timeRange === value && <span className="float-right">✓</span>}
                   </button>
                 ))}
-                <div className="px-3 py-2 text-xs font-medium text-[var(--nim-text-muted)] border-t border-b border-[var(--nim-border)]">
+                <div className="px-3 py-2 text-ui-compact font-medium text-[var(--nim-text-muted)] border-t border-b border-[var(--nim-border)]">
                   Message Type
                 </div>
                 {(Object.entries(DIRECTION_LABELS) as [SearchDirection, string][]).map(([value, label]) => (
                   <button
                     key={value}
-                    className={`w-full px-3 py-2 text-left text-sm transition-colors ${
+                    className={`w-full px-3 py-2 text-left text-ui-body transition-colors ${
                       searchFilters.direction === value
                         ? 'bg-[var(--nim-bg-selected)] text-[var(--nim-primary)]'
                         : 'text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -3396,7 +3396,7 @@ const SessionHistoryComponent: React.FC = () => {
       </div>
       <div className="session-history-filters flex items-center px-3 py-2 border-b border-[var(--nim-border)] gap-2 shrink-0">
         <button
-          className={`session-history-archive-filter flex items-center justify-center px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 outline-none hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] [&_svg]:block ${showArchived ? 'bg-[var(--nim-primary)] border-[var(--nim-primary)] text-white hover:opacity-90' : ''}`}
+          className={`session-history-archive-filter flex items-center justify-center px-2 py-1 text-ui-compact rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] cursor-pointer transition-all duration-150 outline-none hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] [&_svg]:block ${showArchived ? 'bg-[var(--nim-primary)] border-[var(--nim-primary)] text-white hover:opacity-90' : ''}`}
           onClick={toggleShowArchived}
           title={showArchived ? 'Hide archived sessions' : 'Show archived sessions'}
           aria-label={showArchived ? 'Hide archived sessions' : 'Show archived sessions'}
@@ -3429,7 +3429,7 @@ const SessionHistoryComponent: React.FC = () => {
         })()}
         <div className="session-history-sort-dropdown ml-auto relative">
           <button
-            className="session-history-sort-button flex items-center justify-center px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-150 outline-none hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] [&_svg]:block"
+            className="session-history-sort-button flex items-center justify-center px-2 py-1 text-ui-compact rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)] cursor-pointer transition-all duration-150 outline-none hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)] hover:text-[var(--nim-text)] [&_svg]:block"
             onClick={toggleSortDropdown}
             title={`Sorted by: ${sortBy === 'updated' ? 'Last Updated' : 'Created'}`}
             aria-label="Sort sessions"
@@ -3468,7 +3468,7 @@ const SessionHistoryComponent: React.FC = () => {
       </div>
       {(selectedSessionIds.size > 0 || selectedGroupIds.size > 0) && (
         <div className="session-history-bulk-actions flex items-center justify-between px-3 py-2 bg-[var(--nim-bg-selected)] border-b border-[var(--nim-border)] gap-2">
-          <span className="session-history-bulk-count text-xs font-medium text-[var(--nim-text)]">{selectedSessionIds.size + selectedGroupIds.size} selected</span>
+          <span className="session-history-bulk-count text-ui-compact font-medium text-[var(--nim-text)]">{selectedSessionIds.size + selectedGroupIds.size} selected</span>
           <div className="session-history-bulk-buttons flex gap-2">
             {showArchived ? (
               <button className="session-history-bulk-button flex items-center gap-1 px-2 py-1 text-ui-caption font-medium rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] [&_svg]:shrink-0" onClick={handleBulkUnarchive} title="Unarchive selected">
@@ -3506,7 +3506,7 @@ const SessionHistoryComponent: React.FC = () => {
           // No results for the active search/tag filter - offer a clear affordance
           <div className="session-history-empty flex flex-col items-center justify-center px-4 py-8 text-center text-[var(--nim-text-faint)] text-ui-body">
             <p className="my-1">No matching sessions found</p>
-            <p className="session-history-empty-hint my-1 text-xs text-[var(--nim-text-faint)]">
+            <p className="session-history-empty-hint my-1 text-ui-compact text-[var(--nim-text-faint)]">
               {hasSearchQuery && hasTagFilter ? 'Adjust your search or ' : hasSearchQuery ? 'Try a different search term or ' : 'Remove the active tag filter or '}
               <button
                 className="session-history-clear-search-link bg-transparent border-none text-[var(--nim-primary)] cursor-pointer underline p-0 text-inherit font-inherit hover:opacity-80"
@@ -3543,7 +3543,7 @@ const SessionHistoryComponent: React.FC = () => {
                   return (
                     <div className="collapsible-group mb-1">
                       <button
-                        className="collapsible-group-header flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-xs font-semibold text-nim-muted text-left transition-colors duration-150 hover:bg-nim-hover"
+                        className="collapsible-group-header flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-compact font-semibold text-nim-muted text-left transition-colors duration-150 hover:bg-nim-hover"
                         onClick={() => handleToggleGroup(entry.groupKey)}
                         aria-expanded={entry.isExpanded}
                         aria-label={`${entry.groupKey} group, ${entry.isExpanded ? 'expanded' : 'collapsed'}`}
@@ -3554,7 +3554,7 @@ const SessionHistoryComponent: React.FC = () => {
                           className={`collapsible-group-chevron shrink-0 text-nim-faint transition-transform duration-200 ${entry.isExpanded ? 'rotate-90' : ''}`}
                         />
                         <span className="collapsible-group-title flex-1 overflow-hidden text-ellipsis whitespace-nowrap uppercase tracking-wide">{entry.groupKey}</span>
-                        <span className="collapsible-group-count shrink-0 text-[0.625rem] text-nim-faint font-normal">{entry.itemCount}</span>
+                        <span className="collapsible-group-count shrink-0 text-ui-micro text-nim-faint font-normal">{entry.itemCount}</span>
                       </button>
                     </div>
                   );

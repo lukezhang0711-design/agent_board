@@ -266,13 +266,13 @@ export function OpenCodePanel({
               The OpenCode CLI is required to run the agent.
             </p>
             <button
-              className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90"
+              className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90"
               onClick={handleInstall}
             >
               Install OpenCode CLI
             </button>
             {installError && (
-              <div className="text-xs mt-2 text-[var(--nim-error)]">
+              <div className="text-ui-compact mt-2 text-[var(--nim-error)]">
                 {installError}
                 <p className="mt-1 text-[var(--nim-text-muted)]">
                   Try running manually: <code className="text-[var(--nim-code-text)] bg-[var(--nim-code-bg)] px-1 rounded-ui-base">npm i -g opencode-ai</code>
@@ -354,7 +354,7 @@ export function OpenCodePanel({
               />
               <button
                 data-testid="opencode-lmstudio-connect"
-                className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90 disabled:opacity-60 disabled:cursor-wait"
+                className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all bg-[var(--nim-primary)] text-white border border-[var(--nim-primary)] hover:opacity-90 disabled:opacity-60 disabled:cursor-wait"
                 onClick={handleConnectLMStudio}
                 disabled={lmStudioStatus === 'configuring' || !lmStudioBaseUrl.trim()}
               >
@@ -363,7 +363,7 @@ export function OpenCodePanel({
               {lmStudioBridgeConfigured && (
                 <button
                   data-testid="opencode-lmstudio-disconnect"
-                  className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
+                  className="inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={handleDisconnectLMStudio}
                   disabled={lmStudioStatus === 'configuring'}
                 >
@@ -372,12 +372,12 @@ export function OpenCodePanel({
               )}
             </div>
             {lmStudioBridgeConfigured && (
-              <p className="text-xs text-[var(--nim-text-muted)]">
+              <p className="text-ui-compact text-[var(--nim-text-muted)]">
                 Bridge active with {lmStudioBridgeModelCount} {lmStudioBridgeModelCount === 1 ? 'model' : 'models'}. Select one above to use it as the default.
               </p>
             )}
             {lmStudioMessage && (
-              <div className={`text-xs mt-2 ${lmStudioStatus === 'error' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}>
+              <div className={`text-ui-compact mt-2 ${lmStudioStatus === 'error' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}>
                 {lmStudioMessage}
               </div>
             )}
@@ -411,7 +411,7 @@ export function OpenCodePanel({
                   className="api-key-input flex-1 py-2 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
                 />
                 <button
-                  className={`test-button inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium whitespace-nowrap cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] ${
+                  className={`test-button inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-ui-body font-medium whitespace-nowrap cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] ${
                     config.testStatus === 'testing' ? 'opacity-60 cursor-wait' : ''
                   } ${config.testStatus === 'success' ? 'text-[var(--nim-success)] border-[var(--nim-success)]' : ''} ${
                     config.testStatus === 'error' ? 'text-[var(--nim-error)] border-[var(--nim-error)]' : ''
@@ -425,13 +425,13 @@ export function OpenCodePanel({
                 </button>
               </div>
               {config.testMessage && config.testStatus === 'error' && (
-                <div className="test-error text-xs mt-2 text-[var(--nim-error)]">{config.testMessage}</div>
+                <div className="test-error text-ui-compact mt-2 text-[var(--nim-error)]">{config.testMessage}</div>
               )}
             </div>
           </SettingsSection>
 
           {configError && (
-            <div className="provider-panel-section py-2 text-xs text-[var(--nim-error)]">
+            <div className="provider-panel-section py-2 text-ui-compact text-[var(--nim-error)]">
               {configError}
             </div>
           )}

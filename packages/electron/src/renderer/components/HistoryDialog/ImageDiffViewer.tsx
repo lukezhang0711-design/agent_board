@@ -23,19 +23,19 @@ export function ImageDiffViewer({
       <div className="image-diff-controls flex items-center gap-4 px-4 py-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg)]">
         <div className="image-diff-mode-toggle flex gap-1">
           <button
-            className={`image-diff-mode-button px-3 py-2 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] ${viewMode === 'side-by-side' ? 'active !bg-[var(--nim-primary)] !text-white !border-[var(--nim-primary)]' : ''}`}
+            className={`image-diff-mode-button px-3 py-2 text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] ${viewMode === 'side-by-side' ? 'active !bg-[var(--nim-primary)] !text-white !border-[var(--nim-primary)]' : ''}`}
             onClick={() => setViewMode('side-by-side')}
           >
             Side by Side
           </button>
           <button
-            className={`image-diff-mode-button px-3 py-2 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] ${viewMode === 'swipe' ? 'active !bg-[var(--nim-primary)] !text-white !border-[var(--nim-primary)]' : ''}`}
+            className={`image-diff-mode-button px-3 py-2 text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] ${viewMode === 'swipe' ? 'active !bg-[var(--nim-primary)] !text-white !border-[var(--nim-primary)]' : ''}`}
             onClick={() => setViewMode('swipe')}
           >
             Swipe
           </button>
           <button
-            className={`image-diff-mode-button px-3 py-2 text-[13px] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] ${viewMode === 'onion-skin' ? 'active !bg-[var(--nim-primary)] !text-white !border-[var(--nim-primary)]' : ''}`}
+            className={`image-diff-mode-button px-3 py-2 text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] ${viewMode === 'onion-skin' ? 'active !bg-[var(--nim-primary)] !text-white !border-[var(--nim-primary)]' : ''}`}
             onClick={() => setViewMode('onion-skin')}
           >
             Overlay
@@ -44,7 +44,7 @@ export function ImageDiffViewer({
 
         {viewMode === 'swipe' && (
           <div className="image-diff-slider-container flex items-center gap-2 ml-auto">
-            <label className="text-[13px] text-[var(--nim-text-muted)]">Position</label>
+            <label className="text-ui-body text-[var(--nim-text-muted)]">Position</label>
             <input
               type="range"
               min="0"
@@ -58,7 +58,7 @@ export function ImageDiffViewer({
 
         {viewMode === 'onion-skin' && (
           <div className="image-diff-slider-container flex items-center gap-2 ml-auto">
-            <label className="text-[13px] text-[var(--nim-text-muted)]">Opacity</label>
+            <label className="text-ui-body text-[var(--nim-text-muted)]">Opacity</label>
             <input
               type="range"
               min="0"
@@ -75,13 +75,13 @@ export function ImageDiffViewer({
         {viewMode === 'side-by-side' && (
           <div className="image-diff-side-by-side flex gap-4 w-full h-full p-4">
             <div className="image-diff-panel flex-1 flex flex-col min-w-0">
-              <div className="image-diff-label text-[13px] font-medium text-[var(--nim-text-muted)] mb-2 text-center">Old Version</div>
+              <div className="image-diff-label text-ui-body font-medium text-[var(--nim-text-muted)] mb-2 text-center">Old Version</div>
               <div className="image-diff-container flex-1 flex items-center justify-center bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base overflow-auto p-4 [&_img]:max-w-full [&_img]:max-h-full [&_img]:object-contain [&_img]:block">
                 <img src={nimAssetUrl(oldImagePath)} alt="Old version" />
               </div>
             </div>
             <div className="image-diff-panel flex-1 flex flex-col min-w-0">
-              <div className="image-diff-label text-[13px] font-medium text-[var(--nim-text-muted)] mb-2 text-center">New Version</div>
+              <div className="image-diff-label text-ui-body font-medium text-[var(--nim-text-muted)] mb-2 text-center">New Version</div>
               <div className="image-diff-container flex-1 flex items-center justify-center bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-base overflow-auto p-4 [&_img]:max-w-full [&_img]:max-h-full [&_img]:object-contain [&_img]:block">
                 <img src={nimAssetUrl(newImagePath)} alt="New version" />
               </div>

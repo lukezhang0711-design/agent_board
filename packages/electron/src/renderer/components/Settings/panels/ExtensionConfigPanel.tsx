@@ -113,7 +113,7 @@ export const ExtensionConfigPanel: React.FC<ExtensionConfigPanelProps> = ({
     <div className="extension-config-panel flex flex-col gap-4">
       {config.title && (
         <div className="extension-config-header mb-2">
-          <h4 className="text-base font-medium text-[var(--nim-text)]">{config.title}</h4>
+          <h4 className="text-ui-subhead font-medium text-[var(--nim-text)]">{config.title}</h4>
         </div>
       )}
       <div className="extension-config-fields flex flex-col gap-4">
@@ -162,7 +162,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
               disabled={disabled}
               className="w-4 h-4 rounded-ui-base border-[var(--nim-border)] accent-[var(--nim-primary)]"
             />
-            <span className="config-field-label text-sm text-[var(--nim-text)]">{description || propertyKey}</span>
+            <span className="config-field-label text-ui-body text-[var(--nim-text)]">{description || propertyKey}</span>
           </label>
         </div>
       );
@@ -173,12 +173,12 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
         return (
           <div className="config-field config-field-select py-2">
             <label className="config-field-label-block flex flex-col gap-2">
-              <span className="text-sm font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
+              <span className="text-ui-body font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
               <select
                 value={String(value ?? '')}
                 onChange={(e) => onChange(e.target.value)}
                 disabled={disabled}
-                className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm"
+                className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-ui-body"
               >
                 {property.enum.map((opt, idx) => (
                   <option key={String(opt)} value={String(opt)}>
@@ -195,7 +195,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
       return (
         <div className="config-field config-field-text py-2">
           <label className="config-field-label-block flex flex-col gap-2">
-            <span className="text-sm font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
+            <span className="text-ui-body font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
             <input
               type="text"
               value={String(value ?? '')}
@@ -203,7 +203,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
               placeholder={placeholder}
               pattern={property.pattern}
               disabled={disabled}
-              className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
+              className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-ui-body placeholder:text-[var(--nim-text-faint)]"
             />
           </label>
         </div>
@@ -213,7 +213,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
       return (
         <div className="config-field config-field-number py-2">
           <label className="config-field-label-block flex flex-col gap-2">
-            <span className="text-sm font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
+            <span className="text-ui-body font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
             <input
               type="number"
               value={value !== undefined ? Number(value) : ''}
@@ -222,7 +222,7 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
               max={property.maximum}
               placeholder={placeholder}
               disabled={disabled}
-              className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)]"
+              className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-ui-body placeholder:text-[var(--nim-text-faint)]"
             />
           </label>
         </div>
@@ -232,8 +232,8 @@ const ConfigField: React.FC<ConfigFieldProps> = ({
       // Fallback for unsupported types
       return (
         <div className="config-field config-field-unsupported py-2 flex flex-col gap-1">
-          <span className="config-field-label text-sm font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
-          <span className="config-field-value text-sm text-[var(--nim-text-muted)] font-mono">{JSON.stringify(value)}</span>
+          <span className="config-field-label text-ui-body font-medium text-[var(--nim-text)]">{description || propertyKey}</span>
+          <span className="config-field-value text-ui-body text-[var(--nim-text-muted)] font-mono">{JSON.stringify(value)}</span>
         </div>
       );
   }

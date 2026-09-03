@@ -99,11 +99,11 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
           <div className="feedback-intake-hero mb-5 overflow-hidden rounded-ui-lg border border-[var(--nim-border)] bg-[linear-gradient(135deg,rgba(56,189,248,0.10),rgba(251,191,36,0.08),rgba(255,255,255,0.02))] px-6 py-5">
             <h2
               id="feedback-intake-title"
-              className="m-0 text-[24px] font-semibold leading-[1.1] text-[var(--nim-text)]"
+              className="m-0 text-ui-headline font-semibold leading-[1.1] text-[var(--nim-text)]"
             >
               Send better feedback with your Agent
             </h2>
-            <p className="mt-2 max-w-[42ch] text-[13px] leading-relaxed text-[var(--nim-text-muted)]">
+            <p className="mt-2 max-w-[42ch] text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
               Use your Agent to improve your bug reports and feature requests. Your agent will help draft it, and you
               approve everything before GitHub opens.
             </p>
@@ -125,9 +125,9 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                   <span className="flex h-9 w-9 items-center justify-center rounded-ui-lg bg-[rgba(239,68,68,0.12)] text-[var(--nim-error)]">
                     <MaterialSymbol icon="bug_report" size={20} />
                   </span>
-                  <span className="text-[14px] font-semibold leading-none">Bug report</span>
+                  <span className="text-ui-body font-semibold leading-none">Bug report</span>
                 </div>
-                <p className="m-0 text-[12px] leading-relaxed">
+                <p className="m-0 text-ui-compact leading-relaxed">
                   Broken behavior, crashes, sync issues, or regressions.
                 </p>
               </button>
@@ -146,9 +146,9 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                   <span className="flex h-9 w-9 items-center justify-center rounded-ui-lg bg-[rgba(245,158,11,0.14)] text-[var(--nim-warning)]">
                     <MaterialSymbol icon="lightbulb" size={20} />
                   </span>
-                  <span className="text-[14px] font-semibold leading-none">Feature request</span>
+                  <span className="text-ui-body font-semibold leading-none">Feature request</span>
                 </div>
-                <p className="m-0 text-[12px] leading-relaxed">
+                <p className="m-0 text-ui-compact leading-relaxed">
                   Missing capabilities, workflow improvements, or UX changes.
                 </p>
               </button>
@@ -171,10 +171,10 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                         data-testid="feedback-intake-consent"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="m-0 text-[13px] font-medium leading-snug text-[var(--nim-text)]">
+                        <p className="m-0 text-ui-body font-medium leading-snug text-[var(--nim-text)]">
                           Include logs and environment details
                         </p>
-                        <p className="mt-2 text-[12px] leading-relaxed text-[var(--nim-text-muted)]">
+                        <p className="mt-2 text-ui-compact leading-relaxed text-[var(--nim-text-muted)]">
                           Logs may include file paths, workspace names, and error details. The
                           assistant anonymizes them first, and you review the final report before it
                           is posted.
@@ -199,10 +199,10 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
                         data-testid="feedback-intake-mockup"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="m-0 text-[13px] font-medium leading-snug text-[var(--nim-text)]">
+                        <p className="m-0 text-ui-body font-medium leading-snug text-[var(--nim-text)]">
                           Explore the idea with a UX mockup first
                         </p>
-                        <p className="mt-2 text-[12px] leading-relaxed text-[var(--nim-text-muted)]">
+                        <p className="mt-2 text-ui-compact leading-relaxed text-[var(--nim-text-muted)]">
                           Best for interface or workflow changes. The assistant can sketch a mockup,
                           refine it with you, and include that visual direction in the request.
                         </p>
@@ -215,7 +215,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
 
             <button
               type="button"
-              className={`feedback-intake-start-button flex w-full items-center justify-between rounded-ui-lg px-4 py-3 text-left text-[13px] font-semibold transition-all duration-150 ${
+              className={`feedback-intake-start-button flex w-full items-center justify-between rounded-ui-lg px-4 py-3 text-left text-ui-body font-semibold transition-all duration-150 ${
                 selectedKind
                   ? 'border border-[var(--nim-primary)] bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)]'
                   : 'border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text-disabled)]'
@@ -241,14 +241,14 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
         </div>
 
         <div className="border-t border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] px-8 pt-4 pb-4">
-          <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
+          <p className="m-0 mb-2 text-ui-caption font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
             Other ways to reach us
           </p>
           <ul className="m-0 flex list-none flex-col gap-1 p-0">
             <li>
               <button
                 type="button"
-                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-ui-body text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(ISSUES_URL, 'issues')}
                 data-testid="feedback-intake-issues-link"
               >
@@ -263,7 +263,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <li>
               <button
                 type="button"
-                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-ui-body text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(DISCUSSIONS_URL, 'discussions')}
                 data-testid="feedback-intake-discussions-link"
               >
@@ -278,7 +278,7 @@ export const FeedbackIntakeDialog: React.FC<FeedbackIntakeDialogProps> = ({
             <li>
               <button
                 type="button"
-                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-[13px] text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+                className="group -ml-2 inline-flex cursor-pointer items-center gap-2 rounded-ui-base bg-transparent px-2 py-1 text-ui-body text-[var(--nim-text-muted)] transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
                 onClick={() => handleOpenExternal(SUPPORT_EMAIL_URL, 'email')}
                 data-testid="feedback-intake-email-link"
               >

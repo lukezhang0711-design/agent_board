@@ -86,7 +86,7 @@ export const FilePathBreadcrumb: React.FC<FilePathBreadcrumbProps> = ({
   }, [revealFolder, revealFile, setOpenFileRequest, setWindowMode]);
 
   return (
-    <div className={`unified-header-breadcrumb flex items-center gap-2 text-[13px] min-w-0 overflow-hidden ${className}`.trim()}>
+    <div className={`unified-header-breadcrumb flex items-center gap-2 text-ui-body min-w-0 overflow-hidden ${className}`.trim()}>
       {breadcrumbSegments.map((segment, index) => {
         const isLast = index === breadcrumbSegments.length - 1;
         const isClickable = (!isLast && segment.folderPath) || (isLast && Boolean(filePath));
@@ -118,7 +118,7 @@ export const FilePathBreadcrumb: React.FC<FilePathBreadcrumbProps> = ({
               )}
               {segment.name}
             </span>
-            {!isLast && <span className="breadcrumb-separator text-[var(--nim-text-faint)] text-[11px]">/</span>}
+            {!isLast && <span className="breadcrumb-separator text-[var(--nim-text-faint)] text-ui-caption">/</span>}
           </React.Fragment>
         );
       })}

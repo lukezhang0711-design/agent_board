@@ -380,7 +380,7 @@ Best for quick edits and tasks that do not require multi-file operations.`,
               .map((item) => (
                 <div
                   key={item.id}
-                  className={`settings-sidebar-item flex items-center gap-2 px-2 py-2 rounded-ui-base cursor-pointer text-sm transition-colors ${
+                  className={`settings-sidebar-item flex items-center gap-2 px-2 py-2 rounded-ui-base cursor-pointer text-ui-body transition-colors ${
                     selectedCategory === item.id
                       ? 'bg-[var(--nim-bg-selected)] text-[var(--nim-text)]'
                       : 'text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]'
@@ -414,7 +414,7 @@ Best for quick edits and tasks that do not require multi-file operations.`,
       {tooltip &&
         createPortal(
           <div
-            className="settings-sidebar-tooltip fixed z-[10000] max-w-[280px] px-3 py-2 bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-lg shadow-lg text-sm text-[var(--nim-text)] whitespace-pre-wrap pointer-events-none transform -translate-y-1/2"
+            className="settings-sidebar-tooltip fixed z-[10000] max-w-[280px] px-3 py-2 bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] rounded-ui-lg shadow-lg text-ui-body text-[var(--nim-text)] whitespace-pre-wrap pointer-events-none transform -translate-y-1/2"
             style={{ top: `${tooltip.top}px`, left: `${tooltip.left}px` }}
           >
             {tooltip.text}

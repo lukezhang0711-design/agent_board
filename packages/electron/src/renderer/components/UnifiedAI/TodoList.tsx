@@ -62,15 +62,15 @@ function TodoItem({ todo }: TodoItemProps) {
     >
       <div className="todo-item-icon shrink-0 w-4 h-4 flex items-center justify-center mt-1">
         {todo.status === 'pending' && (
-          <span className="todo-icon-pending text-[var(--nim-text-faint)] text-sm">○</span>
+          <span className="todo-icon-pending text-[var(--nim-text-faint)] text-ui-body">○</span>
         )}
         {todo.status === 'in_progress' && (
-          <span className="todo-icon-in-progress text-[var(--nim-primary)] text-sm relative">
+          <span className="todo-icon-in-progress text-[var(--nim-primary)] text-ui-body relative">
             <span className="spinner inline-block w-3 h-3 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
           </span>
         )}
         {todo.status === 'completed' && (
-          <span className="todo-icon-completed text-[var(--nim-success)] text-sm">●</span>
+          <span className="todo-icon-completed text-[var(--nim-success)] text-ui-body">●</span>
         )}
       </div>
       <div

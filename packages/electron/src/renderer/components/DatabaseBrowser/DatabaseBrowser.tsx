@@ -129,7 +129,7 @@ function SyntaxHighlightedJSON({ data }: { data: object }) {
   };
 
   return (
-    <pre className="m-0 whitespace-pre font-mono text-[13px] leading-relaxed text-[var(--nim-text)]">
+    <pre className="m-0 whitespace-pre font-mono text-ui-body leading-relaxed text-[var(--nim-text)]">
       {renderValue(data)}
     </pre>
   );
@@ -539,19 +539,19 @@ export function DatabaseBrowser() {
     <div className="database-browser flex h-screen w-screen overflow-hidden font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif] before:content-[''] before:fixed before:inset-x-0 before:top-0 before:h-10 before:z-[1000] before:pointer-events-none before:[-webkit-app-region:drag] bg-nim text-nim">
       <div className="database-browser-sidebar w-[250px] flex flex-col border-r border-[var(--nim-border)] bg-nim-secondary">
         <div className="sidebar-header flex items-center justify-between p-4 border-b border-[var(--nim-border)] relative z-[1001]">
-          <h2 className="text-base font-semibold m-0">Tables</h2>
-          <button onClick={loadTables} className="refresh-button bg-transparent border-none text-xl cursor-pointer py-1 px-2 rounded-ui-base [-webkit-app-region:no-drag] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]" title="Refresh tables">
+          <h2 className="text-ui-subhead font-semibold m-0">Tables</h2>
+          <button onClick={loadTables} className="refresh-button bg-transparent border-none text-ui-title cursor-pointer py-1 px-2 rounded-ui-base [-webkit-app-region:no-drag] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]" title="Refresh tables">
             ↻
           </button>
         </div>
 
         <div className="tables-list flex-1 overflow-y-auto p-2">
           {loading && tables.length === 0 && <div className="loading py-5 text-center text-[var(--nim-text-muted)]">Loading tables...</div>}
-          {error && <div className="error text-[#ff6b6b] bg-[rgba(255,107,107,0.1)] p-3 rounded-ui-base mt-2 text-[13px]">{error}</div>}
+          {error && <div className="error text-[#ff6b6b] bg-[rgba(255,107,107,0.1)] p-3 rounded-ui-base mt-2 text-ui-body">{error}</div>}
           {tables.map(table => (
             <div
               key={table}
-              className={`table-item py-2 px-3 cursor-pointer rounded-ui-base mb-1 text-sm hover:bg-[var(--nim-bg-hover)] ${selectedTable === table ? 'bg-[var(--nim-primary)] text-white' : ''}`}
+              className={`table-item py-2 px-3 cursor-pointer rounded-ui-base mb-1 text-ui-body hover:bg-[var(--nim-bg-hover)] ${selectedTable === table ? 'bg-[var(--nim-primary)] text-white' : ''}`}
               onClick={() => handleTableSelect(table)}
             >
               {table}
@@ -564,14 +564,14 @@ export function DatabaseBrowser() {
         <div className={`query-panel border border-[var(--nim-border)] rounded-ui-lg transition-all duration-200 bg-nim-secondary ${sqlExpanded ? 'p-4' : 'p-0'}`}>
           <div className={`query-header flex items-center justify-between cursor-pointer select-none ${!sqlExpanded ? 'py-3 px-4' : 'mb-3'}`} onClick={() => setSqlExpanded(!sqlExpanded)}>
             <div className="query-title flex items-center gap-2">
-              <span className="expand-icon text-xs text-[var(--nim-text-muted)] transition-transform duration-200">{sqlExpanded ? '▼' : '▶'}</span>
-              <h3 className="text-sm font-semibold m-0">SQL Query</h3>
+              <span className="expand-icon text-ui-compact text-[var(--nim-text-muted)] transition-transform duration-200">{sqlExpanded ? '▼' : '▶'}</span>
+              <h3 className="text-ui-body font-semibold m-0">SQL Query</h3>
             </div>
             {sqlExpanded && (
               <button
                 onClick={(e) => { e.stopPropagation(); executeQuery(); }}
                 disabled={loading}
-                className="execute-button text-white border-none py-2 px-4 rounded-ui-base text-sm cursor-pointer font-medium bg-[var(--nim-primary)] hover:enabled:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="execute-button text-white border-none py-2 px-4 rounded-ui-base text-ui-body cursor-pointer font-medium bg-[var(--nim-primary)] hover:enabled:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Execute
               </button>
@@ -580,7 +580,7 @@ export function DatabaseBrowser() {
           {sqlExpanded && (
             <>
               <textarea
-                className="query-input w-full border border-[var(--nim-border)] rounded-ui-base p-3 font-mono text-[13px] resize-y bg-[var(--nim-bg)] text-[var(--nim-text)] placeholder:text-[var(--nim-text-faint)]"
+                className="query-input w-full border border-[var(--nim-border)] rounded-ui-base p-3 font-mono text-ui-body resize-y bg-[var(--nim-bg)] text-[var(--nim-text)] placeholder:text-[var(--nim-text-faint)]"
                 value={sqlQuery}
                 onChange={(e) => setSqlQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -592,7 +592,7 @@ export function DatabaseBrowser() {
                 placeholder="Enter SELECT query... (Cmd+Enter to execute)"
                 rows={5}
               />
-              {queryError && <div className="error text-[#ff6b6b] bg-[rgba(255,107,107,0.1)] p-3 rounded-ui-base mt-2 text-[13px]">{queryError}</div>}
+              {queryError && <div className="error text-[#ff6b6b] bg-[rgba(255,107,107,0.1)] p-3 rounded-ui-base mt-2 text-ui-body">{queryError}</div>}
             </>
           )}
         </div>
@@ -600,16 +600,16 @@ export function DatabaseBrowser() {
         {selectedTable && !queryResult && (
           <div className="table-view flex-1 border border-[var(--nim-border)] rounded-ui-lg flex flex-col overflow-hidden bg-nim-secondary">
             <div className="table-header flex items-center justify-between p-4 border-b border-[var(--nim-border)]">
-              <h3 className="text-base font-semibold m-0">Table: {selectedTable}</h3>
+              <h3 className="text-ui-subhead font-semibold m-0">Table: {selectedTable}</h3>
               <div className="tab-buttons flex gap-2">
                 <button
-                  className={`tab-button border border-[var(--nim-border)] py-2 px-4 rounded-ui-base cursor-pointer text-[13px] font-medium transition-all duration-200 ${activeTab === 'data' ? 'bg-[var(--nim-primary)] text-white border-[var(--nim-primary)]' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)]'}`}
+                  className={`tab-button border border-[var(--nim-border)] py-2 px-4 rounded-ui-base cursor-pointer text-ui-body font-medium transition-all duration-200 ${activeTab === 'data' ? 'bg-[var(--nim-primary)] text-white border-[var(--nim-primary)]' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)]'}`}
                   onClick={() => setActiveTab('data')}
                 >
                   Data
                 </button>
                 <button
-                  className={`tab-button border border-[var(--nim-border)] py-2 px-4 rounded-ui-base cursor-pointer text-[13px] font-medium transition-all duration-200 ${activeTab === 'schema' ? 'bg-[var(--nim-primary)] text-white border-[var(--nim-primary)]' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)]'}`}
+                  className={`tab-button border border-[var(--nim-border)] py-2 px-4 rounded-ui-base cursor-pointer text-ui-body font-medium transition-all duration-200 ${activeTab === 'schema' ? 'bg-[var(--nim-primary)] text-white border-[var(--nim-primary)]' : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)]'}`}
                   onClick={() => setActiveTab('schema')}
                 >
                   Schema
@@ -620,7 +620,7 @@ export function DatabaseBrowser() {
             {activeTab === 'schema' && tableSchema.length > 0 && (
               <div className="schema-tab flex-1 overflow-auto p-4">
                 <div className="table-container flex-1 overflow-auto border border-[var(--nim-border)] rounded-ui-base bg-nim">
-                  <table className="schema-table w-full border-collapse text-[13px]">
+                  <table className="schema-table w-full border-collapse text-ui-body">
                     <thead>
                       <tr>
                         <th className="py-2 px-3 text-left border-b border-r border-[var(--nim-border)] font-semibold text-nim-muted sticky top-0 z-[1] bg-nim-tertiary">Column</th>
@@ -632,7 +632,7 @@ export function DatabaseBrowser() {
                     <tbody>
                       {tableSchema.map(col => (
                         <tr key={col.column_name}>
-                          <td className="py-2 px-3 text-left border-b border-r border-[var(--nim-border)]"><code className="py-0.5 px-2 rounded-ui-base text-xs font-mono bg-nim-tertiary">{col.column_name}</code></td>
+                          <td className="py-2 px-3 text-left border-b border-r border-[var(--nim-border)]"><code className="py-0.5 px-2 rounded-ui-base text-ui-compact font-mono bg-nim-tertiary">{col.column_name}</code></td>
                           <td className="py-2 px-3 text-left border-b border-r border-[var(--nim-border)]">{col.data_type}</td>
                           <td className="py-2 px-3 text-left border-b border-r border-[var(--nim-border)]">{col.is_nullable}</td>
                           <td className="py-2 px-3 text-left border-b border-r border-[var(--nim-border)]">{col.column_default || '—'}</td>
@@ -648,9 +648,9 @@ export function DatabaseBrowser() {
               <div className="data-tab flex-1 flex flex-col overflow-hidden p-4 gap-3">
                 <div className="data-header flex items-center justify-between">
                   <div className="data-header-left flex items-center gap-3">
-                    <h4 className="text-sm font-semibold m-0">{tableData.totalCount} total rows{tableLoadTimeMs !== null && <span className="query-time font-normal text-[var(--nim-text-muted)] text-[13px]"> - {tableLoadTimeMs}ms</span>}</h4>
+                    <h4 className="text-ui-body font-semibold m-0">{tableData.totalCount} total rows{tableLoadTimeMs !== null && <span className="query-time font-normal text-[var(--nim-text-muted)] text-ui-body"> - {tableLoadTimeMs}ms</span>}</h4>
                     <button
-                      className="column-picker-button py-1 px-3 rounded-ui-base cursor-pointer text-[13px] border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="column-picker-button py-1 px-3 rounded-ui-base cursor-pointer text-ui-body border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onClick={() => setShowColumnPicker(!showColumnPicker)}
                       title="Show/hide columns"
                     >
@@ -658,9 +658,9 @@ export function DatabaseBrowser() {
                     </button>
                   </div>
                   {totalPages > 1 && (
-                    <div className="pagination flex items-center gap-3 text-[13px]">
+                    <div className="pagination flex items-center gap-3 text-ui-body">
                       <button
-                        className="py-1 px-3 rounded-ui-base cursor-pointer text-[13px] border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:enabled:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="py-1 px-3 rounded-ui-base cursor-pointer text-ui-body border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:enabled:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 0 || loading}
                       >
@@ -670,7 +670,7 @@ export function DatabaseBrowser() {
                         Page {currentPage + 1} of {totalPages}
                       </span>
                       <button
-                        className="py-1 px-3 rounded-ui-base cursor-pointer text-[13px] border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:enabled:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="py-1 px-3 rounded-ui-base cursor-pointer text-ui-body border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:enabled:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage >= totalPages - 1 || loading}
                       >
@@ -683,12 +683,12 @@ export function DatabaseBrowser() {
                 {showColumnPicker && tableData.rows.length > 0 && (
                   <div className="column-picker p-3 mb-2 rounded-ui-base border border-[var(--nim-border)] shadow-sm bg-nim-secondary">
                     <div className="column-picker-header flex items-center justify-between mb-3 pb-2 border-b border-[var(--nim-border)]">
-                      <strong className="text-[13px]">Show/Hide Columns</strong>
-                      <button className="bg-transparent border-none text-xl cursor-pointer p-0 w-6 h-6 flex items-center justify-center rounded-ui-base text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]" onClick={() => setShowColumnPicker(false)}>×</button>
+                      <strong className="text-ui-body">Show/Hide Columns</strong>
+                      <button className="bg-transparent border-none text-ui-title cursor-pointer p-0 w-6 h-6 flex items-center justify-center rounded-ui-base text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]" onClick={() => setShowColumnPicker(false)}>×</button>
                     </div>
                     <div className="column-picker-list grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2 max-h-[300px] overflow-y-auto">
                       {Object.keys(tableData.rows[0]).map(col => (
-                        <label key={col} className="column-picker-item flex items-center gap-2 py-1 px-2 rounded-ui-base cursor-pointer text-[13px] select-none hover:bg-[var(--nim-bg-hover)]">
+                        <label key={col} className="column-picker-item flex items-center gap-2 py-1 px-2 rounded-ui-base cursor-pointer text-ui-body select-none hover:bg-[var(--nim-bg-hover)]">
                           <input
                             type="checkbox"
                             className="cursor-pointer"
@@ -713,10 +713,10 @@ export function DatabaseBrowser() {
                       <div className="virtual-table-header bg-nim-tertiary" style={{ minWidth: visibleColumns.length * 180 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${visibleColumns.length}, 1fr)` }}>
                           {visibleColumns.map(key => (
-                            <div key={key} onClick={() => handleSort(key)} className="py-2 px-3 text-[13px] text-left border-b border-r border-[var(--nim-border)] font-semibold text-nim-muted cursor-pointer select-none hover:bg-nim-hover bg-nim-tertiary overflow-hidden text-ellipsis whitespace-nowrap last:border-r-0">
+                            <div key={key} onClick={() => handleSort(key)} className="py-2 px-3 text-ui-body text-left border-b border-r border-[var(--nim-border)] font-semibold text-nim-muted cursor-pointer select-none hover:bg-nim-hover bg-nim-tertiary overflow-hidden text-ellipsis whitespace-nowrap last:border-r-0">
                               {key}
                               {sortColumn === key && (
-                                <span className="text-[10px] ml-1">
+                                <span className="text-ui-micro ml-1">
                                   {sortDirection === 'asc' ? ' ↑' : ' ↓'}
                                 </span>
                               )}
@@ -733,14 +733,14 @@ export function DatabaseBrowser() {
                                 return (
                                   <div
                                     key={col}
-                                    className="virtual-table-cell clickable py-2 px-3 text-[13px] border-r border-[var(--nim-border)] overflow-hidden text-ellipsis whitespace-nowrap last:border-r-0 cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+                                    className="virtual-table-cell clickable py-2 px-3 text-ui-body border-r border-[var(--nim-border)] overflow-hidden text-ellipsis whitespace-nowrap last:border-r-0 cursor-pointer hover:bg-[var(--nim-bg-hover)]"
                                     onClick={() => handleCellClick(col, value, idx)}
                                     title="Click to view/edit"
                                   >
                                     {value === null ? (
                                       <span className="null-value text-[var(--nim-text-faint)] italic">NULL</span>
                                     ) : typeof value === 'object' ? (
-                                      <span className="json-preview text-[var(--nim-text-muted)] font-mono text-xs">{JSON.stringify(value)}</span>
+                                      <span className="json-preview text-[var(--nim-text-muted)] font-mono text-ui-compact">{JSON.stringify(value)}</span>
                                     ) : (
                                       String(value)
                                     )}
@@ -766,7 +766,7 @@ export function DatabaseBrowser() {
         {queryResult && (
           <div className="query-results flex-1 border border-[var(--nim-border)] rounded-ui-lg p-4 flex flex-col overflow-hidden gap-3 bg-nim-secondary">
             <div className="data-header flex items-center justify-between">
-              <h4 className="text-sm font-semibold m-0">Query Results ({queryResult.rowCount} rows){queryTimeMs !== null && <span className="query-time font-normal text-[var(--nim-text-muted)] text-[13px]"> - {queryTimeMs}ms</span>}</h4>
+              <h4 className="text-ui-body font-semibold m-0">Query Results ({queryResult.rowCount} rows){queryTimeMs !== null && <span className="query-time font-normal text-[var(--nim-text-muted)] text-ui-body"> - {queryTimeMs}ms</span>}</h4>
             </div>
 
             {loading && <div className="loading py-5 text-center text-[var(--nim-text-muted)]">Loading...</div>}
@@ -780,10 +780,10 @@ export function DatabaseBrowser() {
                   <div className="virtual-table-header bg-nim-tertiary" style={{ minWidth: columns.length * 180 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
                       {columns.map(key => (
-                        <div key={key} onClick={() => handleSort(key)} className="py-2 px-3 text-[13px] text-left border-b border-r border-[var(--nim-border)] font-semibold text-nim-muted cursor-pointer select-none hover:bg-nim-hover bg-nim-tertiary overflow-hidden text-ellipsis whitespace-nowrap last:border-r-0">
+                        <div key={key} onClick={() => handleSort(key)} className="py-2 px-3 text-ui-body text-left border-b border-r border-[var(--nim-border)] font-semibold text-nim-muted cursor-pointer select-none hover:bg-nim-hover bg-nim-tertiary overflow-hidden text-ellipsis whitespace-nowrap last:border-r-0">
                           {key}
                           {sortColumn === key && (
-                            <span className="text-[10px] ml-1">
+                            <span className="text-ui-micro ml-1">
                               {sortDirection === 'asc' ? ' ↑' : ' ↓'}
                             </span>
                           )}
@@ -800,14 +800,14 @@ export function DatabaseBrowser() {
                             return (
                               <div
                                 key={colIdx}
-                                className="virtual-table-cell clickable py-2 px-3 text-[13px] border-r border-[var(--nim-border)] overflow-hidden text-ellipsis whitespace-nowrap last:border-r-0 cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+                                className="virtual-table-cell clickable py-2 px-3 text-ui-body border-r border-[var(--nim-border)] overflow-hidden text-ellipsis whitespace-nowrap last:border-r-0 cursor-pointer hover:bg-[var(--nim-bg-hover)]"
                                 onClick={() => handleCellClick(col, value)}
                                 title="Click to expand"
                               >
                                 {value === null ? (
                                   <span className="null-value text-[var(--nim-text-faint)] italic">NULL</span>
                                 ) : typeof value === 'object' ? (
-                                  <span className="json-preview text-[var(--nim-text-muted)] font-mono text-xs">{JSON.stringify(value)}</span>
+                                  <span className="json-preview text-[var(--nim-text-muted)] font-mono text-ui-compact">{JSON.stringify(value)}</span>
                                 ) : (
                                   String(value)
                                 )}
@@ -838,19 +838,19 @@ export function DatabaseBrowser() {
         <div className="cell-modal-overlay fixed inset-0 flex items-center justify-center z-[2000] bg-black/50" onClick={() => { setExpandedCell(null); setModalEditing(false); }}>
           <div className="cell-modal flex flex-col w-[90vw] max-w-[800px] max-h-[80vh] overflow-hidden rounded-ui-lg border border-[var(--nim-border)] shadow-[0_8px_32px_rgba(0,0,0,0.3)] bg-nim" onClick={e => e.stopPropagation()}>
             <div className="cell-modal-header flex items-center justify-between py-3 px-4 border-b border-[var(--nim-border)] rounded-ui-lg-t bg-nim-secondary">
-              <h3 className="m-0 text-sm font-semibold text-[var(--nim-text)]">{expandedCell.column}</h3>
+              <h3 className="m-0 text-ui-body font-semibold text-[var(--nim-text)]">{expandedCell.column}</h3>
               <div className="cell-modal-actions flex items-center gap-2">
                 {modalEditing ? (
                   <>
                     <button
-                      className="border-none py-2 px-3 rounded-ui-base text-[13px] cursor-pointer bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="border-none py-2 px-3 rounded-ui-base text-ui-body cursor-pointer bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onClick={() => { setModalEditing(false); setModalEditError(null); }}
                       disabled={modalEditSaving}
                     >
                       Cancel
                     </button>
                     <button
-                      className="text-white border-none py-2 px-3 rounded-ui-base text-[13px] cursor-pointer min-w-[70px] bg-[var(--nim-primary)] hover:bg-[var(--nim-primary-hover)] disabled:opacity-50"
+                      className="text-white border-none py-2 px-3 rounded-ui-base text-ui-body cursor-pointer min-w-[70px] bg-[var(--nim-primary)] hover:bg-[var(--nim-primary-hover)] disabled:opacity-50"
                       onClick={handleModalEditSave}
                       disabled={modalEditSaving}
                     >
@@ -861,14 +861,14 @@ export function DatabaseBrowser() {
                   <>
                     {primaryKeys.length > 0 && expandedCell.rowIndex !== undefined && (
                       <button
-                        className="border-none py-2 px-3 rounded-ui-base text-[13px] cursor-pointer bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                        className="border-none py-2 px-3 rounded-ui-base text-ui-body cursor-pointer bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                         onClick={handleModalEditStart}
                       >
                         Edit
                       </button>
                     )}
                     <button
-                      className="text-white border-none py-2 px-3 rounded-ui-base text-[13px] cursor-pointer min-w-[70px] bg-[var(--nim-primary)] hover:bg-[var(--nim-primary-hover)]"
+                      className="text-white border-none py-2 px-3 rounded-ui-base text-ui-body cursor-pointer min-w-[70px] bg-[var(--nim-primary)] hover:bg-[var(--nim-primary-hover)]"
                       onClick={handleCopyCellValue}
                     >
                       {copiedCell ? 'Copied!' : 'Copy'}
@@ -876,7 +876,7 @@ export function DatabaseBrowser() {
                   </>
                 )}
                 <button
-                  className="cell-modal-close bg-transparent border-none text-2xl cursor-pointer p-0 w-8 h-8 flex items-center justify-center rounded-ui-base text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+                  className="cell-modal-close bg-transparent border-none text-ui-headline cursor-pointer p-0 w-8 h-8 flex items-center justify-center rounded-ui-base text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
                   onClick={() => { setExpandedCell(null); setModalEditing(false); }}
                 >
                   ×
@@ -884,12 +884,12 @@ export function DatabaseBrowser() {
               </div>
             </div>
             {modalEditError && (
-              <div className="text-[#ff6b6b] bg-[rgba(255,107,107,0.1)] py-2 px-4 text-[13px]">{modalEditError}</div>
+              <div className="text-[#ff6b6b] bg-[rgba(255,107,107,0.1)] py-2 px-4 text-ui-body">{modalEditError}</div>
             )}
             <div className="cell-modal-content flex-1 overflow-auto p-4 min-h-[100px]">
               {modalEditing ? (
                 <textarea
-                  className="w-full h-full min-h-[200px] border border-[var(--nim-border)] rounded-ui-base p-3 font-mono text-[13px] leading-relaxed resize-y bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
+                  className="w-full h-full min-h-[200px] border border-[var(--nim-border)] rounded-ui-base p-3 font-mono text-ui-body leading-relaxed resize-y bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
                   value={modalEditValue}
                   onChange={e => setModalEditValue(e.target.value)}
                   onKeyDown={e => {
@@ -904,7 +904,7 @@ export function DatabaseBrowser() {
                   if (jsonData) {
                     return <SyntaxHighlightedJSON data={jsonData} />;
                   }
-                  return <pre className="m-0 whitespace-pre-wrap break-all font-mono text-[13px] leading-relaxed text-[var(--nim-text)]">{formatCellValue(expandedCell.value)}</pre>;
+                  return <pre className="m-0 whitespace-pre-wrap break-all font-mono text-ui-body leading-relaxed text-[var(--nim-text)]">{formatCellValue(expandedCell.value)}</pre>;
                 })()
               )}
             </div>

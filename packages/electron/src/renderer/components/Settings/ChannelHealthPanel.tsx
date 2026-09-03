@@ -124,9 +124,9 @@ export function ChannelHealthRow({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h4 className="m-0 text-sm font-medium text-[var(--nim-text)]">{result.displayName}</h4>
+            <h4 className="m-0 text-ui-body font-medium text-[var(--nim-text)]">{result.displayName}</h4>
             <span
-              className={`channel-health-status inline-flex items-center gap-1 text-xs font-medium ${status.className}`}
+              className={`channel-health-status inline-flex items-center gap-1 text-ui-compact font-medium ${status.className}`}
               data-testid={`channel-health-status-${result.id}`}
               title={result.state === 'disabled' ? undefined : formatCheckedAt(result.checkedAt)}
             >
@@ -135,16 +135,16 @@ export function ChannelHealthRow({
             </span>
           </div>
           {result.state === 'disabled' && (
-            <p className="mt-1 mb-0 text-xs text-[var(--nim-text-muted)]">未启用，不发送请求</p>
+            <p className="mt-1 mb-0 text-ui-compact text-[var(--nim-text-muted)]">未启用，不发送请求</p>
           )}
           {(result.state === 'failed' || result.state === 'unknown') && failureGuidance && (
-            <p className={`mt-2 mb-0 text-xs ${result.state === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`} data-testid={`channel-health-guidance-${result.id}`}>
+            <p className={`mt-2 mb-0 text-ui-compact ${result.state === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`} data-testid={`channel-health-guidance-${result.id}`}>
               {failureGuidance}
             </p>
           )}
           {result.failureKind === 'not_logged_in' && (
             <div
-              className="mt-3 flex flex-col gap-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-3 text-xs"
+              className="mt-3 flex flex-col gap-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-3 text-ui-compact"
               data-testid={`channel-health-relogin-exit-${result.id}`}
             >
               {result.rawOutput && (
@@ -180,7 +180,7 @@ export function ChannelHealthRow({
         </div>
         <button
           type="button"
-          className="shrink-0 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] px-3 py-2 text-xs text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] px-3 py-2 text-ui-compact text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onRerun(result.id)}
           disabled={running || !canRerun}
           data-testid={`channel-health-rerun-${result.id}`}
@@ -275,7 +275,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-ui-compact font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => void run()}
               disabled={snapshot.running || !workspacePath}
               data-testid="channel-health-run-all"
@@ -284,7 +284,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
             </button>
             <button
               type="button"
-              className="rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] px-3 py-2 text-xs font-medium text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] px-3 py-2 text-ui-compact font-medium text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => void run(undefined, true)}
               disabled={snapshot.running || !workspacePath}
               data-testid="channel-health-run-deep"
@@ -310,7 +310,7 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
           <p
             key={provider}
             data-testid={`model-catalog-health-${provider}`}
-            className={`mb-2 text-xs ${catalogs[provider]?.lastError ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}
+            className={`mb-2 text-ui-compact ${catalogs[provider]?.lastError ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}
             title={message.title}
           >
             {provider === 'claude-code' ? 'Claude 模型目录：' : 'Codex 模型目录：'}{message.text}
@@ -319,13 +319,13 @@ export function ChannelHealthPanel({ workspacePath }: { workspacePath?: string }
       })}
 
       {requestError && (
-        <p className="mb-3 text-sm text-[var(--nim-error)]" role="alert">{requestError}</p>
+        <p className="mb-3 text-ui-body text-[var(--nim-error)]" role="alert">{requestError}</p>
       )}
 
       {loading ? (
-        <p className="text-sm text-[var(--nim-text-muted)]">正在读取体检结果…</p>
+        <p className="text-ui-body text-[var(--nim-text-muted)]">正在读取体检结果…</p>
       ) : visibleResults.length === 0 ? (
-        <p className="text-sm text-[var(--nim-text-muted)]">当前没有已启用的引擎通道。</p>
+        <p className="text-ui-body text-[var(--nim-text-muted)]">当前没有已启用的引擎通道。</p>
       ) : (
         <div className="flex flex-col gap-3">
           {visibleResults.map((result) => (

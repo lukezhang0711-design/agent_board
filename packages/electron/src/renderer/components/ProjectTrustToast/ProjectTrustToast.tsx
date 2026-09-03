@@ -268,18 +268,18 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
           </span>
           <div className="project-trust-toast-header-text flex-1">
             <h2
-              className="project-trust-toast-title text-lg font-semibold m-0 mb-1 text-nim"
+              className="project-trust-toast-title text-ui-title font-semibold m-0 mb-1 text-nim"
             >
               Trust "{projectName}"?
             </h2>
             <p
-              className="project-trust-toast-subtitle text-sm m-0 text-nim-muted"
+              className="project-trust-toast-subtitle text-ui-body m-0 text-nim-muted"
             >
               This project wants to use the AI agent
             </p>
           </div>
           <button
-            className="project-trust-toast-dont-trust text-[13px] font-medium px-3 py-2 rounded-ui-base cursor-pointer shrink-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-nim text-nim-muted"
+            className="project-trust-toast-dont-trust text-ui-body font-medium px-3 py-2 rounded-ui-base cursor-pointer shrink-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-nim text-nim-muted"
             onClick={handleDontTrust}
             disabled={isSubmitting}
           >
@@ -289,7 +289,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
 
         {/* Warning */}
         <div
-          className="project-trust-toast-warning flex items-start gap-3 p-3 rounded-ui-lg mb-4 text-[13px] leading-relaxed bg-[color-mix(in_srgb,#f59e0b_10%,transparent)] border border-[color-mix(in_srgb,#f59e0b_30%,transparent)] text-nim-muted"
+          className="project-trust-toast-warning flex items-start gap-3 p-3 rounded-ui-lg mb-4 text-ui-body leading-relaxed bg-[color-mix(in_srgb,#f59e0b_10%,transparent)] border border-[color-mix(in_srgb,#f59e0b_30%,transparent)] text-nim-muted"
         >
           <svg
             width="16"
@@ -310,7 +310,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
 
         {/* Description */}
         <p
-          className="project-trust-toast-description text-sm m-0 mb-3 text-nim-muted"
+          className="project-trust-toast-description text-ui-body m-0 mb-3 text-nim-muted"
         >
           Choose how the agent handles tool calls in this project:
         </p>
@@ -327,7 +327,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
             disabled={isSubmitting}
           >
             <span
-              className="project-trust-toast-mode-label text-sm font-semibold text-nim"
+              className="project-trust-toast-mode-label text-ui-body font-semibold text-nim"
             >
               Ask
             </span>
@@ -342,12 +342,12 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
             disabled={isSubmitting}
           >
             <span
-              className="project-trust-toast-mode-label text-sm font-semibold text-nim"
+              className="project-trust-toast-mode-label text-ui-body font-semibold text-nim"
             >
               Allow Edits
             </span>
             <span
-              className="project-trust-toast-mode-badge text-[11px] font-medium px-2 py-0.5 rounded-ui-base whitespace-nowrap row-start-2 bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] text-nim-primary"
+              className="project-trust-toast-mode-badge text-ui-caption font-medium px-2 py-0.5 rounded-ui-base whitespace-nowrap row-start-2 bg-[color-mix(in_srgb,var(--nim-primary)_15%,transparent)] text-nim-primary"
             >
               Recommended
             </span>
@@ -362,7 +362,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
             disabled={isSubmitting}
           >
             <span
-              className="project-trust-toast-mode-label text-sm font-semibold text-nim"
+              className="project-trust-toast-mode-label text-ui-body font-semibold text-nim"
             >
               Allow All
             </span>
@@ -376,13 +376,13 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
           {selectedMode === 'ask' ? (
             <>
               <p
-                className="project-trust-toast-mode-summary text-[13px] m-0 mb-3 leading-normal text-nim-muted"
+                className="project-trust-toast-mode-summary text-ui-body m-0 mb-3 leading-normal text-nim-muted"
               >
                 The agent will ask for permission before running commands. When you approve, your choices are saved to <code>.claude/settings.local.json</code> for future sessions.
               </p>
               <ul className="project-trust-toast-features-list list-none m-0 p-0 flex flex-col gap-2">
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -396,7 +396,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                   <span><strong className="font-medium text-nim">Approve once</strong> or <strong className="font-medium text-nim">always</strong> for each tool pattern</span>
                 </li>
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -410,7 +410,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                   <span><strong className="font-medium text-nim">Fine-grained control</strong> - allow "npm test" but block "rm -rf"</span>
                 </li>
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -428,13 +428,13 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
           ) : selectedMode === 'allow-all' ? (
             <>
               <p
-                className="project-trust-toast-mode-summary text-[13px] m-0 mb-3 leading-normal text-[#f59e0b]"
+                className="project-trust-toast-mode-summary text-ui-body m-0 mb-3 leading-normal text-[#f59e0b]"
               >
                 The agent will run all file and edit operations without asking. Shell commands and web requests may still require approval.
               </p>
               <ul className="project-trust-toast-features-list list-none m-0 p-0 flex flex-col gap-2">
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -449,7 +449,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                   <span>All file read/write/edit operations are automatically approved</span>
                 </li>
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -464,7 +464,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                   <span>Bash commands and web fetches follow Claude Code's settings</span>
                 </li>
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -483,13 +483,13 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
           ) : (
             <>
               <p
-                className="project-trust-toast-mode-summary text-[13px] m-0 mb-3 leading-normal text-[#f59e0b]"
+                className="project-trust-toast-mode-summary text-ui-body m-0 mb-3 leading-normal text-[#f59e0b]"
               >
                 The agent will run all operations without permission prompts, including shell commands, file operations, and web requests.
               </p>
               <ul className="project-trust-toast-features-list list-none m-0 p-0 flex flex-col gap-2">
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -504,7 +504,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                   <span>All tool calls are automatically approved</span>
                 </li>
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -519,7 +519,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                   <span>Uses Nimbalyst permissions instead of Claude Code settings</span>
                 </li>
                 <li
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-nim-muted"
+                  className="flex items-start gap-2 text-ui-body leading-relaxed text-nim-muted"
                 >
                   <svg
                     width="14"
@@ -542,7 +542,7 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
                   disabled={isSubmitting}
                   className="mt-1"
                 />
-                <span className="text-[13px] leading-relaxed text-nim-muted">
+                <span className="text-ui-body leading-relaxed text-nim-muted">
                   <strong className="font-medium text-nim">Run an AI safety classifier (Claude Code)</strong> — review risky operations like deploys and prompt for confirmation instead of running them silently.
                 </span>
               </label>
@@ -553,21 +553,21 @@ export const ProjectTrustToast: React.FC<ProjectTrustToastProps> = ({
         {/* Footer with Save/Cancel buttons */}
         <div className="project-trust-toast-footer flex items-center justify-between">
           <button
-            className="project-trust-toast-settings-link text-[13px] p-1 px-2 rounded-ui-base cursor-pointer transition-colors duration-150 hover:underline bg-transparent border-none text-nim-faint"
+            className="project-trust-toast-settings-link text-ui-body p-1 px-2 rounded-ui-base cursor-pointer transition-colors duration-150 hover:underline bg-transparent border-none text-nim-faint"
             onClick={handleOpenSettings}
           >
             Advanced settings
           </button>
           <div className="project-trust-toast-actions flex gap-2">
             <button
-              className="project-trust-toast-cancel text-sm font-medium px-4 py-2 rounded-ui-base cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-nim text-nim-muted"
+              className="project-trust-toast-cancel text-ui-body font-medium px-4 py-2 rounded-ui-base cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-nim text-nim-muted"
               onClick={handleDismiss}
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
-              className="project-trust-toast-save text-sm font-medium px-4 py-2 rounded-ui-base cursor-pointer transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed hover:brightness-110 bg-nim-primary border-none text-nim-on-primary"
+              className="project-trust-toast-save text-ui-body font-medium px-4 py-2 rounded-ui-base cursor-pointer transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed hover:brightness-110 bg-nim-primary border-none text-nim-on-primary"
               onClick={handleSave}
               disabled={isSubmitting}
             >

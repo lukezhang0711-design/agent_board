@@ -54,7 +54,7 @@ class TranscriptEmbeddedFileErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="transcript-embedded-file__error flex items-center gap-2 p-3 text-sm text-[var(--nim-error)]">
+        <div className="transcript-embedded-file__error flex items-center gap-2 p-3 text-ui-body text-[var(--nim-error)]">
           <MaterialSymbol icon="error" size={16} />
           <span>{this.state.error?.message ?? 'Failed to render preview'}</span>
         </div>
@@ -204,7 +204,7 @@ export const TranscriptEmbeddedFileCard: React.FC<TranscriptEmbeddedFileCardProp
         <button
           type="button"
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="flex min-w-0 flex-1 items-center gap-2 border-none bg-transparent p-0 text-left text-sm text-[var(--nim-text)] cursor-pointer"
+          className="flex min-w-0 flex-1 items-center gap-2 border-none bg-transparent p-0 text-left text-ui-body text-[var(--nim-text)] cursor-pointer"
           aria-expanded={isExpanded}
         >
           <MaterialSymbol
@@ -214,7 +214,7 @@ export const TranscriptEmbeddedFileCard: React.FC<TranscriptEmbeddedFileCardProp
           />
           <MaterialSymbol icon="preview" size={16} className="shrink-0 text-[var(--nim-primary)]" />
           <span className="font-medium">{editorLabel}</span>
-          <span className="min-w-0 truncate text-xs text-[var(--nim-text-muted)]">
+          <span className="min-w-0 truncate text-ui-compact text-[var(--nim-text-muted)]">
             {basename(filePath)}
           </span>
         </button>
@@ -237,7 +237,7 @@ export const TranscriptEmbeddedFileCard: React.FC<TranscriptEmbeddedFileCardProp
           style={{ height: `${previewHeight}px` }}
         >
           {!canRenderPreview || !ExtensionComponent || !host ? (
-            <div className="transcript-embedded-file__placeholder flex h-full items-center justify-center px-4 text-center text-sm text-[var(--nim-text-muted)]">
+            <div className="transcript-embedded-file__placeholder flex h-full items-center justify-center px-4 text-center text-ui-body text-[var(--nim-text-muted)]">
               No editor is available to render this file inline.
             </div>
           ) : (
@@ -253,7 +253,7 @@ export const TranscriptEmbeddedFileCard: React.FC<TranscriptEmbeddedFileCardProp
               >
                 <React.Suspense
                   fallback={
-                    <div className="transcript-embedded-file__loading flex h-full items-center justify-center text-sm text-[var(--nim-text-muted)]">
+                    <div className="transcript-embedded-file__loading flex h-full items-center justify-center text-ui-body text-[var(--nim-text-muted)]">
                       Loading preview...
                     </div>
                   }

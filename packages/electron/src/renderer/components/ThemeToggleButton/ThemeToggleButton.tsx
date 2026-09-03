@@ -138,7 +138,7 @@ export const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ className 
           {availableThemes.map(theme => (
             <button
               key={theme.id}
-              className="theme-menu-item flex items-center gap-2 w-full py-2 px-3 border-none bg-transparent text-nim text-[13px] text-left cursor-pointer rounded-ui-base transition-colors duration-100 hover:bg-nim-hover"
+              className="theme-menu-item flex items-center gap-2 w-full py-2 px-3 border-none bg-transparent text-nim text-ui-body text-left cursor-pointer rounded-ui-base transition-colors duration-100 hover:bg-nim-hover"
               onClick={() => selectTheme(theme.id)}
               role="menuitem"
             >

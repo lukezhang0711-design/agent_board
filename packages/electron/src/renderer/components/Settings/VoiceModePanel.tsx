@@ -361,12 +361,12 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
       />
 
       <div className="provider-panel-section mb-6">
-        <h4 className="provider-panel-section-title text-base font-medium mb-4 text-[var(--nim-text)]">Enable Voice Mode</h4>
+        <h4 className="provider-panel-section-title text-ui-subhead font-medium mb-4 text-[var(--nim-text)]">Enable Voice Mode</h4>
 
         <div className="setting-item py-3 mb-3">
           <div className="setting-text flex flex-col gap-1">
-            <span className="setting-name text-sm font-medium text-[var(--nim-text)]">OpenAI API Key</span>
-            <span className="setting-description text-xs text-[var(--nim-text-muted)]">
+            <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">OpenAI API Key</span>
+            <span className="setting-description text-ui-compact text-[var(--nim-text-muted)]">
               Required for Voice Mode. Get one from platform.openai.com.
             </span>
           </div>
@@ -390,8 +390,8 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
               disabled={!hasOpenAIKey}
             />
             <div className="setting-text flex flex-col gap-1">
-              <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Show Voice Mode Button</span>
-              <span className="setting-description text-xs text-[var(--nim-text-muted)]">
+              <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Show Voice Mode Button</span>
+              <span className="setting-description text-ui-compact text-[var(--nim-text-muted)]">
                 Display the microphone button in the AI input area
               </span>
             </div>
@@ -407,8 +407,8 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
           <div className="flex items-start gap-3">
             <MaterialSymbol icon="mic_off" size={20} className="mt-1 text-[var(--nim-warning)]" />
             <div className="flex-1">
-              <h4 className="text-sm font-medium text-[var(--nim-text)] mb-1">Microphone access not granted</h4>
-              <p className="text-xs text-[var(--nim-text-muted)] mb-3">
+              <h4 className="text-ui-body font-medium text-[var(--nim-text)] mb-1">Microphone access not granted</h4>
+              <p className="text-ui-compact text-[var(--nim-text-muted)] mb-3">
                 {micStatus === 'denied'
                   ? 'Voice Mode needs microphone access. Enable it for Nimbalyst in System Settings, then re-check below.'
                   : micStatus === 'restricted'
@@ -419,7 +419,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 {micPlatform === 'darwin' && (
                   <button
                     onClick={handleOpenMicSettings}
-                    className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-primary)] text-white cursor-pointer text-sm flex items-center gap-2"
+                    className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-primary)] text-white cursor-pointer text-ui-body flex items-center gap-2"
                     data-testid="voice-mode-open-mic-settings"
                   >
                     <MaterialSymbol icon="open_in_new" size={14} />
@@ -428,7 +428,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 )}
                 <button
                   onClick={checkMicStatus}
-                  className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-sm flex items-center gap-2"
+                  className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-ui-body flex items-center gap-2"
                   data-testid="voice-mode-recheck-mic"
                 >
                   <MaterialSymbol icon="refresh" size={14} />
@@ -443,11 +443,11 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
       {enabled && hasOpenAIKey && (
         <>
           <div className="provider-panel-section mb-6">
-            <h4 className="provider-panel-section-title text-base font-medium mb-4 text-[var(--nim-text)]">Voice Settings</h4>
+            <h4 className="provider-panel-section-title text-ui-subhead font-medium mb-4 text-[var(--nim-text)]">Voice Settings</h4>
 
             <div className="setting-item py-3">
               <div className="setting-text flex flex-col gap-1">
-                <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Voice</span>
+                <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Voice</span>
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <select
@@ -480,7 +480,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 </button>
               </div>
               {VOICE_OPTIONS.find(v => v.id === voice)?.realtimeOnly && (
-                <p className="provider-panel-hint mt-2 text-xs text-[var(--nim-text-muted)]">
+                <p className="provider-panel-hint mt-2 text-ui-compact text-[var(--nim-text-muted)]">
                   Preview uses a similar voice for this Realtime-only option.
                 </p>
               )}
@@ -488,12 +488,12 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
           </div>
 
           <div className="provider-panel-section mb-6">
-            <h4 className="provider-panel-section-title text-base font-medium mb-4 text-[var(--nim-text)]">Turn Detection</h4>
+            <h4 className="provider-panel-section-title text-ui-subhead font-medium mb-4 text-[var(--nim-text)]">Turn Detection</h4>
 
             {/* Mode Selection */}
             <div className="setting-item py-3 mb-4">
               <div className="setting-text flex flex-col gap-1">
-                <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Input Mode</span>
+                <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Input Mode</span>
               </div>
               <select
                 value={currentTurnDetection.mode}
@@ -511,10 +511,10 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 {/* VAD Threshold */}
                 <div className="setting-item py-3 mb-4">
                   <div className="setting-text flex flex-col gap-1">
-                    <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Voice Detection Sensitivity</span>
+                    <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Voice Detection Sensitivity</span>
                   </div>
                   <div className="flex items-center gap-3 mt-2">
-                    <span className="text-xs text-[var(--nim-text-muted)]">Sensitive</span>
+                    <span className="text-ui-compact text-[var(--nim-text-muted)]">Sensitive</span>
                     <input
                       type="range"
                       min="0"
@@ -523,8 +523,8 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       onChange={(e) => handleTurnDetectionChange({ vadThreshold: parseInt(e.target.value) / 100 })}
                       className="flex-1"
                     />
-                    <span className="text-xs text-[var(--nim-text-muted)]">Less sensitive</span>
-                    <span className="text-xs text-[var(--nim-text)] min-w-[36px]">
+                    <span className="text-ui-compact text-[var(--nim-text-muted)]">Less sensitive</span>
+                    <span className="text-ui-compact text-[var(--nim-text)] min-w-[36px]">
                       {Math.round((currentTurnDetection.vadThreshold || 0.5) * 100)}%
                     </span>
                   </div>
@@ -533,10 +533,10 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                 {/* Silence Duration */}
                 <div className="setting-item py-3 mb-4">
                   <div className="setting-text flex flex-col gap-1">
-                    <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Pause Before Processing</span>
+                    <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Pause Before Processing</span>
                   </div>
                   <div className="flex items-center gap-3 mt-2">
-                    <span className="text-xs text-[var(--nim-text-muted)]">Faster</span>
+                    <span className="text-ui-compact text-[var(--nim-text-muted)]">Faster</span>
                     <input
                       type="range"
                       min="200"
@@ -546,8 +546,8 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       onChange={(e) => handleTurnDetectionChange({ silenceDuration: parseInt(e.target.value) })}
                       className="flex-1"
                     />
-                    <span className="text-xs text-[var(--nim-text-muted)]">Slower</span>
-                    <span className="text-xs text-[var(--nim-text)] min-w-[50px]">
+                    <span className="text-ui-compact text-[var(--nim-text-muted)]">Slower</span>
+                    <span className="text-ui-compact text-[var(--nim-text)] min-w-[50px]">
                       {((currentTurnDetection.silenceDuration || 500) / 1000).toFixed(1)}s
                     </span>
                   </div>
@@ -565,7 +565,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   className="setting-checkbox mt-1 w-4 h-4 rounded-ui-base border-[var(--nim-border)] accent-[var(--nim-primary)]"
                 />
                 <div className="setting-text flex flex-col gap-1">
-                  <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Allow Interruptions</span>
+                  <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Allow Interruptions</span>
                 </div>
               </label>
             </div>
@@ -573,13 +573,13 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
             {/* Listen Window Duration */}
             <div className="setting-item py-3">
               <div className="setting-text flex flex-col gap-1">
-                <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Listen Window Duration</span>
-                <span className="setting-description text-xs text-[var(--nim-text-muted)]">
+                <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Listen Window Duration</span>
+                <span className="setting-description text-ui-compact text-[var(--nim-text-muted)]">
                   How long to keep listening after you stop speaking. After this time, the mic goes to sleep until the assistant responds or you click the mic button.
                 </span>
               </div>
               <div className="flex items-center gap-3 mt-2">
-                <span className="text-xs text-[var(--nim-text-muted)]">5s</span>
+                <span className="text-ui-compact text-[var(--nim-text-muted)]">5s</span>
                 <input
                   type="range"
                   min="5000"
@@ -589,8 +589,8 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   onChange={(e) => handleSettingChange({ listenWindowMs: parseInt(e.target.value) })}
                   className="flex-1"
                 />
-                <span className="text-xs text-[var(--nim-text-muted)]">30s</span>
-                <span className="text-xs text-[var(--nim-text)] min-w-[36px]">
+                <span className="text-ui-compact text-[var(--nim-text-muted)]">30s</span>
+                <span className="text-ui-compact text-[var(--nim-text)] min-w-[36px]">
                   {Math.round((listenWindowMs ?? 15000) / 1000)}s
                 </span>
               </div>
@@ -598,18 +598,18 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
           </div>
 
           <div className="provider-panel-section mb-6">
-            <h4 className="provider-panel-section-title text-base font-medium mb-4 text-[var(--nim-text)]">Command Submission</h4>
+            <h4 className="provider-panel-section-title text-ui-subhead font-medium mb-4 text-[var(--nim-text)]">Command Submission</h4>
 
             {/* Submit Delay */}
             <div className="setting-item py-3 mb-4">
               <div className="setting-text flex flex-col gap-1">
-                <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Review Delay Before Submitting</span>
-                <span className="setting-description text-xs text-[var(--nim-text-muted)]">
+                <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Review Delay Before Submitting</span>
+                <span className="setting-description text-ui-compact text-[var(--nim-text-muted)]">
                   Time to review and edit voice commands before they're sent to the coding agent. Set to 0 for immediate submission.
                 </span>
               </div>
               <div className="flex items-center gap-3 mt-2">
-                <span className="text-xs text-[var(--nim-text-muted)]">Immediate</span>
+                <span className="text-ui-compact text-[var(--nim-text-muted)]">Immediate</span>
                 <input
                   type="range"
                   min="0"
@@ -619,8 +619,8 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   onChange={(e) => handleSettingChange({ submitDelayMs: parseInt(e.target.value) })}
                   className="flex-1"
                 />
-                <span className="text-xs text-[var(--nim-text-muted)]">10 seconds</span>
-                <span className="text-xs text-[var(--nim-text)] min-w-[50px]">
+                <span className="text-ui-compact text-[var(--nim-text-muted)]">10 seconds</span>
+                <span className="text-ui-compact text-[var(--nim-text)] min-w-[50px]">
                   {((submitDelayMs ?? 3000) / 1000).toFixed(1)}s
                 </span>
               </div>
@@ -630,7 +630,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
           {/* Project Summary Section */}
           {workspacePath && (
             <div className="voice-mode-project-summary provider-panel-section mb-6">
-              <h4 className="provider-panel-section-title text-base font-medium mb-4 text-[var(--nim-text)]">Project Summary</h4>
+              <h4 className="provider-panel-section-title text-ui-subhead font-medium mb-4 text-[var(--nim-text)]">Project Summary</h4>
 
               {projectSummaryExists ? (
                 <div className="flex items-center gap-2">
@@ -638,7 +638,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   <span className="text-[var(--nim-text-muted)]">Summary exists</span>
                   <button
                     onClick={handleOpenSummary}
-                    className="px-2 py-1 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-xs flex items-center gap-1"
+                    className="px-2 py-1 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-ui-compact flex items-center gap-1"
                     title="Open summary file"
                     data-testid="voice-mode-summary-view"
                   >
@@ -648,7 +648,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   <button
                     onClick={handleGenerateSummary}
                     disabled={!hasAgentConfigured}
-                    className="px-2 py-1 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-xs flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 py-1 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] cursor-pointer text-ui-compact flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     title={hasAgentConfigured ? 'Regenerate summary' : 'Configure an agent to enable regeneration'}
                     data-testid="voice-mode-summary-regenerate"
                   >
@@ -661,7 +661,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                   <button
                     onClick={handleGenerateSummary}
                     disabled={!hasAgentConfigured}
-                    className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-primary)] text-white cursor-pointer text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-primary)] text-white cursor-pointer text-ui-body flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid="voice-mode-summary-generate"
                   >
                     <MaterialSymbol icon="auto_awesome" size={16} />
@@ -671,7 +671,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
               )}
 
               {!hasAgentConfigured && (
-                <p className="mt-3 text-xs text-[var(--nim-text-muted)]" data-testid="voice-mode-summary-no-agent">
+                <p className="mt-3 text-ui-compact text-[var(--nim-text-muted)]" data-testid="voice-mode-summary-no-agent">
                   No agent is configured.{' '}
                   <button
                     type="button"
@@ -685,7 +685,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
               )}
 
               {summaryError && (
-                <p className="mt-2 text-xs text-[var(--nim-error)]" data-testid="voice-mode-summary-error">
+                <p className="mt-2 text-ui-compact text-[var(--nim-error)]" data-testid="voice-mode-summary-error">
                   {summaryError}
                 </p>
               )}
@@ -693,27 +693,27 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
           )}
 
           <div className="provider-panel-section mb-6">
-            <h4 className="provider-panel-section-title text-base font-medium mb-4 text-[var(--nim-text)]">Usage & Pricing</h4>
-            <p className="provider-panel-hint text-sm text-[var(--nim-text-muted)]">
+            <h4 className="provider-panel-section-title text-ui-subhead font-medium mb-4 text-[var(--nim-text)]">Usage & Pricing</h4>
+            <p className="provider-panel-hint text-ui-body text-[var(--nim-text-muted)]">
               OpenAI charges for voice mode usage:
             </p>
-            <ul className="ml-5 mt-2 mb-2 text-sm text-[var(--nim-text-muted)] list-disc">
+            <ul className="ml-5 mt-2 mb-2 text-ui-body text-[var(--nim-text-muted)] list-disc">
               <li>Audio Input: $0.06 per minute</li>
               <li>Audio Output: $0.24 per minute</li>
               <li>Plus standard token costs for processing</li>
             </ul>
-            <p className="provider-panel-hint text-sm text-[var(--nim-text-muted)]">
+            <p className="provider-panel-hint text-ui-body text-[var(--nim-text-muted)]">
               Example: A 5-minute conversation costs approximately $0.50
             </p>
           </div>
 
           <div className="provider-panel-section mb-6">
-            <h4 className="provider-panel-section-title text-base font-medium mb-4 text-[var(--nim-text)]">System Prompt Customization</h4>
+            <h4 className="provider-panel-section-title text-ui-subhead font-medium mb-4 text-[var(--nim-text)]">System Prompt Customization</h4>
 
             {/* Voice Agent Prompt Section */}
             <button
               onClick={() => setShowVoiceAgentPrompt(!showVoiceAgentPrompt)}
-              className={`flex items-center gap-2 bg-transparent border-none p-0 cursor-pointer text-[var(--nim-text)] text-sm font-medium ${showVoiceAgentPrompt ? 'mb-3' : 'mb-4'}`}
+              className={`flex items-center gap-2 bg-transparent border-none p-0 cursor-pointer text-[var(--nim-text)] text-ui-body font-medium ${showVoiceAgentPrompt ? 'mb-3' : 'mb-4'}`}
             >
               <MaterialSymbol icon={showVoiceAgentPrompt ? 'expand_less' : 'expand_more'} size={20} />
               Voice Agent Instructions
@@ -723,8 +723,8 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
               <div className="mb-6 pl-7">
                 <div className="setting-item py-3 mb-4">
                   <div className="setting-text flex flex-col gap-1">
-                    <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Prepend to Instructions</span>
-                    <span className="setting-description text-xs text-[var(--nim-text-muted)]">
+                    <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Prepend to Instructions</span>
+                    <span className="setting-description text-ui-compact text-[var(--nim-text-muted)]">
                       Added before the default voice assistant instructions
                     </span>
                   </div>
@@ -737,14 +737,14 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       },
                     })}
                     placeholder="e.g., Always respond in a formal tone..."
-                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
+                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-ui-body resize-y"
                   />
                 </div>
 
                 <div className="setting-item py-3">
                   <div className="setting-text flex flex-col gap-1">
-                    <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Append to Instructions</span>
-                    <span className="setting-description text-xs text-[var(--nim-text-muted)]">
+                    <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Append to Instructions</span>
+                    <span className="setting-description text-ui-compact text-[var(--nim-text-muted)]">
                       Added after the default voice assistant instructions
                     </span>
                   </div>
@@ -757,7 +757,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       },
                     })}
                     placeholder="e.g., When discussing code, always mention file names..."
-                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
+                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-ui-body resize-y"
                   />
                 </div>
               </div>
@@ -766,7 +766,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
             {/* Coding Agent Prompt Section */}
             <button
               onClick={() => setShowCodingAgentPrompt(!showCodingAgentPrompt)}
-              className={`flex items-center gap-2 bg-transparent border-none p-0 cursor-pointer text-[var(--nim-text)] text-sm font-medium ${showCodingAgentPrompt ? 'mb-3' : ''}`}
+              className={`flex items-center gap-2 bg-transparent border-none p-0 cursor-pointer text-[var(--nim-text)] text-ui-body font-medium ${showCodingAgentPrompt ? 'mb-3' : ''}`}
             >
               <MaterialSymbol icon={showCodingAgentPrompt ? 'expand_less' : 'expand_more'} size={20} />
               Coding Agent Instructions (Voice Mode)
@@ -774,14 +774,14 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
 
             {showCodingAgentPrompt && (
               <div className="pl-7">
-                <p className="provider-panel-hint text-sm text-[var(--nim-text-muted)] mb-3">
+                <p className="provider-panel-hint text-ui-body text-[var(--nim-text-muted)] mb-3">
                   Customize the coding agent for voice mode requests.
                 </p>
 
                 <div className="setting-item py-3 mb-4">
                   <div className="setting-text flex flex-col gap-1">
-                    <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Prepend to Instructions</span>
-                    <span className="setting-description text-xs text-[var(--nim-text-muted)]">
+                    <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Prepend to Instructions</span>
+                    <span className="setting-description text-ui-compact text-[var(--nim-text-muted)]">
                       Added before the coding agent's voice mode context
                     </span>
                   </div>
@@ -794,14 +794,14 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       },
                     })}
                     placeholder="e.g., When responding to voice requests, prioritize brevity..."
-                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
+                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-ui-body resize-y"
                   />
                 </div>
 
                 <div className="setting-item py-3">
                   <div className="setting-text flex flex-col gap-1">
-                    <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Append to Instructions</span>
-                    <span className="setting-description text-xs text-[var(--nim-text-muted)]">
+                    <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Append to Instructions</span>
+                    <span className="setting-description text-ui-compact text-[var(--nim-text-muted)]">
                       Added after the coding agent's voice mode context
                     </span>
                   </div>
@@ -814,7 +814,7 @@ export const VoiceModePanel: React.FC<VoiceModePanelProps> = ({
                       },
                     })}
                     placeholder="e.g., Always summarize what you did in 1-2 sentences at the end..."
-                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-sm resize-y"
+                    className="mt-2 w-full min-h-[80px] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] font-inherit text-ui-body resize-y"
                   />
                 </div>
               </div>

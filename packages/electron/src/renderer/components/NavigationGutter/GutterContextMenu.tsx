@@ -54,7 +54,7 @@ export function GutterContextMenu({ x, y, onClose, targetButton, workspacePath }
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="gutter-context-menu p-1 min-w-[180px] rounded-ui-base z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)] overflow-hidden bg-nim border border-nim"
+        className="gutter-context-menu p-1 min-w-[180px] rounded-ui-base z-[10000] text-ui-body backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)] overflow-hidden bg-nim border border-nim"
         data-testid="gutter-context-menu"
       >
         {/* If right-clicked on a specific button, show hide option */}

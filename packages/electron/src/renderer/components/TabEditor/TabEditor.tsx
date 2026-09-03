@@ -2517,7 +2517,7 @@ export const TabEditor: React.FC<TabEditorProps> = ({
         />
         {autosaveConflictDiskContent !== null && (
           <div
-            className="autosave-conflict-banner flex items-center gap-2 px-3 py-2 text-[13px] bg-nim-warning-subtle border-b border-nim-warning text-nim"
+            className="autosave-conflict-banner flex items-center gap-2 px-3 py-2 text-ui-body bg-nim-warning-subtle border-b border-nim-warning text-nim"
             role="alert"
             data-testid="autosave-conflict-banner"
           >
@@ -2573,12 +2573,12 @@ export const TabEditor: React.FC<TabEditorProps> = ({
               return (
                 <>
                   <div className="custom-editor-source-toolbar py-2 px-4 border-b border-nim flex justify-end items-center gap-2 bg-nim-secondary">
-                    <span className="mr-auto text-[13px] text-nim-muted">
+                    <span className="mr-auto text-ui-body text-nim-muted">
                       Source Mode
                     </span>
                     <button
                       onClick={() => editorHost.toggleSourceMode?.()}
-                      className="py-1 px-3 text-[13px] cursor-pointer bg-nim border border-nim rounded-ui-base text-nim"
+                      className="py-1 px-3 text-ui-body cursor-pointer bg-nim border border-nim rounded-ui-base text-nim"
                     >
                       Editor
                     </button>
@@ -2768,12 +2768,12 @@ export const TabEditor: React.FC<TabEditorProps> = ({
           ) : isMarkdown && sourceMode ? (
             <>
               <div className="monaco-markdown-toolbar py-2 px-4 border-b border-nim flex justify-end items-center gap-2 bg-nim-secondary">
-                <span className="mr-auto text-[13px] text-nim-muted">
+                <span className="mr-auto text-ui-body text-nim-muted">
                   Source Mode
                 </span>
                 <button
                   onClick={() => editorHost.toggleSourceMode?.()}
-                  className="py-1 px-3 text-[13px] cursor-pointer bg-nim border border-nim rounded-ui-base text-nim"
+                  className="py-1 px-3 text-ui-body cursor-pointer bg-nim border border-nim rounded-ui-base text-nim"
                 >
                   Rich Text
                 </button>

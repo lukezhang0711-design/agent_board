@@ -418,7 +418,7 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
                 role="tab"
                 aria-selected={active}
                 data-tab={tab.id}
-                className={`unified-quick-open-tab flex-1 min-w-0 flex items-center justify-center gap-2 px-2 py-2 text-[13px] font-medium whitespace-nowrap border-b-2 cursor-pointer transition-colors duration-100 ${
+                className={`unified-quick-open-tab flex-1 min-w-0 flex items-center justify-center gap-2 px-2 py-2 text-ui-body font-medium whitespace-nowrap border-b-2 cursor-pointer transition-colors duration-100 ${
                   active
                     ? 'text-nim border-[var(--nim-primary)] bg-nim'
                     : 'text-nim-muted border-transparent hover:text-nim hover:bg-nim-hover'
@@ -429,7 +429,7 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
                 <span>{tab.label}</span>
                 {tab.shortcut && (
                   <kbd
-                    className={`unified-quick-open-tab-shortcut font-mono text-[10px] px-2 py-0.5 rounded-ui-base border min-w-[26px] text-center ${
+                    className={`unified-quick-open-tab-shortcut font-mono text-ui-micro px-2 py-0.5 rounded-ui-base border min-w-[26px] text-center ${
                       active
                         ? 'text-[var(--nim-primary)] border-[var(--nim-primary)] bg-transparent'
                         : 'text-nim-faint border-nim bg-nim-secondary'
@@ -444,11 +444,11 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
           {FUTURE_TABS.map((tab) => (
             <div
               key={tab.id}
-              className="unified-quick-open-tab future flex-1 min-w-0 flex items-center justify-center gap-2 px-2 py-2 text-[13px] font-medium whitespace-nowrap border-b-2 border-transparent text-nim-faint italic cursor-not-allowed opacity-60"
+              className="unified-quick-open-tab future flex-1 min-w-0 flex items-center justify-center gap-2 px-2 py-2 text-ui-body font-medium whitespace-nowrap border-b-2 border-transparent text-nim-faint italic cursor-not-allowed opacity-60"
               title="Coming soon"
             >
               <span>{tab.label}</span>
-              <span className="text-[9px] uppercase tracking-wide text-nim-faint not-italic">
+              <span className="text-ui-micro uppercase tracking-wide text-nim-faint not-italic">
                 soon
               </span>
             </div>
@@ -463,7 +463,7 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
               <input
                 ref={inputRef}
                 type="text"
-                className={`unified-quick-open-search nim-input w-full text-sm py-1 px-2 ${
+                className={`unified-quick-open-search nim-input w-full text-ui-body py-1 px-2 ${
                   showSessionContentHint ? 'pr-[156px]' : ''
                 }`}
                 placeholder={placeholder}
@@ -473,14 +473,14 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
               />
               {showSessionContentHint &&
                 (sessionContentStatus === 'searching' ? (
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-nim-faint pointer-events-none">
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-ui-compact text-nim-faint pointer-events-none">
                     <MaterialSymbol icon="progress_activity" size={13} className="animate-spin" />
                     Searching messages...
                   </span>
                 ) : sessionContentStatus === 'results' ? (
                   <button
                     type="button"
-                    className="unified-quick-open-content-search-active absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-[var(--nim-primary)] bg-transparent border-none cursor-pointer px-2 py-1 rounded-ui-base transition-colors duration-150 hover:bg-nim-hover"
+                    className="unified-quick-open-content-search-active absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-ui-compact text-[var(--nim-primary)] bg-transparent border-none cursor-pointer px-2 py-1 rounded-ui-base transition-colors duration-150 hover:bg-nim-hover"
                     onClick={() => setSessionContentClearNonce((n) => n + 1)}
                     title="Back to title search"
                   >
@@ -491,7 +491,7 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
                 ) : (
                   <button
                     type="button"
-                    className="unified-quick-open-content-search-hint absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-nim-muted bg-transparent border-none cursor-pointer px-2 py-1 rounded-ui-base transition-colors duration-150 hover:bg-nim-hover hover:text-[var(--nim-primary)]"
+                    className="unified-quick-open-content-search-hint absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-ui-compact text-nim-muted bg-transparent border-none cursor-pointer px-2 py-1 rounded-ui-base transition-colors duration-150 hover:bg-nim-hover hover:text-[var(--nim-primary)]"
                     onClick={() => setSessionContentNonce((n) => n + 1)}
                     title="Press Shift+Tab to search message contents"
                   >
@@ -627,8 +627,8 @@ export const UnifiedQuickOpen: React.FC<UnifiedQuickOpenProps> = ({
 };
 
 const FooterHint: React.FC<{ kbd: string; label: string }> = ({ kbd, label }) => (
-  <span className="unified-quick-open-hint text-[11px] flex items-center gap-1 text-nim-faint">
-    <kbd className="px-2 py-0.5 rounded-ui-base font-mono text-[10px] bg-nim border border-nim text-nim">
+  <span className="unified-quick-open-hint text-ui-caption flex items-center gap-1 text-nim-faint">
+    <kbd className="px-2 py-0.5 rounded-ui-base font-mono text-ui-micro bg-nim border border-nim text-nim">
       {kbd}
     </kbd>
     {label}
@@ -895,16 +895,16 @@ const FilesPane: React.FC<FilesPaneProps> = memo(({
                   <MaterialSymbol icon="history" size={16} />
                 </button>
               )}
-              <div className="text-sm font-medium flex items-center gap-2 text-nim">
+              <div className="text-ui-body font-medium flex items-center gap-2 text-nim">
                 {file.type === 'directory' && (
                   <MaterialSymbol icon="folder" size={16} className="text-nim-faint shrink-0" />
                 )}
                 {file.type === 'directory' ? file.name + '/' : file.name}
                 {file.isRecent && !query && (
-                  <span className="nim-badge-primary text-[10px]">Recent</span>
+                  <span className="nim-badge-primary text-ui-micro">Recent</span>
                 )}
               </div>
-              <div className="text-xs mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-nim-faint">
+              <div className="text-ui-compact mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-nim-faint">
                 {getRelativeDir(file.path, workspacePath)}
               </div>
             </li>
@@ -1117,15 +1117,15 @@ const InFilesPane: React.FC<InFilesPaneProps> = memo(({
                 if (mouseHasMoved) setSelectedIndex(index);
               }}
             >
-              <div className="text-sm font-medium flex items-center gap-2 text-nim">
+              <div className="text-ui-body font-medium flex items-center gap-2 text-nim">
                 {file.name}
                 {file.matches && file.matches.length > 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-ui-base text-white font-semibold uppercase bg-[var(--nim-accent-purple)]">
+                  <span className="text-ui-micro px-2 py-0.5 rounded-ui-base text-white font-semibold uppercase bg-[var(--nim-accent-purple)]">
                     {file.matches.length} match{file.matches.length > 1 ? 'es' : ''}
                   </span>
                 )}
               </div>
-              <div className="text-xs mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-nim-faint">
+              <div className="text-ui-compact mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-nim-faint">
                 {getRelativeDir(file.path, workspacePath)}
               </div>
               {file.matches && file.matches.length > 0 && (
@@ -1133,7 +1133,7 @@ const InFilesPane: React.FC<InFilesPaneProps> = memo(({
                   {file.matches.slice(0, 2).map((m, i) => (
                     <div
                       key={i}
-                      className="text-xs leading-snug mb-1 block overflow-hidden text-ellipsis whitespace-nowrap text-nim-muted"
+                      className="text-ui-compact leading-snug mb-1 block overflow-hidden text-ellipsis whitespace-nowrap text-nim-muted"
                     >
                       <span className="mr-2 font-medium text-nim-faint">Line {m.line}:</span>
                       <span>
@@ -1146,7 +1146,7 @@ const InFilesPane: React.FC<InFilesPaneProps> = memo(({
                     </div>
                   ))}
                   {file.matches.length > 2 && (
-                    <div className="text-[11px] italic mt-1 text-nim-faint">
+                    <div className="text-ui-caption italic mt-1 text-nim-faint">
                       ...and {file.matches.length - 2} more
                     </div>
                   )}
@@ -1474,10 +1474,10 @@ const SessionsPane: React.FC<SessionsPaneProps> = memo(({
   return (
     <div className="sessions-pane flex-1 flex flex-col overflow-hidden">
       {fileFilter && (
-        <div className="flex items-center gap-2 px-4 py-2 text-xs text-nim-muted border-b border-nim bg-[var(--nim-accent-subtle)]">
+        <div className="flex items-center gap-2 px-4 py-2 text-ui-compact text-nim-muted border-b border-nim bg-[var(--nim-accent-subtle)]">
           <span className="text-nim-faint">Filtered to sessions that edited:</span>
           <span
-            className="inline-flex items-center gap-2 px-2 py-0.5 rounded-ui-base bg-[rgba(0,122,255,0.15)] text-[var(--nim-primary)] text-xs max-w-[60%]"
+            className="inline-flex items-center gap-2 px-2 py-0.5 rounded-ui-base bg-[rgba(0,122,255,0.15)] text-[var(--nim-primary)] text-ui-compact max-w-[60%]"
             title={fileFilter}
           >
             <MaterialSymbol icon="description" size={14} className="shrink-0" />
@@ -1499,7 +1499,7 @@ const SessionsPane: React.FC<SessionsPaneProps> = memo(({
         {showTypeahead ? (
           <ul className={`list-none m-0 p-0 ${mouseHasMoved ? '' : 'pointer-events-none'}`}>
             {fileOptions.length === 0 ? (
-              <li className="py-6 px-4 text-center text-nim-faint text-sm">
+              <li className="py-6 px-4 text-center text-nim-faint text-ui-body">
                 {fileSearchQuery ? 'No files found' : 'Type to search files...'}
               </li>
             ) : (
@@ -1522,11 +1522,11 @@ const SessionsPane: React.FC<SessionsPaneProps> = memo(({
                     )}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="text-sm text-nim block overflow-hidden text-ellipsis whitespace-nowrap">
+                    <span className="text-ui-body text-nim block overflow-hidden text-ellipsis whitespace-nowrap">
                       {option.label}
                     </span>
                     {option.description && (
-                      <span className="text-xs text-nim-faint block overflow-hidden text-ellipsis whitespace-nowrap">
+                      <span className="text-ui-compact text-nim-faint block overflow-hidden text-ellipsis whitespace-nowrap">
                         {option.description}
                       </span>
                     )}
@@ -1565,32 +1565,32 @@ const SessionsPane: React.FC<SessionsPaneProps> = memo(({
                   <ProviderIcon provider={session.provider || 'claude'} size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-nim flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                  <div className="text-ui-body font-medium text-nim flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
                     {session.title || 'New conversation'}
                     {session.parentSessionId && (
-                      <span className="shrink-0 text-[10px] py-0.5 px-2 rounded-ui-base font-semibold bg-[var(--nim-primary)] text-white">
+                      <span className="shrink-0 text-ui-micro py-0.5 px-2 rounded-ui-base font-semibold bg-[var(--nim-primary)] text-white">
                         In Workstream
                       </span>
                     )}
                     {session.worktreeId && (
-                      <span className="shrink-0 text-[10px] py-0.5 px-2 rounded-ui-base font-semibold bg-[var(--nim-success)] text-white">
+                      <span className="shrink-0 text-ui-micro py-0.5 px-2 rounded-ui-base font-semibold bg-[var(--nim-success)] text-white">
                         Worktree
                       </span>
                     )}
                     {session.messageCount > 0 && (
-                      <span className="shrink-0 text-[10px] py-0.5 px-2 rounded-ui-base font-semibold bg-nim-faint text-white">
+                      <span className="shrink-0 text-ui-micro py-0.5 px-2 rounded-ui-base font-semibold bg-nim-faint text-white">
                         {session.messageCount} msg{session.messageCount !== 1 ? 's' : ''}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-nim-faint mt-1">
+                  <div className="text-ui-compact text-nim-faint mt-1">
                     {getRelativeTimeString(session.updatedAt)}
                   </div>
                 </div>
                 <div className="shrink-0 flex items-center gap-2 ml-auto">
                   {session.uncommittedCount !== undefined && session.uncommittedCount > 0 && (
                     <span
-                      className="shrink-0 text-[10px] py-0.5 px-2 rounded-ui-base font-semibold bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]"
+                      className="shrink-0 text-ui-micro py-0.5 px-2 rounded-ui-base font-semibold bg-[rgba(245,158,11,0.15)] text-[var(--nim-warning)]"
                       title={`${session.uncommittedCount} uncommitted change${session.uncommittedCount !== 1 ? 's' : ''}`}
                     >
                       {session.uncommittedCount}
@@ -1775,7 +1775,7 @@ const PromptsPane: React.FC<PromptsPaneProps> = memo(({
     <div className="prompts-pane flex-1 overflow-y-auto relative">
       {copiedPromptId && (
         <div
-          className="absolute top-2 left-1/2 -translate-x-1/2 z-10 py-1 px-3 rounded-ui-full text-[11px] font-medium bg-[var(--nim-success)] text-white shadow"
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-10 py-1 px-3 rounded-ui-full text-ui-caption font-medium bg-[var(--nim-success)] text-white shadow"
           data-testid="prompt-quick-open-copied-toast"
         >
           Copied to clipboard
@@ -1804,17 +1804,17 @@ const PromptsPane: React.FC<PromptsPaneProps> = memo(({
               }}
             >
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-nim leading-snug mb-1 overflow-hidden text-ellipsis line-clamp-2">
+                <div className="text-ui-body text-nim leading-snug mb-1 overflow-hidden text-ellipsis line-clamp-2">
                   {truncatePrompt(prompt.content)}
                 </div>
-                <div className="text-xs text-nim-faint flex items-center gap-2">
+                <div className="text-ui-compact text-nim-faint flex items-center gap-2">
                   <span className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
                     <span className="shrink-0 inline-flex items-center justify-center text-nim-muted">
                       <ProviderIcon provider={prompt.provider || 'claude'} size={12} />
                     </span>
                     {prompt.sessionTitle}
                     {prompt.parentSessionId && (
-                      <span className="shrink-0 text-[10px] py-0.5 px-2 bg-[var(--nim-primary)] text-white rounded-ui-base font-semibold">
+                      <span className="shrink-0 text-ui-micro py-0.5 px-2 bg-[var(--nim-primary)] text-white rounded-ui-base font-semibold">
                         In Workstream
                       </span>
                     )}
@@ -1983,20 +1983,20 @@ const ProjectsPane: React.FC<ProjectsPaneProps> = memo(({
                 <MaterialSymbol icon="folder" size={16} fill={project.isOpen} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-nim flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                <div className="text-ui-body font-medium text-nim flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
                   {project.name}
                   {project.isCurrent && (
-                    <span className="shrink-0 text-[10px] py-0.5 px-2 rounded-ui-base font-semibold bg-[var(--nim-primary)] text-white">
+                    <span className="shrink-0 text-ui-micro py-0.5 px-2 rounded-ui-base font-semibold bg-[var(--nim-primary)] text-white">
                       Current
                     </span>
                   )}
                   {project.isOpen && !project.isCurrent && (
-                    <span className="shrink-0 text-[10px] py-0.5 px-2 rounded-ui-base font-semibold bg-[var(--nim-success)] text-white">
+                    <span className="shrink-0 text-ui-micro py-0.5 px-2 rounded-ui-base font-semibold bg-[var(--nim-success)] text-white">
                       Open
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-nim-faint mt-1 overflow-hidden text-ellipsis whitespace-nowrap direction-rtl text-left">
+                <div className="text-ui-compact text-nim-faint mt-1 overflow-hidden text-ellipsis whitespace-nowrap direction-rtl text-left">
                   {project.path}
                 </div>
               </div>
@@ -2165,15 +2165,15 @@ const TrackersPane: React.FC<TrackersPaneProps> = memo(({
                 <MaterialSymbol icon={trackerTypeIcon(it.type)} size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-nim flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                <div className="text-ui-body font-medium text-nim flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
                   {it.issueKey && (
-                    <span className="shrink-0 text-[10px] font-mono py-0.5 px-2 rounded-ui-base bg-nim-secondary text-nim-faint">
+                    <span className="shrink-0 text-ui-micro font-mono py-0.5 px-2 rounded-ui-base bg-nim-secondary text-nim-faint">
                       {it.issueKey}
                     </span>
                   )}
                   <span className="truncate">{it.title}</span>
                 </div>
-                <div className="text-xs text-nim-faint mt-1 flex items-center gap-2">
+                <div className="text-ui-compact text-nim-faint mt-1 flex items-center gap-2">
                   <span
                     className="inline-flex items-center gap-1"
                     style={{ color: TRACKER_STATUS_COLOR[it.status] ?? 'var(--nim-text-faint)' }}

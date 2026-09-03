@@ -84,6 +84,42 @@ const TARGET_FILES = new Set([
   'components/AgentMode/WorkstreamEditorTabs.tsx',
   'components/AgentMode/WorkstreamSessionTabs.tsx',
   'components/AgentMode/index.ts',
+  'components/GlobalSettings/SettingsToggle.tsx',
+  'components/GlobalSettings/panels/AdvancedPanel.tsx',
+  'components/GlobalSettings/panels/BetaFeaturesPanel.tsx',
+  'components/GlobalSettings/panels/ClaudeCliChannelToggle.tsx',
+  'components/GlobalSettings/panels/ClaudeCodePanel.tsx',
+  'components/GlobalSettings/panels/ClaudeCodePluginsPanel.tsx',
+  'components/GlobalSettings/panels/ClaudePanel.tsx',
+  'components/GlobalSettings/panels/CopilotCLIPanel.tsx',
+  'components/GlobalSettings/panels/DatabasePanel.tsx',
+  'components/GlobalSettings/panels/LMStudioPanel.tsx',
+  'components/GlobalSettings/panels/MCPServersPanel.tsx',
+  'components/GlobalSettings/panels/NotificationsPanel.tsx',
+  'components/GlobalSettings/panels/OpenAICodexPanel.tsx',
+  'components/GlobalSettings/panels/OpenAIPanel.tsx',
+  'components/GlobalSettings/panels/OpenCodePanel.tsx',
+  'components/GlobalSettings/panels/QRPairingModal.tsx',
+  'components/GlobalSettings/panels/SharedLinksPanel.tsx',
+  'components/GlobalSettings/panels/SyncPanel.tsx',
+  'components/Settings/AgentFeaturesPanel.tsx',
+  'components/Settings/SettingsSidebar.tsx',
+  'components/Settings/SettingsView.tsx',
+  'components/Settings/VoiceModePanel.tsx',
+  'components/Settings/panels/ExtensionConfigPanel.tsx',
+  'components/Settings/panels/ExtensionMarketplacePanel.tsx',
+  'components/Settings/panels/GitHubAccountPanel.tsx',
+  'components/Settings/panels/InstalledExtensionsPanel.tsx',
+  'components/Settings/panels/OrgPanel.tsx',
+  'components/Settings/panels/PrivilegedExtensionsPanel.tsx',
+  'components/Settings/panels/ProjectAIProvidersPanel.tsx',
+  'components/Settings/panels/ProjectPermissionsPanel.tsx',
+  'components/Settings/panels/ProviderOverrideWrapper.tsx',
+  'components/Settings/panels/TeamPanel.tsx',
+  'components/Settings/panels/ThemesPanel.tsx',
+  'components/Settings/panels/TrackerConfigPanel.tsx',
+  'components/Settings/panels/trackerConfigUpgrade.ts',
+  'components/Settings/voiceModeSummaryPrompt.ts',
 ]);
 
 function walk(dir) {
@@ -106,11 +142,19 @@ function walk(dir) {
 }
 
 const ALLOWED_ROUNDED = /^rounded-ui-(?:base|lg|full|none)(?:-[tblr])?$/;
+const ALLOWED_FONT_SIZES = /^text-ui-(?:micro|caption|compact|body|subhead|title|headline|display)$/;
+const fontClassRegex = /(?<![a-zA-Z0-9_\-])(?:[a-zA-Z0-9_-]+:)*(?:text-(?:xs|sm|base|lg|xl|[2-9]xl|\d+xl|ui-[a-zA-Z0-9_-]+)|text-\[(?!\s*(?:#|rgba?\(|hsla?\(|var\(--nim-))[^\]]+\])/g;
 
 function scanFile(content, isExempt = false) {
-  const pxFontRegex = /text-\[\d+(?:\.\d+)?px\]/g;
-  const inlineFontSizeRegex = /fontSize:\s*['"]?\d+(?:\.\d+)?(?:px)?['"]?/g;
   const rawColorRegex = /(?:bg|text|border|ring)-\[#(?:[0-9a-fA-F]+)\]|(?:bg|text|border|ring)-\[rgb[a]?\([^)]+\)\]/g;
+  const inlineFontSizeRegex = /fontSize:\s*['"]?\d+(?:\.\d+)?(?:px)?['"]?/g;
+
+  const rawFonts = content.match(fontClassRegex) || [];
+  const nonStdFonts = rawFonts.filter(cls => {
+    const baseCls = cls.includes(':') ? cls.split(':').pop() : cls;
+    return !ALLOWED_FONT_SIZES.test(baseCls);
+  });
+  const inlineFonts = content.match(inlineFontSizeRegex) || [];
 
   let nonStdRoundedCount = 0;
   let halfGapCount = 0;
@@ -125,7 +169,7 @@ function scanFile(content, isExempt = false) {
   }
 
   return {
-    pxFonts: (content.match(pxFontRegex) || []).length + (content.match(inlineFontSizeRegex) || []).length,
+    pxFonts: nonStdFonts.length + inlineFonts.length,
     rawColors: (content.match(rawColorRegex) || []).length,
     nonStdRounded: nonStdRoundedCount,
     halfGap: halfGapCount,
@@ -139,6 +183,7 @@ function generateBaseline() {
   files.forEach(f => {
     const rel = path.relative(RENDERER_ROOT, f);
     if (TARGET_FILES.has(rel)) return;
+    if (rel.startsWith('styles/')) return;
 
     let group = 'other';
     const parts = rel.split(path.sep);

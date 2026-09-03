@@ -89,7 +89,7 @@ export function UserMenuPopover({ onNavigateSettings, onClose, isProjectConnecte
           {menuItems.map((item) => (
             <button
               key={item.label}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-nim hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left transition-colors duration-100"
+              className="w-full flex items-center gap-3 px-3 py-2 text-ui-body text-nim hover:bg-nim-tertiary cursor-pointer border-none bg-transparent text-left transition-colors duration-100"
               onClick={item.onClick}
               data-testid={`user-menu-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
             >
@@ -111,15 +111,15 @@ export function UserMenuPopover({ onNavigateSettings, onClose, isProjectConnecte
           data-testid="user-menu-identity"
         >
           <div className="w-7 h-7 rounded-ui-full bg-nim-primary flex items-center justify-center shrink-0">
-            <span className="text-xs font-semibold text-white leading-none">
+            <span className="text-ui-compact font-semibold text-white leading-none">
               {email ? email[0].toUpperCase() : '?'}
             </span>
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm text-nim truncate">
+            <span className="text-ui-body text-nim truncate">
               {email ?? 'No account'}
             </span>
-            <span className="text-xs text-nim-muted">
+            <span className="text-ui-compact text-nim-muted">
               {isSignedIn ? 'Signed in' : 'Not signed in'}
             </span>
           </div>

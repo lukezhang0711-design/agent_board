@@ -141,7 +141,7 @@ export function FileContextMenu({
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={handleRenameKeyDown}
               onBlur={handleRenameSubmit}
-              className="rename-input w-full px-2 py-2 rounded-ui-base text-[13px] outline-none transition-colors"
+              className="rename-input w-full px-2 py-2 rounded-ui-base text-ui-body outline-none transition-colors"
               style={{
                 background: 'var(--nim-bg-secondary)',
                 border: '1px solid var(--nim-primary)',
@@ -166,7 +166,7 @@ export function FileContextMenu({
             border: '1px solid var(--nim-border)',
           }}
           {...menu.getFloatingProps()}
-          className="file-context-menu p-1 min-w-[200px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-ui-base z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+          className="file-context-menu p-1 min-w-[200px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-ui-base z-[10000] text-ui-body backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
         >
           <div
             className="file-context-menu-item file-context-menu-item-danger flex items-center gap-3 px-3 py-2 rounded-ui-base cursor-pointer transition-colors text-[var(--nim-error)] hover:bg-[var(--nim-error-subtle)]"
@@ -194,7 +194,7 @@ export function FileContextMenu({
           border: '1px solid var(--nim-border)',
         }}
         {...menu.getFloatingProps()}
-        className="file-context-menu p-1 min-w-[200px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-ui-base z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+        className="file-context-menu p-1 min-w-[200px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-ui-base z-[10000] text-ui-body backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
         data-testid="file-context-menu"
       >
         {fileType === 'directory' && (

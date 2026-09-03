@@ -73,45 +73,53 @@ export class TabEditorErrorBoundary extends Component<Props, State> {
             maxWidth: '500px',
             textAlign: 'center',
           }}>
-            <h3 style={{
-              margin: '0 0 16px 0',
-              color: 'var(--nim-text)',
-              fontSize: '18px',
-            }}>
+            <h3
+              className="text-ui-title"
+              style={{
+                margin: '0 0 16px 0',
+                color: 'var(--nim-text)',
+              }}
+            >
               Unable to Load Editor
             </h3>
 
-            <p style={{
-              margin: '0 0 8px 0',
-              color: 'var(--nim-text-muted)',
-              fontSize: '14px',
-            }}>
+            <p
+              className="text-ui-body"
+              style={{
+                margin: '0 0 8px 0',
+                color: 'var(--nim-text-muted)',
+              }}
+            >
               An error occurred while loading "{this.props.fileName}".
             </p>
 
-            <p style={{
-              margin: '0 0 24px 0',
-              color: 'var(--nim-text-faint)',
-              fontSize: '13px',
-            }}>
+            <p
+              className="text-ui-body"
+              style={{
+                margin: '0 0 24px 0',
+                color: 'var(--nim-text-faint)',
+              }}
+            >
               Other tabs should continue to work normally.
             </p>
 
             {this.state.error && (
-              <pre style={{
-                margin: '0 0 24px 0',
-                padding: '12px',
-                backgroundColor: 'var(--nim-bg-tertiary)',
-                border: '1px solid var(--nim-border)',
-                borderRadius: '4px',
-                fontSize: '12px',
-                color: 'var(--nim-text-muted)',
-                textAlign: 'left',
-                overflow: 'auto',
-                maxHeight: '150px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}>
+              <pre
+                className="text-ui-compact"
+                style={{
+                  margin: '0 0 24px 0',
+                  padding: '12px',
+                  backgroundColor: 'var(--nim-bg-tertiary)',
+                  border: '1px solid var(--nim-border)',
+                  borderRadius: '4px',
+                  color: 'var(--nim-text-muted)',
+                  textAlign: 'left',
+                  overflow: 'auto',
+                  maxHeight: '150px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
                 {this.state.error.message}
               </pre>
             )}
@@ -122,6 +130,7 @@ export class TabEditorErrorBoundary extends Component<Props, State> {
               justifyContent: 'center',
             }}>
               <button
+                className="text-ui-body"
                 onClick={this.handleRetry}
                 style={{
                   padding: '8px 16px',
@@ -130,7 +139,6 @@ export class TabEditorErrorBoundary extends Component<Props, State> {
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '14px',
                 }}
               >
                 Try Again
@@ -138,6 +146,7 @@ export class TabEditorErrorBoundary extends Component<Props, State> {
 
               {this.props.onClose && (
                 <button
+                  className="text-ui-body"
                   onClick={this.handleClose}
                   style={{
                     padding: '8px 16px',
@@ -146,7 +155,6 @@ export class TabEditorErrorBoundary extends Component<Props, State> {
                     border: '1px solid var(--nim-border)',
                     borderRadius: '4px',
                     cursor: 'pointer',
-                    fontSize: '14px',
                   }}
                 >
                   Close Tab

@@ -65,7 +65,7 @@ export function BadGitStateDialog({
         />
 
         <div className="merge-conflict-dialog-body flex-1 min-h-0 overflow-y-auto px-6 pb-5">
-          <p className="m-0 mb-4 text-sm leading-relaxed text-[var(--nim-text-muted)]">
+          <p className="m-0 mb-4 text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
             Cannot perform git operation on <strong className="text-[var(--nim-text)] font-medium">{worktreeName}</strong>.
           </p>
 
@@ -86,7 +86,7 @@ export function BadGitStateDialog({
                 {conflictedFiles.map((file) => (
                   <li key={file} className="merge-conflict-dialog-file flex items-center gap-2 text-ui-body text-[var(--nim-text-muted)]">
                     <MaterialSymbol icon="error" size={14} className="merge-conflict-dialog-file-icon text-[var(--nim-error)] shrink-0" />
-                    <span className="font-mono text-xs">{file}</span>
+                    <span className="font-mono text-ui-compact">{file}</span>
                   </li>
                 ))}
               </ul>
@@ -112,7 +112,7 @@ export function BadGitStateDialog({
               <MaterialSymbol icon="terminal" size={16} />
               Worktree location:
             </p>
-            <code className="merge-conflict-dialog-path block font-[var(--nim-font-mono)] text-xs text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] px-2 py-2 rounded-ui-base break-all">{worktreePath}</code>
+            <code className="merge-conflict-dialog-path block font-[var(--nim-font-mono)] text-ui-compact text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] px-2 py-2 rounded-ui-base break-all">{worktreePath}</code>
           </div>
         </div>
 

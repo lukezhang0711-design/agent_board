@@ -15,6 +15,7 @@ import { loadTerminalGhostty } from './ghosttyInstance';
 import { isElementMeasurable, waitUntilElementMeasurable } from './terminalVisibility';
 
 // Type for terminal API is defined in electron.d.ts
+const GHOSTTY_FONT_SIZE = 13;
 
 export interface TerminalPanelProps {
   /** Terminal ID (ULID) */
@@ -401,7 +402,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         // Create Ghostty Terminal instance
         terminal = new Terminal({
           ghostty,
-          fontSize: 13,
+          fontSize: GHOSTTY_FONT_SIZE,
           fontFamily: '"SF Mono", Monaco, "Courier New", monospace',
           scrollback: 50000,
           cursorBlink: false,
@@ -874,8 +875,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         />
       )}
 
-      {restoreWarning && !initError && !hasExited && (
+      {restoreWarning && (
         <div
+          className="text-ui-compact"
           style={{
             position: 'absolute',
             top: '8px',
@@ -885,7 +887,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
             backgroundColor: 'var(--nim-bg-secondary)',
             borderRadius: '4px',
             color: 'var(--nim-text-muted)',
-            fontSize: '12px',
             border: '1px solid var(--nim-border)',
             display: 'flex',
             alignItems: 'center',
@@ -896,6 +897,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
           <span>{restoreWarning}</span>
           <button
             type="button"
+            className="text-ui-body"
             onClick={() => setRestoreWarning(null)}
             aria-label="Dismiss"
             style={{
@@ -904,7 +906,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
               border: 'none',
               color: 'var(--nim-text-muted)',
               cursor: 'pointer',
-              fontSize: '14px',
               lineHeight: 1,
               padding: '0 2px',
             }}
@@ -916,6 +917,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
       {!isInitialized && !hasExited && !initError && (
         <div
+          className="text-ui-body"
           style={{
             position: 'absolute',
             inset: 0,
@@ -923,7 +925,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             color: 'var(--nim-text-faint)',
-            fontSize: '14px',
           }}
         >
           Initializing terminal...
@@ -932,12 +933,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
       {initError && (
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center text-nim-error text-sm p-5 text-center"
+          className="absolute inset-0 flex flex-col items-center justify-center text-nim-error text-ui-body p-5 text-center"
         >
           <div style={{ marginBottom: '12px' }}>
             Failed to initialize terminal: {initError}
           </div>
           <button
+            className="text-ui-compact"
             onClick={handleRestart}
             style={{
               padding: '6px 12px',
@@ -945,7 +947,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
               border: 'none',
               borderRadius: '4px',
               color: 'var(--nim-text)',
-              fontSize: '12px',
               cursor: 'pointer',
             }}
           >
@@ -956,6 +957,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
       {hasExited && (
         <div
+          className="text-ui-compact"
           style={{
             position: 'absolute',
             bottom: '8px',
@@ -965,7 +967,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
             backgroundColor: 'var(--nim-bg-secondary)',
             borderRadius: '4px',
             color: 'var(--nim-text-muted)',
-            fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
@@ -975,6 +976,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
             Process exited with code {exitCode ?? 0}.
           </span>
           <button
+            className="text-ui-compact"
             onClick={handleRestart}
             style={{
               padding: '4px 8px',
@@ -982,7 +984,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
               border: 'none',
               borderRadius: '4px',
               color: 'var(--nim-text)',
-              fontSize: '12px',
               cursor: 'pointer',
             }}
           >

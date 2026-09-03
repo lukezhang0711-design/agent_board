@@ -567,7 +567,7 @@ const WorkstreamHeader: React.FC<{
             <input
               ref={inputRef}
               type="text"
-              className="workstream-header-title-input text-sm font-semibold text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-accent)] rounded-ui-base py-0.5 px-1 m-0 outline-none w-full min-w-[150px] max-w-[500px]"
+              className="workstream-header-title-input text-ui-body font-semibold text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-accent)] rounded-ui-base py-0.5 px-1 m-0 outline-none w-full min-w-[150px] max-w-[500px]"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleRenameSubmit}
@@ -575,7 +575,7 @@ const WorkstreamHeader: React.FC<{
             />
           ) : (
             <h2
-              className="workstream-header-title max-w-full m-0 text-sm font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight cursor-pointer py-0.5 px-1 rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="workstream-header-title max-w-full m-0 text-ui-body font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight cursor-pointer py-0.5 px-1 rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleTitleClick}
               title="Click to rename"
             >

@@ -98,24 +98,24 @@ export const ProjectSelectionDialog: React.FC<ProjectSelectionDialogProps> = ({
         className="project-selection-dialog nim-modal min-w-[500px] max-w-[600px] max-h-[80vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="project-selection-dialog-title m-0 mb-3 text-lg font-semibold text-[var(--nim-text)]">
+        <h2 className="project-selection-dialog-title m-0 mb-3 text-ui-title font-semibold text-[var(--nim-text)]">
           Select a Project
         </h2>
-        <p className="project-selection-dialog-message m-0 mb-6 text-sm text-[var(--nim-text-muted)] leading-relaxed">
+        <p className="project-selection-dialog-message m-0 mb-6 text-ui-body text-[var(--nim-text-muted)] leading-relaxed">
           The file <strong className="text-[var(--nim-text)] font-medium">{fileName}</strong> is not in a known project.
           {suggestedWorkspace && ' A potential project folder was detected.'}
         </p>
 
         {suggestedWorkspace && (
           <div className="project-selection-suggested mb-6 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base">
-            <h3 className="project-selection-section-title m-0 mb-3 text-sm font-semibold text-[var(--nim-text)] uppercase tracking-wide">
+            <h3 className="project-selection-section-title m-0 mb-3 text-ui-body font-semibold text-[var(--nim-text)] uppercase tracking-wide">
               Suggested Project
             </h3>
             <div className="project-selection-suggested-item mb-3">
-              <div className="project-selection-item-name text-sm font-medium text-[var(--nim-text)] mb-1">
+              <div className="project-selection-item-name text-ui-body font-medium text-[var(--nim-text)] mb-1">
                 {getFileName(suggestedWorkspace)}
               </div>
-              <div className="project-selection-item-path text-xs text-[var(--nim-text-faint)] font-mono">
+              <div className="project-selection-item-path text-ui-compact text-[var(--nim-text-faint)] font-mono">
                 {suggestedWorkspace}
               </div>
             </div>
@@ -130,7 +130,7 @@ export const ProjectSelectionDialog: React.FC<ProjectSelectionDialogProps> = ({
 
         {recentProjects.length > 0 && (
           <div className="project-selection-recent mb-6">
-            <h3 className="project-selection-section-title m-0 mb-3 text-sm font-semibold text-[var(--nim-text)] uppercase tracking-wide">
+            <h3 className="project-selection-section-title m-0 mb-3 text-ui-body font-semibold text-[var(--nim-text)] uppercase tracking-wide">
               Recent Projects
             </h3>
             <div className="project-selection-list mb-3 border border-[var(--nim-border)] rounded-ui-base overflow-hidden max-h-[300px] overflow-y-auto">
@@ -144,10 +144,10 @@ export const ProjectSelectionDialog: React.FC<ProjectSelectionDialogProps> = ({
                   }`}
                   onClick={() => setSelectedProject(project.path)}
                 >
-                  <div className="project-selection-item-name text-sm font-medium text-[var(--nim-text)] mb-1">
+                  <div className="project-selection-item-name text-ui-body font-medium text-[var(--nim-text)] mb-1">
                     {project.name}
                   </div>
-                  <div className="project-selection-item-path text-xs text-[var(--nim-text-faint)] font-mono">
+                  <div className="project-selection-item-path text-ui-compact text-[var(--nim-text-faint)] font-mono">
                     {project.path}
                   </div>
                 </div>

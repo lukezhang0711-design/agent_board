@@ -169,7 +169,7 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
   if (!controller) {
     return (
       <div className="collab-history-overlay fixed inset-0 flex items-center justify-center z-[10000] bg-black/50" onClick={onClose}>
-        <div className="collab-history-empty bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg p-6 max-w-md text-sm text-[var(--nim-text)]" onClick={(e) => e.stopPropagation()}>
+        <div className="collab-history-empty bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg p-6 max-w-md text-ui-body text-[var(--nim-text)]" onClick={(e) => e.stopPropagation()}>
           {graceExpired ? (
             <>
               <div className="font-semibold mb-1">Open the document first</div>
@@ -198,22 +198,22 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
       <div className="collab-history-dialog flex flex-col overflow-hidden rounded-ui-lg bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[80vw] max-w-[900px] h-[70vh] max-h-[700px]" onClick={(e) => e.stopPropagation()}>
         <div className="collab-history-header flex items-center justify-between py-3 px-4 border-b border-[var(--nim-border)]">
           <div>
-            <h2 className="m-0 text-base font-semibold text-[var(--nim-text)]">Document History</h2>
-            <div className="text-[11px] text-[var(--nim-text-muted)]">Shared revisions for this document</div>
+            <h2 className="m-0 text-ui-subhead font-semibold text-[var(--nim-text)]">Document History</h2>
+            <div className="text-ui-caption text-[var(--nim-text-muted)]">Shared revisions for this document</div>
           </div>
           <button className="nim-btn-icon" onClick={onClose} aria-label="Close history dialog">
-            <span className="material-symbols-outlined text-xl">close</span>
+            <span className="material-symbols-outlined text-ui-title">close</span>
           </button>
         </div>
 
         <div className="collab-history-content flex-1 flex overflow-hidden">
           <div className="collab-history-list w-[320px] border-r border-[var(--nim-border)] flex flex-col">
-            <div className="py-2 px-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">
+            <div className="py-2 px-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">
               Revisions ({revisions.length})
               {loading && <span className="ml-2 normal-case text-[var(--nim-text-muted)]">Loading...</span>}
             </div>
             {revisions.length === 0 && !loading ? (
-              <div className="p-6 text-center text-sm text-[var(--nim-text-muted)]">
+              <div className="p-6 text-center text-ui-body text-[var(--nim-text-muted)]">
                 No revisions yet. Press Cmd/Ctrl+S to save a version or wait for an auto snapshot.
               </div>
             ) : (
@@ -227,14 +227,14 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
                       className={`collab-history-item flex items-center gap-2 py-2 px-2 mb-1 rounded-ui-base cursor-pointer ${isSelected ? 'bg-[var(--nim-primary)] text-white' : 'hover:bg-[var(--nim-bg-hover)]'}`}
                       onClick={() => setSelectedId(rev.revisionId)}
                     >
-                      <span className="material-symbols-outlined text-lg shrink-0">
+                      <span className="material-symbols-outlined text-ui-title shrink-0">
                         {REVISION_ICONS[rev.revisionKind] ?? 'description'}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium truncate">
+                        <div className="text-ui-compact font-medium truncate">
                           {REVISION_LABELS[rev.revisionKind] ?? rev.revisionKind}
                         </div>
-                        <div className={`text-[11px] truncate ${isSelected ? 'text-white/80' : 'text-[var(--nim-text-faint)]'}`}>
+                        <div className={`text-ui-caption truncate ${isSelected ? 'text-white/80' : 'text-[var(--nim-text-faint)]'}`}>
                           {getRelativeTimeString(rev.createdAt)}
                         </div>
                       </div>
@@ -247,11 +247,11 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
 
           <div className="collab-history-detail flex-1 flex flex-col">
             <div className="py-2 px-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] flex items-center justify-between">
-              <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">
+              <div className="text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">
                 Details
               </div>
               <button
-                className="history-restore-button py-2 px-4 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 hover:not-disabled:bg-[var(--nim-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="history-restore-button py-2 px-4 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-200 hover:not-disabled:bg-[var(--nim-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleRestore}
                 disabled={!selectedRevision || restoring || !restoreSafe || !supportsRestore}
                 title={
@@ -266,19 +266,19 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto p-4 text-sm text-[var(--nim-text)]">
+            <div className="flex-1 overflow-auto p-4 text-ui-body text-[var(--nim-text)]">
               {error && (
                 <div className="mb-3 p-2 border border-[var(--nim-error)] rounded-ui-base text-[var(--nim-error)] bg-[var(--nim-error-light)]">
                   {error}
                 </div>
               )}
               {!supportsRestore && (
-                <div className="mb-3 p-2 border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] bg-[var(--nim-bg-secondary)] text-xs">
+                <div className="mb-3 p-2 border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] bg-[var(--nim-bg-secondary)] text-ui-compact">
                   This editor has not opted into snapshot export and restore yet. You can still inspect revision metadata from this document.
                 </div>
               )}
               {!restoreSafe && supportsRestore && (
-                <div className="mb-3 p-2 border border-[var(--nim-warning)] rounded-ui-base text-[var(--nim-warning)] bg-[var(--nim-warning-light)] text-xs">
+                <div className="mb-3 p-2 border border-[var(--nim-warning)] rounded-ui-base text-[var(--nim-warning)] bg-[var(--nim-warning-light)] text-ui-compact">
                   This document still has unsynced local changes. Wait for the connection to reach "Connected" before restoring.
                 </div>
               )}
@@ -291,14 +291,14 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
                   <DetailRow label="Format" value={selectedRevision.contentFormat} />
                   <DetailRow label="Size" value={`${selectedRevision.payloadBytes} bytes (encrypted)`} />
                   <DetailRow label="Hash" value={selectedRevision.contentHash.slice(0, 16) + '...'} />
-                  <div className="pt-3 text-xs text-[var(--nim-text-muted)]">
+                  <div className="pt-3 text-ui-compact text-[var(--nim-text-muted)]">
                     {supportsRestore
                       ? 'Restoring creates a new current version. Earlier history is preserved.'
                       : 'Snapshot content is not available for preview or restore until this editor registers a revision adapter.'}
                   </div>
                 </div>
               ) : (
-                <div className="text-[var(--nim-text-muted)] text-sm">
+                <div className="text-[var(--nim-text-muted)] text-ui-body">
                   Select a revision to see details.
                 </div>
               )}
@@ -311,7 +311,7 @@ export const CollabHistoryDialog: React.FC<CollabHistoryDialogProps> = ({
 };
 
 const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="flex gap-3 text-xs">
+  <div className="flex gap-3 text-ui-compact">
     <div className="w-20 shrink-0 text-[var(--nim-text-muted)]">{label}</div>
     <div className="flex-1 break-all">{value}</div>
   </div>

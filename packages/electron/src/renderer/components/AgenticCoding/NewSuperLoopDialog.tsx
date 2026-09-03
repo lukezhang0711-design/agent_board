@@ -207,7 +207,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Description */}
-          <div className="text-sm text-nim-muted">
+          <div className="text-ui-body text-nim-muted">
             Super Loops run an autonomous AI agent iteratively until a task is complete.
             Each iteration starts with fresh context while progress persists via files.
             A dedicated worktree will be automatically created for this loop.
@@ -216,18 +216,18 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
 
           {/* Task Description */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-nim">
+            <label className="block text-ui-body font-medium text-nim">
               Task Description
             </label>
             <textarea
               value={taskDescription}
               onChange={(e) => setTaskDescription(e.target.value)}
               placeholder="Describe the task you want the AI to complete..."
-              className="w-full h-40 px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-ui-base text-nim placeholder:text-nim-muted focus:outline-none focus:ring-2 focus:ring-nim-primary resize-none"
+              className="w-full h-40 px-3 py-2 text-ui-body bg-nim-secondary border border-nim rounded-ui-base text-nim placeholder:text-nim-muted focus:outline-none focus:ring-2 focus:ring-nim-primary resize-none"
               disabled={isCreating}
               autoFocus
             />
-            <p className="text-xs text-nim-muted">
+            <p className="text-ui-compact text-nim-muted">
               This will be saved to .superloop/task.md in a new worktree.
             </p>
           </div>
@@ -236,14 +236,14 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
           <div className="flex gap-4">
             {/* Model Selector */}
             <div className="space-y-2 flex-1">
-              <label className="block text-sm font-medium text-nim">
+              <label className="block text-ui-body font-medium text-nim">
                 Model
               </label>
               <div className="relative">
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-ui-base text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary appearance-none pr-8"
+                  className="w-full px-3 py-2 text-ui-body bg-nim-secondary border border-nim rounded-ui-base text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary appearance-none pr-8"
                   disabled={isCreating || loadingModels || agentModels.length === 0}
                 >
                   {loadingModels ? (
@@ -264,14 +264,14 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-nim-muted pointer-events-none"
                 />
               </div>
-              <p className="text-xs text-nim-muted">
+              <p className="text-ui-compact text-nim-muted">
                 The AI model used for each iteration.
               </p>
             </div>
 
             {/* Max Iterations */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-nim">
+              <label className="block text-ui-body font-medium text-nim">
                 Max Iterations
               </label>
               <div className="flex items-center gap-2">
@@ -281,14 +281,14 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
                   onChange={(e) => setMaxIterations(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
                   min={1}
                   max={100}
-                  className="w-24 px-3 py-2 text-sm bg-nim-secondary border border-nim rounded-ui-base text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary"
+                  className="w-24 px-3 py-2 text-ui-body bg-nim-secondary border border-nim rounded-ui-base text-nim focus:outline-none focus:ring-2 focus:ring-nim-primary"
                   disabled={isCreating}
                 />
-                <span className="text-sm text-nim-muted">
+                <span className="text-ui-body text-nim-muted">
                   (1-100)
                 </span>
               </div>
-              <p className="text-xs text-nim-muted">
+              <p className="text-ui-compact text-nim-muted">
                 Stops after this many iterations.
               </p>
             </div>
@@ -296,7 +296,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 text-sm text-nim-error bg-nim-error/10 border border-nim-error/30 rounded-ui-base">
+            <div className="p-3 text-ui-body text-nim-error bg-nim-error/10 border border-nim-error/30 rounded-ui-base">
               {error}
             </div>
           )}
@@ -306,7 +306,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-nim">
           <button
             onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-nim bg-nim-secondary hover:bg-nim-hover border border-nim rounded-ui-base transition-colors"
+            className="px-4 py-2 text-ui-body font-medium text-nim bg-nim-secondary hover:bg-nim-hover border border-nim rounded-ui-base transition-colors"
             disabled={isCreating}
           >
             Cancel
@@ -314,7 +314,7 @@ export const NewSuperLoopDialog: React.FC<NewSuperLoopDialogProps> = ({
           <button
             onClick={handleCreate}
             disabled={isCreating || !taskDescription.trim() || !selectedModel}
-            className="px-4 py-2 text-sm font-medium text-nim-on-primary bg-nim-primary hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-ui-base transition-colors flex items-center gap-2"
+            className="px-4 py-2 text-ui-body font-medium text-nim-on-primary bg-nim-primary hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-ui-base transition-colors flex items-center gap-2"
           >
             {isCreating ? (
               <>

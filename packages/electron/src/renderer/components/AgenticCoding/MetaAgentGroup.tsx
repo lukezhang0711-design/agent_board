@@ -131,12 +131,12 @@ const MetaAgentChildRow: React.FC<{
     }`}>
       <ProviderIcon provider={session.provider || 'claude-code'} size={14} />
     </div>
-    <span className={`flex-1 text-xs text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis ${
+    <span className={`flex-1 text-ui-compact text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis ${
       isActive ? 'font-medium' : ''
     }`}>
       {session.title || 'Untitled Session'}
     </span>
-    <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)] ml-2">
+    <span className="shrink-0 text-ui-caption text-[var(--nim-text-faint)] ml-2">
       <SessionRelativeTime sessionId={session.id} fallbackTimestamp={session.updatedAt || session.createdAt} />
     </span>
     <div className="shrink-0 flex items-center">
@@ -262,7 +262,7 @@ export const MetaAgentGroup: React.FC<MetaAgentGroupProps> = memo(({
         </div>
 
         {/* Title */}
-        <span className={`flex-1 text-xs whitespace-nowrap overflow-hidden text-ellipsis ${
+        <span className={`flex-1 text-ui-compact whitespace-nowrap overflow-hidden text-ellipsis ${
           isActive ? 'font-medium text-[var(--nim-text)]' : 'text-[var(--nim-text)]'
         }`}>
           {metaSession.title || 'Meta Agent'}
@@ -270,13 +270,13 @@ export const MetaAgentGroup: React.FC<MetaAgentGroupProps> = memo(({
 
         {/* Child count badge */}
         {childSessions.length > 0 && (
-          <span className="shrink-0 text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] font-medium">
+          <span className="shrink-0 text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] font-medium">
             {childSessions.length}
           </span>
         )}
 
         {/* Timestamp */}
-        <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)]">
+        <span className="shrink-0 text-ui-caption text-[var(--nim-text-faint)]">
           <SessionRelativeTime sessionId={metaSession.id} fallbackTimestamp={metaSession.updatedAt || metaSession.createdAt} />
         </span>
 

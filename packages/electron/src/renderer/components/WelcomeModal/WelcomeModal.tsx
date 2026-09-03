@@ -145,7 +145,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
 
         {/* Header */}
         <div className="welcome-modal-header flex justify-between items-center px-8 pt-6 pb-4 border-b border-nim">
-          <h2 className="m-0 text-2xl font-semibold text-nim">
+          <h2 className="m-0 text-ui-headline font-semibold text-nim">
             {currentStep === 'welcome' && 'Welcome to Nimbalyst'}
             {currentStep === 'plans-location' && 'Configure Plans Location'}
             {currentStep === 'claude-code' && 'Configure Claude Agent Integration'}
@@ -154,7 +154,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
             {currentStep === 'complete' && 'All Set!'}
           </h2>
           <button
-            className="welcome-modal-close flex items-center justify-center w-8 h-8 p-0 text-[28px] rounded-ui-base bg-transparent border-none cursor-pointer transition-all duration-200 text-nim-muted hover:bg-nim-hover hover:text-nim"
+            className="welcome-modal-close flex items-center justify-center w-8 h-8 p-0 text-ui-headline rounded-ui-base bg-transparent border-none cursor-pointer transition-all duration-200 text-nim-muted hover:bg-nim-hover hover:text-nim"
             onClick={handleSkip}
             title="Skip onboarding"
           >
@@ -172,23 +172,23 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
 
           {currentStep === 'welcome' && (
             <div className="welcome-step text-center">
-              <h3 className="m-0 mb-3 text-xl text-nim">Welcome to {workspaceName}</h3>
+              <h3 className="m-0 mb-3 text-ui-title text-nim">Welcome to {workspaceName}</h3>
               <p className="mb-8 leading-relaxed text-nim-muted">
                 Nimbalyst is a powerful editor with integrated planning, tracking, and AI features.
                 This quick setup will help you get started.
               </p>
               <div className="welcome-features flex flex-col gap-5 text-left">
                 <div className="welcome-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
-                  <strong className="block mb-2 text-[15px] text-nim">Planning System</strong>
-                  <p className="m-0 text-sm leading-normal text-nim-muted">Organize features, bugs, and tasks with structured markdown plans</p>
+                  <strong className="block mb-2 text-ui-subhead text-nim">Planning System</strong>
+                  <p className="m-0 text-ui-body leading-normal text-nim-muted">Organize features, bugs, and tasks with structured markdown plans</p>
                 </div>
                 <div className="welcome-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
-                  <strong className="block mb-2 text-[15px] text-nim">AI Integration</strong>
-                  <p className="m-0 text-sm leading-normal text-nim-muted">Work with Claude Agent and other AI assistants for enhanced productivity</p>
+                  <strong className="block mb-2 text-ui-subhead text-nim">AI Integration</strong>
+                  <p className="m-0 text-ui-body leading-normal text-nim-muted">Work with Claude Agent and other AI assistants for enhanced productivity</p>
                 </div>
                 <div className="welcome-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
-                  <strong className="block mb-2 text-[15px] text-nim">Progress Tracking</strong>
-                  <p className="m-0 text-sm leading-normal text-nim-muted">Visual plan view to monitor status and progress across all work items</p>
+                  <strong className="block mb-2 text-ui-subhead text-nim">Progress Tracking</strong>
+                  <p className="m-0 text-ui-body leading-normal text-nim-muted">Visual plan view to monitor status and progress across all work items</p>
                 </div>
               </div>
             </div>
@@ -214,8 +214,8 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                     className="mt-1 cursor-pointer w-[18px] h-[18px] shrink-0"
                   />
                   <div className="plan-location-content flex-1">
-                    <strong className="block mb-1 text-[15px] text-nim">nimbalyst-local/plans</strong> (Recommended)
-                    <p className="m-0 text-sm leading-normal text-nim-muted">Private plans not checked into version control. Best for personal planning.</p>
+                    <strong className="block mb-1 text-ui-subhead text-nim">nimbalyst-local/plans</strong> (Recommended)
+                    <p className="m-0 text-ui-body leading-normal text-nim-muted">Private plans not checked into version control. Best for personal planning.</p>
                   </div>
                 </label>
 
@@ -232,8 +232,8 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                     className="mt-1 cursor-pointer w-[18px] h-[18px] shrink-0"
                   />
                   <div className="plan-location-content flex-1">
-                    <strong className="block mb-1 text-[15px] text-nim">plans/</strong>
-                    <p className="m-0 text-sm leading-normal text-nim-muted">Shared plans checked into version control. Best for team collaboration.</p>
+                    <strong className="block mb-1 text-ui-subhead text-nim">plans/</strong>
+                    <p className="m-0 text-ui-body leading-normal text-nim-muted">Shared plans checked into version control. Best for team collaboration.</p>
                   </div>
                 </label>
 
@@ -247,8 +247,8 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                     className="mt-1 cursor-pointer w-[18px] h-[18px] shrink-0"
                   />
                   <div className="plan-location-content flex-1">
-                    <strong className="block mb-1 text-[15px] text-nim">Custom location</strong>
-                    <p className="m-0 text-sm leading-normal text-nim-muted">Specify your own directory path</p>
+                    <strong className="block mb-1 text-ui-subhead text-nim">Custom location</strong>
+                    <p className="m-0 text-ui-body leading-normal text-nim-muted">Specify your own directory path</p>
                   </div>
                 </label>
 
@@ -259,7 +259,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                       placeholder="e.g., docs/plans or .local/plans"
                       value={customPlansLocation}
                       onChange={(e) => setCustomPlansLocation(e.target.value)}
-                      className="w-full py-2 px-3 rounded-ui-base text-sm mb-3 outline-none bg-nim border border-nim text-nim focus:border-nim-focus"
+                      className="w-full py-2 px-3 rounded-ui-base text-ui-body mb-3 outline-none bg-nim border border-nim text-nim focus:border-nim-focus"
                     />
                     <label className="checkbox-label flex items-start gap-3 cursor-pointer p-3 rounded-ui-base transition-colors duration-200 hover:bg-nim-hover">
                       <input
@@ -279,7 +279,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                 <ul className="m-0 pl-6 text-nim-muted">
                   <li className="mb-2">Plans directory will be created at the specified location</li>
                   {!checkInPlans && (
-                    <li className="mb-2">The directory will be added to <code className="px-2 py-0.5 rounded-ui-base font-mono text-[13px] bg-nim-tertiary">.gitignore</code> (not checked in)</li>
+                    <li className="mb-2">The directory will be added to <code className="px-2 py-0.5 rounded-ui-base font-mono text-ui-body bg-nim-tertiary">.gitignore</code> (not checked in)</li>
                   )}
                   {checkInPlans && (
                     <li className="mb-2">Plans will be included in your repository (team collaboration)</li>
@@ -323,8 +323,8 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                         className="mt-1 cursor-pointer w-[18px] h-[18px] shrink-0"
                       />
                       <div className="plan-location-content flex-1">
-                        <strong className="block mb-1 text-[15px] text-nim">Project (.claude/)</strong> (Recommended)
-                        <p className="m-0 text-sm leading-normal text-nim-muted">Commands stored in project directory, can be checked into version control for team sharing</p>
+                        <strong className="block mb-1 text-ui-subhead text-nim">Project (.claude/)</strong> (Recommended)
+                        <p className="m-0 text-ui-body leading-normal text-nim-muted">Commands stored in project directory, can be checked into version control for team sharing</p>
                       </div>
                     </label>
 
@@ -338,8 +338,8 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                         className="mt-1 cursor-pointer w-[18px] h-[18px] shrink-0"
                       />
                       <div className="plan-location-content flex-1">
-                        <strong className="block mb-1 text-[15px] text-nim">Global (~/.claude/)</strong>
-                        <p className="m-0 text-sm leading-normal text-nim-muted">Commands stored in home directory, shared across all projects</p>
+                        <strong className="block mb-1 text-ui-subhead text-nim">Global (~/.claude/)</strong>
+                        <p className="m-0 text-ui-body leading-normal text-nim-muted">Commands stored in home directory, shared across all projects</p>
                       </div>
                     </label>
                   </div>
@@ -376,10 +376,10 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                     </p>
                     <ul className="m-0 pl-6 text-nim-muted">
                       <li className="mb-2">
-                        <code className="px-2 py-0.5 rounded-ui-base font-mono text-[13px] bg-nim-tertiary">{commandsLocation === 'project' ? '.claude' : '~/.claude'}/commands/track.md</code> - Tracking command
+                        <code className="px-2 py-0.5 rounded-ui-base font-mono text-ui-body bg-nim-tertiary">{commandsLocation === 'project' ? '.claude' : '~/.claude'}/commands/track.md</code> - Tracking command
                       </li>
                       <li className="mb-2">
-                        <code className="px-2 py-0.5 rounded-ui-base font-mono text-[13px] bg-nim-tertiary">CLAUDE.md</code> - Planning system documentation
+                        <code className="px-2 py-0.5 rounded-ui-base font-mono text-ui-body bg-nim-tertiary">CLAUDE.md</code> - Planning system documentation
                       </li>
                     </ul>
                   </div>
@@ -406,13 +406,13 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                   onClick={handleCreateExamplePlan}
                 >
                   <div className="plan-option-content flex-1">
-                    <strong className="block mb-1 text-[15px] text-nim">Create Example Plan</strong>
-                    <p className="m-0 text-sm leading-normal text-nim-muted">Start with a pre-filled example that shows the plan structure</p>
+                    <strong className="block mb-1 text-ui-subhead text-nim">Create Example Plan</strong>
+                    <p className="m-0 text-ui-body leading-normal text-nim-muted">Start with a pre-filled example that shows the plan structure</p>
                   </div>
                 </button>
 
 
-                <div className="plan-option-info py-3 px-4 rounded-ui-base text-sm leading-normal bg-nim-tertiary text-nim-muted">
+                <div className="plan-option-info py-3 px-4 rounded-ui-base text-ui-body leading-normal bg-nim-tertiary text-nim-muted">
                   Plans are stored in the <code className="px-2 py-0.5 rounded-ui-base font-mono bg-nim">plans/</code> directory as markdown files with
                   frontmatter metadata.
                 </div>
@@ -428,16 +428,16 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
 
               <div className="plan-view-features flex flex-col gap-4 mb-6">
                 <div className="plan-view-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
-                  <strong className="block mb-2 text-[15px] text-nim">Status Overview</strong>
-                  <p className="m-0 text-sm leading-normal text-nim-muted">See all plans grouped by status (draft, in-progress, completed, etc.)</p>
+                  <strong className="block mb-2 text-ui-subhead text-nim">Status Overview</strong>
+                  <p className="m-0 text-ui-body leading-normal text-nim-muted">See all plans grouped by status (draft, in-progress, completed, etc.)</p>
                 </div>
                 <div className="plan-view-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
-                  <strong className="block mb-2 text-[15px] text-nim">Filter & Sort</strong>
-                  <p className="m-0 text-sm leading-normal text-nim-muted">Filter by type, priority, or tags. Sort by date, progress, or priority.</p>
+                  <strong className="block mb-2 text-ui-subhead text-nim">Filter & Sort</strong>
+                  <p className="m-0 text-ui-body leading-normal text-nim-muted">Filter by type, priority, or tags. Sort by date, progress, or priority.</p>
                 </div>
                 <div className="plan-view-feature p-4 rounded-ui-lg bg-nim-secondary border border-nim">
-                  <strong className="block mb-2 text-[15px] text-nim">Progress Tracking</strong>
-                  <p className="m-0 text-sm leading-normal text-nim-muted">Visual progress bars show completion percentage for each plan</p>
+                  <strong className="block mb-2 text-ui-subhead text-nim">Progress Tracking</strong>
+                  <p className="m-0 text-ui-body leading-normal text-nim-muted">Visual progress bars show completion percentage for each plan</p>
                 </div>
               </div>
 
@@ -456,11 +456,11 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
 
           {currentStep === 'complete' && (
             <div className="complete-step text-center max-w-[500px] mx-auto">
-              <h3 className="m-0 mb-3 text-2xl text-nim">You're all set!</h3>
+              <h3 className="m-0 mb-3 text-ui-headline text-nim">You're all set!</h3>
               <p className="mb-8 text-nim-muted">Your workspace is configured and ready to use.</p>
 
               <div className="next-steps text-left p-5 rounded-ui-lg mb-6 bg-nim-secondary border border-nim">
-                <h4 className="m-0 mb-3 text-base text-nim">Next steps:</h4>
+                <h4 className="m-0 mb-3 text-ui-subhead text-nim">Next steps:</h4>
                 <ul className="m-0 pl-6 text-nim-muted">
                   <li className="mb-2 leading-normal">Explore your example plan document</li>
                   <li className="mb-2 leading-normal">Create your first real plan with File → New Plan</li>
@@ -483,7 +483,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
         <div className="welcome-modal-footer flex justify-between items-center py-4 px-8 border-t border-nim bg-nim-secondary">
           <div className="welcome-modal-footer-left flex gap-3">
             <button
-              className="welcome-modal-button nim-btn-secondary py-3 px-5 rounded-ui-lg text-sm font-medium"
+              className="welcome-modal-button nim-btn-secondary py-3 px-5 rounded-ui-lg text-ui-body font-medium"
               onClick={handleSkip}
               disabled={isProcessing}
             >
@@ -493,7 +493,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
           <div className="welcome-modal-footer-right flex gap-3">
             {currentStepIndex > 0 && (
               <button
-                className="welcome-modal-button nim-btn-secondary py-3 px-5 rounded-ui-lg text-sm font-medium"
+                className="welcome-modal-button nim-btn-secondary py-3 px-5 rounded-ui-lg text-ui-body font-medium"
                 onClick={handleBack}
                 disabled={isProcessing}
               >
@@ -502,7 +502,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
             )}
             {currentStep !== 'complete' ? (
               <button
-                className="welcome-modal-button nim-btn-primary py-3 px-5 rounded-ui-lg text-sm font-medium hover:opacity-90 hover:-translate-y-px hover:shadow-md"
+                className="welcome-modal-button nim-btn-primary py-3 px-5 rounded-ui-lg text-ui-body font-medium hover:opacity-90 hover:-translate-y-px hover:shadow-md"
                 onClick={handleNext}
                 disabled={isProcessing}
               >
@@ -510,7 +510,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
               </button>
             ) : (
               <button
-                className="welcome-modal-button nim-btn-primary py-3 px-5 rounded-ui-lg text-sm font-medium hover:opacity-90 hover:-translate-y-px hover:shadow-md"
+                className="welcome-modal-button nim-btn-primary py-3 px-5 rounded-ui-lg text-ui-body font-medium hover:opacity-90 hover:-translate-y-px hover:shadow-md"
                 onClick={handleComplete}
                 disabled={isProcessing}
               >

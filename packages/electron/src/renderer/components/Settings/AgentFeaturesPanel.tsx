@@ -242,10 +242,10 @@ export function AgentFeaturesPanel() {
 
         <div className="agent-preferred-language flex items-start justify-between gap-4 py-3">
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-[var(--nim-text)] leading-tight">
+            <div className="text-ui-body font-medium text-[var(--nim-text)] leading-tight">
               Preferred Agent Language
             </div>
-            <div className="text-xs text-[var(--nim-text-muted)] leading-snug mt-1">
+            <div className="text-ui-compact text-[var(--nim-text-muted)] leading-snug mt-1">
               Preferred language for AI-generated session names (e.g. "Japanese", "ja", "Spanish"). Leave blank to let the agent pick based on the conversation.
             </div>
           </div>
@@ -254,7 +254,7 @@ export function AgentFeaturesPanel() {
             value={preferredAgentLanguage}
             onChange={(e) => handlePreferredAgentLanguageChange(e.target.value)}
             placeholder="e.g. ja"
-            className="w-40 py-2 px-3 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
+            className="w-40 py-2 px-3 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
             data-testid="preferred-agent-language-input"
           />
         </div>
@@ -268,7 +268,7 @@ export function AgentFeaturesPanel() {
         }>
 
         <div className="mb-4 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] p-3">
-          <h5 className="text-sm font-semibold mb-2 text-[var(--nim-text)]">
+          <h5 className="text-ui-body font-semibold mb-2 text-[var(--nim-text)]">
             Agent skills and commands compatibility
           </h5>
 
@@ -329,13 +329,13 @@ export function AgentFeaturesPanel() {
                 <div className="flex-1 min-w-0">
                   <label
                     htmlFor="meta-agent-max-parallel-input"
-                    className="text-sm font-medium text-[var(--nim-text)] leading-tight"
+                    className="text-ui-body font-medium text-[var(--nim-text)] leading-tight"
                   >
                     Max parallel child sessions
                   </label>
                   <div
                     id="meta-agent-max-parallel-help"
-                    className="text-xs text-[var(--nim-text-muted)] leading-snug mt-1"
+                    className="text-ui-compact text-[var(--nim-text-muted)] leading-snug mt-1"
                   >
                     New child sessions queue when all parallel slots are in use.
                   </div>
@@ -353,7 +353,7 @@ export function AgentFeaturesPanel() {
                     if (event.key === 'Enter') event.currentTarget.blur();
                   }}
                   aria-describedby="meta-agent-max-parallel-help"
-                  className="w-24 py-2 px-3 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
+                  className="w-24 py-2 px-3 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
                 />
               </div>
               <div className="pl-4 pb-3">
@@ -378,7 +378,7 @@ export function AgentFeaturesPanel() {
 
       {isDevelopment && (
         <SettingsSection title="Developer Options">
-          <p className="text-sm leading-relaxed text-[var(--nim-text-muted)] mb-2">
+          <p className="text-ui-body leading-relaxed text-[var(--nim-text-muted)] mb-2">
             Only available in development mode.
           </p>
 
