@@ -351,7 +351,7 @@ export function MetaAgentMode({
           hideSidebar={true}
           additionalTeammates={activeChildSessionTeammates}
           waitingForNoun="session"
-          showStopAndClearQueue={summary.runningCount > 0 || summary.queuedCount > 0}
+          showStopAndClearQueue={false}
           onStopAndClearQueue={handleEmergencyStop}
           onFileClick={handleTranscriptFileClick}
         />

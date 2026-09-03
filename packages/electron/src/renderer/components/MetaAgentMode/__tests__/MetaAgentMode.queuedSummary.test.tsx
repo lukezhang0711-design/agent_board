@@ -141,9 +141,12 @@ describe('MetaAgentMode Head workbench', () => {
       </Provider>,
     );
 
-    await waitFor(() =>
-      expect(screen.getByTestId('session-transcript').dataset.emergencyStop).toBe('true'),
-    );
+    await waitFor(() => {
+      const stopAll = screen.getByTestId('meta-agent-stop-all');
+      expect(stopAll.getAttribute('disabled')).toBeNull();
+      // FB-171: SessionTranscript stop control is removed to eliminate duplicate stop button
+      expect(screen.getByTestId('session-transcript').dataset.emergencyStop).toBe('false');
+    });
   });
 
   it('withdraws emergency stop when no delegated session is running or queued', async () => {
@@ -170,8 +173,11 @@ describe('MetaAgentMode Head workbench', () => {
       </Provider>,
     );
 
-    const transcript = await screen.findByTestId('session-transcript');
-    await waitFor(() => expect(transcript.dataset.emergencyStop).toBe('false'));
+    await waitFor(() => {
+      const stopAll = screen.getByTestId('meta-agent-stop-all');
+      expect(stopAll.getAttribute('disabled')).not.toBeNull();
+      expect(screen.getByTestId('session-transcript').dataset.emergencyStop).toBe('false');
+    });
   });
 
   it('feeds the artifact shelf from the same delegated-session snapshot', async () => {

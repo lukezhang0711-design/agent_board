@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAtomValue } from 'jotai';
 import {
   CODEX_SKILL_CONTROL_NOTICE,
   DISPATCH_SKILL_SETTINGS_KEY,
@@ -12,6 +13,12 @@ import {
   type DispatchSkillSettings,
   type MergedSkillCard,
 } from '../../utils/dispatchSkillLibrary';
+import {
+  dispatchSkillsVersionAtom,
+  dispatchSkillLibraryChangedVersionAtom,
+  dispatchSkillLibrarySettingsPayloadAtom,
+} from '../../store/atoms/dispatchSkills';
+import { store } from '@nimbalyst/runtime/store';
 import { MaterialSymbol } from '@nimbalyst/runtime';
 import { getEffectiveSkillTaxonomy } from '../../../shared/skillTaxonomy';
 import { PageHeader } from '../common/PageHeader';
@@ -109,17 +116,36 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     };
   }, [workspacePath]);
 
+  // React to centralized IPC updates via store/listeners/dispatchSkillListeners.ts
+  const dispatchSkillsVersion = useAtomValue(dispatchSkillsVersionAtom, { store });
+  const initialSkillsVersionRef = useRef(dispatchSkillsVersion);
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.on?.('dispatch-skill-library:changed', (payload) => {
-      const nextSettings = sanitizeDispatchSkillSettingsForLibrary(
-        readDispatchSkillSettings(payload?.settings ?? payload),
-        skills,
-      );
-      setSettings(nextSettings);
-      setSaveState('saved');
-    });
-    return () => unsubscribe?.();
-  }, [skills]);
+    if (dispatchSkillsVersion === initialSkillsVersionRef.current) return;
+    void (async () => {
+      try {
+        const listResult = await window.electronAPI?.invoke?.('dispatch-skills:list', workspacePath);
+        if (Array.isArray(listResult?.skills)) {
+          setSkills(listResult.skills);
+        }
+      } catch {
+        // Silently keep current skills on background refresh failure
+      }
+    })();
+  }, [dispatchSkillsVersion, workspacePath]);
+
+  const libraryChangedVersion = useAtomValue(dispatchSkillLibraryChangedVersionAtom, { store });
+  const libraryPayload = useAtomValue(dispatchSkillLibrarySettingsPayloadAtom, { store });
+  const initialLibraryVersionRef = useRef(libraryChangedVersion);
+  useEffect(() => {
+    if (libraryChangedVersion === initialLibraryVersionRef.current) return;
+    const payload = libraryPayload as { settings?: unknown } | undefined;
+    const nextSettings = sanitizeDispatchSkillSettingsForLibrary(
+      readDispatchSkillSettings(payload?.settings ?? payload),
+      skills,
+    );
+    setSettings(nextSettings);
+    setSaveState('saved');
+  }, [libraryChangedVersion, libraryPayload, skills]);
 
   const mergedCards = useMemo(() => mergeSkillsByName(skills, settings), [skills, settings]);
   const activeTaxonomy = useMemo(
