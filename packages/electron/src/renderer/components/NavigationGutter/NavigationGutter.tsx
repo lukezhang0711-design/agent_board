@@ -608,120 +608,127 @@ export const NavigationGutter: React.FC<NavigationGutterProps> = ({
 
       {/* Settings (bottom) */}
       <div className="nav-section nav-settings flex flex-col items-center gap-1 w-full px-2 py-1 mt-auto pt-2 border-t border-nim">
+        {/* Group 1: Utilities, Indicators & Skill Library */}
+        <div className="nav-bottom-group-tools flex flex-col items-center gap-1 w-full" data-testid="gutter-group-tools">
+          {/* AI Usage Indicator - Consolidated usage limits for Claude, Codex, Gemini */}
+          {!isHidden('ai-usage') && (
+            <div onContextMenu={(e) => openContextMenu(e, 'ai-usage')}>
+              <AIUsageIndicator />
+            </div>
+          )}
 
-        {/* AI Usage Indicator - Consolidated usage limits for Claude, Codex, Gemini */}
-        {!isHidden('ai-usage') && (
-          <div onContextMenu={(e) => openContextMenu(e, 'ai-usage')}>
-            <AIUsageIndicator />
-          </div>
-        )}
+          {/* Extension Dev Indicator - Shows when extension dev tools are enabled */}
+          {!isHidden('extension-dev') && (
+            <div onContextMenu={(e) => openContextMenu(e, 'extension-dev')}>
+              <ExtensionDevIndicator onOpenSettings={onOpenSettings} />
+            </div>
+          )}
 
-        {/* Extension Dev Indicator - Shows when extension dev tools are enabled */}
-        {!isHidden('extension-dev') && (
-          <div onContextMenu={(e) => openContextMenu(e, 'extension-dev')}>
-            <ExtensionDevIndicator onOpenSettings={onOpenSettings} />
-          </div>
-        )}
-
-        {isDevMode && (
-          <BackgroundTaskIndicator
-            workspacePath={workspacePath || undefined}
-            onOpenSession={(sessionId) => {
-              setActiveSession(sessionId);
-              onContentModeChange('agent');
-            }}
-          />
-        )}
-
-        {/* Trust Indicator - Shows agent trust status */}
-        {!isHidden('trust-indicator') && (
-          <div onContextMenu={(e) => openContextMenu(e, 'trust-indicator')}>
-            <TrustIndicator
-              workspacePath={workspacePath}
-              onOpenSettings={onOpenPermissions || (() => {})}
-              onChangeMode={onChangeTrustMode}
-            />
-          </div>
-        )}
-
-        {/* Sync Status - Above Theme Toggle (Only rendered when sync is configured) */}
-        {!isHidden('sync-status') && isSyncConfigured && (
-          <div onContextMenu={(e) => openContextMenu(e, 'sync-status')}>
-            <SyncStatusButton
+          {isDevMode && (
+            <BackgroundTaskIndicator
               workspacePath={workspacePath || undefined}
-              onOpenSettings={onOpenSettings}
-            />
-          </div>
-        )}
-
-        {/* Skill Library - Direct entry to Skill Library */}
-        <HelpTooltip testId="gutter-skill-library-button" placement="right">
-          <button
-            className="nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
-            onClick={() => handleNavigateSettings('user', 'skill-library')}
-            aria-label="技能库"
-            data-testid="gutter-skill-library-button"
-          >
-            <MaterialSymbol
-              icon="school"
-              size={20}
-            />
-          </button>
-        </HelpTooltip>
-
-        {/* Theme Toggle - Above Settings */}
-        {!isHidden('theme-toggle') && (
-          <div className="nav-section nav-theme flex flex-col items-center gap-1 w-full px-2 py-1" onContextMenu={(e) => openContextMenu(e, 'theme-toggle')}>
-            <ThemeToggleButton />
-          </div>
-        )}
-
-        {!isHidden('feedback') && (
-          <HelpTooltip testId="gutter-feedback-button" placement="right">
-            <button
-              className="nimbalyst-feedback-button nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
-              onClick={() => {
-                // console.log('[NavigationGutter] Feedback button clicked');
-                onOpenFeedback?.();
+              onOpenSession={(sessionId) => {
+                setActiveSession(sessionId);
+                onContentModeChange('agent');
               }}
-              onContextMenu={(e) => openContextMenu(e, 'feedback')}
-              aria-label={feedbackButton.label}
-              data-testid="gutter-feedback-button"
-            >
-              <MaterialSymbol
-                icon={feedbackButton.icon}
-                size={20}
-              />
-            </button>
-          </HelpTooltip>
-        )}
-
-        <div>
-          {userMenuOpen && (
-            <UserMenuPopover
-              onNavigateSettings={handleNavigateSettings}
-              onClose={() => setUserMenuOpen(false)}
-              isProjectConnected={isProjectConnected}
-              anchorEl={userMenuButtonRef.current}
             />
           )}
-          <HelpTooltip testId="gutter-user-button" placement="right">
+
+          {/* Trust Indicator - Shows agent trust status */}
+          {!isHidden('trust-indicator') && (
+            <div onContextMenu={(e) => openContextMenu(e, 'trust-indicator')}>
+              <TrustIndicator
+                workspacePath={workspacePath}
+                onOpenSettings={onOpenPermissions || (() => {})}
+                onChangeMode={onChangeTrustMode}
+              />
+            </div>
+          )}
+
+          {/* Sync Status - (Only rendered when sync is configured) */}
+          {!isHidden('sync-status') && isSyncConfigured && (
+            <div onContextMenu={(e) => openContextMenu(e, 'sync-status')}>
+              <SyncStatusButton
+                workspacePath={workspacePath || undefined}
+                onOpenSettings={onOpenSettings}
+              />
+            </div>
+          )}
+
+          {/* Skill Library - Direct entry to Skill Library */}
+          <HelpTooltip testId="gutter-skill-library-button" placement="right">
             <button
-              ref={userMenuButtonRef}
-              className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${userMenuOpen ? 'bg-nim-tertiary text-nim' : needsSignIn ? 'bg-transparent text-nim-warning hover:bg-nim-tertiary' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
-              aria-label={needsSignIn ? 'User menu (signed out -- sync requires sign in)' : 'User menu'}
-              aria-expanded={userMenuOpen}
-              data-signed-in={isSignedIn === null ? undefined : isSignedIn}
-              data-needs-sign-in={needsSignIn || undefined}
-              data-testid="gutter-user-button"
+              className="nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
+              onClick={() => handleNavigateSettings('user', 'skill-library')}
+              aria-label="技能库"
+              data-testid="gutter-skill-library-button"
             >
               <MaterialSymbol
-                icon={needsSignIn ? 'no_accounts' : 'person'}
+                icon="school"
                 size={20}
               />
             </button>
           </HelpTooltip>
+        </div>
+
+        {/* Divider between tools and preferences/account */}
+        <div className="w-6 border-t border-nim my-1 shrink-0" data-testid="gutter-bottom-divider" />
+
+        {/* Group 2: Preferences, Feedback & User Account */}
+        <div className="nav-bottom-group-user flex flex-col items-center gap-1 w-full" data-testid="gutter-group-user">
+          {/* Theme Toggle */}
+          {!isHidden('theme-toggle') && (
+            <div onContextMenu={(e) => openContextMenu(e, 'theme-toggle')}>
+              <ThemeToggleButton />
+            </div>
+          )}
+
+          {!isHidden('feedback') && (
+            <HelpTooltip testId="gutter-feedback-button" placement="right">
+              <button
+                className="nimbalyst-feedback-button nav-button relative w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-ui-base text-nim-muted cursor-pointer transition-all duration-150 p-0 hover:bg-nim-tertiary hover:text-nim active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2"
+                onClick={() => {
+                  onOpenFeedback?.();
+                }}
+                onContextMenu={(e) => openContextMenu(e, 'feedback')}
+                aria-label={feedbackButton.label}
+                data-testid="gutter-feedback-button"
+              >
+                <MaterialSymbol
+                  icon={feedbackButton.icon}
+                  size={20}
+                />
+              </button>
+            </HelpTooltip>
+          )}
+
+          <div>
+            {userMenuOpen && (
+              <UserMenuPopover
+                onNavigateSettings={handleNavigateSettings}
+                onClose={() => setUserMenuOpen(false)}
+                isProjectConnected={isProjectConnected}
+                anchorEl={userMenuButtonRef.current}
+              />
+            )}
+            <HelpTooltip testId="gutter-user-button" placement="right">
+              <button
+                ref={userMenuButtonRef}
+                className={`nav-button relative w-9 h-9 flex items-center justify-center border-none rounded-ui-base cursor-pointer transition-all duration-150 p-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--nim-primary)] focus-visible:outline-offset-2 ${userMenuOpen ? 'bg-nim-tertiary text-nim' : needsSignIn ? 'bg-transparent text-nim-warning hover:bg-nim-tertiary' : 'bg-transparent text-nim-muted hover:bg-nim-tertiary hover:text-nim'}`}
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                aria-label={needsSignIn ? 'User menu (signed out -- sync requires sign in)' : 'User menu'}
+                aria-expanded={userMenuOpen}
+                data-signed-in={isSignedIn === null ? undefined : isSignedIn}
+                data-needs-sign-in={needsSignIn || undefined}
+                data-testid="gutter-user-button"
+              >
+                <MaterialSymbol
+                  icon={needsSignIn ? 'no_accounts' : 'person'}
+                  size={20}
+                />
+              </button>
+            </HelpTooltip>
+          </div>
         </div>
       </div>
 

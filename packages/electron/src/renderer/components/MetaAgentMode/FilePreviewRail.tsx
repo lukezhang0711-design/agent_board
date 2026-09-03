@@ -281,19 +281,39 @@ export const FilePreviewRail: React.FC<FilePreviewRailProps> = ({
         : '复制文件路径';
 
   if (!open) {
-    // Fully collapsed: the rail takes no column and no space. The only trace
-    // is a slim edge handle floating over the conversation's right border.
+    // Collapsed: permanent ~40px narrow strip with icon and file count.
     return (
-      <button
-        type="button"
-        className="file-preview-rail-toggle absolute right-0 top-1/2 z-20 -translate-y-1/2 rounded-ui-base-l border border-r-0 border-nim bg-[var(--nim-bg-secondary)] px-1 py-3 text-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
+      <aside
+        className="file-preview-rail-collapsed w-10 shrink-0 border-l border-nim bg-[var(--nim-bg-secondary)] flex flex-col items-center py-3 gap-2 cursor-pointer hover:bg-[var(--nim-bg-tertiary)] transition-colors select-none"
         onClick={onOpen}
-        title="打开文件预览"
-        aria-label="打开文件预览"
-        data-testid="file-preview-rail-toggle"
+        title="打开交付文件架"
+        aria-label="打开交付文件架"
+        data-testid="file-preview-rail-collapsed"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpen();
+          }
+        }}
       >
-        <MaterialSymbol icon="chevron_left" size={16} />
-      </button>
+        <button
+          type="button"
+          className="file-preview-rail-toggle flex flex-col items-center gap-1 border-none bg-transparent p-0 text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] cursor-pointer"
+          data-testid="file-preview-rail-toggle"
+          aria-label="打开交付文件架"
+          title="打开交付文件架"
+        >
+          <MaterialSymbol icon="folder_open" size={20} />
+          <span
+            className="text-ui-caption font-semibold text-[var(--nim-text-muted)] tabular-nums"
+            data-testid="file-preview-collapsed-count"
+          >
+            {shelfItems.length}
+          </span>
+        </button>
+      </aside>
     );
   }
 

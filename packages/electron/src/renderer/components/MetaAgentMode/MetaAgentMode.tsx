@@ -10,6 +10,8 @@ import { resolveTranscriptClickPath } from '../../utils/resolveTranscriptClickPa
 import { SessionTranscript } from '../UnifiedAI/SessionTranscript';
 import { FilePreviewRail, type ArtifactShelfItem } from './FilePreviewRail';
 import { AgentBusyIndicator } from '../common/AgentBusyIndicator';
+import { PageHeader } from '../common/PageHeader';
+import { StatusBadge } from '../common/StatusBadge';
 
 interface MetaAgentModeProps {
   workspacePath: string;
@@ -206,6 +208,12 @@ export function MetaAgentMode({
     };
   }, [metaSessionId, refreshSpawnedSessions]);
 
+  const workspaceName = useMemo(() => {
+    if (!workspacePath) return '';
+    const parts = workspacePath.split(/[/\\]/).filter(Boolean);
+    return parts.pop() || workspacePath;
+  }, [workspacePath]);
+
   const summary = useMemo(() => {
     const waitingCount = childSessions.filter((session) => session.status === 'waiting_for_input').length;
     const runningCount = childSessions.filter((session) => session.status === 'running').length;
@@ -289,32 +297,52 @@ export function MetaAgentMode({
   return (
     <div className="meta-agent-mode relative flex-1 flex min-h-0" data-testid="meta-agent-mode">
       <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
-        <div className="flex items-center justify-between gap-3 m-3 mb-0">
-          <div
-            className="meta-agent-identity-badge shrink-0 self-start rounded-ui-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-ui-caption font-bold tracking-[0.12em] text-[var(--nim-primary)]"
-            data-testid="meta-agent-identity-badge"
-            aria-label="META AGENT"
-          >
-            META AGENT
-          </div>
-
-          <AgentBusyIndicator
-            runningCount={summary.runningCount}
-            totalCount={summary.total}
-            queuedCount={summary.queuedCount}
-            activeSessions={childSessions.map((s) => ({
-              id: s.sessionId,
-              title: s.title,
-              provider: s.provider,
-              status: s.status,
-            }))}
+        <div className="px-3 pt-3 pb-0 shrink-0">
+          <PageHeader
+            icon="hub"
+            title="总指挥"
+            subtitle={`${workspaceName} · ${summary.runningCount} 个在跑 · ${summary.waitingCount} 个等你确认`}
+            actions={
+              <div className="flex items-center gap-2">
+                {planAutoApproveEnabled && (
+                  <StatusBadge
+                    status="waiting"
+                    label="测试模式：方案将自动批准"
+                    testId="meta-agent-test-mode-badge"
+                  />
+                )}
+                <AgentBusyIndicator
+                  runningCount={summary.runningCount}
+                  totalCount={summary.total}
+                  queuedCount={summary.queuedCount}
+                  activeSessions={childSessions
+                    .filter((s) => s.status === 'running')
+                    .map((s) => ({
+                      id: s.sessionId,
+                      title: s.title,
+                      provider: s.provider,
+                      status: s.status,
+                    }))}
+                />
+                <button
+                  type="button"
+                  className={`px-3 py-1 text-ui-compact font-medium rounded-ui-base border transition-colors ${
+                    summary.runningCount > 0 || summary.queuedCount > 0
+                      ? 'bg-nim-error-subtle text-[var(--nim-error)] border-nim-error-subtle hover:opacity-80 cursor-pointer'
+                      : 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-disabled)] border-[var(--nim-border)] cursor-not-allowed opacity-50'
+                  }`}
+                  onClick={handleEmergencyStop}
+                  disabled={summary.runningCount === 0 && summary.queuedCount === 0}
+                  data-testid="meta-agent-stop-all"
+                  aria-label="全部停下"
+                  title="全部停下"
+                >
+                  全部停下
+                </button>
+              </div>
+            }
           />
         </div>
-        {planAutoApproveEnabled && (
-          <div data-testid="meta-agent-test-mode-badge" className="shrink-0 bg-amber-500 px-3 py-1 text-center text-ui-compact font-semibold text-amber-950">
-            测试模式：方案将自动批准
-          </div>
-        )}
         <SessionTranscript
           sessionId={metaSessionId}
           workspacePath={workspacePath}
