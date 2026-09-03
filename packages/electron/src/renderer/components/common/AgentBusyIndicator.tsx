@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MaterialSymbol } from '@nimbalyst/runtime';
+import { useFloating, offset, flip, shift, FloatingPortal } from '@floating-ui/react';
 
 export interface ActiveWorkerSummary {
   id: string;
@@ -25,11 +26,83 @@ export interface AgentBusyIndicatorProps {
   testId?: string;
 }
 
+const AVATAR_PALETTES = [
+  'bg-nim-primary-subtle text-[var(--nim-primary)] border-nim-primary-subtle',
+  'bg-nim-success-subtle text-[var(--nim-success)] border-nim-success-subtle',
+  'bg-nim-warning-subtle text-[var(--nim-warning)] border-nim-warning-subtle',
+  'bg-nim-error-subtle text-[var(--nim-error)] border-nim-error-subtle',
+  'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border-[var(--nim-border)]',
+];
+
+export function getAvatarColorIndex(id: string): number {
+  let sum = 0;
+  for (let i = 0; i < id.length; i++) {
+    sum += id.charCodeAt(i);
+  }
+  return sum % AVATAR_PALETTES.length;
+}
+
+export function getAvatarPalette(id: string): string {
+  return AVATAR_PALETTES[getAvatarColorIndex(id)];
+}
+
+interface SessionAvatarProps {
+  session: ActiveWorkerSummary;
+  index: number;
+}
+
+function SessionAvatar({ session, index }: SessionAvatarProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { refs, floatingStyles } = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
+    placement: 'bottom',
+    middleware: [offset(6), flip({ padding: 8 }), shift({ padding: 8 })],
+  });
+
+  const title = session.title || session.id || 'Worker';
+  const twoChars = (session.title?.trim() || session.provider || 'AG').slice(0, 2);
+  const paletteClass = getAvatarPalette(session.id || String(index));
+
+  return (
+    <>
+      <div
+        ref={refs.setReference}
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+        className={`w-5 h-5 rounded-ui-full border flex items-center justify-center overflow-hidden text-ui-micro font-semibold uppercase select-none cursor-pointer shrink-0 ring-1 ring-[var(--nim-bg)] ${paletteClass}`}
+        data-testid="agent-avatar"
+        data-session-id={session.id}
+        data-session-status={session.status || 'running'}
+      >
+        {twoChars}
+      </div>
+      {isOpen && (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            style={floatingStyles}
+            className="z-[9999] px-2 py-1 rounded-ui-base bg-nim border border-nim text-ui-caption shadow-lg pointer-events-none flex flex-col gap-1"
+            data-testid="agent-avatar-popover"
+          >
+            <span className="font-semibold text-nim truncate max-w-[220px]" data-testid="agent-avatar-popover-title">
+              {title}
+            </span>
+            <span className="text-ui-micro text-nim-muted" data-testid="agent-avatar-popover-status">
+              {session.status || 'running'}
+            </span>
+          </div>
+        </FloatingPortal>
+      )}
+    </>
+  );
+}
+
 /**
  * AgentBusyIndicator - Concise, one-sentence agent busy status indicator with stacked avatars.
  *
  * Pattern:
- *   Left: Stacked avatars/icons of running workers
+ *   Left: Stacked avatars/icons of running workers (-6px overlap)
  *   Center: Single clear sentence: "{N} agents working" / "0 agents working"
  *   Status: Subtle running pulse when > 0, clean idle state when 0
  *
@@ -46,6 +119,7 @@ export const AgentBusyIndicator: React.FC<AgentBusyIndicatorProps> = ({
 }) => {
   const isWorking = runningCount > 0;
   const statusSentence = `${runningCount} agent${runningCount === 1 ? '' : 's'} working`;
+  const runningSessions = activeSessions.filter((s) => !s.status || s.status === 'running');
 
   return (
     <div
@@ -64,16 +138,14 @@ export const AgentBusyIndicator: React.FC<AgentBusyIndicatorProps> = ({
       onClick={onClick}
     >
       {/* Avatar / Provider Icon Stack */}
-      <div className="flex items-center -space-x-1 shrink-0" data-testid="agent-avatar-stack">
-        {activeSessions.length > 0 ? (
-          activeSessions.slice(0, 3).map((session, index) => (
-            <div
+      <div className="flex items-center -space-x-1.5 shrink-0" data-testid="agent-avatar-stack">
+        {runningSessions.length > 0 ? (
+          runningSessions.map((session, index) => (
+            <SessionAvatar
               key={session.id || index}
-              className="w-5 h-5 rounded-ui-full ring-1 ring-[var(--nim-bg)] bg-[var(--nim-bg-secondary)] flex items-center justify-center overflow-hidden text-ui-micro"
-              title={session.title || session.provider || 'Agent'}
-            >
-              <MaterialSymbol icon="smart_toy" size={12} />
-            </div>
+              session={session}
+              index={index}
+            />
           ))
         ) : (
           <div

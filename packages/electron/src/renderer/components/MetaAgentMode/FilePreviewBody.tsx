@@ -148,7 +148,7 @@ function highlightSearchMatches(root: HTMLElement, query: string): HTMLElement[]
       }
       const end = nextMatch + normalizedQuery.length;
       const mark = document.createElement('mark');
-      mark.className = 'file-preview-search-hit rounded-ui-base bg-[rgba(250,204,21,0.45)] text-[var(--nim-text)]';
+      mark.className = 'file-preview-search-hit rounded-ui-base bg-[var(--nim-highlight-bg)] text-[var(--nim-text)]';
       mark.dataset.testid = 'file-preview-search-hit';
       mark.textContent = text.slice(nextMatch, end);
       fragment.appendChild(mark);

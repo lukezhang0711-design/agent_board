@@ -107,17 +107,18 @@ describe('MetaAgentMode Head workbench', () => {
 
     await waitFor(() => expect(screen.getByText('Unable to initialize meta-agent mode.')).toBeTruthy());
     expect(screen.queryByTestId('file-preview-rail-toggle')).toBeNull();
-    expect(screen.queryByTestId('meta-agent-identity-badge')).toBeNull();
+    expect(screen.queryByTestId('page-header')).toBeNull();
   });
 
-  it('shows the identity badge and a collapsed preview rail for a verified meta-agent session', async () => {
+  it('shows the unified page header and a collapsed preview rail for a verified meta-agent session', async () => {
     render(
       <Provider store={createStore()}>
         <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
       </Provider>,
     );
 
-    expect((await screen.findByTestId('meta-agent-identity-badge')).textContent).toBe('META AGENT');
+    const header = await screen.findByTestId('page-header');
+    expect(header.textContent).toContain('总指挥');
     // The rail is collapsed: only its edge handle exists, no panel.
     expect(screen.getByTestId('file-preview-rail-toggle')).toBeTruthy();
     expect(screen.queryByTestId('file-preview-rail')).toBeNull();

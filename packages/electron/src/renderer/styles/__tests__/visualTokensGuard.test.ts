@@ -134,6 +134,14 @@ const TARGET_FILES = [
   'components/Settings/panels/TrackerConfigPanel.tsx',
   'components/Settings/panels/trackerConfigUpgrade.ts',
   'components/Settings/voiceModeSummaryPrompt.ts',
+  'components/MetaAgentMode/FilePreviewBody.tsx',
+  'components/MetaAgentMode/FilePreviewRail.tsx',
+  'components/MetaAgentMode/MetaAgentMode.tsx',
+  'components/MetaAgentMode/filePreviewFormat.ts',
+  'components/NavigationGutter/GutterContextMenu.tsx',
+  'components/NavigationGutter/NavigationGutter.tsx',
+  'components/NavigationGutter/UserMenuPopover.tsx',
+  'components/NavigationGutter/index.ts',
 ];
 
 const RENDERER_ROOT = path.resolve(__dirname, '../..');
