@@ -122,7 +122,7 @@ export function AttachmentPreview({ attachment, onRemove, onConvertToText }: Att
               className="attachment-preview-image w-full h-full object-cover"
             />
           ) : (
-            <span className="attachment-preview-icon text-2xl text-[var(--nim-text-muted)]">
+            <span className="attachment-preview-icon text-ui-headline text-[var(--nim-text-muted)]">
               {getFileIcon(attachment.filename, 18)}
             </span>
           )}
@@ -173,7 +173,7 @@ export function AttachmentPreview({ attachment, onRemove, onConvertToText }: Att
               alt={attachment.filename}
               className="attachment-preview-modal-image max-w-[90vw] max-h-[80vh] object-contain rounded-ui-lg shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
             />
-            <div className="attachment-preview-modal-caption text-white text-sm text-center py-2 px-4 bg-black/50 rounded-ui-base max-w-[90vw] overflow-hidden text-ellipsis whitespace-nowrap">
+            <div className="attachment-preview-modal-caption text-white text-ui-body text-center py-2 px-4 bg-black/50 rounded-ui-base max-w-[90vw] overflow-hidden text-ellipsis whitespace-nowrap">
               {attachment.filename}
             </div>
           </div>

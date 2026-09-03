@@ -378,20 +378,20 @@ export function WorkspaceHistoryDialog({
       >
         <div className="workspace-history-dialog-header flex items-center justify-between px-4 py-3 border-b border-[var(--nim-border)]">
           <div className="workspace-history-dialog-title flex items-center gap-2">
-            <span className="material-symbols-outlined text-xl text-[var(--nim-text-muted)]">history</span>
-            <h2 className="m-0 text-base font-semibold text-[var(--nim-text)]">Folder History</h2>
+            <span className="material-symbols-outlined text-ui-title text-[var(--nim-text-muted)]">history</span>
+            <h2 className="m-0 text-ui-subhead font-semibold text-[var(--nim-text)]">Folder History</h2>
           </div>
           <button className="workspace-history-dialog-close nim-btn-icon" onClick={onClose}>
-            <span className="material-symbols-outlined text-xl">close</span>
+            <span className="material-symbols-outlined text-ui-title">close</span>
           </button>
         </div>
 
         <div className="workspace-history-dialog-content flex-1 flex overflow-hidden">
           {/* Left Panel - File Tree */}
           <div className="workspace-history-file-panel w-[350px] border-r border-[var(--nim-border)] flex flex-col bg-[var(--nim-bg-secondary)]">
-            <div className="workspace-history-file-panel-header px-3 py-2 border-b border-[var(--nim-border)] text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide flex items-center justify-between">
+            <div className="workspace-history-file-panel-header px-3 py-2 border-b border-[var(--nim-border)] text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide flex items-center justify-between">
               <span>Files with History ({files.length} files{deletedFilesCount > 0 ? `, ${deletedFilesCount} deleted` : ''})</span>
-              {loading && <span className="workspace-history-loading text-[11px] font-normal text-[var(--nim-text-faint)]">Loading...</span>}
+              {loading && <span className="workspace-history-loading text-ui-caption font-normal text-[var(--nim-text-faint)]">Loading...</span>}
             </div>
             <WorkspaceHistoryFileTree
               files={files}
@@ -409,36 +409,36 @@ export function WorkspaceHistoryDialog({
               <div className="workspace-history-preview-header-left flex items-center gap-2 min-w-0 flex-1">
                 {selectedFilePath ? (
                   <>
-                    <span className="material-symbols-outlined text-lg text-[var(--nim-text-muted)] shrink-0">description</span>
-                    <span className="workspace-history-selected-file text-[13px] font-medium text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis">
+                    <span className="material-symbols-outlined text-ui-title text-[var(--nim-text-muted)] shrink-0">description</span>
+                    <span className="workspace-history-selected-file text-ui-body font-medium text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis">
                       {selectedFilePath.replace(workspacePath + '/', '')}
                     </span>
-                    <span className="workspace-history-snapshot-count text-xs text-[var(--nim-text-faint)] shrink-0">
+                    <span className="workspace-history-snapshot-count text-ui-compact text-[var(--nim-text-faint)] shrink-0">
                       ({snapshots.length} snapshot{snapshots.length !== 1 ? 's' : ''})
                     </span>
                   </>
                 ) : (
-                  <span className="workspace-history-no-selection text-[13px] text-[var(--nim-text-muted)]">Select a file to view history</span>
+                  <span className="workspace-history-no-selection text-ui-body text-[var(--nim-text-muted)]">Select a file to view history</span>
                 )}
               </div>
               <div className="workspace-history-header-buttons flex items-center gap-2 shrink-0">
                 {selectedDeletedFiles.size > 0 && (
                   <button
-                    className="workspace-history-restore-selected-button px-3 py-2 bg-emerald-500 text-white border-none rounded-ui-base text-xs font-medium cursor-pointer transition-all duration-200 flex items-center gap-1 whitespace-nowrap hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="workspace-history-restore-selected-button px-3 py-2 bg-emerald-500 text-white border-none rounded-ui-base text-ui-compact font-medium cursor-pointer transition-all duration-200 flex items-center gap-1 whitespace-nowrap hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleBatchRestore}
                     disabled={isRestoring}
                   >
-                    <span className="material-symbols-outlined text-base">restore</span>
+                    <span className="material-symbols-outlined text-ui-subhead">restore</span>
                     Restore Selected ({selectedDeletedFiles.size})
                   </button>
                 )}
                 {selectedFilePath && selectedSnapshotTimestamp && (
                   <button
-                    className="workspace-history-restore-button nim-btn-primary px-3 py-2 text-xs font-medium rounded-ui-base flex items-center gap-1 whitespace-nowrap"
+                    className="workspace-history-restore-button nim-btn-primary px-3 py-2 text-ui-compact font-medium rounded-ui-base flex items-center gap-1 whitespace-nowrap"
                     onClick={handleRestoreVersion}
                     disabled={isRestoring || !previewContent}
                   >
-                    <span className="material-symbols-outlined text-base">restore</span>
+                    <span className="material-symbols-outlined text-ui-subhead">restore</span>
                     {isSelectedFileDeleted ? 'Restore File' : 'Restore This Version'}
                   </button>
                 )}
@@ -450,9 +450,9 @@ export function WorkspaceHistoryDialog({
                 {/* Snapshot List */}
                 <div className="workspace-history-snapshot-list border-b border-[var(--nim-border)] max-h-[200px] overflow-y-auto nim-scrollbar">
                   {snapshotsLoading ? (
-                    <div className="workspace-history-snapshots-loading p-5 text-center text-[var(--nim-text-muted)] text-[13px]">Loading snapshots...</div>
+                    <div className="workspace-history-snapshots-loading p-5 text-center text-[var(--nim-text-muted)] text-ui-body">Loading snapshots...</div>
                   ) : snapshots.length === 0 ? (
-                    <div className="workspace-history-no-snapshots p-5 text-center text-[var(--nim-text-muted)] text-[13px]">No snapshots available</div>
+                    <div className="workspace-history-no-snapshots p-5 text-center text-[var(--nim-text-muted)] text-ui-body">No snapshots available</div>
                   ) : (
                     snapshots.map((snapshot, index) => (
                       <div
@@ -461,11 +461,11 @@ export function WorkspaceHistoryDialog({
                         onClick={() => handleSnapshotSelect(snapshot.timestamp, index)}
                       >
                         <div className={`workspace-history-snapshot-icon w-7 h-7 rounded-ui-base flex items-center justify-center shrink-0 ${getSnapshotIconBgClass(snapshot.type)}`}>
-                          <span className="material-symbols-outlined text-base">{getSnapshotIcon(snapshot.type)}</span>
+                          <span className="material-symbols-outlined text-ui-subhead">{getSnapshotIcon(snapshot.type)}</span>
                         </div>
                         <div className="workspace-history-snapshot-info flex-1 min-w-0">
-                          <span className="workspace-history-snapshot-type block text-xs font-medium text-[var(--nim-text)] capitalize">{snapshot.type.replace('-', ' ')}</span>
-                          <span className="workspace-history-snapshot-time block text-[11px] text-[var(--nim-text-faint)]">{formatTimestamp(snapshot.timestamp)}</span>
+                          <span className="workspace-history-snapshot-type block text-ui-compact font-medium text-[var(--nim-text)] capitalize">{snapshot.type.replace('-', ' ')}</span>
+                          <span className="workspace-history-snapshot-time block text-ui-caption text-[var(--nim-text-faint)]">{formatTimestamp(snapshot.timestamp)}</span>
                         </div>
                       </div>
                     ))
@@ -476,23 +476,23 @@ export function WorkspaceHistoryDialog({
                 <div className="workspace-history-preview-area flex-1 overflow-auto bg-[var(--nim-bg)] flex flex-col nim-scrollbar">
                   {diffMode && versionAMeta && versionBMeta && (
                     <div className="workspace-history-diff-header px-4 py-2 flex items-center gap-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] flex-wrap">
-                      <span className="workspace-history-diff-label old px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[11px] font-medium text-[var(--nim-error)]">
+                      <span className="workspace-history-diff-label old px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-ui-caption font-medium text-[var(--nim-error)]">
                         {formatVersionLabel(versionAMeta.type, versionAMeta.timestamp)}
                       </span>
-                      <span className="workspace-history-diff-separator text-[11px] font-semibold text-[var(--nim-text-faint)]">vs</span>
-                      <span className="workspace-history-diff-label new px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[11px] font-medium text-[var(--nim-success)]">
+                      <span className="workspace-history-diff-separator text-ui-caption font-semibold text-[var(--nim-text-faint)]">vs</span>
+                      <span className="workspace-history-diff-label new px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-ui-caption font-medium text-[var(--nim-success)]">
                         {formatVersionLabel(versionBMeta.type, versionBMeta.timestamp)}
                       </span>
                       {fileType === 'markdown' && (
                         <div className="workspace-history-diff-mode-toggle flex bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-0.5 gap-1 ml-auto">
                           <button
-                            className={`workspace-history-diff-mode-button px-3 py-1 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${diffViewMode === 'rich' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                            className={`workspace-history-diff-mode-button px-3 py-1 text-ui-caption font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${diffViewMode === 'rich' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                             onClick={() => setDiffViewMode('rich')}
                           >
                             Rich
                           </button>
                           <button
-                            className={`workspace-history-diff-mode-button px-3 py-1 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${diffViewMode === 'text' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                            className={`workspace-history-diff-mode-button px-3 py-1 text-ui-caption font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${diffViewMode === 'text' ? 'active text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                             onClick={() => setDiffViewMode('text')}
                           >
                             Text
@@ -503,7 +503,7 @@ export function WorkspaceHistoryDialog({
                   )}
 
                   {loadingPreview ? (
-                    <div className="workspace-history-preview-loading flex flex-col items-center justify-center p-10 gap-3 text-[var(--nim-text-muted)] text-[13px]">
+                    <div className="workspace-history-preview-loading flex flex-col items-center justify-center p-10 gap-3 text-[var(--nim-text-muted)] text-ui-body">
                       <div className="workspace-history-preview-loading-spinner w-6 h-6 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
                       Loading preview...
                     </div>
@@ -541,9 +541,9 @@ export function WorkspaceHistoryDialog({
                       )}
                     </div>
                   ) : selectedSnapshotTimestamp ? (
-                    <pre className="workspace-history-preview-text m-0 p-4 font-mono text-[13px] leading-relaxed text-[var(--nim-text)] whitespace-pre-wrap break-words">{previewContent}</pre>
+                    <pre className="workspace-history-preview-text m-0 p-4 font-mono text-ui-body leading-relaxed text-[var(--nim-text)] whitespace-pre-wrap break-words">{previewContent}</pre>
                   ) : (
-                    <div className="workspace-history-preview-empty flex items-center justify-center flex-1 text-[var(--nim-text-muted)] text-[13px]">
+                    <div className="workspace-history-preview-empty flex items-center justify-center flex-1 text-[var(--nim-text-muted)] text-ui-body">
                       Select a snapshot to preview
                     </div>
                   )}
@@ -551,8 +551,8 @@ export function WorkspaceHistoryDialog({
               </div>
             ) : (
               <div className="workspace-history-no-file-selected flex flex-col items-center justify-center flex-1 gap-3 text-[var(--nim-text-faint)]">
-                <span className="material-symbols-outlined text-5xl opacity-30">folder_open</span>
-                <p className="m-0 text-sm">Select a file from the tree to view its history</p>
+                <span className="material-symbols-outlined text-ui-display opacity-30">folder_open</span>
+                <p className="m-0 text-ui-body">Select a file from the tree to view its history</p>
               </div>
             )}
           </div>

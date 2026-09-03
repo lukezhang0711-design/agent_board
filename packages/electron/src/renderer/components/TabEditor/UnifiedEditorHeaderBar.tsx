@@ -78,8 +78,8 @@ const SessionItem: React.FC<{
     onClick={() => onClick?.(session.id)}
   >
     <span className="shrink-0 text-[var(--nim-text-muted)]"><ProviderIcon provider={session.provider} size={14} /></span>
-    <div className="ai-session-title text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis text-[var(--nim-text)] flex-1 min-w-0">{session.title}</div>
-    <div className="ai-session-time text-xs text-[var(--nim-text-faint)] shrink-0">{formatTime(session.updatedAt)}</div>
+    <div className="ai-session-title text-ui-body font-medium whitespace-nowrap overflow-hidden text-ellipsis text-[var(--nim-text)] flex-1 min-w-0">{session.title}</div>
+    <div className="ai-session-time text-ui-compact text-[var(--nim-text-faint)] shrink-0">{formatTime(session.updatedAt)}</div>
     {onOpenChat && (
       <button
         className="shrink-0 w-6 h-6 flex items-center justify-center rounded-ui-base text-[var(--nim-text-faint)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-tertiary)] transition-colors duration-150 bg-transparent border-none cursor-pointer"
@@ -633,26 +633,26 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
               <div className="unified-header-ai-dropdown absolute top-[calc(100%+4px)] right-0 min-w-[300px] max-w-[400px] overflow-hidden rounded-ui-base z-[1000] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 {/* Dropdown header */}
                 <div className="ai-sessions-header px-4 py-3 border-b border-[var(--nim-border)]">
-                  <div className="ai-sessions-title text-[11px] font-semibold uppercase tracking-wide text-[var(--nim-text-muted)]">
+                  <div className="ai-sessions-title text-ui-caption font-semibold uppercase tracking-wide text-[var(--nim-text-muted)]">
                     AI Sessions that edited this file
                   </div>
                 </div>
 
                 {loadingSessions ? (
-                  <div className="ai-sessions-loading p-4 text-center text-[13px] text-[var(--nim-text-muted)]">Loading sessions...</div>
+                  <div className="ai-sessions-loading p-4 text-center text-ui-body text-[var(--nim-text-muted)]">Loading sessions...</div>
                 ) : aiSessions.length > 0 ? (
                   <div className="ai-sessions-list max-h-[300px] overflow-y-auto">
                     {hasGroupedSessions ? (
                       <>
                         {/* Current workspace sessions */}
-                        <div className="ai-sessions-group-header px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)]">
+                        <div className="ai-sessions-group-header px-4 py-2 text-ui-micro font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)]">
                           {isInWorktree ? 'This worktree' : 'This project'}
                         </div>
                         {currentWorkspaceSessions.map((session) => (
                           <SessionItem key={session.id} session={session} onClick={onSwitchToAgentMode ? handleLoadSessionInAgentMode : undefined} onOpenChat={onOpenSessionInChat ? handleLoadSessionInChat : undefined} formatTime={formatRelativeTime} />
                         ))}
                         {/* Other sessions */}
-                        <div className="ai-sessions-group-header px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)]">
+                        <div className="ai-sessions-group-header px-4 py-2 text-ui-micro font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] bg-[var(--nim-bg-secondary)]">
                           Other sessions
                         </div>
                         {otherSessions.map((session) => (
@@ -666,14 +666,14 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                     )}
                   </div>
                 ) : (
-                  <div className="ai-sessions-empty p-4 text-center text-[13px] text-[var(--nim-text-muted)]">No AI sessions have edited this file yet</div>
+                  <div className="ai-sessions-empty p-4 text-center text-ui-body text-[var(--nim-text-muted)]">No AI sessions have edited this file yet</div>
                 )}
 
                 {/* Start new session button - only shown when agent mode switch is available */}
                 {onSwitchToAgentMode && (
                   <div className="ai-session-start-container px-3 py-3 border-t border-[var(--nim-border)]">
                     <button
-                      className="ai-session-start-button w-full py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-[13px] font-medium text-left cursor-pointer flex items-center gap-2 transition-all duration-150 text-[var(--nim-text-muted)] bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
+                      className="ai-session-start-button w-full py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-ui-body font-medium text-left cursor-pointer flex items-center gap-2 transition-all duration-150 text-[var(--nim-text-muted)] bg-transparent hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
                       onClick={handleStartAgentSession}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -717,16 +717,16 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                     {tocItems.map((item) => (
                       <li
                         key={item.key}
-                        className={`toc-item py-2 px-3 cursor-pointer text-sm leading-snug whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${
+                        className={`toc-item py-2 px-3 cursor-pointer text-ui-body leading-snug whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] ${
                           item.level === 1
                             ? 'toc-level-1 font-semibold pl-3'
                             : item.level === 2
                             ? 'toc-level-2 pl-6'
                             : item.level === 3
-                            ? 'toc-level-3 pl-9 text-[13px]'
+                            ? 'toc-level-3 pl-9 text-ui-body'
                             : item.level === 4
-                            ? 'toc-level-4 pl-12 text-[13px]'
-                            : 'toc-level-5 pl-[60px] text-xs text-[var(--nim-text-muted)]'
+                            ? 'toc-level-4 pl-12 text-ui-body'
+                            : 'toc-level-5 pl-[60px] text-ui-compact text-[var(--nim-text-muted)]'
                         }`}
                         onClick={() => handleTOCItemClick(item.key)}
                       >
@@ -735,7 +735,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                     ))}
                   </ul>
                 ) : (
-                  <div className="toc-empty py-4 px-3 text-center text-[13px] text-[var(--nim-text-muted)]">No headings in document</div>
+                  <div className="toc-empty py-4 px-3 text-center text-ui-body text-[var(--nim-text-muted)]">No headings in document</div>
                 )}
               </div>
             )}
@@ -787,16 +787,16 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                   {...sharedDocMenu.getFloatingProps()}
                 >
                   <div className="px-3 py-2 border-b border-[var(--nim-border)]">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
+                    <div className="text-ui-caption font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
                       Shared Document
                     </div>
-                    <div className="mt-1 text-[13px] text-[var(--nim-text)]">
+                    <div className="mt-1 text-ui-body text-[var(--nim-text)]">
                       Shared to team on {formatSharedTimestamp(sharedDocLink.binding.createdAt)}
                     </div>
                   </div>
                   {sharedDocNameAndFolder && (
                     <button
-                      className="shared-doc-open-link dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-start gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="shared-doc-open-link dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-start gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onClick={handleOpenSharedDoc}
                       title="Open shared document"
                     >
@@ -810,7 +810,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                           {sharedDocNameAndFolder.name}
                         </span>
                         {sharedDocNameAndFolder.folder && (
-                          <sub className="shared-doc-open-link-folder text-[11px] text-[var(--nim-text-faint)] truncate not-italic align-baseline mt-1">
+                          <sub className="shared-doc-open-link-folder text-ui-caption text-[var(--nim-text-faint)] truncate not-italic align-baseline mt-1">
                             {sharedDocNameAndFolder.folder}
                           </sub>
                         )}
@@ -818,7 +818,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                     </button>
                   )}
                   <button
-                    className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={sharedDocLink.busyAction !== null}
                     onClick={async () => {
                       const success = await sharedDocLink.reuploadToSharedDoc();
@@ -870,7 +870,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
               {/* Toggle Source Mode */}
               {supportsSourceMode && onToggleSourceMode && (
                 <button
-                  className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={() => {
                     onToggleSourceMode();
                     setShowActionsMenu(false);
@@ -887,7 +887,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
               {/* View History */}
               {showHistoryAction && (
                 <button
-                  className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={() => {
                     openHistoryDialog(filePath);
                     setShowActionsMenu(false);
@@ -907,7 +907,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                   {/* Toggle Markdown Mode - switch to Monaco */}
                   {onToggleMarkdownMode && (
                     <button
-                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onClick={() => {
                         onToggleMarkdownMode();
                         setShowActionsMenu(false);
@@ -924,7 +924,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                   {/* Copy as Markdown */}
                   {lexicalEditor && (
                     <button
-                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onClick={handleCopyAsMarkdown}
                     >
                       <svg className="w-4 h-4 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -938,7 +938,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                   {/* Export to PDF */}
                   {lexicalEditor && (
                     <button
-                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onClick={handleExportToPdf}
                     >
                       <svg className="w-4 h-4 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -954,7 +954,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                   {/* Set Document Type with submenu */}
                   {lexicalEditor && (
                     <div
-                      className="dropdown-item dropdown-item-with-submenu relative w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="dropdown-item dropdown-item-with-submenu relative w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onMouseEnter={() => setShowDocTypeSubmenu(true)}
                       onMouseLeave={() => setShowDocTypeSubmenu(false)}
                     >
@@ -965,28 +965,28 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                         <line x1="16" y1="17" x2="8" y2="17"/>
                       </svg>
                       <span className="dropdown-item-label flex-1">Set Document Type</span>
-                      <span className="dropdown-item-chevron ml-auto text-sm text-[var(--nim-text-faint)]">&#8250;</span>
+                      <span className="dropdown-item-chevron ml-auto text-ui-body text-[var(--nim-text-faint)]">&#8250;</span>
 
                       {showDocTypeSubmenu && (
                         <div className="dropdown-submenu absolute right-full left-auto top-0 min-w-[180px] py-1 rounded-ui-base z-[1001] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                           {TRACKER_TYPES.map((type) => (
                             <button
                               key={type.type}
-                              className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                              className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleSetDocumentType(type.type);
                               }}
                             >
                               <span
-                                className="material-symbols-outlined opacity-70"
-                                style={{ color: type.color, fontSize: '18px' }}
+                                className="material-symbols-outlined opacity-70 text-ui-title"
+                                style={{ color: type.color }}
                               >
                                 {type.icon}
                               </span>
                               <span>{type.displayName}</span>
                               {currentDocumentType === type.type && (
-                                <span className="dropdown-checkmark ml-auto text-sm text-[var(--nim-primary)]">&#10003;</span>
+                                <span className="dropdown-checkmark ml-auto text-ui-body text-[var(--nim-primary)]">&#10003;</span>
                               )}
                             </button>
                           ))}
@@ -994,13 +994,13 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                             <>
                               <div className="dropdown-divider h-px my-1 bg-[var(--nim-border)]" />
                               <button
-                                className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                                className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleRemoveDocumentType();
                                 }}
                               >
-                                <span className="material-symbols-outlined opacity-70" style={{ fontSize: '18px' }}>
+                                <span className="material-symbols-outlined opacity-70 text-ui-title">
                                   close
                                 </span>
                                 <span>Remove Type</span>
@@ -1017,7 +1017,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
               {/* Debug Tree (dev mode only) */}
               {isDevMode && isMarkdown && onToggleDebugTree && (
                 <button
-                  className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={() => {
                     onToggleDebugTree();
                     setShowActionsMenu(false);
@@ -1039,7 +1039,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                   {extraActionItems.map((item, index) => (
                     <button
                       key={`extra-action-${index}-${item.label}`}
-                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={item.disabled}
                       onClick={() => {
                         item.onClick();
@@ -1047,7 +1047,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                       }}
                     >
                       {item.icon && (
-                        <span className="material-symbols-outlined text-lg opacity-70">{item.icon}</span>
+                        <span className="material-symbols-outlined text-ui-title opacity-70">{item.icon}</span>
                       )}
                       {item.label}
                     </button>
@@ -1063,7 +1063,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                     filePath={filePath}
                     fileName={fileName}
                     onClose={() => setShowActionsMenu(false)}
-                    menuItemClass="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                    menuItemClass="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                     separatorClass="dropdown-divider h-px my-1 bg-[var(--nim-border)]"
                     iconSize={16}
                     useButtons={true}
@@ -1075,13 +1075,13 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
               {extensionMenuItems.length > 0 && (
                 <>
                   <div className="dropdown-divider h-px my-1 bg-[var(--nim-border)]" />
-                  <div className="dropdown-section-label pt-2 pb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
+                  <div className="dropdown-section-label pt-2 pb-1 px-3 text-ui-caption font-semibold uppercase tracking-wider text-[var(--nim-text-faint)]">
                     {extensionId || 'Extension'}
                   </div>
                   {extensionMenuItems.map((item, index) => (
                     <button
                       key={index}
-                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="dropdown-item w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={item.disabled}
                       onClick={() => {
                         item.onClick();
@@ -1089,7 +1089,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                       }}
                     >
                       {item.icon && (
-                        <span className="material-symbols-outlined text-lg opacity-70">{item.icon}</span>
+                        <span className="material-symbols-outlined text-ui-title opacity-70">{item.icon}</span>
                       )}
                       {item.label}
                     </button>
@@ -1102,7 +1102,7 @@ export const UnifiedEditorHeaderBar: React.FC<UnifiedEditorHeaderBarProps> = ({
                 <>
                   <div className="dropdown-divider h-px my-1 bg-[var(--nim-border)]" />
                   <button
-                    className="dropdown-item settings-link w-full py-2 px-3 border-none bg-transparent text-[13px] text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-primary)] hover:bg-[var(--nim-bg-hover)]"
+                    className="dropdown-item settings-link w-full py-2 px-3 border-none bg-transparent text-ui-body text-left cursor-pointer flex items-center gap-3 transition-colors duration-150 text-[var(--nim-primary)] hover:bg-[var(--nim-bg-hover)]"
                     onClick={() => {
                       onOpenExtensionSettings();
                       setShowActionsMenu(false);

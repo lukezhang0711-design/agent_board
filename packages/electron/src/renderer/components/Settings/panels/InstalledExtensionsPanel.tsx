@@ -365,7 +365,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
       {totalCount === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--nim-text-muted)]">
           <MaterialSymbol icon="extension" size={48} />
-          <h3 className="mt-4 mb-2 text-lg font-medium text-[var(--nim-text)]">No Extensions Installed</h3>
+          <h3 className="mt-4 mb-2 text-ui-title font-medium text-[var(--nim-text)]">No Extensions Installed</h3>
         </div>
       ) : (
         /* Main content: List + Details split view */
@@ -373,8 +373,8 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
           {/* Left: Extension list */}
           <div className="w-[260px] flex-shrink-0 flex flex-col bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg overflow-hidden">
             <div className="px-3 py-3 border-b border-[var(--nim-border)] flex items-center justify-between flex-shrink-0">
-              <span className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Extensions</span>
-              <span className="text-xs text-[var(--nim-text-faint)]">
+              <span className="text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Extensions</span>
+              <span className="text-ui-compact text-[var(--nim-text-faint)]">
                 {enabledCount}/{totalCount}
                 {updateCount > 0 && (
                   <span className="ml-2 text-[var(--nim-primary)]">{updateCount} update{updateCount > 1 ? 's' : ''}</span>
@@ -394,16 +394,16 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-medium text-[var(--nim-text)] truncate">{ext.manifest.name}</span>
+                      <span className="text-ui-body font-medium text-[var(--nim-text)] truncate">{ext.manifest.name}</span>
                       {ext.availableUpdate && ext.registryEntry && (
                         <MaterialSymbol icon="upgrade" size={14} className="text-[var(--nim-primary)] shrink-0" />
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className={`inline-flex items-center px-2 py-0 rounded-ui-base text-[0.625rem] font-semibold uppercase tracking-tight ${sourcePillClasses(ext.source)}`}>
+                      <span className={`inline-flex items-center px-2 py-0 rounded-ui-base text-ui-micro font-semibold uppercase tracking-tight ${sourcePillClasses(ext.source)}`}>
                         {sourceLabel(ext.source)}
                       </span>
-                      <span className="text-xs text-[var(--nim-text-faint)] truncate">{ext.manifest.author || 'Unknown'}</span>
+                      <span className="text-ui-compact text-[var(--nim-text-faint)] truncate">{ext.manifest.author || 'Unknown'}</span>
                     </div>
                   </div>
                   <span className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -424,12 +424,12 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
               <>
                 {/* Details header */}
                 <div className="p-4 border-b border-[var(--nim-border)] flex-shrink-0">
-                  <div className="text-base font-semibold text-[var(--nim-text)]">{selectedExtension.manifest.name}</div>
-                  <div className="text-xs text-[var(--nim-text-muted)]">
+                  <div className="text-ui-subhead font-semibold text-[var(--nim-text)]">{selectedExtension.manifest.name}</div>
+                  <div className="text-ui-compact text-[var(--nim-text-muted)]">
                     by {selectedExtension.manifest.author || 'Unknown'}
                     <span className="text-[var(--nim-text-faint)] ml-2">v{selectedExtension.manifest.version}</span>
                   </div>
-                  <div className="text-sm text-[var(--nim-text-muted)] mt-2 leading-relaxed">
+                  <div className="text-ui-body text-[var(--nim-text-muted)] mt-2 leading-relaxed">
                     {selectedExtension.manifest.description || 'No description provided'}
                   </div>
                 </div>
@@ -438,8 +438,8 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                 <div className="flex-1 overflow-y-auto min-h-0 p-4">
                   {/* Source + actions */}
                   <div className="mb-5 pb-4 border-b border-[var(--nim-border)]">
-                    <div className="flex flex-wrap items-center gap-2 mb-3 text-xs text-[var(--nim-text-muted)]">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-ui-base text-[0.6875rem] font-semibold uppercase tracking-tight ${sourcePillClasses(selectedExtension.source)}`}>
+                    <div className="flex flex-wrap items-center gap-2 mb-3 text-ui-compact text-[var(--nim-text-muted)]">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-ui-base text-ui-caption font-semibold uppercase tracking-tight ${sourcePillClasses(selectedExtension.source)}`}>
                         {sourceLabel(selectedExtension.source)}
                       </span>
                       {selectedExtension.installedAt && (
@@ -454,7 +454,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                     <div className="flex flex-wrap gap-2">
                       {selectedExtension.availableUpdate && selectedExtension.registryEntry && (
                         <button
-                          className="py-2 px-3 border-none rounded-ui-base text-xs font-medium cursor-pointer transition-opacity duration-150 bg-[var(--nim-primary)] text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="py-2 px-3 border-none rounded-ui-base text-ui-compact font-medium cursor-pointer transition-opacity duration-150 bg-[var(--nim-primary)] text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
                           onClick={() => handleUpdate(selectedExtension)}
                           disabled={processingId === selectedExtension.id}
                           data-testid={`installed-update-${selectedExtension.id}`}
@@ -464,7 +464,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                       )}
                       {(selectedExtension.manifest.marketplace?.repositoryUrl || selectedExtension.registryEntry?.repositoryUrl) && (
                         <button
-                          className="py-2 px-3 border border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 hover:border-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
+                          className="py-2 px-3 border border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-text-muted)] text-ui-compact font-medium cursor-pointer transition-all duration-150 hover:border-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
                           onClick={() => {
                             const url = selectedExtension.manifest.marketplace?.repositoryUrl || selectedExtension.registryEntry?.repositoryUrl;
                             if (url) window.electronAPI.openExternal(url);
@@ -474,7 +474,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                         </button>
                       )}
                       <button
-                        className="py-2 px-3 border border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 hover:border-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
+                        className="py-2 px-3 border border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-text-muted)] text-ui-compact font-medium cursor-pointer transition-all duration-150 hover:border-[var(--nim-text-muted)] hover:text-[var(--nim-text)]"
                         onClick={() => handleReveal(selectedExtension.path)}
                         data-testid={`installed-reveal-${selectedExtension.id}`}
                       >
@@ -482,7 +482,7 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                       </button>
                       {selectedExtension.source !== 'built-in' && (
                         <button
-                          className="py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-xs font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="py-2 px-3 border border-[var(--nim-error)] rounded-ui-base bg-transparent text-[var(--nim-error)] text-ui-compact font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--nim-error)] hover:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                           onClick={() => handleUninstall(selectedExtension.id)}
                           disabled={processingId === selectedExtension.id}
                           data-testid={`installed-uninstall-${selectedExtension.id}`}
@@ -518,11 +518,11 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   {/* Claude Plugin */}
                   {selectedExtension.manifest.contributions?.claudePlugin && (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Claude Agent Plugin</div>
+                      <div className="text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Claude Agent Plugin</div>
                       <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2 text-xs font-medium text-[var(--nim-text)]">
-                            <span className="material-symbols-outlined text-base text-[var(--nim-primary)]">smart_toy</span>
+                          <div className="flex items-center gap-2 text-ui-compact font-medium text-[var(--nim-text)]">
+                            <span className="material-symbols-outlined text-ui-subhead text-[var(--nim-primary)]">smart_toy</span>
                             {selectedExtension.manifest.contributions.claudePlugin.displayName || 'Claude Plugin'}
                           </div>
                           <ToggleSwitch
@@ -531,20 +531,20 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                             disabled={processingId === selectedExtension.id || !selectedExtension.enabled}
                           />
                         </div>
-                        <div className="text-xs text-[var(--nim-text-muted)] mb-3">
+                        <div className="text-ui-compact text-[var(--nim-text-muted)] mb-3">
                           {selectedExtension.manifest.contributions.claudePlugin.description || 'No description'}
                         </div>
                         {selectedExtension.manifest.contributions.claudePlugin.commands && selectedExtension.manifest.contributions.claudePlugin.commands.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {selectedExtension.manifest.contributions.claudePlugin.commands.map((cmd, idx) => (
-                              <span key={idx} className="px-2 py-0.5 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] font-mono" title={cmd.description}>
+                              <span key={idx} className="px-2 py-0.5 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] font-mono" title={cmd.description}>
                                 /{cmd.name}
                               </span>
                             ))}
                           </div>
                         )}
                         {!selectedExtension.enabled && (
-                          <div className="mt-2 text-xs text-[var(--nim-text-faint)] italic">
+                          <div className="mt-2 text-ui-compact text-[var(--nim-text-faint)] italic">
                             Enable the extension to use this plugin
                           </div>
                         )}
@@ -554,11 +554,11 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
 
                   {selectedExtension.manifest.contributions?.agentWorkflows && (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Agent Workflows</div>
+                      <div className="text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Agent Workflows</div>
                       <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2 text-xs font-medium text-[var(--nim-text)]">
-                            <span className="material-symbols-outlined text-base text-[var(--nim-primary)]">hub</span>
+                          <div className="flex items-center gap-2 text-ui-compact font-medium text-[var(--nim-text)]">
+                            <span className="material-symbols-outlined text-ui-subhead text-[var(--nim-primary)]">hub</span>
                             {selectedExtension.manifest.contributions.agentWorkflows.displayName || 'Agent Workflows'}
                           </div>
                           <ToggleSwitch
@@ -567,11 +567,11 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                             disabled={processingId === selectedExtension.id || !selectedExtension.enabled}
                           />
                         </div>
-                        <div className="text-xs text-[var(--nim-text-muted)]">
+                        <div className="text-ui-compact text-[var(--nim-text-muted)]">
                           {selectedExtension.manifest.contributions.agentWorkflows.description || 'Provider-neutral workflows exported to Claude Code and Codex.'}
                         </div>
                         {!selectedExtension.enabled && (
-                          <div className="mt-2 text-xs text-[var(--nim-text-faint)] italic">
+                          <div className="mt-2 text-ui-compact text-[var(--nim-text-faint)] italic">
                             Enable the extension to use these workflows
                           </div>
                         )}
@@ -582,37 +582,37 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   {/* Contributions */}
                   {selectedExtension.manifest.contributions && (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Contributions</div>
+                      <div className="text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Contributions</div>
                       <div className="flex flex-wrap gap-2">
                         {selectedExtension.manifest.contributions.customEditors?.map((editor, idx) => (
-                          <span key={`editor-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
-                            <span className="material-symbols-outlined text-sm">edit_document</span>
+                          <span key={`editor-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                            <span className="material-symbols-outlined text-ui-body">edit_document</span>
                             {editor.displayName}
                           </span>
                         ))}
                         {selectedExtension.manifest.contributions.aiTools?.map((tool, idx) => {
                           const toolName = typeof tool === 'string' ? tool : (tool as { name: string }).name;
                           return (
-                            <span key={`tool-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
-                              <span className="material-symbols-outlined text-sm">smart_toy</span>
+                            <span key={`tool-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                              <span className="material-symbols-outlined text-ui-body">smart_toy</span>
                               AI Tool: {toolName}
                             </span>
                           );
                         })}
                         {selectedExtension.manifest.contributions.slashCommands?.map((cmd, idx) => (
-                          <span key={`slash-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] font-mono">
+                          <span key={`slash-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] font-mono">
                             /{cmd.title}
                           </span>
                         ))}
                         {selectedExtension.manifest.contributions.agentWorkflows && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
-                            <span className="material-symbols-outlined text-sm">hub</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                            <span className="material-symbols-outlined text-ui-body">hub</span>
                             {selectedExtension.manifest.contributions.agentWorkflows.displayName}
                           </span>
                         )}
                         {selectedExtension.manifest.contributions.nodes?.map((node, idx) => (
-                          <span key={`node-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
-                            <span className="material-symbols-outlined text-sm">widgets</span>
+                          <span key={`node-${idx}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                            <span className="material-symbols-outlined text-ui-body">widgets</span>
                             {node}
                           </span>
                         ))}
@@ -623,23 +623,23 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
                   {/* Permissions */}
                   {selectedExtension.manifest.permissions && (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Permissions</div>
+                      <div className="text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">Permissions</div>
                       <div className="flex flex-wrap gap-2">
                         {selectedExtension.manifest.permissions.filesystem && (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
-                            <span className="material-symbols-outlined text-sm">folder</span>
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                            <span className="material-symbols-outlined text-ui-body">folder</span>
                             File System
                           </span>
                         )}
                         {selectedExtension.manifest.permissions.ai && (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
-                            <span className="material-symbols-outlined text-sm">psychology</span>
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                            <span className="material-symbols-outlined text-ui-body">psychology</span>
                             AI Tools
                           </span>
                         )}
                         {selectedExtension.manifest.permissions.network && (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-xs bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
-                            <span className="material-symbols-outlined text-sm">cloud</span>
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-ui-base text-ui-compact bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
+                            <span className="material-symbols-outlined text-ui-body">cloud</span>
                             Network
                           </span>
                         )}
@@ -661,9 +661,9 @@ export const InstalledExtensionsPanel: React.FC<InstalledExtensionsPanelProps> =
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-[var(--nim-text-muted)] text-center p-5">
-                <span className="material-symbols-outlined text-5xl opacity-50 mb-3">extension</span>
-                <div className="text-sm font-medium text-[var(--nim-text)]">No Extension Selected</div>
-                <div className="text-xs">Select an extension from the list to view details</div>
+                <span className="material-symbols-outlined text-ui-display opacity-50 mb-3">extension</span>
+                <div className="text-ui-body font-medium text-[var(--nim-text)]">No Extension Selected</div>
+                <div className="text-ui-compact">Select an extension from the list to view details</div>
               </div>
             )}
           </div>

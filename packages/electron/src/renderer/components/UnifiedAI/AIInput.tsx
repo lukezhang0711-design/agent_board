@@ -1399,7 +1399,7 @@ export const AIInput = forwardRef<AIInputRef, AIInputProps>(
             {resolvedModel && (
               <span
                 data-testid="resolved-model-receipt"
-                className="text-xs text-[var(--nim-text-muted)] truncate max-w-[200px]"
+                className="text-ui-compact text-[var(--nim-text-muted)] truncate max-w-[200px]"
                 title={`Engine-reported model: ${resolvedModel}`}
               >
                 Model: {resolvedModel}

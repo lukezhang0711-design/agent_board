@@ -63,7 +63,7 @@ export function MergeConfirmDialog({
         />
 
         <div className="merge-confirm-dialog-body px-6 pb-5">
-          <p className="m-0 mb-4 text-sm leading-relaxed text-[var(--nim-text-muted)]">
+          <p className="m-0 mb-4 text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
             Are you sure you want to merge <strong className="font-medium text-[var(--nim-text)]">{worktreeName}</strong> into the main branch of <strong className="font-medium text-[var(--nim-text)]">{projectName}</strong>?
           </p>
 
@@ -77,11 +77,11 @@ export function MergeConfirmDialog({
           )}
 
           <div className="merge-confirm-dialog-info flex flex-col gap-2 p-3 rounded-ui-lg bg-[var(--nim-bg-secondary)]">
-            <div className="merge-confirm-dialog-info-row flex items-center gap-2 text-[0.8125rem]">
+            <div className="merge-confirm-dialog-info-row flex items-center gap-2 text-ui-body">
               <span className="merge-confirm-dialog-info-label min-w-[60px] text-[var(--nim-text-faint)]">Source:</span>
               <span className="merge-confirm-dialog-info-value font-mono text-[var(--nim-text)]">{worktreeName}</span>
             </div>
-            <div className="merge-confirm-dialog-info-row flex items-center gap-2 text-[0.8125rem]">
+            <div className="merge-confirm-dialog-info-row flex items-center gap-2 text-ui-body">
               <span className="merge-confirm-dialog-info-label min-w-[60px] text-[var(--nim-text-faint)]">Target:</span>
               <span className="merge-confirm-dialog-info-value font-mono text-[var(--nim-text)]">main ({projectName})</span>
             </div>
@@ -91,14 +91,14 @@ export function MergeConfirmDialog({
         <div className="merge-confirm-dialog-footer flex justify-end gap-2 px-6 pt-4 pb-5 border-t border-[var(--nim-border)]">
           <button
             type="button"
-            className="merge-confirm-dialog-button nim-btn-secondary text-sm"
+            className="merge-confirm-dialog-button nim-btn-secondary text-ui-body"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
             type="button"
-            className="merge-confirm-dialog-button nim-btn-primary text-sm"
+            className="merge-confirm-dialog-button nim-btn-primary text-ui-body"
             onClick={onConfirm}
           >
             <MaterialSymbol icon="merge" size={16} />

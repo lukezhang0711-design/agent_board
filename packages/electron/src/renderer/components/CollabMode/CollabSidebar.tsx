@@ -675,7 +675,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
       <div className="session-history-search px-3 py-2 border-b border-[var(--nim-border)] shrink-0 relative">
           <input
             type="text"
-            className="session-history-search-input nim-input w-full pl-3 pr-9 py-2 text-[13px] text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:bg-[var(--nim-bg)]"
+            className="session-history-search-input nim-input w-full pl-3 pr-9 py-2 text-ui-body text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base outline-none transition-colors duration-150 placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:bg-[var(--nim-bg)]"
             placeholder="Search shared documents..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
@@ -742,7 +742,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
                   size={32}
                   className="text-nim-faint mb-2 animate-pulse"
                 />
-                <p className="text-xs text-nim-faint m-0">
+                <p className="text-ui-compact text-nim-faint m-0">
                   Loading shared documents...
                 </p>
               </div>
@@ -752,13 +752,13 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
             return (
               <div className="px-2 py-4 text-center">
                 <MaterialSymbol icon="cloud_sync" size={32} className="text-nim-faint mb-2" />
-                <p className="text-xs text-nim-faint m-0">
+                <p className="text-ui-compact text-nim-faint m-0">
                   {workspaceHasTeam
                     ? 'No shared documents yet.'
                     : 'No team connected to this workspace.'}
                 </p>
                 {workspaceHasTeam && (
-                  <p className="text-xs text-nim-faint mt-1 m-0">
+                  <p className="text-ui-compact text-nim-faint mt-1 m-0">
                     Create one here or share a local file to collaborate.
                   </p>
                 )}
@@ -769,10 +769,10 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
             return (
               <div className="px-2 py-4 text-center">
                 <MaterialSymbol icon="search_off" size={32} className="text-nim-faint mb-2" />
-                <p className="text-xs text-nim-faint m-0">
+                <p className="text-ui-compact text-nim-faint m-0">
                   No shared documents match "{trimmedSearchQuery}".
                 </p>
-                <p className="text-xs text-nim-faint mt-1 m-0">
+                <p className="text-ui-compact text-nim-faint mt-1 m-0">
                   Try a different file name or folder path.
                 </p>
               </div>
@@ -789,7 +789,7 @@ export const CollabSidebar: React.FC<CollabSidebarProps> = ({
             ref={contextMenuFloating.refs.setFloating}
             style={contextMenuFloating.floatingStyles}
             {...contextMenuFloating.getFloatingProps()}
-            className="min-w-[160px] rounded-ui-base z-[10000] text-[13px] p-1 bg-nim-secondary border border-nim text-nim backdrop-blur-[10px] shadow-lg"
+            className="min-w-[160px] rounded-ui-base z-[10000] text-ui-body p-1 bg-nim-secondary border border-nim text-nim backdrop-blur-[10px] shadow-lg"
           >
           {contextMenu.node.type === 'folder' ? (
             <>

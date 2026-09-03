@@ -115,7 +115,7 @@ export const GeminiUsageIndicator: React.FC<GeminiUsageIndicatorProps> = ({ clas
           />
         </svg>
         {/* Percentage text */}
-        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-nim">
+        <span className="absolute inset-0 flex items-center justify-center text-ui-micro font-semibold text-nim">
           {limitsAvailable ? `${Math.round(utilization)}%` : '--'}
         </span>
       </button>

@@ -225,7 +225,7 @@ export const FileTreeRow = memo<FileTreeRowProps>(({
           <>
             <span className="file-tree-name">
               {node.name}
-              {node.isDragOver && isCopyDrag && <span style={{ marginLeft: '4px', fontSize: '10px', opacity: 0.7 }}>(copy)</span>}
+              {node.isDragOver && isCopyDrag && <span className="text-ui-micro" style={{ marginLeft: '4px', opacity: 0.7 }}>(copy)</span>}
             </span>
             <DirectoryGitStatusIndicator dirPath={node.path} />
           </>

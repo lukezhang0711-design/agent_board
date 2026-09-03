@@ -86,7 +86,7 @@ export function PlanListItem({ plan, isActive, onClick }: PlanListItemProps): JS
     >
       <div className="plan-list-item-header flex items-start gap-2 mb-2">
         <span
-          className="plan-priority-indicator text-[11px] font-bold tracking-tighter shrink-0 min-w-4"
+          className="plan-priority-indicator text-ui-caption font-bold tracking-tighter shrink-0 min-w-4"
           style={{ color: priorityColor }}
           title={`Priority: ${plan.priority}`}
         >
@@ -94,10 +94,10 @@ export function PlanListItem({ plan, isActive, onClick }: PlanListItemProps): JS
           {plan.priority === 'high' && '!!'}
           {plan.priority === 'medium' && '!'}
         </span>
-        <span className="material-symbols-outlined plan-type-icon text-base text-nim-faint shrink-0 mt-px" title={plan.planType || 'plan'}>
+        <span className="material-symbols-outlined plan-type-icon text-ui-subhead text-nim-faint shrink-0 mt-px" title={plan.planType || 'plan'}>
           {planTypeIcon}
         </span>
-        <div className="plan-list-item-title flex-1 text-[13px] font-medium text-nim-primary leading-snug overflow-hidden text-ellipsis line-clamp-2">{plan.title}</div>
+        <div className="plan-list-item-title flex-1 text-ui-body font-medium text-nim-primary leading-snug overflow-hidden text-ellipsis line-clamp-2">{plan.title}</div>
       </div>
 
       {plan.progress > 0 && (
@@ -113,9 +113,9 @@ export function PlanListItem({ plan, isActive, onClick }: PlanListItemProps): JS
       )}
 
       <div className="plan-list-item-footer flex items-center justify-between gap-2">
-        <span className="plan-updated-time text-[11px] text-nim-faint">{formatDate(plan.lastUpdated)}</span>
+        <span className="plan-updated-time text-ui-caption text-nim-faint">{formatDate(plan.lastUpdated)}</span>
         <span
-          className="plan-status-badge text-[10px] px-2 py-0.5 rounded-ui-base border capitalize font-medium whitespace-nowrap"
+          className="plan-status-badge text-ui-micro px-2 py-0.5 rounded-ui-base border capitalize font-medium whitespace-nowrap"
           style={{
             backgroundColor: `${statusColor}20`,
             color: statusColor,

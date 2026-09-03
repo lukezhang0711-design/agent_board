@@ -71,7 +71,7 @@ export function RebaseConflictDialog({
         />
 
         <div className="merge-conflict-dialog-body flex-1 min-h-0 overflow-y-auto px-6 pb-5">
-          <p className="m-0 mb-4 text-sm leading-relaxed text-[var(--nim-text-muted)]">
+          <p className="m-0 mb-4 text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
             Cannot rebase <strong className="text-[var(--nim-text)] font-medium">{worktreeName}</strong> because there are conflicts between the worktree branch and the base branch.
           </p>
 
@@ -102,13 +102,13 @@ export function RebaseConflictDialog({
                     {ourCommits.map((commit, idx) => (
                       <li key={idx} className="merge-conflict-dialog-file flex items-center gap-2 text-[var(--nim-text-muted)]">
                         <MaterialSymbol icon="arrow_forward" size={14} />
-                        <span className="text-xs">{commit}</span>
+                        <span className="text-ui-compact">{commit}</span>
                       </li>
                     ))}
                     {hasMoreOurCommits && (
                       <li className="merge-conflict-dialog-file flex items-center gap-2 text-[var(--nim-text-muted)] italic opacity-70">
                         <MaterialSymbol icon="more_horiz" size={14} />
-                        <span className="text-xs">
+                        <span className="text-ui-compact">
                           {(conflictingCommits?.ours?.length || 0) - 5} more commit(s)
                         </span>
                       </li>
@@ -127,13 +127,13 @@ export function RebaseConflictDialog({
                     {theirCommits.map((commit, idx) => (
                       <li key={idx} className="merge-conflict-dialog-file flex items-center gap-2 text-[var(--nim-text-muted)]">
                         <MaterialSymbol icon="arrow_forward" size={14} />
-                        <span className="text-xs">{commit}</span>
+                        <span className="text-ui-compact">{commit}</span>
                       </li>
                     ))}
                     {hasMoreTheirCommits && (
                       <li className="merge-conflict-dialog-file flex items-center gap-2 text-[var(--nim-text-muted)] italic opacity-70">
                         <MaterialSymbol icon="more_horiz" size={14} />
-                        <span className="text-xs">
+                        <span className="text-ui-compact">
                           {(conflictingCommits?.theirs?.length || 0) - 5} more commit(s)
                         </span>
                       </li>
@@ -170,7 +170,7 @@ export function RebaseConflictDialog({
               <MaterialSymbol icon="terminal" size={16} />
               Worktree location:
             </p>
-            <code className="merge-conflict-dialog-path block font-[var(--nim-font-mono)] text-xs text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] px-2 py-2 rounded-ui-base break-all">{worktreePath}</code>
+            <code className="merge-conflict-dialog-path block font-[var(--nim-font-mono)] text-ui-compact text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] px-2 py-2 rounded-ui-base break-all">{worktreePath}</code>
           </div>
         </div>
 

@@ -136,11 +136,11 @@ export function TipCard({
     ? 'w-8 h-8 rounded-ui-base'
     : 'w-11 h-11 rounded-ui-lg';
   const titleClasses = isFloating
-    ? 'text-[13px] font-semibold text-[var(--nim-text)] leading-tight'
-    : 'text-[16px] font-semibold text-[var(--nim-text)] leading-snug';
+    ? 'text-ui-body font-semibold text-[var(--nim-text)] leading-tight'
+    : 'text-ui-subhead font-semibold text-[var(--nim-text)] leading-snug';
   const bodyClasses = isFloating
-    ? 'text-[12.5px] leading-relaxed text-[var(--nim-text-muted)] px-3 pt-2 pb-3'
-    : 'text-[14px] leading-relaxed text-[var(--nim-text-muted)] px-5 pt-3 pb-4';
+    ? 'text-ui-compact leading-relaxed text-[var(--nim-text-muted)] px-3 pt-2 pb-3'
+    : 'text-ui-body leading-relaxed text-[var(--nim-text-muted)] px-5 pt-3 pb-4';
   const bodyIndent = isFloating
     ? (tip.content.icon ? '3.5rem' : '0.875rem')
     : (tip.content.icon ? '4.75rem' : '1.25rem');
@@ -148,11 +148,11 @@ export function TipCard({
     ? 'flex items-center gap-3 px-3 pb-3'
     : 'flex items-center gap-3 px-5 pb-5';
   const primaryButtonClasses = isFloating
-    ? 'inline-flex items-center gap-2 px-3 py-2 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-[12.5px] font-medium cursor-pointer transition-all duration-150 hover:brightness-110 font-[inherit]'
-    : 'inline-flex items-center gap-2 px-3 py-2 bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_18%,transparent)] font-[inherit]';
+    ? 'inline-flex items-center gap-2 px-3 py-2 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-ui-compact font-medium cursor-pointer transition-all duration-150 hover:brightness-110 font-[inherit]'
+    : 'inline-flex items-center gap-2 px-3 py-2 bg-[color-mix(in_srgb,var(--nim-primary)_12%,transparent)] text-[var(--nim-primary)] border border-[color-mix(in_srgb,var(--nim-primary)_20%,transparent)] rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_18%,transparent)] font-[inherit]';
   const secondaryButtonClasses = isFloating
-    ? 'text-[12.5px] text-[var(--nim-text-faint)] bg-transparent border-none cursor-pointer font-[inherit] transition-colors duration-150 hover:text-[var(--nim-text-muted)] hover:underline'
-    : 'text-[13px] text-[var(--nim-text-faint)] bg-transparent border-none cursor-pointer font-[inherit] transition-colors duration-150 hover:text-[var(--nim-text-muted)] hover:underline';
+    ? 'text-ui-compact text-[var(--nim-text-faint)] bg-transparent border-none cursor-pointer font-[inherit] transition-colors duration-150 hover:text-[var(--nim-text-muted)] hover:underline'
+    : 'text-ui-body text-[var(--nim-text-faint)] bg-transparent border-none cursor-pointer font-[inherit] transition-colors duration-150 hover:text-[var(--nim-text-muted)] hover:underline';
 
   const card = (
     <div

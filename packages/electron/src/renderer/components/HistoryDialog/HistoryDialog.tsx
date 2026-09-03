@@ -491,21 +491,21 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
       <div className="history-dialog flex flex-col overflow-hidden rounded-ui-lg bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[90vw] max-w-[1200px] h-[80vh] max-h-[800px]" onClick={(e) => e.stopPropagation()}>
         <div className="history-dialog-header flex items-center justify-between py-3 px-4 border-b border-[var(--nim-border)]">
           <div className="history-dialog-title flex flex-col gap-1 min-w-0 flex-1">
-            <h2 className="m-0 text-base font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis">{filePath ? getFileName(filePath) : 'Document History'}</h2>
-            {filePath && <span className="history-dialog-path text-[11px] text-[var(--nim-text-muted)] whitespace-nowrap overflow-hidden text-ellipsis">{filePath}</span>}
+            <h2 className="m-0 text-ui-subhead font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis">{filePath ? getFileName(filePath) : 'Document History'}</h2>
+            {filePath && <span className="history-dialog-path text-ui-caption text-[var(--nim-text-muted)] whitespace-nowrap overflow-hidden text-ellipsis">{filePath}</span>}
           </div>
           <div className="history-dialog-header-right flex items-center gap-3">
             {fileType === 'markdown' && (
               <div className="view-variant-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-0.5 gap-1">
                 <button
-                  className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                  className={`view-mode-button py-1 px-3 text-ui-caption font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                   onClick={() => setRichView(true)}
                   title="Rendered view"
                 >
                   Rich
                 </button>
                 <button
-                  className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${!richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                  className={`view-mode-button py-1 px-3 text-ui-caption font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${!richView ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                   onClick={() => setRichView(false)}
                   title="Raw source"
                 >
@@ -515,14 +515,14 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
             )}
             <div className="view-mode-toggle flex bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base p-0.5 gap-1">
               <button
-                className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${viewMode === 'changes' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                className={`view-mode-button py-1 px-3 text-ui-caption font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${viewMode === 'changes' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                 onClick={() => setViewMode('changes')}
                 title="Show diff with previous version"
               >
                 Diff
               </button>
               <button
-                className={`view-mode-button py-1 px-3 text-[11px] font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${viewMode === 'version' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
+                className={`view-mode-button py-1 px-3 text-ui-caption font-medium border-none rounded-ui-base cursor-pointer transition-all duration-200 ${viewMode === 'version' ? 'text-white bg-[var(--nim-primary)]' : 'text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'}`}
                 onClick={() => setViewMode('version')}
                 title="View full content"
               >
@@ -530,7 +530,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
               </button>
             </div>
             <button className="history-dialog-close nim-btn-icon" onClick={onClose}>
-              <span className="material-symbols-outlined text-xl">close</span>
+              <span className="material-symbols-outlined text-ui-title">close</span>
             </button>
           </div>
         </div>
@@ -539,8 +539,8 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
           <div className="history-list w-[350px] border-r border-[var(--nim-border)] flex flex-col">
             <div className="history-list-header py-2 px-3 border-b border-[var(--nim-border)] flex items-center justify-between bg-[var(--nim-bg-secondary)]">
               <div className="history-list-header-left flex items-center gap-2">
-                <h3 className="m-0 text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">Snapshots ({displayedSnapshots.length}{compactView && snapshots.length !== displayedSnapshots.length ? ` of ${snapshots.length}` : ''})</h3>
-                {loading && <span className="history-loading text-xs text-[var(--nim-text-muted)]">Loading...</span>}
+                <h3 className="m-0 text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">Snapshots ({displayedSnapshots.length}{compactView && snapshots.length !== displayedSnapshots.length ? ` of ${snapshots.length}` : ''})</h3>
+                {loading && <span className="history-loading text-ui-compact text-[var(--nim-text-muted)]">Loading...</span>}
               </div>
               {snapshots.length > 5 && (
                 <button
@@ -548,7 +548,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                   onClick={() => setCompactView(!compactView)}
                   title={compactView ? 'Show all versions' : 'Hide minor auto-saves'}
                 >
-                  <span className="material-symbols-outlined text-lg">
+                  <span className="material-symbols-outlined text-ui-title">
                     {compactView ? 'unfold_more' : 'unfold_less'}
                   </span>
                 </button>
@@ -556,7 +556,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
             </div>
 
             {displayedSnapshots.length === 0 ? (
-              <div className="history-empty py-10 px-5 text-center text-[var(--nim-text-muted)] text-sm">
+              <div className="history-empty py-10 px-5 text-center text-[var(--nim-text-muted)] text-ui-body">
                 No history available for this document
               </div>
             ) : (
@@ -589,15 +589,15 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                   >
                     <div className="history-item-content py-2 px-2 flex items-center justify-between">
                       <div className="history-item-main flex items-center gap-2 flex-1 min-w-0">
-                        <span className={`history-item-icon material-symbols-outlined text-lg shrink-0 ${isSelected ? 'text-white' : 'text-[var(--nim-text-muted)]'}`}>{getSnapshotIcon(snapshot.type)}</span>
+                        <span className={`history-item-icon material-symbols-outlined text-ui-title shrink-0 ${isSelected ? 'text-white' : 'text-[var(--nim-text-muted)]'}`}>{getSnapshotIcon(snapshot.type)}</span>
                         <div className="history-item-info flex flex-col gap-1 min-w-0 flex-1">
                           <div className="history-item-type-row flex items-center justify-between gap-2">
-                            <span className={`history-item-type text-xs font-medium capitalize whitespace-nowrap ${isSelected ? 'text-white' : 'text-[var(--nim-text)]'}`}>{snapshot.type.replace('-', ' ')}</span>
-                            <span className={`history-item-time text-[11px] whitespace-nowrap shrink-0 ${isSelected ? 'text-white' : 'text-[var(--nim-text-faint)]'}`}>{relativeTime}</span>
+                            <span className={`history-item-type text-ui-compact font-medium capitalize whitespace-nowrap ${isSelected ? 'text-white' : 'text-[var(--nim-text)]'}`}>{snapshot.type.replace('-', ' ')}</span>
+                            <span className={`history-item-time text-ui-caption whitespace-nowrap shrink-0 ${isSelected ? 'text-white' : 'text-[var(--nim-text-faint)]'}`}>{relativeTime}</span>
                           </div>
                           {isAIEdit && session && (
                             <span
-                              className={`history-item-session-link flex items-center gap-1 text-[11px] cursor-pointer transition-colors duration-150 max-w-full overflow-hidden no-underline ${isSelected ? 'text-white/80 hover:text-white' : 'text-[var(--nim-link)] hover:text-[var(--nim-link-hover)]'}`}
+                              className={`history-item-session-link flex items-center gap-1 text-ui-caption cursor-pointer transition-colors duration-150 max-w-full overflow-hidden no-underline ${isSelected ? 'text-white/80 hover:text-white' : 'text-[var(--nim-link)] hover:text-[var(--nim-link-hover)]'}`}
                             >
                               <ProviderIcon provider={session.provider} size={11} />
                               <a title="Open AI session in chat"
@@ -617,7 +617,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                           }}
                           title="Delete snapshot"
                         >
-                          <span className={`material-symbols-outlined text-base ${isSelected ? 'text-white' : 'text-[var(--nim-text-muted)]'} [.history-item-delete:hover_&]:text-[var(--nim-error)]`}>delete</span>
+                          <span className={`material-symbols-outlined text-ui-subhead ${isSelected ? 'text-white' : 'text-[var(--nim-text-muted)]'} [.history-item-delete:hover_&]:text-[var(--nim-error)]`}>delete</span>
                         </button>
                       </div>
                     </div>
@@ -631,9 +631,9 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
           <div className="history-preview flex-1 flex flex-col relative min-w-0 overflow-hidden">
             <div className="history-preview-header py-2 px-3 border-b border-[var(--nim-border)] flex items-center justify-between bg-[var(--nim-bg-secondary)] gap-3">
               <div className="history-preview-header-left flex items-center gap-3 min-w-0 flex-1 overflow-hidden flex-wrap">
-                <h3 className="m-0 text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">{diffMode ? 'Diff Preview' : 'Preview'}</h3>
+                <h3 className="m-0 text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">{diffMode ? 'Diff Preview' : 'Preview'}</h3>
                 {diffMode && versionAMeta && versionBMeta && (
-                  <div className="diff-version-labels flex items-center gap-2 text-[11px] text-[var(--nim-text-muted)]">
+                  <div className="diff-version-labels flex items-center gap-2 text-ui-caption text-[var(--nim-text-muted)]">
                     <span className="diff-version-label diff-version-old py-0.5 px-2 rounded-ui-base bg-[var(--nim-bg-tertiary)] font-medium text-[var(--nim-error)]">
                       {formatVersionLabel(versionAMeta.type, versionAMeta.timestamp)}
                     </span>
@@ -657,7 +657,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                             <path d="M6 9L3 6L6 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </button>
-                        <span className="diff-change-counter text-[11px] font-medium text-[var(--nim-text-muted)] min-w-[50px] text-center">
+                        <span className="diff-change-counter text-ui-caption font-medium text-[var(--nim-text-muted)] min-w-[50px] text-center">
                           {navigationState.currentIndex + 1} / {navigationState.totalGroups}
                         </span>
                         <button
@@ -672,8 +672,8 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                         </button>
                         {!richView && 'addedLines' in navigationState && (
                           <div className="diff-stats flex items-center gap-2 ml-2 pl-2 border-l border-[var(--nim-border)]">
-                            <span className="diff-stat diff-stat-added text-[11px] font-semibold py-0.5 px-2 rounded-ui-base text-[var(--nim-success)] bg-[var(--nim-success-light)]">+{navigationState.addedLines}</span>
-                            <span className="diff-stat diff-stat-removed text-[11px] font-semibold py-0.5 px-2 rounded-ui-base text-[var(--nim-error)] bg-[var(--nim-error-light)]">-{navigationState.removedLines}</span>
+                            <span className="diff-stat diff-stat-added text-ui-caption font-semibold py-0.5 px-2 rounded-ui-base text-[var(--nim-success)] bg-[var(--nim-success-light)]">+{navigationState.addedLines}</span>
+                            <span className="diff-stat diff-stat-removed text-ui-caption font-semibold py-0.5 px-2 rounded-ui-base text-[var(--nim-error)] bg-[var(--nim-error-light)]">-{navigationState.removedLines}</span>
                           </div>
                         )}
                       </div>
@@ -683,7 +683,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
               </div>
               {selectedVersions.length === 1 && (
                 <button
-                  className="history-restore-button py-2 px-4 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 shrink-0 whitespace-nowrap hover:not-disabled:bg-[var(--nim-primary-hover)] hover:not-disabled:-translate-y-px hover:not-disabled:shadow-[0_2px_8px_rgba(59,130,246,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="history-restore-button py-2 px-4 bg-[var(--nim-primary)] text-white border-none rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-200 shrink-0 whitespace-nowrap hover:not-disabled:bg-[var(--nim-primary-hover)] hover:not-disabled:-translate-y-px hover:not-disabled:shadow-[0_2px_8px_rgba(59,130,246,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleRestore}
                   disabled={!previewContent}
                 >
@@ -774,7 +774,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
                 )}
               </div>
             ) : (
-              <div className="history-preview-empty flex-1 flex items-center justify-center text-[var(--nim-text-muted)] text-sm">
+              <div className="history-preview-empty flex-1 flex items-center justify-center text-[var(--nim-text-muted)] text-ui-body">
                 {viewMode === 'changes'
                   ? 'Select a snapshot to see diff, or Cmd+Click two to compare'
                   : 'Select a snapshot to view'}
@@ -784,7 +784,7 @@ export function HistoryDialog({ isOpen, onClose, filePath, onRestore, theme = 'l
             {loadingPreview && (richView || !diffMode) && (
               <div className="history-preview-loading absolute inset-0 flex flex-col items-center justify-center bg-[var(--nim-bg)] z-10 gap-3">
                 <div className="history-preview-loading-spinner w-10 h-10 border-[3px] border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
-                <div className="history-preview-loading-text text-[var(--nim-text-muted)] text-sm">
+                <div className="history-preview-loading-text text-[var(--nim-text-muted)] text-ui-body">
                   {selectedVersions.length === 2 ? 'Loading diff...' : 'Loading preview...'}
                 </div>
               </div>

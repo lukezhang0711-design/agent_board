@@ -74,11 +74,11 @@ export function PullRequestDetail({
       <div className="shrink-0 border-b border-nim">
         <div className="flex items-start gap-2 px-4 pt-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-ui-body">
               <span className="text-nim-faint font-mono">#{pr.number}</span>
               <span className="text-nim font-medium truncate">{pr.title}</span>
             </div>
-            <div className="flex items-center gap-2 mt-1 text-[11px] text-nim-faint">
+            <div className="flex items-center gap-2 mt-1 text-ui-caption text-nim-faint">
               {pr.authorLogin && <span>{pr.authorLogin}</span>}
               <span className="font-mono truncate">
                 {pr.baseRef} ← {pr.headRef}
@@ -95,7 +95,7 @@ export function PullRequestDetail({
             />
             {htmlUrl && (
               <button
-                className="flex items-center gap-1 px-2 py-1 text-xs text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-ui-compact text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors"
                 onClick={() => window.electronAPI?.openExternal(htmlUrl)}
                 title="Open on GitHub"
               >
@@ -105,7 +105,7 @@ export function PullRequestDetail({
             )}
             {onOpenInWorktree && (
               <button
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded-ui-base transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-ui-compact bg-nim-primary text-nim-on-primary hover:bg-nim-primary-hover rounded-ui-base transition-colors"
                 onClick={onOpenInWorktree}
                 data-testid="pr-open-in-worktree"
                 title="Create a worktree on this PR's branch"
@@ -124,7 +124,7 @@ export function PullRequestDetail({
               key={tab.id}
               data-testid={`pr-tab-${tab.id}`}
               onClick={() => setLayout({ activeDetailTab: tab.id })}
-              className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+              className={`px-3 py-2 text-ui-compact font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-[var(--nim-primary)] text-nim'
                   : 'border-transparent text-nim-muted hover:text-nim'

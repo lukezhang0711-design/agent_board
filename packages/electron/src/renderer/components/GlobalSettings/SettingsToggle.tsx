@@ -31,9 +31,9 @@ export function SettingsToggle({
     return (
       <div data-testid={testId} className="provider-enable flex items-center justify-between gap-4 py-4 mb-4 border-b border-[var(--nim-border)]">
         <div>
-          <span className="provider-enable-label text-sm font-medium text-[var(--nim-text)]">{name}</span>
+          <span className="provider-enable-label text-ui-body font-medium text-[var(--nim-text)]">{name}</span>
           {description && (
-            <p className="text-xs text-[var(--nim-text-muted)] mt-1">{description}</p>
+            <p className="text-ui-compact text-[var(--nim-text-muted)] mt-1">{description}</p>
           )}
         </div>
         <ToggleSwitch checked={checked} onChange={onChange} disabled={disabled} />
@@ -44,9 +44,9 @@ export function SettingsToggle({
   return (
     <div data-testid={testId} className="flex items-center justify-between gap-4 py-3">
       <div>
-        <span className="text-sm font-medium text-[var(--nim-text)]">{name}</span>
+        <span className="text-ui-body font-medium text-[var(--nim-text)]">{name}</span>
         {description && (
-          <p className="text-xs text-[var(--nim-text-muted)] mt-1">{description}</p>
+          <p className="text-ui-compact text-[var(--nim-text-muted)] mt-1">{description}</p>
         )}
       </div>
       <ToggleSwitch checked={checked} onChange={onChange} disabled={disabled} />

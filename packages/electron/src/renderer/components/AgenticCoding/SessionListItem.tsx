@@ -86,7 +86,7 @@ const SessionPhaseBadge = memo<{ phase: string }>(({ phase }) => {
   if (!style) return null;
   return (
     <span
-      className="session-list-item-phase text-[0.5625rem] leading-tight px-1 py-px rounded-ui-base font-medium whitespace-nowrap"
+      className="session-list-item-phase text-ui-micro leading-tight px-1 py-px rounded-ui-base font-medium whitespace-nowrap"
       style={{ color: style.color, backgroundColor: style.bg }}
     >
       {style.label}

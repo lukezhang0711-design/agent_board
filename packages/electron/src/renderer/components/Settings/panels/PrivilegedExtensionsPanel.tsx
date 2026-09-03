@@ -106,16 +106,21 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
 
   return (
     <div className="privileged-extensions-panel max-w-4xl">
-      <PageHeader icon="admin_panel_settings" title="Privileged Capabilities" className="mb-5" />
+      <PageHeader
+        icon="admin_panel_settings"
+        title="Privileged Capabilities"
+        subtitle="Extensions that have been granted permission to run code outside the app"
+        className="mb-5"
+      />
 
       {error && (
-        <div className="mb-4 rounded-ui-base border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] p-3 text-sm text-[var(--nim-error)]">
+        <div className="mb-4 rounded-ui-base border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] p-3 text-ui-body text-[var(--nim-error)]">
           {error}
         </div>
       )}
 
       {enabledModules.length === 0 ? (
-        <div className="rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-4 text-sm text-[var(--nim-text-muted)]">
+        <div className="rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-4 text-ui-body text-[var(--nim-text-muted)]">
           No extensions currently hold privileged grants.
         </div>
       ) : (
@@ -141,10 +146,10 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
                 className="privileged-extension rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-3"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-[var(--nim-text)]">
+                  <div className="flex items-center gap-2 text-ui-body font-medium text-[var(--nim-text)]">
                     <MaterialSymbol icon="extension" size={16} />
                     {row.extensionId}
-                    <span className="text-xs text-[var(--nim-text-faint)] font-mono">/{row.moduleId}</span>
+                    <span className="text-ui-compact text-[var(--nim-text-faint)] font-mono">/{row.moduleId}</span>
                   </div>
                   {status && (
                     <span className="text-ui-micro font-semibold uppercase tracking-wider px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]">
@@ -152,7 +157,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 mb-2 text-xs text-[var(--nim-text-muted)]">
+                <div className="flex items-center gap-3 mb-2 text-ui-compact text-[var(--nim-text-muted)]">
                   <span>
                     Calls: <span className="text-[var(--nim-text)]">{totalCalls}</span>
                   </span>
@@ -164,7 +169,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
                   {row.scopes.includes('workspace') && (
                     <button
                       type="button"
-                      className="px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50"
+                      className="px-2 py-1 text-ui-compact rounded-ui-base border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50"
                       disabled={
                         !workspacePath ||
                         busy === `${row.extensionId}::${row.moduleId}::workspace`
@@ -177,7 +182,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
                   {row.scopes.includes('global') && (
                     <button
                       type="button"
-                      className="px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50"
+                      className="px-2 py-1 text-ui-compact rounded-ui-base border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] disabled:opacity-50"
                       disabled={busy === `${row.extensionId}::${row.moduleId}::global`}
                       onClick={() => handleRevoke(row.extensionId, row.moduleId, 'global')}
                     >
@@ -210,11 +215,11 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
         </div>
       )}
 
-      <div className="mb-2 text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">
+      <div className="mb-2 text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">
         Recent activity
       </div>
       {recent.length === 0 ? (
-        <div className="rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-3 text-xs text-[var(--nim-text-muted)]">
+        <div className="rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg)] p-3 text-ui-compact text-[var(--nim-text-muted)]">
           No privileged-capability calls recorded yet this session.
         </div>
       ) : (
@@ -224,7 +229,7 @@ export const PrivilegedExtensionsPanel: React.FC<PrivilegedExtensionsPanelProps>
             return (
               <div
                 key={`${evt.timestamp}::${idx}`}
-                className="flex items-center gap-2 px-3 py-2 text-xs"
+                className="flex items-center gap-2 px-3 py-2 text-ui-compact"
               >
                 <span
                   className={`shrink-0 ${evt.outcome === 'denied' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-success)]'}`}

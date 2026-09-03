@@ -271,25 +271,25 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
           role="menu"
         >
           <div className="sync-menu-header flex justify-between items-center px-3 py-3 bg-[var(--nim-bg-tertiary)] border-b border-[var(--nim-border)]">
-            <span className="sync-menu-title text-[13px] font-semibold text-[var(--nim-text)]">
+            <span className="sync-menu-title text-ui-body font-semibold text-[var(--nim-text)]">
               Session Sync
             </span>
             <span
-              className={`sync-status-badge text-[11px] font-medium px-2 py-0.5 rounded-ui-lg ${getBadgeColorClass()}`}
+              className={`sync-status-badge text-ui-caption font-medium px-2 py-0.5 rounded-ui-lg ${getBadgeColorClass()}`}
             >
               {status.projectEnabled ? (status.connected ? 'Connected' : 'Disconnected') : 'Disabled'}
             </span>
           </div>
 
           {status.userEmail && (
-            <div className="sync-menu-user flex items-center gap-2 px-3 py-3 border-b border-[var(--nim-border)] text-[var(--nim-text-muted)] text-xs">
+            <div className="sync-menu-user flex items-center gap-2 px-3 py-3 border-b border-[var(--nim-border)] text-[var(--nim-text-muted)] text-ui-compact">
               <MaterialSymbol icon="account_circle" size={16} />
               <span>{status.userEmail}</span>
             </div>
           )}
 
           {status.error && (
-            <div className="sync-menu-error flex items-center gap-2 px-3 py-3 bg-[rgba(239,68,68,0.1)] text-[#ef4444] text-xs">
+            <div className="sync-menu-error flex items-center gap-2 px-3 py-3 bg-[rgba(239,68,68,0.1)] text-[#ef4444] text-ui-compact">
               <MaterialSymbol icon="error" size={16} />
               <span>{status.error}</span>
             </div>
@@ -297,14 +297,14 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
 
           <div className="sync-menu-stats px-3 py-3">
             <div className="sync-stat flex justify-between items-center py-1">
-              <span className="sync-stat-label text-xs text-[var(--nim-text-muted)]">Sessions synced</span>
-              <span className="sync-stat-value text-xs font-medium text-[var(--nim-text)]">
+              <span className="sync-stat-label text-ui-compact text-[var(--nim-text-muted)]">Sessions synced</span>
+              <span className="sync-stat-value text-ui-compact font-medium text-[var(--nim-text)]">
                 {status.stats.sessionCount}
               </span>
             </div>
             <div className="sync-stat flex justify-between items-center py-1">
-              <span className="sync-stat-label text-xs text-[var(--nim-text-muted)]">Last sync</span>
-              <span className="sync-stat-value text-xs font-medium text-[var(--nim-text)]">
+              <span className="sync-stat-label text-ui-compact text-[var(--nim-text-muted)]">Last sync</span>
+              <span className="sync-stat-value text-ui-compact font-medium text-[var(--nim-text)]">
                 {formatLastSync()}
               </span>
             </div>
@@ -316,17 +316,17 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
               <div className="px-3 py-3">
                 <div className="flex items-center gap-2 mb-2">
                   <MaterialSymbol icon="description" size={14} className="text-[var(--nim-text-muted)]" />
-                  <span className="text-[11px] font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">Document Sync</span>
+                  <span className="text-ui-caption font-semibold text-[var(--nim-text-muted)] uppercase tracking-wider">Document Sync</span>
                 </div>
                 <div className="sync-stat flex justify-between items-center py-1">
-                  <span className="sync-stat-label text-xs text-[var(--nim-text-muted)]">Files tracked</span>
-                  <span className="sync-stat-value text-xs font-medium text-[var(--nim-text)]">
+                  <span className="sync-stat-label text-ui-compact text-[var(--nim-text-muted)]">Files tracked</span>
+                  <span className="sync-stat-value text-ui-compact font-medium text-[var(--nim-text)]">
                     {status.docSyncStats.fileCount}
                   </span>
                 </div>
                 <div className="sync-stat flex justify-between items-center py-1">
-                  <span className="sync-stat-label text-xs text-[var(--nim-text-muted)]">Status</span>
-                  <span className={`sync-stat-value text-xs font-medium ${status.docSyncStats.connected ? 'text-[#22c55e]' : 'text-[var(--nim-text-faint)]'}`}>
+                  <span className="sync-stat-label text-ui-compact text-[var(--nim-text-muted)]">Status</span>
+                  <span className={`sync-stat-value text-ui-compact font-medium ${status.docSyncStats.connected ? 'text-[#22c55e]' : 'text-[var(--nim-text-faint)]'}`}>
                     {status.docSyncStats.connected ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
@@ -338,7 +338,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
 
           <div className="sync-menu-actions p-2">
             <button
-              className="sync-menu-action flex items-center gap-3 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="sync-menu-action flex items-center gap-3 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-ui-body text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleToggleProjectSync}
               role="menuitem"
             >
@@ -348,7 +348,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({ workspacePat
               <span>{status.projectEnabled ? 'Disable sync for this project' : 'Enable sync for this project'}</span>
             </button>
             <button
-              className="sync-menu-action flex items-center gap-3 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[13px] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="sync-menu-action flex items-center gap-3 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-ui-body text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleOpenSettings}
               role="menuitem"
             >

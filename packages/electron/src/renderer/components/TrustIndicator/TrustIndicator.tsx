@@ -189,7 +189,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
 
   const getBadgeClasses = (): string => {
     const statusClass = getStatusClass();
-    const base = 'px-2 py-0.5 rounded-ui-base text-[11px] font-medium';
+    const base = 'px-2 py-0.5 rounded-ui-base text-ui-caption font-medium';
     switch (statusClass) {
       case 'untrusted':
         return `${base} bg-[color-mix(in_srgb,var(--nim-warning)_15%,transparent)] text-[var(--nim-warning)]`;
@@ -311,17 +311,17 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
             }
           `}</style>
           <div className="trust-menu-header flex items-center justify-between px-3 pt-3 pb-2">
-            <span className="trust-menu-title text-[13px] font-semibold text-[var(--nim-text)]">
+            <span className="trust-menu-title text-ui-body font-semibold text-[var(--nim-text)]">
               Agent Permissions
             </span>
           </div>
 
           {/* Current mode - prominent display */}
           <div className={`trust-menu-current-mode ${getStatusClass()} ${getCurrentModeClasses()}`}>
-            <div className="trust-menu-current-mode-label text-[11px] font-medium text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-2">
+            <div className="trust-menu-current-mode-label text-ui-caption font-medium text-[var(--nim-text-faint)] uppercase tracking-[0.5px] mb-2">
               Current mode:
             </div>
-            <div className={`trust-menu-current-mode-value flex items-center gap-2 text-sm font-semibold mb-1 ${getModeValueColorClass()}`}>
+            <div className={`trust-menu-current-mode-value flex items-center gap-2 text-ui-body font-semibold mb-1 ${getModeValueColorClass()}`}>
               <MaterialSymbol
                 icon={getStatusIcon()}
                 size={20}
@@ -332,13 +332,13 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
                   : 'Not Trusted'}
               </span>
             </div>
-            <div className="trust-menu-current-mode-description text-xs text-[var(--nim-text-muted)] leading-[1.4]">
+            <div className="trust-menu-current-mode-description text-ui-compact text-[var(--nim-text-muted)] leading-[1.4]">
               {getStatusDescription()}
             </div>
           </div>
 
           {status?.trustedAt && (
-            <div className="trust-menu-date px-3 pb-2 text-[11px] text-[var(--nim-text-faint)]">
+            <div className="trust-menu-date px-3 pb-2 text-ui-caption text-[var(--nim-text-faint)]">
               Trusted {new Date(status.trustedAt).toLocaleDateString()}
             </div>
           )}
@@ -347,7 +347,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
 
           <div className="trust-menu-actions p-1">
               <button
-                className="trust-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
+                className="trust-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-ui-body font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
                 onClick={handleChangeMode}
                 role="menuitem"
               >
@@ -355,7 +355,7 @@ export const TrustIndicator: React.FC<TrustIndicatorProps> = ({
                 <span>Change permission mode</span>
               </button>
             <button
-              className="trust-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-[13px] font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
+              className="trust-menu-action flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--nim-text)] text-ui-body font-inherit text-left rounded-ui-base cursor-pointer transition-colors duration-100 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleOpenSettings}
               role="menuitem"
             >

@@ -1106,7 +1106,7 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
               <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
             </span>
           }
-          subtitle="Not signed in"
+          subtitle="Collaborate on shared items and documents with end-to-end encryption"
           className="mb-3"
         />
         <div className="mb-5">
@@ -1143,7 +1143,7 @@ export function TeamPanel({ workspacePath }: TeamPanelProps) {
             <AlphaBadge size="sm" tooltip={SETTINGS_ALPHA_TOOLTIP} />
           </span>
         }
-        subtitle={userEmail && team ? (userName || userEmail) : undefined}
+        subtitle={userEmail && team ? `${userName || userEmail} · Collaborate with end-to-end encryption` : 'Collaborate with end-to-end encryption'}
         className="mb-3"
       />
       <div className="mb-5">

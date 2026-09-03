@@ -51,7 +51,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           aria-live="assertive"
           className="p-8 text-center text-nim bg-nim-secondary rounded-ui-lg border border-nim"
         >
-          <h3 className="mt-0 mb-4 text-lg">
+          <h3 className="mt-0 mb-4 text-ui-title">
             Something went wrong
           </h3>
           <p className="mb-6 text-nim-muted">
@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           </p>
           <button
             onClick={this.handleReset}
-            className="px-4 py-2 bg-nim-primary text-nim-on-primary border-none rounded-ui-base cursor-pointer text-sm hover:bg-nim-primary-hover"
+            className="px-4 py-2 bg-nim-primary text-nim-on-primary border-none rounded-ui-base cursor-pointer text-ui-body hover:bg-nim-primary-hover"
           >
             Try Again
           </button>

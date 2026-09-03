@@ -106,7 +106,7 @@ export function OrgSwitcher() {
       <button
         ref={refs.setReference}
         {...getReferenceProps()}
-        className="org-switcher-button w-10 h-10 mx-auto mt-2 mb-1 rounded-ui-lg bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] text-white text-[12px] font-semibold flex items-center justify-center shadow-sm hover:brightness-110 transition"
+        className="org-switcher-button w-10 h-10 mx-auto mt-2 mb-1 rounded-ui-lg bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] text-white text-ui-compact font-semibold flex items-center justify-center shadow-sm hover:brightness-110 transition"
         data-testid="org-switcher"
         title={activeOrg ? `Organization: ${activeOrg.name}` : 'Organization'}
         aria-label="Switch organization"
@@ -122,7 +122,7 @@ export function OrgSwitcher() {
             {...getFloatingProps()}
             className="org-switcher-menu z-[1000] min-w-[220px] bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-lg py-2"
           >
-            <div className="px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--nim-text-faint)]">
+            <div className="px-3 py-2 text-ui-micro uppercase tracking-wide text-[var(--nim-text-faint)]">
               Organizations
             </div>
             {orgs.map((o) => (
@@ -131,19 +131,19 @@ export function OrgSwitcher() {
                 className={`org-switcher-item w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[var(--nim-bg-secondary)] ${o.orgId === activeOrgId ? 'bg-[var(--nim-bg-secondary)]' : ''}`}
                 onClick={goToOrgSettings}
               >
-                <span className="w-6 h-6 rounded-ui-base bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] text-white text-[10px] font-semibold flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-ui-base bg-gradient-to-br from-[#60a5fa] to-[#a78bfa] text-white text-ui-micro font-semibold flex items-center justify-center shrink-0">
                   {initials(o.name)}
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[13px] text-[var(--nim-text)] truncate">{o.name}</span>
-                  <span className="block text-[10px] text-[var(--nim-text-faint)] font-mono">{o.role}</span>
+                  <span className="block text-ui-body text-[var(--nim-text)] truncate">{o.name}</span>
+                  <span className="block text-ui-micro text-[var(--nim-text-faint)] font-mono">{o.role}</span>
                 </span>
                 {o.orgId === activeOrgId && <MaterialSymbol icon="check" size={14} className="text-[var(--nim-text-muted)]" />}
               </button>
             ))}
             <div className="border-t border-[var(--nim-border)] mt-1 pt-1">
               <button
-                className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-secondary)]"
+                className="w-full flex items-center gap-2 px-3 py-2 text-ui-compact text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-secondary)]"
                 onClick={goToOrgSettings}
               >
                 <MaterialSymbol icon="settings" size={14} />

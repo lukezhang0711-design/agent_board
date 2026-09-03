@@ -357,13 +357,13 @@ function MockupPickerMenu({ onClose }: MockupPickerMenuProps): JSX.Element {
             <input
               ref={inputRef}
               type="text"
-              className="mockup-picker-input w-full px-4 py-3 border-none border-b border-b-[var(--nim-border)] text-sm bg-transparent text-[var(--nim-text)] outline-none placeholder:text-[var(--nim-text-faint)]"
+              className="mockup-picker-input w-full px-4 py-3 border-none border-b border-b-[var(--nim-border)] text-ui-body bg-transparent text-[var(--nim-text)] outline-none placeholder:text-[var(--nim-text-faint)]"
               placeholder="Enter mockup name..."
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus
             />
-            <div className="mockup-picker-create-hint px-3 py-2 text-xs text-[var(--nim-text-faint)]">
+            <div className="mockup-picker-create-hint px-3 py-2 text-ui-compact text-[var(--nim-text-faint)]">
               Press Enter to create, Escape to cancel
             </div>
           </div>
@@ -372,14 +372,14 @@ function MockupPickerMenu({ onClose }: MockupPickerMenuProps): JSX.Element {
             <input
               ref={inputRef}
               type="text"
-              className="mockup-picker-input w-full px-4 py-3 border-none border-b border-b-[var(--nim-border)] text-sm bg-transparent text-[var(--nim-text)] outline-none placeholder:text-[var(--nim-text-faint)]"
+              className="mockup-picker-input w-full px-4 py-3 border-none border-b border-b-[var(--nim-border)] text-ui-body bg-transparent text-[var(--nim-text)] outline-none placeholder:text-[var(--nim-text-faint)]"
               placeholder="Search mockups..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <div className="mockup-picker-list flex-1 overflow-y-auto p-1">
               {isLoading ? (
-                <div className="mockup-picker-loading p-4 text-center text-sm text-[var(--nim-text-muted)]">
+                <div className="mockup-picker-loading p-4 text-center text-ui-body text-[var(--nim-text-muted)]">
                   Loading...
                 </div>
               ) : (
@@ -396,9 +396,9 @@ function MockupPickerMenu({ onClose }: MockupPickerMenuProps): JSX.Element {
                     onClick={() => handleSelect(option)}
                     onMouseEnter={() => setSelectedIndex(index)}
                   >
-                    <span className="mockup-picker-item-label text-sm">{option.label}</span>
+                    <span className="mockup-picker-item-label text-ui-body">{option.label}</span>
                     {'description' in option && option.description && (
-                      <span className="mockup-picker-item-desc text-xs text-[var(--nim-text-faint)] overflow-hidden text-ellipsis whitespace-nowrap">
+                      <span className="mockup-picker-item-desc text-ui-compact text-[var(--nim-text-faint)] overflow-hidden text-ellipsis whitespace-nowrap">
                         {option.description}
                       </span>
                     )}

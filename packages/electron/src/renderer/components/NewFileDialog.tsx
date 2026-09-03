@@ -176,7 +176,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
           return (
             <li key={folder.path}>
               <div
-                className={`new-file-folder-item flex items-center gap-2 py-2 px-3 rounded-ui-base cursor-pointer text-[13px] ${
+                className={`new-file-folder-item flex items-center gap-2 py-2 px-3 rounded-ui-base cursor-pointer text-ui-body ${
                   isSelected
                     ? 'bg-nim-primary text-nim-on-primary'
                     : 'text-nim hover:bg-nim-hover'
@@ -213,13 +213,13 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
         className="new-file-dialog w-[420px] max-w-[90vw] p-6 rounded-ui-lg shadow-[0_4px_12px_rgba(0,0,0,0.3)] bg-nim border border-nim"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="m-0 mb-5 text-lg font-semibold text-nim">
+        <h2 className="m-0 mb-5 text-ui-title font-semibold text-nim">
           New File
         </h2>
 
         {/* File Type Selector */}
         <div className="new-file-field mb-4">
-          <label className="block mb-2 text-[13px] font-medium text-nim-muted">
+          <label className="block mb-2 text-ui-body font-medium text-nim-muted">
             Type
           </label>
           <select
@@ -228,7 +228,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
               setSelectedFileType(e.target.value as NewFileType);
               setError('');
             }}
-            className="new-file-select w-full py-2 px-3 pr-8 text-sm rounded-ui-base cursor-pointer appearance-none focus:outline-none bg-nim-secondary border border-nim text-nim bg-[url('data:image/svg+xml,%3Csvg_xmlns=%27http://www.w3.org/2000/svg%27_width=%2712%27_height=%2712%27_viewBox=%270_0_12_12%27%3E%3Cpath_fill=%27%23969696%27_d=%27M3_4.5L6_7.5L9_4.5%27/%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center]"
+            className="new-file-select w-full py-2 px-3 pr-8 text-ui-body rounded-ui-base cursor-pointer appearance-none focus:outline-none bg-nim-secondary border border-nim text-nim bg-[url('data:image/svg+xml,%3Csvg_xmlns=%27http://www.w3.org/2000/svg%27_width=%2712%27_height=%2712%27_viewBox=%270_0_12_12%27%3E%3Cpath_fill=%27%23969696%27_d=%27M3_4.5L6_7.5L9_4.5%27/%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center]"
           >
             {fileTypeOptions.map((option) => (
               <option key={option.id} value={option.id}>
@@ -240,13 +240,13 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
 
         {/* Location Selector */}
         <div className="new-file-field mb-4">
-          <label className="block mb-2 text-[13px] font-medium text-nim-muted">
+          <label className="block mb-2 text-ui-body font-medium text-nim-muted">
             Location
           </label>
           <div className="new-file-location-picker relative" ref={folderPickerRef}>
             <button
               type="button"
-              className="new-file-location-button w-full flex items-center gap-2 py-2 px-3 text-sm rounded-ui-base cursor-pointer text-left focus:outline-none bg-nim-secondary border border-nim text-nim"
+              className="new-file-location-button w-full flex items-center gap-2 py-2 px-3 text-ui-body rounded-ui-base cursor-pointer text-left focus:outline-none bg-nim-secondary border border-nim text-nim"
               onClick={() => setShowFolderPicker(!showFolderPicker)}
             >
               <MaterialSymbol icon="folder" size={16} />
@@ -258,7 +258,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
             {showFolderPicker && fileTree.length > 0 && (
               <div className="new-file-folder-picker absolute top-[calc(100%+4px)] left-0 right-0 max-h-[250px] overflow-y-auto p-1 rounded-ui-base z-[10001] shadow-[0_4px_12px_rgba(0,0,0,0.3)] bg-nim border border-nim">
                 <div
-                  className={`new-file-folder-item flex items-center gap-2 py-2 px-3 rounded-ui-base cursor-pointer text-[13px] ${
+                  className={`new-file-folder-item flex items-center gap-2 py-2 px-3 rounded-ui-base cursor-pointer text-ui-body ${
                     currentDirectory === workspacePath
                       ? 'bg-nim-primary text-nim-on-primary'
                       : 'text-nim hover:bg-nim-hover'
@@ -281,7 +281,7 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
         {/* File Name Input */}
         <form onSubmit={handleSubmit}>
           <div className="new-file-field mb-4">
-            <label className="block mb-2 text-[13px] font-medium text-nim-muted">
+            <label className="block mb-2 text-ui-body font-medium text-nim-muted">
               Name
             </label>
             <div className="new-file-input-wrapper flex items-center overflow-hidden rounded-ui-base bg-nim-secondary border border-nim focus-within:border-nim-focus">
@@ -295,29 +295,29 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = ({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder={selectedFileType === 'any' ? 'document.txt' : 'document'}
-                className="new-file-input flex-1 py-2 px-3 text-sm bg-transparent border-none focus:outline-none text-nim placeholder:text-nim-faint"
+                className="new-file-input flex-1 py-2 px-3 text-ui-body bg-transparent border-none focus:outline-none text-nim placeholder:text-nim-faint"
               />
               {extensionSuffix && (
-                <span className="new-file-extension py-2 pr-3 text-sm font-mono select-none text-nim-faint">
+                <span className="new-file-extension py-2 pr-3 text-ui-body font-mono select-none text-nim-faint">
                   {extensionSuffix}
                 </span>
               )}
             </div>
           </div>
           {error && (
-            <div className="new-file-error text-[13px] mb-4 text-nim-error">{error}</div>
+            <div className="new-file-error text-ui-body mb-4 text-nim-error">{error}</div>
           )}
           <div className="new-file-buttons flex justify-end gap-2 mt-5">
             <button
               type="button"
               onClick={onClose}
-              className="py-2 px-4 text-[13px] rounded-ui-base cursor-pointer transition-colors duration-200 bg-nim-secondary border border-nim text-nim hover:bg-nim-hover"
+              className="py-2 px-4 text-ui-body rounded-ui-base cursor-pointer transition-colors duration-200 bg-nim-secondary border border-nim text-nim hover:bg-nim-hover"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="py-2 px-4 text-[13px] rounded-ui-base cursor-pointer transition-colors duration-200 bg-nim-primary border border-nim-primary text-nim-on-primary hover:bg-nim-primary-hover"
+              className="py-2 px-4 text-ui-body rounded-ui-base cursor-pointer transition-colors duration-200 bg-nim-primary border border-nim-primary text-nim-on-primary hover:bg-nim-primary-hover"
             >
               Create
             </button>

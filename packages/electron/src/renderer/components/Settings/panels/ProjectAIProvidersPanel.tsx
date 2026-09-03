@@ -281,7 +281,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
         .map((message) => (
           <div
             key={message}
-            className="rounded-ui-lg border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] px-3 py-2 text-xs leading-relaxed text-[var(--nim-error)]"
+            className="rounded-ui-lg border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] px-3 py-2 text-ui-compact leading-relaxed text-[var(--nim-error)]"
             role="alert"
             data-testid="project-model-catalog-warning"
           >
@@ -315,8 +315,8 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                       {getProviderIcon(provider.id as any, { size: 24 })}
                     </span>
                     <div className="provider-details flex flex-col gap-1">
-                      <span className="provider-name text-sm font-medium text-[var(--nim-text)]">{provider.name}</span>
-                      <span className="provider-subtitle text-xs text-[var(--nim-text-faint)]">{provider.subtitle}</span>
+                      <span className="provider-name text-ui-body font-medium text-[var(--nim-text)]">{provider.name}</span>
+                      <span className="provider-subtitle text-ui-compact text-[var(--nim-text-faint)]">{provider.subtitle}</span>
                     </div>
                   </div>
 
@@ -378,7 +378,7 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
                           <div className="config-section py-4 border-b border-[var(--nim-border)]">
                             <h4 className="config-section-title nim-section-label m-0 mb-3">API Key</h4>
                             <div className="api-key-info mb-2">
-                              <span className="api-key-hint text-xs text-[var(--nim-text-faint)]">
+                              <span className="api-key-hint text-ui-compact text-[var(--nim-text-faint)]">
                                 {globalApiKeys[provider.apiKeyField]
                                   ? 'Leave empty to use global key, or enter a project-specific key'
                                   : 'Enter an API key for this project'}
@@ -455,10 +455,10 @@ export function ProjectAIProvidersPanel({ workspacePath, workspaceName }: Projec
 
       {/* Tracker Automation Override */}
       <div className="tracker-automation-override mt-6 pt-4 border-t border-[var(--nim-border)]">
-        <h3 className="text-sm font-semibold text-[var(--nim-text)] mb-3">Tracker Automation</h3>
+        <h3 className="text-ui-body font-semibold text-[var(--nim-text)] mb-3">Tracker Automation</h3>
         <div className="flex items-center gap-3 mb-2">
           <select
-            className="text-sm rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] px-3 py-2"
+            className="text-ui-body rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] px-3 py-2"
             value={trackerAutomationOverride === null ? 'inherit' : trackerAutomationOverride?.enabled ? 'enable' : 'disable'}
             onChange={(e) => {
               const val = e.target.value;

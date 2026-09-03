@@ -47,9 +47,9 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ filePath, fileName, re
     return (
       <div className="flex items-center justify-center h-full text-nim-muted">
         <div className="text-center">
-          <div className="text-5xl mb-4">📷</div>
+          <div className="text-ui-display mb-4">📷</div>
           <div>{error}</div>
-          <div className="text-xs mt-2 opacity-70">{fileName}</div>
+          <div className="text-ui-compact mt-2 opacity-70">{fileName}</div>
         </div>
       </div>
     );
@@ -71,8 +71,8 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ filePath, fileName, re
         copyFilePath={filePath}
         className="h-full"
         toolbarLabel={(
-          <div className="flex min-w-0 items-center gap-3 text-xs text-nim-muted">
-            <span className="truncate text-sm text-nim" title={fileName}>{fileName}</span>
+          <div className="flex min-w-0 items-center gap-3 text-ui-compact text-nim-muted">
+            <span className="truncate text-ui-body text-nim" title={fileName}>{fileName}</span>
             {dimensions ? (
               <span className="shrink-0 font-mono">
                 {dimensions.width} × {dimensions.height}

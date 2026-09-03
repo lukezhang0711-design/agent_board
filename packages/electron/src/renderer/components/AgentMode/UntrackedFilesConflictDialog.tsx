@@ -63,7 +63,7 @@ export function UntrackedFilesConflictDialog({
         />
 
         <div className="merge-conflict-dialog-body flex-1 min-h-0 overflow-y-auto px-6 pb-5">
-          <p className="m-0 mb-4 text-sm leading-relaxed text-[var(--nim-text-muted)]">
+          <p className="m-0 mb-4 text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
             Cannot rebase <strong className="text-[var(--nim-text)] font-medium">{worktreeName}</strong> because untracked files in the worktree would be overwritten by incoming changes from the base branch.
           </p>
 
@@ -108,7 +108,7 @@ export function UntrackedFilesConflictDialog({
               <MaterialSymbol icon="terminal" size={16} />
               Worktree location:
             </p>
-            <code className="merge-conflict-dialog-path block font-[var(--nim-font-mono)] text-xs text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] px-2 py-2 rounded-ui-base break-all">{worktreePath}</code>
+            <code className="merge-conflict-dialog-path block font-[var(--nim-font-mono)] text-ui-compact text-[var(--nim-text)] bg-[var(--nim-bg-tertiary)] px-2 py-2 rounded-ui-base break-all">{worktreePath}</code>
           </div>
         </div>
 

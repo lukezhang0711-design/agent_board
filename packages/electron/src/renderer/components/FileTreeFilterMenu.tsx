@@ -65,7 +65,7 @@ export function FileTreeFilterMenu({
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="file-tree-filter-menu min-w-[200px] p-1 rounded-ui-base text-[13px] z-[10000] backdrop-blur-[10px] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+        className="file-tree-filter-menu min-w-[200px] p-1 rounded-ui-base text-ui-body z-[10000] backdrop-blur-[10px] bg-[var(--nim-bg)] border border-[var(--nim-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
       >
         <div className="filter-menu-section-label nim-section-label px-3 pt-2 pb-1">Show Files</div>
 
@@ -111,7 +111,7 @@ export function FileTreeFilterMenu({
           <MaterialSymbol icon="difference" size={18} />
           <span>Uncommitted Changes</span>
           {gitUncommittedCount > 0 && (
-            <span className="filter-menu-pill ml-auto rounded-ui-full px-2 text-[11px] font-semibold leading-[18px] bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]">{gitUncommittedCount}</span>
+            <span className="filter-menu-pill ml-auto rounded-ui-full px-2 text-ui-caption font-semibold leading-[18px] bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]">{gitUncommittedCount}</span>
           )}
           {currentFilter === 'git-uncommitted' && (
             <MaterialSymbol icon="check" size={16} className={`filter-menu-check text-[var(--nim-primary)] ${gitUncommittedCount > 0 ? 'ml-2' : 'ml-auto'}`} />
@@ -126,7 +126,7 @@ export function FileTreeFilterMenu({
             <MaterialSymbol icon="account_tree" size={18} />
             <span>Worktree Changes</span>
             {gitWorktreeCount > 0 && (
-              <span className="filter-menu-pill ml-auto rounded-ui-full px-2 text-[11px] font-semibold leading-[18px] bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]">{gitWorktreeCount}</span>
+              <span className="filter-menu-pill ml-auto rounded-ui-full px-2 text-ui-caption font-semibold leading-[18px] bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]">{gitWorktreeCount}</span>
             )}
             {currentFilter === 'git-worktree' && (
               <MaterialSymbol icon="check" size={16} className={`filter-menu-check text-[var(--nim-primary)] ${gitWorktreeCount > 0 ? 'ml-2' : 'ml-auto'}`} />
@@ -135,7 +135,7 @@ export function FileTreeFilterMenu({
         )}
 
         {!isGitRepo && (
-          <div className="filter-menu-hint text-[11px] text-[var(--nim-text-faint)] px-3 pb-2">
+          <div className="filter-menu-hint text-ui-caption text-[var(--nim-text-faint)] px-3 pb-2">
             Not a git repository.
           </div>
         )}
@@ -149,7 +149,7 @@ export function FileTreeFilterMenu({
           <MaterialSymbol icon="visibility" size={18} />
           <span>Files Read</span>
           {claudeSessionFileCounts.read > 0 && (
-            <span className="filter-menu-pill ml-auto rounded-ui-full px-2 text-[11px] font-semibold leading-[18px] bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]">{claudeSessionFileCounts.read}</span>
+            <span className="filter-menu-pill ml-auto rounded-ui-full px-2 text-ui-caption font-semibold leading-[18px] bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]">{claudeSessionFileCounts.read}</span>
           )}
           {currentFilter === 'ai-read' && (
             <MaterialSymbol icon="check" size={16} className={`filter-menu-check text-[var(--nim-primary)] ${claudeSessionFileCounts.read > 0 ? 'ml-2' : 'ml-auto'}`} />
@@ -163,7 +163,7 @@ export function FileTreeFilterMenu({
           <MaterialSymbol icon="edit_note" size={18} />
           <span>Files Written</span>
           {claudeSessionFileCounts.written > 0 && (
-            <span className="filter-menu-pill ml-auto rounded-ui-full px-2 text-[11px] font-semibold leading-[18px] bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]">{claudeSessionFileCounts.written}</span>
+            <span className="filter-menu-pill ml-auto rounded-ui-full px-2 text-ui-caption font-semibold leading-[18px] bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]">{claudeSessionFileCounts.written}</span>
           )}
           {currentFilter === 'ai-written' && (
             <MaterialSymbol icon="check" size={16} className={`filter-menu-check text-[var(--nim-primary)] ${claudeSessionFileCounts.written > 0 ? 'ml-2' : 'ml-auto'}`} />
@@ -171,7 +171,7 @@ export function FileTreeFilterMenu({
         </div>
 
         {!hasActiveClaudeSession && (
-          <div className="filter-menu-hint text-[11px] text-[var(--nim-text-faint)] px-3 pb-2">
+          <div className="filter-menu-hint text-ui-caption text-[var(--nim-text-faint)] px-3 pb-2">
             Open a Claude Agent session to enable these filters.
           </div>
         )}

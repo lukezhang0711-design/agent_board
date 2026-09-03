@@ -465,7 +465,7 @@ export function VoiceModeButton({ workspacePath }: VoiceModeButtonProps) {
   };
 
   const contextExtraContent = (isVoiceActive && tokenUsage) ? (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="flex items-center gap-2 text-ui-compact">
       <div
         className="w-2 h-2 rounded-ui-full shrink-0"
         style={{ backgroundColor: getRingStrokeColor() }}

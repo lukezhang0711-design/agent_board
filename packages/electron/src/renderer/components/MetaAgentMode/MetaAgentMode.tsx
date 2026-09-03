@@ -291,7 +291,7 @@ export function MetaAgentMode({
       <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
         <div className="flex items-center justify-between gap-3 m-3 mb-0">
           <div
-            className="meta-agent-identity-badge shrink-0 self-start rounded-ui-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[11px] font-bold tracking-[0.12em] text-[var(--nim-primary)]"
+            className="meta-agent-identity-badge shrink-0 self-start rounded-ui-full border border-[var(--nim-primary)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-ui-caption font-bold tracking-[0.12em] text-[var(--nim-primary)]"
             data-testid="meta-agent-identity-badge"
             aria-label="META AGENT"
           >
@@ -311,7 +311,7 @@ export function MetaAgentMode({
           />
         </div>
         {planAutoApproveEnabled && (
-          <div data-testid="meta-agent-test-mode-badge" className="shrink-0 bg-amber-500 px-3 py-1 text-center text-xs font-semibold text-amber-950">
+          <div data-testid="meta-agent-test-mode-badge" className="shrink-0 bg-amber-500 px-3 py-1 text-center text-ui-compact font-semibold text-amber-950">
             测试模式：方案将自动批准
           </div>
         )}

@@ -127,7 +127,7 @@ export function PullRequestMode({
     return (
       <div className="pr-review-mode flex flex-col h-full w-full overflow-hidden">
         <GhOnboardingBanner />
-        <div className="pr-review-placeholder flex flex-1 items-center justify-center text-nim-muted text-sm">
+        <div className="pr-review-placeholder flex flex-1 items-center justify-center text-nim-muted text-ui-body">
           No GitHub remote detected for {workspaceName}.
         </div>
       </div>
@@ -169,8 +169,8 @@ export function PullRequestMode({
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-ui-full border border-nim bg-nim-secondary text-nim-faint">
                 <MaterialSymbol icon="merge" size={24} />
               </div>
-              <div className="text-sm font-medium text-nim">Select a pull request</div>
-              <div className="text-sm text-nim-muted">
+              <div className="text-ui-body font-medium text-nim">Select a pull request</div>
+              <div className="text-ui-body text-nim-muted">
                 Pick a PR from the left to review its conversation, files, commits, and checks.
               </div>
             </div>

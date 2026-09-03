@@ -116,6 +116,7 @@ export const SharedLinksPanel: React.FC = () => {
       <PageHeader
         icon="link"
         title="Shared Links"
+        subtitle="Anyone with a link can view the content."
         count={state === 'loaded' ? shares.length : undefined}
         className="mb-4"
         actions={state === 'loaded' && shares.length > 0 ? (
@@ -141,10 +142,10 @@ export const SharedLinksPanel: React.FC = () => {
       {state === 'unauthenticated' && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <MaterialSymbol icon="account_circle" size={32} className="text-[var(--nim-text-faint)] mb-3" />
-          <p className="text-[0.8125rem] text-[var(--nim-text-muted)] mb-2">
+          <p className="text-ui-body text-[var(--nim-text-muted)] mb-2">
             Sign in to share files and sessions.
           </p>
-          <p className="text-[0.75rem] text-[var(--nim-text-faint)]">
+          <p className="text-ui-compact text-[var(--nim-text-faint)]">
             Go to Account & Sync to set up your account.
           </p>
         </div>
@@ -154,11 +155,11 @@ export const SharedLinksPanel: React.FC = () => {
       {state === 'error' && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <MaterialSymbol icon="error" size={32} className="text-[var(--nim-error)] mb-3" />
-          <p className="text-[0.8125rem] text-[var(--nim-text-muted)] mb-2">
+          <p className="text-ui-body text-[var(--nim-text-muted)] mb-2">
             {errorMessage}
           </p>
           <button
-            className="flex items-center gap-2 px-3 py-2 text-[0.8125rem] text-[var(--nim-text)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+            className="flex items-center gap-2 px-3 py-2 text-ui-body text-[var(--nim-text)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
             onClick={fetchShares}
           >
             <MaterialSymbol icon="refresh" size={14} />
@@ -171,10 +172,10 @@ export const SharedLinksPanel: React.FC = () => {
       {state === 'loaded' && shares.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <MaterialSymbol icon="link" size={32} className="text-[var(--nim-text-faint)] mb-3" />
-          <p className="text-[0.8125rem] text-[var(--nim-text-muted)] mb-1">
+          <p className="text-ui-body text-[var(--nim-text-muted)] mb-1">
             No shared links yet.
           </p>
-          <p className="text-[0.75rem] text-[var(--nim-text-faint)]">
+          <p className="text-ui-compact text-[var(--nim-text-faint)]">
             Right-click a file or session and select "Share link" to create one.
           </p>
         </div>
@@ -190,17 +191,17 @@ export const SharedLinksPanel: React.FC = () => {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[0.8125rem] font-medium text-[var(--nim-text)] truncate">
+                  <span className="text-ui-body font-medium text-[var(--nim-text)] truncate">
                     {share.title || 'Untitled'}
                   </span>
-                  <span className="shrink-0 px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-hover)] text-[0.625rem] uppercase tracking-[0.04em] text-[var(--nim-text-faint)]">
+                  <span className="shrink-0 px-2 py-0.5 rounded-ui-base bg-[var(--nim-bg-hover)] text-ui-micro uppercase tracking-[0.04em] text-[var(--nim-text-faint)]">
                     {getShareKindLabel(share)}
                   </span>
-                  <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)]">
+                  <span className="shrink-0 text-ui-caption text-[var(--nim-text-faint)]">
                     {share.viewCount} {share.viewCount === 1 ? 'view' : 'views'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[0.6875rem] text-[var(--nim-text-faint)]">
+                <div className="flex items-center gap-2 text-ui-caption text-[var(--nim-text-faint)]">
                   <span className="truncate">share.nimbalyst.com/share/{share.shareId.slice(0, 8)}...</span>
                   <span>{formatDate(share.createdAt)}</span>
                   <span>{formatSize(share.sizeBytes)}</span>

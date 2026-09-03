@@ -25,7 +25,7 @@ export function SessionCreationModelRecovery({
       <div className="mt-4">
         <button
           type="button"
-          className="nim-btn-primary px-3 py-2 text-sm"
+          className="nim-btn-primary px-3 py-2 text-ui-body"
           data-testid="session-create-reselect-model"
           onClick={() => setShowPicker(true)}
         >
@@ -37,7 +37,7 @@ export function SessionCreationModelRecovery({
 
   return (
     <div className="mt-4 flex flex-col gap-2" data-testid="session-create-model-picker">
-      <p className="m-0 text-sm text-[var(--nim-text-muted)]">
+      <p className="m-0 text-ui-body text-[var(--nim-text-muted)]">
         请从当前引擎目录中选择模型；不会自动替换为其他型号。
       </p>
       <ModelSelector

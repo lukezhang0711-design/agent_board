@@ -57,7 +57,7 @@ export function InputModal({
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
-          <h3 className="input-modal-title m-0 mb-4 text-base font-semibold text-[var(--nim-text)]">
+          <h3 className="input-modal-title m-0 mb-4 text-ui-subhead font-semibold text-[var(--nim-text)]">
             {title}
           </h3>
           <div
@@ -66,14 +66,14 @@ export function InputModal({
             <input
               ref={inputRef}
               type="text"
-              className={`input-modal-input nim-input text-sm ${suffix ? 'pr-[120px]' : ''}`}
+              className={`input-modal-input nim-input text-ui-body ${suffix ? 'pr-[120px]' : ''}`}
               placeholder={placeholder}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={handleKeyDown}
             />
             {suffix && (
-              <span className="input-modal-suffix absolute right-3 text-sm text-[var(--nim-text-faint)] pointer-events-none select-none">
+              <span className="input-modal-suffix absolute right-3 text-ui-body text-[var(--nim-text-faint)] pointer-events-none select-none">
                 {suffix}
               </span>
             )}
@@ -81,14 +81,14 @@ export function InputModal({
           <div className="input-modal-buttons flex justify-end gap-2">
             <button
               type="button"
-              className="input-modal-button input-modal-cancel nim-btn-secondary px-4 py-2 text-sm"
+              className="input-modal-button input-modal-cancel nim-btn-secondary px-4 py-2 text-ui-body"
               onClick={onCancel}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="input-modal-button input-modal-confirm nim-btn-primary px-4 py-2 text-sm"
+              className="input-modal-button input-modal-confirm nim-btn-primary px-4 py-2 text-ui-body"
               disabled={!value.trim()}
             >
               {confirmLabel}

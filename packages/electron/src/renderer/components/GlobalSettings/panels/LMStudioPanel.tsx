@@ -46,7 +46,7 @@ export function LMStudioPanel({
       {config.enabled && (
         <>
           <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Server Configuration</h4>
+            <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-3 text-[var(--nim-text)]">Server Configuration</h4>
             <div className="api-key-section mt-4">
               <div className="api-key-row flex gap-2 items-center">
                 <input
@@ -58,7 +58,7 @@ export function LMStudioPanel({
                   className="api-key-input flex-1 py-2 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] outline-none font-mono focus:border-[var(--nim-primary)]"
                 />
                 <button
-                  className={`test-button inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium whitespace-nowrap cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] ${
+                  className={`test-button inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-ui-body font-medium whitespace-nowrap cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] ${
                     config.testStatus === 'testing' ? 'opacity-60 cursor-wait' : ''
                   } ${config.testStatus === 'success' ? 'text-[var(--nim-success)] border-[var(--nim-success)]' : ''} ${
                     config.testStatus === 'error' ? 'text-[var(--nim-error)] border-[var(--nim-error)]' : ''
@@ -72,30 +72,30 @@ export function LMStudioPanel({
                 </button>
               </div>
               {config.testMessage && config.testStatus === 'error' && (
-                <div className="test-error text-xs mt-2 text-[var(--nim-error)]">{config.testMessage}</div>
+                <div className="test-error text-ui-compact mt-2 text-[var(--nim-error)]">{config.testMessage}</div>
               )}
             </div>
           </div>
 
           <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-            <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Available Models</h4>
+            <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-3 text-[var(--nim-text)]">Available Models</h4>
             {loading && (
-              <div className="models-loading text-sm text-[var(--nim-text-muted)] py-2">Loading models from LM Studio...</div>
+              <div className="models-loading text-ui-body text-[var(--nim-text-muted)] py-2">Loading models from LM Studio...</div>
             )}
 
             {!loading && availableModels.length > 0 && (
               <div className="models-section">
                 <div className="models-header flex items-center justify-between mb-3">
-                  <span className="text-sm text-[var(--nim-text-muted)]">Detected models:</span>
+                  <span className="text-ui-body text-[var(--nim-text-muted)]">Detected models:</span>
                   <div className="models-actions flex gap-2">
                     <button
-                      className="models-action-btn text-xs py-1 px-2 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] cursor-pointer transition-all"
+                      className="models-action-btn text-ui-compact py-1 px-2 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] cursor-pointer transition-all"
                       onClick={() => onSelectAllModels(true)}
                     >
                       Select All
                     </button>
                     <button
-                      className="models-action-btn text-xs py-1 px-2 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] cursor-pointer transition-all"
+                      className="models-action-btn text-ui-compact py-1 px-2 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] cursor-pointer transition-all"
                       onClick={() => onSelectAllModels(false)}
                     >
                       Deselect All
@@ -111,7 +111,7 @@ export function LMStudioPanel({
                         onChange={(e) => onModelToggle(model.id, e.target.checked)}
                         className="w-4 h-4 cursor-pointer accent-[var(--nim-primary)]"
                       />
-                      <span className="text-sm text-[var(--nim-text)]">{model.name}</span>
+                      <span className="text-ui-body text-[var(--nim-text)]">{model.name}</span>
                     </label>
                   ))}
                 </div>
@@ -119,14 +119,14 @@ export function LMStudioPanel({
             )}
 
             {!loading && availableModels.length === 0 && (
-              <div className="models-loading text-sm text-[var(--nim-text-muted)] py-2">
+              <div className="models-loading text-ui-body text-[var(--nim-text-muted)] py-2">
                 No models found. Make sure LM Studio is running with a loaded model.
               </div>
             )}
 
             <div className="mt-4">
               <button
-                className="models-action-btn text-xs py-2 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] cursor-pointer transition-all"
+                className="models-action-btn text-ui-compact py-2 px-3 rounded-ui-base bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] cursor-pointer transition-all"
                 onClick={() => onTestConnection()}
                 disabled={loading}
               >

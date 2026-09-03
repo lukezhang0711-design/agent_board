@@ -506,7 +506,7 @@ export function SyncPanel() {
       <PageHeader
         icon="sync"
         title="Account & Sync"
-        subtitle={stytchAuth.isAuthenticated && stytchAuth.user ? (stytchAuth.user.emails[0]?.email || 'Signed in') : 'Not signed in'}
+        subtitle={stytchAuth.isAuthenticated && stytchAuth.user ? `${stytchAuth.user.emails[0]?.email || 'Signed in'} · All data is end-to-end encrypted.` : 'All data is end-to-end encrypted.'}
       />
 
       {/* Team Collaboration (alpha) */}
@@ -544,7 +544,7 @@ export function SyncPanel() {
           <div className="flex gap-2">
             <button
               onClick={() => handleEnvironmentSwitch('development')}
-              className={`flex-1 px-3 py-2 text-xs border border-nim rounded-ui-base cursor-pointer ${
+              className={`flex-1 px-3 py-2 text-ui-compact border border-nim rounded-ui-base cursor-pointer ${
                 currentEnvironment === 'development'
                   ? 'bg-nim-primary text-nim-on-primary font-semibold'
                   : 'bg-nim-secondary text-nim-muted font-normal'
@@ -554,7 +554,7 @@ export function SyncPanel() {
             </button>
             <button
               onClick={() => handleEnvironmentSwitch('production')}
-              className={`flex-1 px-3 py-2 text-xs border border-nim rounded-ui-base cursor-pointer ${
+              className={`flex-1 px-3 py-2 text-ui-compact border border-nim rounded-ui-base cursor-pointer ${
                 currentEnvironment === 'production'
                   ? 'bg-nim-primary text-nim-on-primary font-semibold'
                   : 'bg-nim-secondary text-nim-muted font-normal'
@@ -583,7 +583,7 @@ export function SyncPanel() {
                   : acct.isPrimary;
                 return (
                   <div key={acct.personalOrgId} className={`flex items-center gap-3 p-3 rounded-ui-lg ${isSyncAccount ? 'bg-nim-primary/8 border border-nim-primary/20' : 'bg-nim-secondary'}`}>
-                    <div className={`w-9 h-9 rounded-ui-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${isSyncAccount ? 'bg-nim-primary' : 'bg-nim-tertiary'}`}>
+                    <div className={`w-9 h-9 rounded-ui-full flex items-center justify-center text-white font-semibold text-ui-body shrink-0 ${isSyncAccount ? 'bg-nim-primary' : 'bg-nim-tertiary'}`}>
                       {(acct.email?.[0] || '?').toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -613,7 +613,7 @@ export function SyncPanel() {
                     </div>
                     <button
                       onClick={() => handleRemoveAccount(acct.personalOrgId)}
-                      className="px-3 py-2 text-xs bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover shrink-0"
+                      className="px-3 py-2 text-ui-compact bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover shrink-0"
                     >
                       Sign Out
                     </button>
@@ -622,7 +622,7 @@ export function SyncPanel() {
               })
             ) : (
               <div className="flex items-center gap-3 p-3 bg-nim-secondary rounded-ui-lg">
-                <div className="w-9 h-9 rounded-ui-full bg-nim-primary flex items-center justify-center text-nim-on-primary font-semibold text-sm">
+                <div className="w-9 h-9 rounded-ui-full bg-nim-primary flex items-center justify-center text-nim-on-primary font-semibold text-ui-body">
                   {(stytchAuth.user.name?.first_name?.[0] || stytchAuth.user.emails[0]?.email[0] || '?').toUpperCase()}
                 </div>
                 <div className="flex-1">
@@ -637,7 +637,7 @@ export function SyncPanel() {
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="px-3 py-2 text-xs bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover"
+                  className="px-3 py-2 text-ui-compact bg-transparent border border-nim rounded-ui-base text-nim-muted cursor-pointer hover:bg-nim-hover"
                 >
                   Sign Out
                 </button>
@@ -646,7 +646,7 @@ export function SyncPanel() {
             {/* Add Account button */}
             <button
               onClick={handleAddAccount}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-nim-muted bg-transparent border border-dashed border-nim rounded-ui-lg cursor-pointer hover:bg-nim-hover hover:text-nim transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-ui-compact text-nim-muted bg-transparent border border-dashed border-nim rounded-ui-lg cursor-pointer hover:bg-nim-hover hover:text-nim transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -702,7 +702,7 @@ export function SyncPanel() {
                   Continue with Google
                 </button>
 
-                <div className="flex items-center gap-3 my-4 text-nim-faint text-xs">
+                <div className="flex items-center gap-3 my-4 text-nim-faint text-ui-compact">
                   <div className="flex-1 h-px bg-nim" />
                   or
                   <div className="flex-1 h-px bg-nim" />
@@ -730,7 +730,7 @@ export function SyncPanel() {
                 </form>
 
                 {authError && (
-                  <p className="text-nim-error text-xs mt-2 mb-0">
+                  <p className="text-nim-error text-ui-compact mt-2 mb-0">
                     {authError}
                   </p>
                 )}
@@ -741,7 +741,7 @@ export function SyncPanel() {
                     setAuthError(null);
                     setEmail('');
                   }}
-                  className="block w-full mt-3 bg-transparent border-none text-nim-faint cursor-pointer text-xs hover:text-nim-muted"
+                  className="block w-full mt-3 bg-transparent border-none text-nim-faint cursor-pointer text-ui-compact hover:text-nim-muted"
                 >
                   Cancel
                 </button>
@@ -1068,7 +1068,7 @@ export function SyncPanel() {
                 autoFocus
               />
               {deleteError && (
-                <p className="text-[var(--nim-error)] text-xs mb-3 m-0">{deleteError}</p>
+                <p className="text-[var(--nim-error)] text-ui-compact mb-3 m-0">{deleteError}</p>
               )}
               <div className="flex gap-2">
                 <button

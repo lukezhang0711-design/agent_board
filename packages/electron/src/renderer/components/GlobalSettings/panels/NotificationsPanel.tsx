@@ -74,11 +74,11 @@ export function NotificationsPanel() {
         {completionSoundEnabled && (
             <div className="setting-item py-3 mt-4">
               <div className="setting-text flex flex-col gap-1">
-                <span className="setting-name text-sm font-medium text-[var(--nim-text)]">Sound Type</span>
+                <span className="setting-name text-ui-body font-medium text-[var(--nim-text)]">Sound Type</span>
               </div>
             <div className="mt-3 flex flex-col gap-2">
               {(['chime', 'bell', 'pop'] as CompletionSoundType[]).map((sound) => (
-                <label key={sound} className="setting-radio-label flex items-center gap-2 cursor-pointer text-sm text-[var(--nim-text)]">
+                <label key={sound} className="setting-radio-label flex items-center gap-2 cursor-pointer text-ui-body text-[var(--nim-text)]">
                   <input
                     type="radio"
                     name="sound-type"
@@ -94,7 +94,7 @@ export function NotificationsPanel() {
             <button
               onClick={handleTestSound}
               disabled={isTestPlaying}
-              className="nim-btn-secondary text-sm mt-3"
+              className="nim-btn-secondary text-ui-body mt-3"
             >
               {isTestPlaying ? 'Playing...' : 'Test Sound'}
             </button>
@@ -130,15 +130,15 @@ export function NotificationsPanel() {
             <div className="setting-item py-3">
               <div className="setting-text flex flex-col gap-2">
                 <div className="flex flex-wrap gap-2">
-                  <button onClick={handleTestNotification} className="nim-btn-secondary text-sm">
+                  <button onClick={handleTestNotification} className="nim-btn-secondary text-ui-body">
                     Send Test Notification
                   </button>
-                  <button onClick={handleOpenNotificationSettings} className="nim-btn-secondary text-sm">
+                  <button onClick={handleOpenNotificationSettings} className="nim-btn-secondary text-ui-body">
                     Open System Notification Settings
                   </button>
                 </div>
                 {notificationHelp && (
-                  <span className="text-xs leading-relaxed text-[var(--nim-text-muted)]">{notificationHelp}</span>
+                  <span className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)]">{notificationHelp}</span>
                 )}
               </div>
             </div>

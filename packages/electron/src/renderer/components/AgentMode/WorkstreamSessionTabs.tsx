@@ -110,7 +110,7 @@ const SessionTab: React.FC<{
   return (
     <div className="relative">
       <button
-        className={`session-tab flex items-center gap-2 px-3 py-1 border-none rounded-ui-base text-xs font-medium cursor-pointer whitespace-nowrap transition-colors duration-150 ${
+        className={`session-tab flex items-center gap-2 px-3 py-1 border-none rounded-ui-base text-ui-compact font-medium cursor-pointer whitespace-nowrap transition-colors duration-150 ${
           isActive
             ? 'active bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)]'
             : 'bg-transparent text-[var(--nim-text-muted)] hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]'
@@ -131,7 +131,7 @@ const SessionTab: React.FC<{
           <input
             ref={renameInputRef}
             type="text"
-            className="session-tab-rename-input w-full max-w-[150px] px-1 py-0 text-xs font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
+            className="session-tab-rename-input w-full max-w-[150px] px-1 py-0 text-ui-compact font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={handleRenameKeyDown}
@@ -265,7 +265,7 @@ export const WorkstreamSessionTabs: React.FC<WorkstreamSessionTabsProps> = React
 
   if (!activeSessionId) {
     return (
-      <div className="workstream-session-tabs-empty flex items-center justify-center h-full text-[var(--nim-text-muted)] text-sm">
+      <div className="workstream-session-tabs-empty flex items-center justify-center h-full text-[var(--nim-text-muted)] text-ui-body">
         <p>Loading sessions...</p>
       </div>
     );

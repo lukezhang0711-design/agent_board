@@ -345,8 +345,8 @@ export function ClaudeCodePanel({
         {/* Custom Claude Installation */}
         <div className="provider-enable flex flex-col gap-2 py-4 mb-4 border-b border-[var(--nim-border)]">
           <div>
-            <span className="provider-enable-label text-sm font-medium text-[var(--nim-text)]">Custom Claude Installation</span>
-            <p className="text-xs text-[var(--nim-text-muted)] mt-1">
+            <span className="provider-enable-label text-ui-body font-medium text-[var(--nim-text)]">Custom Claude Installation</span>
+            <p className="text-ui-compact text-[var(--nim-text-muted)] mt-1">
               {scope === 'project'
                 ? 'Override the Claude executable path for this project only. Leave empty to inherit the global setting.'
                 : 'Override the default Claude executable path. Use this to point to a custom Claude CLI wrapper (e.g., for corporate SSO authentication).'}
@@ -367,11 +367,11 @@ export function ClaudeCodePanel({
               placeholder={scope === 'project' && globalCustomClaudeCodePath
                 ? `Inheriting: ${globalCustomClaudeCodePath}`
                 : '/usr/local/bin/claude'}
-              className="flex-1 py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
+              className="flex-1 py-2 px-2 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
             />
             <button
               onClick={handleBrowseCustomClaudeCodePath}
-              className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors whitespace-nowrap"
+              className="py-2 px-3 rounded-ui-base text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors whitespace-nowrap"
             >
               Browse
             </button>
@@ -399,7 +399,7 @@ export function ClaudeCodePanel({
       { isWindowsPlatform && isCheckingClaudeWindowsStatus && (
         <div className="installation-status p-4 rounded-ui-lg bg-nim-warning-subtle border border-nim-warning-subtle">
           <div className="installation-status-row flex items-center gap-3 py-1">
-            <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">Checking Claude Code Installation...</span>
+            <span className="installation-status-label text-ui-body font-medium text-[var(--nim-text-muted)]">Checking Claude Code Installation...</span>
           </div>
         </div>
       )}
@@ -407,20 +407,20 @@ export function ClaudeCodePanel({
         <div className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
           { isWindowsPlatform ? (
             <>
-              <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Claude Code for Windows Installation</h4>
-              <p className="text-xs text-[var(--nim-text-muted)] mt-3 leading-relaxed">
+              <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-3 text-[var(--nim-text)]">Claude Code for Windows Installation</h4>
+              <p className="text-ui-compact text-[var(--nim-text-muted)] mt-3 leading-relaxed">
                 Nimbalyst requires Claude Code for Windows to be installed to use the Claude Code provider.
               </p>
               { Boolean(claudeCodeWindowsStatus?.claudeCodeVersion) ? (
                 <div className="installation-status mt-3 p-4 rounded-ui-lg bg-nim-success-subtle border border-nim-success-subtle">
                   <div className="installation-status-row flex items-center gap-3 py-1">
-                    <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">Claude Code Version:</span>
-                    <span className="installation-status-value text-sm text-[var(--nim-text)]">{claudeCodeWindowsStatus?.claudeCodeVersion}</span>
+                    <span className="installation-status-label text-ui-body font-medium text-[var(--nim-text-muted)]">Claude Code Version:</span>
+                    <span className="installation-status-value text-ui-body text-[var(--nim-text)]">{claudeCodeWindowsStatus?.claudeCodeVersion}</span>
                   </div>
                 </div>
               ): (
                 <div className="installation-status mt-3 p-4 rounded-ui-lg bg-nim-error-subtle border border-nim-error-subtle">
-                  <div className="text-xs text-[var(--nim-text-muted)] mt-3 leading-relaxed">
+                  <div className="text-ui-compact text-[var(--nim-text-muted)] mt-3 leading-relaxed">
                     <p className="mb-2">Install Claude Code for Windows by following the instructions below:</p>
                     <ol className="list-decimal list-inside space-y-1 mb-4">
                       <li>Install <a href="https://git-scm.com/install/windows" className="text-[var(--nim-link)] hover:underline">Git for Windows</a>. This is a prerequisite for installing Claude Code</li>
@@ -434,15 +434,15 @@ export function ClaudeCodePanel({
             </>
           ): (
             <>
-              <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Claude Agent SDK</h4>
+              <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-3 text-[var(--nim-text)]">Claude Agent SDK</h4>
               <div className="installation-status p-4 rounded-ui-lg bg-nim-success-subtle border border-nim-success-subtle">
                 <div className="installation-status-row flex items-center gap-3 py-1">
-                  <span className="installation-status-label text-sm font-medium text-[var(--nim-text-muted)]">SDK package:</span>
-                  <span className="installation-status-value text-sm text-[var(--nim-text)]">{BUNDLED_SDK_VERSION}</span>
+                  <span className="installation-status-label text-ui-body font-medium text-[var(--nim-text-muted)]">SDK package:</span>
+                  <span className="installation-status-value text-ui-body text-[var(--nim-text)]">{BUNDLED_SDK_VERSION}</span>
                 </div>
-                {systemVersion && <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mt-3">System Claude Code: {systemVersion}</p>}
-                {systemIsNewer && <p className="text-xs leading-relaxed text-[var(--nim-warning)] mt-2">System Claude Code is newer, but SDK sessions stay on the built-in runtime to preserve resumable multi-turn sessions.</p>}
-                <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mt-3">
+                {systemVersion && <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mt-3">System Claude Code: {systemVersion}</p>}
+                {systemIsNewer && <p className="text-ui-compact leading-relaxed text-[var(--nim-warning)] mt-2">System Claude Code is newer, but SDK sessions stay on the built-in runtime to preserve resumable multi-turn sessions.</p>}
+                <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mt-3">
                   Nimbalyst includes the Claude Agent SDK. No additional installation required.
                 </p>
               </div>
@@ -496,11 +496,11 @@ export function ClaudeCodePanel({
                       {/* Logged In State */}
                       <div className="status-box-success mb-4 py-3 px-4 rounded-ui-lg text-ui-body flex items-center gap-3 justify-between bg-nim-success-subtle border border-nim-success-subtle">
                         <div className="flex items-center gap-3 flex-1">
-                          <span className="status-box-icon text-xl leading-none shrink-0 text-[var(--nim-success)]">✓</span>
+                          <span className="status-box-icon text-ui-title leading-none shrink-0 text-[var(--nim-success)]">✓</span>
                           <div className="status-box-content flex flex-col gap-1 flex-1">
-                            <span className="status-box-title font-semibold text-sm text-[var(--nim-text)]">Authenticated with Claude Plan</span>
+                            <span className="status-box-title font-semibold text-ui-body text-[var(--nim-text)]">Authenticated with Claude Plan</span>
                             {loginStatus.email && (
-                              <span className="status-box-subtitle text-xs text-[var(--nim-text-muted)]">
+                              <span className="status-box-subtitle text-ui-compact text-[var(--nim-text-muted)]">
                                 {loginStatus.email}
                                 {loginStatus.organization && ` • ${loginStatus.organization}`}
                               </span>
@@ -508,10 +508,10 @@ export function ClaudeCodePanel({
                           </div>
                         </div>
                         <div className="status-box-actions flex gap-2 shrink-0">
-                          <button className="btn-small py-2 px-3 rounded-ui-base text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]" onClick={checkLoginStatus}>
+                          <button className="btn-small py-2 px-3 rounded-ui-base text-ui-compact font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]" onClick={checkLoginStatus}>
                             Refresh
                           </button>
-                          <button className="btn-small py-2 px-3 rounded-ui-base text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]" onClick={handleLogout}>
+                          <button className="btn-small py-2 px-3 rounded-ui-base text-ui-compact font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]" onClick={handleLogout}>
                             Logout
                           </button>
                         </div>
@@ -522,7 +522,7 @@ export function ClaudeCodePanel({
                     <>
                       {/* Not Logged In State */}
                       <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg">
-                        <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
+                        <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mb-3">
                           Your Claude login is no longer active. Log in again with your Claude Pro or Team subscription.
                         </p>
                         {(loginStatus.rawOutput || loginStatus.error) && (
@@ -542,7 +542,7 @@ export function ClaudeCodePanel({
                             Refresh
                           </button>
                         </div>
-                        <div className="mt-3 pt-3 border-t border-[var(--nim-border)] flex items-center justify-between gap-2 text-xs">
+                        <div className="mt-3 pt-3 border-t border-[var(--nim-border)] flex items-center justify-between gap-2 text-ui-compact">
                           <div className="flex items-center gap-2 text-[var(--nim-text)]">
                             <span className="text-[var(--nim-text-muted)]">终端重登命令：</span>
                             <code className="rounded-ui-base bg-[var(--nim-bg-tertiary)] px-2 py-0.5 font-mono text-ui-caption text-[var(--nim-text)] border border-[var(--nim-border)]" data-testid="claude-code-relogin-command">
@@ -569,7 +569,7 @@ export function ClaudeCodePanel({
                     </>
                   ) : (
                     <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg">
-                      <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
+                      <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mb-3">
                         {loginStatus.status === 'check-failed'
                           ? `Claude login status check failed${loginStatus.error ? `: ${loginStatus.error}` : '.'}`
                           : 'Claude login status is unknown. Complete the Terminal action, then refresh status.'}
@@ -585,7 +585,7 @@ export function ClaudeCodePanel({
               {/* API Key Authentication */}
               {selectedAuthMethod === 'api-key' && (
                 <>
-                  <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
+                  <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mb-3">
                     Use an Anthropic API key. Pay-per-use with API credits from your Anthropic account.
                   </p>
                   <div className="api-key-row flex gap-2 items-center">
@@ -599,7 +599,7 @@ export function ClaudeCodePanel({
                     />
                     {apiKeys['claude-code'] ? (
                       <button
-                        className={`test-button inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-sm font-medium whitespace-nowrap cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] ${
+                        className={`test-button inline-flex items-center justify-center py-2 px-4 rounded-ui-base text-ui-body font-medium whitespace-nowrap cursor-pointer transition-all bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-primary)] ${
                           config.testStatus === 'testing' ? 'opacity-60 cursor-wait' : ''
                         } ${config.testStatus === 'success' ? 'text-[var(--nim-success)] border-[var(--nim-success)]' : ''} ${
                           config.testStatus === 'error' ? 'text-[var(--nim-error)] border-[var(--nim-error)]' : ''
@@ -614,7 +614,7 @@ export function ClaudeCodePanel({
                     ) : null}
                   </div>
                   {config.testMessage && config.testStatus === 'error' && (
-                    <div className="test-error text-xs mt-2 text-[var(--nim-error)]">{config.testMessage}</div>
+                    <div className="test-error text-ui-compact mt-2 text-[var(--nim-error)]">{config.testMessage}</div>
                   )}
                 </>
               )}
@@ -622,7 +622,7 @@ export function ClaudeCodePanel({
           </SettingsSection>
 
           <SettingsSection title="Tool Permissions">
-            <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-2">
+            <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mb-2">
               Tool permissions are now managed per-project. When Claude Agent attempts to use a tool,
               you'll be prompted to allow or deny the action.
             </p>
@@ -634,13 +634,13 @@ export function ClaudeCodePanel({
               changing global state. See issue #185. */}
           {scope === 'user' && (
           <SettingsSection title="Environment Variables">
-            <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
+            <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mb-3">
               Configure environment variables that will be set for all Claude Code sessions.
-              These are stored in <code className="text-xs bg-[var(--nim-bg-tertiary)] px-1 py-0.5 rounded-ui-base">~/.claude/settings.json</code> and apply to every project.
+              These are stored in <code className="text-ui-compact bg-[var(--nim-bg-tertiary)] px-1 py-0.5 rounded-ui-base">~/.claude/settings.json</code> and apply to every project.
             </p>
 
             {isLoadingEnv ? (
-              <div className="text-sm text-[var(--nim-text-muted)]">Loading...</div>
+              <div className="text-ui-body text-[var(--nim-text-muted)]">Loading...</div>
             ) : (
               <>
                 {/* Existing env vars list */}
@@ -654,14 +654,14 @@ export function ClaudeCodePanel({
                               type="text"
                               value={key}
                               disabled
-                              className="flex-1 py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono"
+                              className="flex-1 py-2 px-2 rounded-ui-base text-ui-body bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text-muted)] font-mono"
                             />
                             <span className="text-[var(--nim-text-muted)]">=</span>
                             <input
                               type="text"
                               value={editingValue}
                               onChange={(e) => setEditingValue(e.target.value)}
-                              className="flex-[2] py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
+                              className="flex-[2] py-2 px-2 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
                               autoFocus
                             />
                             <button
@@ -671,7 +671,7 @@ export function ClaudeCodePanel({
                                 setEditingKey(null);
                                 setEditingValue('');
                               }}
-                              className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)] transition-colors"
+                              className="py-2 px-3 rounded-ui-base text-ui-compact font-medium bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)] transition-colors"
                             >
                               Save
                             </button>
@@ -680,22 +680,22 @@ export function ClaudeCodePanel({
                                 setEditingKey(null);
                                 setEditingValue('');
                               }}
-                              className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors"
+                              className="py-2 px-3 rounded-ui-base text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors"
                             >
                               Cancel
                             </button>
                           </>
                         ) : (
                           <>
-                            <span className="flex-1 py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] font-mono truncate">{key}</span>
+                            <span className="flex-1 py-2 px-2 rounded-ui-base text-ui-body bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] font-mono truncate">{key}</span>
                             <span className="text-[var(--nim-text-muted)]">=</span>
-                            <span className="flex-[2] py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] font-mono truncate">{value}</span>
+                            <span className="flex-[2] py-2 px-2 rounded-ui-base text-ui-body bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] font-mono truncate">{value}</span>
                             <button
                               onClick={() => {
                                 setEditingKey(key);
                                 setEditingValue(value);
                               }}
-                              className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors"
+                              className="py-2 px-3 rounded-ui-base text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] transition-colors"
                             >
                               Edit
                             </button>
@@ -705,7 +705,7 @@ export function ClaudeCodePanel({
                                 delete newEnvVars[key];
                                 saveEnvVars(newEnvVars);
                               }}
-                              className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-error)] hover:bg-nim-error-subtle transition-colors"
+                              className="py-2 px-3 rounded-ui-base text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)] text-[var(--nim-error)] hover:bg-nim-error-subtle transition-colors"
                             >
                               Delete
                             </button>
@@ -723,7 +723,7 @@ export function ClaudeCodePanel({
                     value={newEnvKey}
                     onChange={(e) => setNewEnvKey(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
                     placeholder="VARIABLE_NAME"
-                    className="flex-1 py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
+                    className="flex-1 py-2 px-2 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
                   />
                   <span className="text-[var(--nim-text-muted)]">=</span>
                   <input
@@ -731,7 +731,7 @@ export function ClaudeCodePanel({
                     value={newEnvValue}
                     onChange={(e) => setNewEnvValue(e.target.value)}
                     placeholder="value"
-                    className="flex-[2] py-2 px-2 rounded-ui-base text-sm bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
+                    className="flex-[2] py-2 px-2 rounded-ui-base text-ui-body bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] font-mono focus:border-[var(--nim-primary)] outline-none"
                   />
                   <button
                     onClick={() => {
@@ -743,7 +743,7 @@ export function ClaudeCodePanel({
                       }
                     }}
                     disabled={!newEnvKey.trim()}
-                    className="py-2 px-3 rounded-ui-base text-xs font-medium bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="py-2 px-3 rounded-ui-base text-ui-compact font-medium bg-[var(--nim-primary)] text-white hover:bg-[var(--nim-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Add
                   </button>

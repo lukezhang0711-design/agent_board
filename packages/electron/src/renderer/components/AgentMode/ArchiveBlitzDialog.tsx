@@ -54,12 +54,12 @@ export function ArchiveBlitzDialog({
         <div className="archive-worktree-dialog-body px-6 pb-5">
           <div className="flex items-start gap-3 mb-4 p-3 rounded-ui-lg bg-[var(--nim-success)]/10 border border-[var(--nim-success)]/30">
             <MaterialSymbol icon="check_circle" size={20} className="text-[var(--nim-success)] shrink-0 mt-1" />
-            <p className="m-0 text-sm text-[var(--nim-text-muted)]">
+            <p className="m-0 text-ui-body text-[var(--nim-text-muted)]">
               Changes from <strong className="font-medium text-[var(--nim-text)]">{worktreeName}</strong> have been merged successfully.
             </p>
           </div>
 
-          <p className="mb-4 text-sm leading-relaxed text-[var(--nim-text-muted)]">
+          <p className="mb-4 text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
             This worktree is part of the blitz{' '}
             <strong className="font-medium text-[var(--nim-text)]">{blitzName}</strong>.
             Would you like to archive the entire blitz or just this worktree?

@@ -147,7 +147,7 @@ export function InlineTipDisplay({ onInsertPrompt }: InlineTipDisplayProps = {})
       {orderedTips.length > 1 && (
         <button
           type="button"
-          className="inline-flex items-center gap-1 px-3 py-1 text-[12.5px] text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+          className="inline-flex items-center gap-1 px-3 py-1 text-ui-compact text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
           onClick={handleNext}
           aria-label="Next tip"
           title="Next tip"
@@ -160,7 +160,7 @@ export function InlineTipDisplay({ onInsertPrompt }: InlineTipDisplayProps = {})
       )}
       <button
         type="button"
-        className="inline-flex items-center gap-1 px-3 py-1 text-[12.5px] text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+        className="inline-flex items-center gap-1 px-3 py-1 text-ui-compact text-[var(--nim-text-muted)] bg-transparent border border-[var(--nim-border)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
         onClick={handleOpenAllTips}
         aria-label="Show all tips"
         title="Show all tips"

@@ -545,7 +545,7 @@ export const WorkspaceManager: React.FC = () => {
         <div className="sidebar-header p-3 bg-[var(--nim-bg)] border-b border-[var(--nim-border)] [-webkit-app-region:no-drag]">
           <div className="app-branding flex items-center gap-3 mb-4">
             <img src="./icon.png" alt="Nimbalyst" className="app-logo w-8 h-8 shrink-0 object-contain" />
-            <h2 className="m-0 text-lg font-bold text-[var(--nim-text)] tracking-tight">Nimbalyst</h2>
+            <h2 className="m-0 text-ui-title font-bold text-[var(--nim-text)] tracking-tight">Nimbalyst</h2>
           </div>
           <div className="action-buttons flex gap-2">
             <button className="btn nim-btn-primary" onClick={handleBrowse}>
@@ -578,11 +578,11 @@ export const WorkspaceManager: React.FC = () => {
             </div>
           ) : workspaces.length === 0 ? (
             <div className="sidebar-empty flex flex-col items-center justify-center h-full p-5 text-center">
-              <p className="text-[13px] text-[var(--nim-text-faint)] m-0">No recent projects</p>
+              <p className="text-ui-body text-[var(--nim-text-faint)] m-0">No recent projects</p>
             </div>
           ) : filteredWorkspaces.length === 0 ? (
             <div className="sidebar-empty flex flex-col items-center justify-center h-full p-5 text-center">
-              <p className="text-[13px] text-[var(--nim-text-faint)] m-0">No matching projects</p>
+              <p className="text-ui-body text-[var(--nim-text-faint)] m-0">No matching projects</p>
             </div>
           ) : (
             filteredWorkspaces.map((workspace, index) => (
@@ -604,12 +604,12 @@ export const WorkspaceManager: React.FC = () => {
                 onContextMenu={(e) => handleContextMenu(e, workspace)}
               >
                 <div className={`workspace-icon shrink-0 flex items-center justify-center text-[var(--nim-text-muted)] ${selectedWorkspace?.path === workspace.path ? '!text-[var(--nim-primary)]' : ''}`}>
-                  <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>folder</span>
+                  <span className="material-symbols-outlined text-ui-title" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>folder</span>
                 </div>
                 <div className="workspace-info flex-1 min-w-0">
-                  <div className={`workspace-name text-[13px] font-medium text-[var(--nim-text)] mb-1 overflow-hidden text-ellipsis whitespace-nowrap ${selectedWorkspace?.path === workspace.path ? '!text-[var(--nim-primary)]' : ''}`}>{workspace.name}</div>
-                  <div className="workspace-path text-[11px] text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap mb-1">{workspace.path}</div>
-                  <div className="workspace-meta flex gap-3 text-[11px] text-[var(--nim-text-faint)]">
+                  <div className={`workspace-name text-ui-body font-medium text-[var(--nim-text)] mb-1 overflow-hidden text-ellipsis whitespace-nowrap ${selectedWorkspace?.path === workspace.path ? '!text-[var(--nim-primary)]' : ''}`}>{workspace.name}</div>
+                  <div className="workspace-path text-ui-caption text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap mb-1">{workspace.path}</div>
+                  <div className="workspace-meta flex gap-3 text-ui-caption text-[var(--nim-text-faint)]">
                     {workspace.markdownCount !== undefined && (
                       <span className="whitespace-nowrap">{workspace.markdownCount} markdown files</span>
                     )}
@@ -627,8 +627,8 @@ export const WorkspaceManager: React.FC = () => {
           <>
             <div className="content-header py-5 px-6 border-b border-[var(--nim-border)] bg-[var(--nim-bg)] flex justify-between items-start gap-5">
               <div className="workspace-title">
-                <h1 className="text-xl font-semibold text-[var(--nim-text)] m-0 mb-1">{selectedWorkspace.name}</h1>
-                <div className="workspace-path text-[13px] text-[var(--nim-text-muted)]">{selectedWorkspace.path}</div>
+                <h1 className="text-ui-title font-semibold text-[var(--nim-text)] m-0 mb-1">{selectedWorkspace.name}</h1>
+                <div className="workspace-path text-ui-body text-[var(--nim-text-muted)]">{selectedWorkspace.path}</div>
               </div>
               <div className="content-actions flex flex-col items-end gap-2 shrink-0">
                 <div className="content-actions-primary flex flex-wrap justify-end gap-2">
@@ -641,13 +641,13 @@ export const WorkspaceManager: React.FC = () => {
                 </div>
                 <div className="content-actions-secondary flex flex-wrap justify-end gap-2">
                   <button
-                    className="btn nim-btn-secondary !h-8 !px-3 !text-[12px]"
+                    className="btn nim-btn-secondary !h-8 !px-3 !text-ui-compact"
                     onClick={() => openRenameDialog(selectedWorkspace)}
                   >
                     Rename
                   </button>
                   <button
-                    className="btn nim-btn-secondary !h-8 !px-3 !text-[12px]"
+                    className="btn nim-btn-secondary !h-8 !px-3 !text-ui-compact"
                     onClick={() => handleMoveProject(selectedWorkspace)}
                   >
                     Move
@@ -661,30 +661,30 @@ export const WorkspaceManager: React.FC = () => {
                 <>
                   <div className="stats-grid grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4">
                     <div className="stat-card bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-4">
-                      <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">{workspaceStats.fileCount}</div>
-                      <div className="stat-label text-xs text-[var(--nim-text-muted)] uppercase tracking-wider">Total Files</div>
+                      <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1">{workspaceStats.fileCount}</div>
+                      <div className="stat-label text-ui-compact text-[var(--nim-text-muted)] uppercase tracking-wider">Total Files</div>
                     </div>
                     <div className="stat-card bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-4">
-                      <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">{workspaceStats.markdownCount}</div>
-                      <div className="stat-label text-xs text-[var(--nim-text-muted)] uppercase tracking-wider">Markdown Files</div>
+                      <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1">{workspaceStats.markdownCount}</div>
+                      <div className="stat-label text-ui-compact text-[var(--nim-text-muted)] uppercase tracking-wider">Markdown Files</div>
                     </div>
                     <div className="stat-card bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-4">
-                      <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">{formatSize(workspaceStats.totalSize)}</div>
-                      <div className="stat-label text-xs text-[var(--nim-text-muted)] uppercase tracking-wider">Total Size</div>
+                      <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1">{formatSize(workspaceStats.totalSize)}</div>
+                      <div className="stat-label text-ui-compact text-[var(--nim-text-muted)] uppercase tracking-wider">Total Size</div>
                     </div>
                     <div className="stat-card bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-4">
-                      <div className="stat-value text-2xl font-semibold text-[var(--nim-text)] mb-1">{formatDate(selectedWorkspace.lastOpened)}</div>
-                      <div className="stat-label text-xs text-[var(--nim-text-muted)] uppercase tracking-wider">Last Opened</div>
+                      <div className="stat-value text-ui-headline font-semibold text-[var(--nim-text)] mb-1">{formatDate(selectedWorkspace.lastOpened)}</div>
+                      <div className="stat-label text-ui-compact text-[var(--nim-text-muted)] uppercase tracking-wider">Last Opened</div>
                     </div>
                   </div>
 
                   {workspaceStats.recentFiles.length > 0 && (
                     <div className="recent-files bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-4 mt-4">
-                      <h3 className="text-sm font-semibold text-[var(--nim-text)] m-0 mb-3">Recent Files</h3>
+                      <h3 className="text-ui-body font-semibold text-[var(--nim-text)] m-0 mb-3">Recent Files</h3>
                       <ul className="list-none m-0 p-0">
                         {workspaceStats.recentFiles.map(file => (
-                          <li key={file} className="flex items-center gap-2 py-2 text-[13px] text-[var(--nim-text-muted)] border-b border-[var(--nim-border-subtle)] last:border-b-0">
-                            <span className="material-symbols-outlined text-base text-[var(--nim-text-faint)]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>description</span>
+                          <li key={file} className="flex items-center gap-2 py-2 text-ui-body text-[var(--nim-text-muted)] border-b border-[var(--nim-border-subtle)] last:border-b-0">
+                            <span className="material-symbols-outlined text-ui-subhead text-[var(--nim-text-faint)]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>description</span>
                             {file}
                           </li>
                         ))}
@@ -705,13 +705,13 @@ export const WorkspaceManager: React.FC = () => {
               <div className="welcome-header flex items-center justify-center gap-5 mb-6">
                 <img src="./icon.png" alt="Nimbalyst" className="welcome-logo w-16 h-16 object-contain" />
                 <div className="welcome-text text-left">
-                  <h1 className="welcome-title text-[28px] font-extrabold text-[var(--nim-text)] m-0 mb-1 tracking-tight">Nimbalyst</h1>
-                  <p className="welcome-subtitle text-sm text-[var(--nim-text-muted)] m-0 font-normal">AI-native, interactive work platform</p>
+                  <h1 className="welcome-title text-ui-headline font-extrabold text-[var(--nim-text)] m-0 mb-1 tracking-tight">Nimbalyst</h1>
+                  <p className="welcome-subtitle text-ui-body text-[var(--nim-text-muted)] m-0 font-normal">AI-native, interactive work platform</p>
                 </div>
               </div>
 
               <div className="welcome-info-compact mb-6 text-center">
-                <p className="welcome-description text-sm text-[var(--nim-text-muted)] leading-relaxed m-0">
+                <p className="welcome-description text-ui-body text-[var(--nim-text-muted)] leading-relaxed m-0">
                   Projects are local folders on your computer. Open any folder to view and edit all markdown files within it.
                   If you are working on a coding project, it is recommended to open the root folder of your project as
                   agents are configured at the project level.
@@ -719,12 +719,12 @@ export const WorkspaceManager: React.FC = () => {
               </div>
 
               <div className="welcome-actions flex justify-center gap-4">
-                <button className="btn btn-large btn-welcome-primary bg-[var(--nim-primary)] text-white border-none py-3 px-6 text-[15px] font-semibold rounded-ui-lg cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(59,130,246,0.3)] hover:bg-[var(--nim-primary-hover)] hover:shadow-[0_4px_12px_rgba(59,130,246,0.4)] hover:-translate-y-px" onClick={handleBrowse}>
-                  <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>folder_open</span>
+                <button className="btn btn-large btn-welcome-primary bg-[var(--nim-primary)] text-white border-none py-3 px-6 text-ui-subhead font-semibold rounded-ui-lg cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(59,130,246,0.3)] hover:bg-[var(--nim-primary-hover)] hover:shadow-[0_4px_12px_rgba(59,130,246,0.4)] hover:-translate-y-px" onClick={handleBrowse}>
+                  <span className="material-symbols-outlined text-ui-title" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>folder_open</span>
                   Open Folder
                 </button>
-                <button className="btn btn-large btn-welcome-secondary bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border-2 border-[var(--nim-border)] py-3 px-6 text-[15px] font-semibold rounded-ui-lg cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 hover:bg-[var(--nim-bg-secondary)] hover:border-[var(--nim-border-hover)] hover:-translate-y-px" onClick={handleCreateWorkspace}>
-                  <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>create_new_folder</span>
+                <button className="btn btn-large btn-welcome-secondary bg-[var(--nim-bg)] text-[var(--nim-text-muted)] border-2 border-[var(--nim-border)] py-3 px-6 text-ui-subhead font-semibold rounded-ui-lg cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 hover:bg-[var(--nim-bg-secondary)] hover:border-[var(--nim-border-hover)] hover:-translate-y-px" onClick={handleCreateWorkspace}>
+                  <span className="material-symbols-outlined text-ui-title" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>create_new_folder</span>
                   New Folder
                 </button>
               </div>
@@ -741,33 +741,33 @@ export const WorkspaceManager: React.FC = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            className="w-full px-3 py-2 text-left text-[13px] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] flex items-center gap-2"
+            className="w-full px-3 py-2 text-left text-ui-body text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] flex items-center gap-2"
             onClick={() => handleContextMenuAction('open')}
           >
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>folder_open</span>
+            <span className="material-symbols-outlined text-ui-subhead" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>folder_open</span>
             Open Project
           </button>
           <div className="border-t border-[var(--nim-border)] my-1" />
           <button
-            className="w-full px-3 py-2 text-left text-[13px] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] flex items-center gap-2"
+            className="w-full px-3 py-2 text-left text-ui-body text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] flex items-center gap-2"
             onClick={() => handleContextMenuAction('rename')}
           >
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>edit</span>
+            <span className="material-symbols-outlined text-ui-subhead" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>edit</span>
             Rename...
           </button>
           <button
-            className="w-full px-3 py-2 text-left text-[13px] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] flex items-center gap-2"
+            className="w-full px-3 py-2 text-left text-ui-body text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] flex items-center gap-2"
             onClick={() => handleContextMenuAction('move')}
           >
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>drive_file_move</span>
+            <span className="material-symbols-outlined text-ui-subhead" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>drive_file_move</span>
             Move to...
           </button>
           <div className="border-t border-[var(--nim-border)] my-1" />
           <button
-            className="w-full px-3 py-2 text-left text-[13px] text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] flex items-center gap-2"
+            className="w-full px-3 py-2 text-left text-ui-body text-[var(--nim-error)] hover:bg-[var(--nim-bg-hover)] flex items-center gap-2"
             onClick={() => handleContextMenuAction('remove')}
           >
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>close</span>
+            <span className="material-symbols-outlined text-ui-subhead" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>close</span>
             Remove from Recent
           </button>
         </div>
@@ -777,12 +777,12 @@ export const WorkspaceManager: React.FC = () => {
       {renameDialog.visible && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[3000]">
           <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-xl p-5 w-[450px]">
-            <h2 className="text-lg font-semibold text-[var(--nim-text)] m-0 mb-3">Rename Project</h2>
+            <h2 className="text-ui-title font-semibold text-[var(--nim-text)] m-0 mb-3">Rename Project</h2>
 
             {/* Warning banner */}
             <div className="bg-[var(--nim-warning)]/10 border border-[var(--nim-warning)]/30 rounded-ui-base p-3 mb-4 flex gap-2">
-              <span className="material-symbols-outlined text-[18px] text-[var(--nim-warning)] shrink-0 mt-1" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>warning</span>
-              <div className="text-[12px] text-[var(--nim-text-muted)]">
+              <span className="material-symbols-outlined text-ui-title text-[var(--nim-warning)] shrink-0 mt-1" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>warning</span>
+              <div className="text-ui-compact text-[var(--nim-text-muted)]">
                 <p className="m-0 mb-1 font-medium text-[var(--nim-text)]">This will rename the project folder on disk</p>
                 <p className="m-0">All AI session history, file history, and settings will be migrated. This may take a while for large projects.</p>
                 {renameDialog.stats && (
@@ -794,7 +794,7 @@ export const WorkspaceManager: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-[13px] text-[var(--nim-text-muted)] mb-1">New name</label>
+              <label className="block text-ui-body text-[var(--nim-text-muted)] mb-1">New name</label>
               <input
                 ref={renameInputRef}
                 type="text"
@@ -811,7 +811,7 @@ export const WorkspaceManager: React.FC = () => {
                 disabled={operationInProgress}
               />
               {renameDialog.error && (
-                <p className="text-[12px] text-[var(--nim-error)] mt-1 m-0">{renameDialog.error}</p>
+                <p className="text-ui-compact text-[var(--nim-error)] mt-1 m-0">{renameDialog.error}</p>
               )}
             </div>
             <div className="flex justify-end gap-2">
@@ -838,12 +838,12 @@ export const WorkspaceManager: React.FC = () => {
       {confirmDialog.visible && confirmDialog.type === 'move' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[3000]">
           <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-xl p-5 w-[500px]">
-            <h2 className="text-lg font-semibold text-[var(--nim-text)] m-0 mb-3">Move Project</h2>
+            <h2 className="text-ui-title font-semibold text-[var(--nim-text)] m-0 mb-3">Move Project</h2>
 
             {/* Warning banner */}
             <div className="bg-[var(--nim-warning)]/10 border border-[var(--nim-warning)]/30 rounded-ui-base p-3 mb-4 flex gap-2">
-              <span className="material-symbols-outlined text-[18px] text-[var(--nim-warning)] shrink-0 mt-1" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>warning</span>
-              <div className="text-[12px] text-[var(--nim-text-muted)]">
+              <span className="material-symbols-outlined text-ui-title text-[var(--nim-warning)] shrink-0 mt-1" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>warning</span>
+              <div className="text-ui-compact text-[var(--nim-text-muted)]">
                 <p className="m-0 mb-1 font-medium text-[var(--nim-text)]">This will move the entire project folder</p>
                 <p className="m-0">All project files will be copied to the new location, and all AI session history, file history, and settings will be migrated. This may take a while for large projects.</p>
               </div>
@@ -851,15 +851,15 @@ export const WorkspaceManager: React.FC = () => {
 
             <div className="mb-4 space-y-2">
               <div>
-                <label className="block text-[12px] text-[var(--nim-text-muted)] mb-1">From</label>
-                <div className="text-[13px] text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] font-mono overflow-hidden text-ellipsis">{confirmDialog.workspace?.path}</div>
+                <label className="block text-ui-compact text-[var(--nim-text-muted)] mb-1">From</label>
+                <div className="text-ui-body text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] font-mono overflow-hidden text-ellipsis">{confirmDialog.workspace?.path}</div>
               </div>
               <div>
-                <label className="block text-[12px] text-[var(--nim-text-muted)] mb-1">To</label>
-                <div className="text-[13px] text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] font-mono overflow-hidden text-ellipsis">{confirmDialog.destinationPath}</div>
+                <label className="block text-ui-compact text-[var(--nim-text-muted)] mb-1">To</label>
+                <div className="text-ui-body text-[var(--nim-text)] bg-[var(--nim-bg-secondary)] px-3 py-2 rounded-ui-base border border-[var(--nim-border)] font-mono overflow-hidden text-ellipsis">{confirmDialog.destinationPath}</div>
               </div>
               {confirmDialog.stats && (
-                <div className="flex gap-4 pt-2 text-[12px] text-[var(--nim-text-muted)]">
+                <div className="flex gap-4 pt-2 text-ui-compact text-[var(--nim-text-muted)]">
                   <span>{confirmDialog.stats.fileCount.toLocaleString()} files</span>
                   <span>{formatSize(confirmDialog.stats.totalSize)}</span>
                 </div>
@@ -887,13 +887,13 @@ export const WorkspaceManager: React.FC = () => {
       {/* Operation Error Toast */}
       {operationError && (
         <div className="fixed bottom-4 right-4 bg-[var(--nim-error)] text-white px-4 py-3 rounded-ui-lg shadow-lg z-[3000] flex items-center gap-3 max-w-[400px]">
-          <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>error</span>
-          <span className="text-[13px] flex-1">{operationError}</span>
+          <span className="material-symbols-outlined text-ui-title" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>error</span>
+          <span className="text-ui-body flex-1">{operationError}</span>
           <button
             className="text-white/80 hover:text-white"
             onClick={() => setOperationError(null)}
           >
-            <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>close</span>
+            <span className="material-symbols-outlined text-ui-title" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>close</span>
           </button>
         </div>
       )}
@@ -903,7 +903,7 @@ export const WorkspaceManager: React.FC = () => {
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[4000]">
           <div className="bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-lg shadow-xl p-6 flex items-center gap-3">
             <div className="spinner w-5 h-5 border-2 border-[var(--nim-border)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin"></div>
-            <span className="text-[14px] text-[var(--nim-text)]">{operationLabel}</span>
+            <span className="text-ui-body text-[var(--nim-text)]">{operationLabel}</span>
           </div>
         </div>
       )}

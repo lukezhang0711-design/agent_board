@@ -256,7 +256,7 @@ export function TextDiffViewer({
     <div className="text-diff-viewer flex flex-col h-full overflow-hidden">
       <div className="text-diff-panels flex flex-1 overflow-hidden">
         <div className="text-diff-panel text-diff-old flex-1 flex flex-col overflow-hidden">
-          <div className="text-diff-header px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.5px] border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-red-600">
+          <div className="text-diff-header px-3 py-2 text-ui-caption font-semibold uppercase tracking-[0.5px] border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-red-600">
             Old Version
           </div>
           <div
@@ -264,7 +264,7 @@ export function TextDiffViewer({
             ref={oldContentRef}
             onScroll={() => handleScroll('old')}
           >
-            <div className="text-diff-lines font-mono text-[13px] leading-[1.6]">
+            <div className="text-diff-lines font-mono text-ui-body leading-[1.6]">
               {oldLines.map((line, index) => (
                 <div
                   key={index}
@@ -304,7 +304,7 @@ export function TextDiffViewer({
           </div>
         </div>
         <div className="text-diff-panel text-diff-new flex-1 flex flex-col overflow-hidden border-l border-[var(--nim-border)]">
-          <div className="text-diff-header px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.5px] border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-green-600">
+          <div className="text-diff-header px-3 py-2 text-ui-caption font-semibold uppercase tracking-[0.5px] border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)] text-green-600">
             New Version
           </div>
           <div
@@ -312,7 +312,7 @@ export function TextDiffViewer({
             ref={newContentRef}
             onScroll={() => handleScroll('new')}
           >
-            <div className="text-diff-lines font-mono text-[13px] leading-[1.6]">
+            <div className="text-diff-lines font-mono text-ui-body leading-[1.6]">
               {newLines.map((line, index) => (
                 <div
                   key={index}

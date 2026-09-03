@@ -74,7 +74,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
         return (
           <MaterialSymbol
             icon="schedule"
-            className="archive-task-icon archive-task-icon--queued text-lg shrink-0 mt-1 text-[var(--nim-text-faint)]"
+            className="archive-task-icon archive-task-icon--queued text-ui-title shrink-0 mt-1 text-[var(--nim-text-faint)]"
           />
         );
       case 'pending':
@@ -82,21 +82,21 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
         return (
           <MaterialSymbol
             icon="progress_activity"
-            className="archive-task-icon archive-task-icon--active text-lg shrink-0 mt-1 text-[var(--nim-primary)] animate-spin"
+            className="archive-task-icon archive-task-icon--active text-ui-title shrink-0 mt-1 text-[var(--nim-primary)] animate-spin"
           />
         );
       case 'completed':
         return (
           <MaterialSymbol
             icon="check_circle"
-            className="archive-task-icon archive-task-icon--completed text-lg shrink-0 mt-1 text-[var(--nim-success)]"
+            className="archive-task-icon archive-task-icon--completed text-ui-title shrink-0 mt-1 text-[var(--nim-success)]"
           />
         );
       case 'failed':
         return (
           <MaterialSymbol
             icon="error"
-            className="archive-task-icon archive-task-icon--failed text-lg shrink-0 mt-1 text-[var(--nim-error)]"
+            className="archive-task-icon archive-task-icon--failed text-ui-title shrink-0 mt-1 text-[var(--nim-error)]"
           />
         );
     }
@@ -131,7 +131,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
       >
         <MaterialSymbol
           icon="archive"
-          className="archive-progress-header-icon text-lg text-[var(--nim-text-muted)] shrink-0"
+          className="archive-progress-header-icon text-ui-title text-[var(--nim-text-muted)] shrink-0"
         />
         <span className="archive-progress-header-text flex-1 text-left">Archive Tasks</span>
         {activeCount > 0 && (
@@ -141,7 +141,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
         )}
         <MaterialSymbol
           icon="expand_more"
-          className={`archive-progress-header-chevron text-lg text-[var(--nim-text-muted)] shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+          className={`archive-progress-header-chevron text-ui-title text-[var(--nim-text-muted)] shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
         />
       </button>
       {isExpanded && (
@@ -150,7 +150,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
             <div className="archive-progress-warning flex items-start gap-2 px-3 py-2 bg-nim-warning-subtle border-l-[3px] border-l-[var(--nim-warning)] mx-2 mb-2">
               <MaterialSymbol
                 icon="warning"
-                className="archive-progress-warning-icon text-base text-[var(--nim-warning)] shrink-0 mt-px"
+                className="archive-progress-warning-icon text-ui-subhead text-[var(--nim-warning)] shrink-0 mt-px"
               />
               <span className="archive-progress-warning-text text-ui-caption italic text-[var(--nim-text-muted)] leading-[1.4]">
                 Worktree removal can take several minutes for large repositories
@@ -172,7 +172,7 @@ export const ArchiveProgress: React.FC<ArchiveProgressProps> = ({ onWorktreeArch
                     {task.worktreeId}
                   </div>
                   <div
-                    className={`archive-task-status text-xs mt-1 ${task.status === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}
+                    className={`archive-task-status text-ui-compact mt-1 ${task.status === 'failed' ? 'text-[var(--nim-error)]' : 'text-[var(--nim-text-muted)]'}`}
                   >
                     {task.error || getStatusText(task.status)}
                   </div>

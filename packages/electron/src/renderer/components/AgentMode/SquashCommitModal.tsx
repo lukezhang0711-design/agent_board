@@ -81,7 +81,7 @@ export function SquashCommitModal({
           />
 
           {warningMessage && (
-            <div className="squash-commit-modal-warning flex items-center gap-2 px-5 py-3 text-sm leading-relaxed bg-nim-warning-subtle border-b border-nim-warning-subtle text-[var(--nim-warning)]">
+            <div className="squash-commit-modal-warning flex items-center gap-2 px-5 py-3 text-ui-body leading-relaxed bg-nim-warning-subtle border-b border-nim-warning-subtle text-[var(--nim-warning)]">
               <MaterialSymbol icon="warning" size={20} className="shrink-0" />
               <span>{warningMessage}</span>
             </div>
@@ -90,21 +90,21 @@ export function SquashCommitModal({
           <div className="squash-commit-modal-body flex-1 p-5 flex flex-col gap-2 overflow-y-auto">
             <label
               htmlFor="commit-message"
-              className="squash-commit-modal-label text-sm font-medium text-[var(--nim-text-muted)] block"
+              className="squash-commit-modal-label text-ui-body font-medium text-[var(--nim-text-muted)] block"
             >
               Commit Message
             </label>
             <textarea
               ref={textareaRef}
               id="commit-message"
-              className="squash-commit-modal-textarea nim-input font-mono text-sm leading-relaxed resize-y min-h-[120px] p-3 rounded-ui-base"
+              className="squash-commit-modal-textarea nim-input font-mono text-ui-body leading-relaxed resize-y min-h-[120px] p-3 rounded-ui-base"
               placeholder="Enter commit message for squashed commit..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={5}
             />
-            <div className="squash-commit-modal-hint text-xs text-[var(--nim-text-faint)] italic">
+            <div className="squash-commit-modal-hint text-ui-compact text-[var(--nim-text-faint)] italic">
               Press {submitShortcut} to submit
             </div>
           </div>

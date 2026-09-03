@@ -144,7 +144,7 @@ export const SlashCommandSuggestions: React.FC<SlashCommandSuggestionsProps> = (
 
   return (
     <div className="slash-command-suggestions flex flex-col items-center gap-2 px-3 py-2 max-w-4xl mx-auto">
-      <div className="slash-command-suggestions-label text-xs font-medium text-[var(--nim-text-faint)]">
+      <div className="slash-command-suggestions-label text-ui-compact font-medium text-[var(--nim-text-faint)]">
         Try a command:
       </div>
       <div className="slash-command-suggestions-pills flex flex-wrap justify-center gap-2">
@@ -159,7 +159,7 @@ export const SlashCommandSuggestions: React.FC<SlashCommandSuggestionsProps> = (
             </button>
             {cmd.description && (
               <div
-                className="slash-command-tooltip absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 px-3 py-2 text-xs font-normal leading-relaxed text-center whitespace-normal min-w-[200px] max-w-[320px] rounded-ui-lg border z-[100] pointer-events-none opacity-0 invisible transition-[opacity,visibility] duration-150 group-hover:opacity-100 group-hover:visible bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-muted)] shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
+                className="slash-command-tooltip absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 px-3 py-2 text-ui-compact font-normal leading-relaxed text-center whitespace-normal min-w-[200px] max-w-[320px] rounded-ui-lg border z-[100] pointer-events-none opacity-0 invisible transition-[opacity,visibility] duration-150 group-hover:opacity-100 group-hover:visible bg-[var(--nim-bg)] border-[var(--nim-border)] text-[var(--nim-text-muted)] shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
                 role="tooltip"
               >
                 {cmd.description}

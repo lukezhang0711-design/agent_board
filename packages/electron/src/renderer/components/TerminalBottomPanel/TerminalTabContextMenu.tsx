@@ -66,7 +66,7 @@ export function TerminalTabContextMenu({
           border: '1px solid var(--nim-border)',
         }}
         {...menu.getFloatingProps()}
-        className="p-1 min-w-[160px] rounded-ui-base z-[10000] text-[13px] backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+        className="p-1 min-w-[160px] rounded-ui-base z-[10000] text-ui-body backdrop-blur-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
         data-testid="terminal-tab-context-menu"
       >
         <div

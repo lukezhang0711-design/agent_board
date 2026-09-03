@@ -35,18 +35,18 @@ export function PullRequestSidebar({
       data-testid="pr-sidebar"
     >
       <div className="px-3 py-2 border-b border-nim">
-        <div className="text-[11px] font-semibold text-nim-muted uppercase tracking-wider">
+        <div className="text-ui-caption font-semibold text-nim-muted uppercase tracking-wider">
           Pull Requests
         </div>
         {remote && (
-          <div className="text-[11px] text-nim-faint truncate mt-1" title={remote}>
+          <div className="text-ui-caption text-nim-faint truncate mt-1" title={remote}>
             {remote}
           </div>
         )}
       </div>
 
       <div className="px-2 pt-2 pb-1">
-        <div className="text-[10px] font-semibold text-nim-faint uppercase tracking-wider px-1 mb-2">
+        <div className="text-ui-micro font-semibold text-nim-faint uppercase tracking-wider px-1 mb-2">
           Filters
         </div>
         <div className="flex flex-wrap gap-1">
@@ -56,7 +56,7 @@ export function PullRequestSidebar({
               <button
                 key={chip.id}
                 data-testid={`pr-filter-${chip.id}`}
-                className={`flex items-center gap-1 px-2 py-1 rounded-ui-base text-[11px] font-medium transition-colors ${
+                className={`flex items-center gap-1 px-2 py-1 rounded-ui-base text-ui-caption font-medium transition-colors ${
                   isActive
                     ? 'bg-[var(--nim-primary)] text-white'
                     : 'bg-nim-tertiary text-nim-muted hover:bg-nim-active hover:text-nim'

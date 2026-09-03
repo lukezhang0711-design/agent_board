@@ -114,25 +114,25 @@ const TaskRow: React.FC<{
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-[13px] font-medium text-nim">{task.label}</div>
-            <div className="mt-1 text-[11px] text-nim-muted">{task.detail}</div>
+            <div className="truncate text-ui-body font-medium text-nim">{task.label}</div>
+            <div className="mt-1 text-ui-caption text-nim-muted">{task.detail}</div>
           </div>
           {task.category === 'ai-session' && task.status === 'running' ? (
             <SessionRunningIndicator />
           ) : (
-            <span className={`shrink-0 rounded-ui-full px-2 py-0.5 text-[10px] font-medium ${getTaskStatusClasses(task)}`}>
+            <span className={`shrink-0 rounded-ui-full px-2 py-0.5 text-ui-micro font-medium ${getTaskStatusClasses(task)}`}>
               {getTaskStatusLabel(task)}
             </span>
           )}
         </div>
         <div className="mt-2 flex items-center justify-between gap-3">
-          <span className="text-[10px] text-nim-faint">
+          <span className="text-ui-micro text-nim-faint">
             {task.startedAt ? `Active ${formatDuration(task.startedAt, now)}` : 'Standing by'}
           </span>
           {canOpenSession && task.sessionId ? (
             <button
               type="button"
-              className="text-[11px] font-medium text-[var(--nim-primary)] transition-colors hover:text-[var(--nim-primary-hover)]"
+              className="text-ui-caption font-medium text-[var(--nim-primary)] transition-colors hover:text-[var(--nim-primary-hover)]"
               onClick={() => {
                 if (task.sessionId) {
                   onOpenSession?.(task.sessionId);
@@ -149,7 +149,7 @@ const TaskRow: React.FC<{
 };
 
 const EmptyState: React.FC<{ label: string }> = ({ label }) => (
-  <div className="rounded-ui-base border border-dashed border-nim px-3 py-2 text-[12px] text-nim-muted">
+  <div className="rounded-ui-base border border-dashed border-nim px-3 py-2 text-ui-compact text-nim-muted">
     {label}
   </div>
 );
@@ -258,7 +258,7 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
             size={20}
           />
           {activeTaskCount > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex min-h-[16px] min-w-[16px] items-center justify-center rounded-ui-full bg-[var(--nim-primary)] px-1 text-[10px] font-semibold text-white">
+            <span className="absolute -right-0.5 -top-0.5 flex min-h-[16px] min-w-[16px] items-center justify-center rounded-ui-full bg-[var(--nim-primary)] px-1 text-ui-micro font-semibold text-white">
               {activeTaskCount > 9 ? '9+' : activeTaskCount}
             </span>
           ) : null}
@@ -279,8 +279,8 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
           >
             <div className="flex items-center justify-between border-b border-nim px-4 py-3">
               <div>
-                <div className="text-[14px] font-semibold text-nim">Background Tasks</div>
-                <div className="mt-1 text-[11px] text-nim-muted">
+                <div className="text-ui-body font-semibold text-nim">Background Tasks</div>
+                <div className="mt-1 text-ui-caption text-nim-muted">
                   Dev mode only. {activeTaskCount > 0 ? `${activeTaskCount} active` : 'No active work'}.
                 </div>
               </div>
@@ -297,10 +297,10 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
             <div className="space-y-4 px-4 py-3">
               <section>
                 <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-nim-muted">
+                  <h3 className="text-ui-compact font-semibold uppercase tracking-[0.08em] text-nim-muted">
                     AI Sessions
                   </h3>
-                  <span className="text-[11px] text-nim-faint">
+                  <span className="text-ui-caption text-nim-faint">
                     {tasksByCategory.aiSessions.length} running
                   </span>
                 </div>
@@ -325,10 +325,10 @@ export const BackgroundTaskIndicator: React.FC<BackgroundTaskIndicatorProps> = (
 
               <section>
                 <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-nim-muted">
+                  <h3 className="text-ui-compact font-semibold uppercase tracking-[0.08em] text-nim-muted">
                     Sync
                   </h3>
-                  <span className="text-[11px] text-nim-faint">
+                  <span className="text-ui-caption text-nim-faint">
                     Last sync {formatLastSync(syncStatus.stats.lastSyncedAt)}
                   </span>
                 </div>

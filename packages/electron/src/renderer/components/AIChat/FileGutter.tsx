@@ -346,7 +346,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
 
     return (
       <span
-        className={`file-gutter__git-status file-gutter__git-status--${status.status} inline-flex items-center justify-center w-3.5 h-3.5 text-[0.65rem] font-semibold rounded-ui-base shrink-0 text-white ${statusClasses[status.status] || ''}`}
+        className={`file-gutter__git-status file-gutter__git-status--${status.status} inline-flex items-center justify-center w-3.5 h-3.5 text-ui-micro font-semibold rounded-ui-base shrink-0 text-white ${statusClasses[status.status] || ''}`}
         title={`Git status: ${status.status}`}
       >
         {statusChar}
@@ -370,7 +370,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
         {node.displayPath && (
           <button
             onClick={() => toggleFolder(node.path)}
-            className="file-gutter__directory-header w-full flex items-center gap-1 px-2 py-0.5 text-[0.8125rem] font-medium text-[var(--nim-text-muted)] bg-transparent border border-transparent rounded-ui-base cursor-pointer transition-all duration-200 text-left hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+            className="file-gutter__directory-header w-full flex items-center gap-1 px-2 py-0.5 text-ui-body font-medium text-[var(--nim-text-muted)] bg-transparent border border-transparent rounded-ui-base cursor-pointer transition-all duration-200 text-left hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
           >
             <MaterialSymbol
               icon={isExpanded ? "expand_more" : "chevron_right"}
@@ -383,7 +383,7 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
               className="file-gutter__directory-icon shrink-0 text-[var(--nim-text-muted)]"
             />
             <span className="file-gutter__directory-path flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{node.displayPath}</span>
-            <span className="file-gutter__directory-count shrink-0 py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded-ui-base text-[9px] text-[var(--nim-text-faint)]">{node.fileCount}</span>
+            <span className="file-gutter__directory-count shrink-0 py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded-ui-base text-ui-micro text-[var(--nim-text-faint)]">{node.fileCount}</span>
           </button>
         )}
 
@@ -421,12 +421,12 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
                     )}
                     {renderGitStatus(file.filePath)}
                     <div className="file-gutter__file-info flex-1 min-w-0">
-                      <div className="file-gutter__file-name text-[0.8125rem] text-[var(--nim-text)] font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+                      <div className="file-gutter__file-name text-ui-body text-[var(--nim-text)] font-medium overflow-hidden text-ellipsis whitespace-nowrap">
                         {fileName}
                       </div>
                     </div>
                     {hasStats && (
-                      <div className="file-gutter__file-stats flex items-center gap-1 text-[0.6875rem] shrink-0">
+                      <div className="file-gutter__file-stats flex items-center gap-1 text-ui-caption shrink-0">
                         {file.linesAdded ? (
                           <span className="file-gutter__file-stats-added text-[var(--nim-success)]">+{file.linesAdded}</span>
                         ) : null}
@@ -452,12 +452,12 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
       <div className="file-gutter__header-container flex items-center justify-between gap-2 py-1 px-2">
         <button
           onClick={toggleExpanded}
-          className="file-gutter__header w-full flex items-center justify-between py-1 px-2 text-base font-semibold text-[var(--nim-text-muted)] bg-transparent border-none rounded-ui-base cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
+          className="file-gutter__header w-full flex items-center justify-between py-1 px-2 text-ui-subhead font-semibold text-[var(--nim-text-muted)] bg-transparent border-none rounded-ui-base cursor-pointer transition-all duration-200 hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)]"
         >
           <div className="file-gutter__header-content flex items-center gap-2">
             {getSectionIcon()}
             <span>{label}</span>
-            <span className="file-gutter__count py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded-ui-base text-[9px]">{groupedFiles.length}</span>
+            <span className="file-gutter__count py-0.5 px-1 bg-[var(--nim-bg-tertiary)] rounded-ui-base text-ui-micro">{groupedFiles.length}</span>
           </div>
           <MaterialSymbol
             icon="expand_more"
@@ -528,12 +528,12 @@ export function FileGutter({ sessionId, workspacePath, type, onFileClick, pendin
                     )}
                     {renderGitStatus(file.filePath)}
                     <div className="file-gutter__file-info flex-1 min-w-0">
-                      <div className="file-gutter__file-name text-[0.8125rem] text-[var(--nim-text)] font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+                      <div className="file-gutter__file-name text-ui-body text-[var(--nim-text)] font-medium overflow-hidden text-ellipsis whitespace-nowrap">
                         {fileName}
                       </div>
                     </div>
                     {hasStats && (
-                      <div className="file-gutter__file-stats flex items-center gap-1 text-[0.6875rem] shrink-0">
+                      <div className="file-gutter__file-stats flex items-center gap-1 text-ui-caption shrink-0">
                         {file.linesAdded ? (
                           <span className="file-gutter__file-stats-added text-[var(--nim-success)]">+{file.linesAdded}</span>
                         ) : null}

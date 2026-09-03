@@ -54,7 +54,7 @@ export function NewFileMenu({
         ref={menu.refs.setFloating}
         style={menu.floatingStyles}
         {...menu.getFloatingProps()}
-        className="new-file-menu bg-nim-secondary border border-nim rounded-ui-base shadow-lg p-1 min-w-[180px] z-[10000] text-[13px] backdrop-blur-[10px]"
+        className="new-file-menu bg-nim-secondary border border-nim rounded-ui-base shadow-lg p-1 min-w-[180px] z-[10000] text-ui-body backdrop-blur-[10px]"
       >
         <div
           className="new-file-menu-item flex items-center gap-3 py-2 px-3 rounded-ui-base cursor-pointer transition-colors text-nim hover:bg-nim-hover"

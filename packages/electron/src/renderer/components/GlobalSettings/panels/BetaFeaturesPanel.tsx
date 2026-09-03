@@ -74,13 +74,13 @@ export function BetaFeaturesPanel() {
                   disabled={enableAllBetaFeatures}
                 />
                 <div className="setting-text flex flex-col gap-1">
-                  <span className="setting-name text-sm font-medium text-[var(--nim-text)] flex items-center gap-2">
+                  <span className="setting-name text-ui-body font-medium text-[var(--nim-text)] flex items-center gap-2">
                     {feature.icon && (
-                      <span className="material-symbols-outlined text-sm">{feature.icon}</span>
+                      <span className="material-symbols-outlined text-ui-body">{feature.icon}</span>
                     )}
                     {feature.name}
                   </span>
-                  <span className="setting-description text-xs leading-relaxed text-[var(--nim-text-muted)]">
+                  <span className="setting-description text-ui-compact leading-relaxed text-[var(--nim-text-muted)]">
                     {feature.description}
                   </span>
                 </div>

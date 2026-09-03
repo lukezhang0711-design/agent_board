@@ -223,17 +223,17 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
             </div>
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <h2 className="m-0 text-[18px] font-semibold text-nim">New Blitz</h2>
-                <span className="text-[10px] uppercase tracking-wide text-nim-faint border border-nim rounded-ui-full px-2 py-0.5">
+                <h2 className="m-0 text-ui-title font-semibold text-nim">New Blitz</h2>
+                <span className="text-ui-micro uppercase tracking-wide text-nim-faint border border-nim rounded-ui-full px-2 py-0.5">
                   Beta
                 </span>
               </div>
-              <p className="m-0 text-[12px] text-nim-muted max-w-[24rem]">
+              <p className="m-0 text-ui-compact text-nim-muted max-w-[24rem]">
                 Run a single prompt across multiple worktrees and compare the outcomes side-by-side.
               </p>
             </div>
           </div>
-          <span className="text-[11px] text-nim-faint px-3 py-1 rounded-ui-full border border-nim bg-nim-tertiary">
+          <span className="text-ui-caption text-nim-faint px-3 py-1 rounded-ui-full border border-nim bg-nim-tertiary">
             Max 10 worktrees
           </span>
         </div>
@@ -243,19 +243,19 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
           {/* Prompt */}
           <div className="flex flex-col gap-2 rounded-ui-lg border border-nim bg-nim-secondary p-4">
             <div className="flex items-center justify-between gap-2">
-              <label className="text-[13px] font-medium text-nim">Prompt</label>
-              <span className="text-[11px] text-nim-faint">Cmd+Enter to start</span>
+              <label className="text-ui-body font-medium text-nim">Prompt</label>
+              <span className="text-ui-caption text-nim-faint">Cmd+Enter to start</span>
             </div>
             <textarea
               ref={textareaRef}
-              className="w-full p-3 text-[14px] bg-nim border border-nim rounded-ui-lg text-nim resize-none outline-none focus:border-nim-focus transition-colors placeholder:text-nim-faint"
+              className="w-full p-3 text-ui-body bg-nim border border-nim rounded-ui-lg text-nim resize-none outline-none focus:border-nim-focus transition-colors placeholder:text-nim-faint"
               rows={4}
               placeholder="Enter the prompt to run across all sessions..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               disabled={creating}
             />
-            <div className="text-[11px] text-nim-faint">
+            <div className="text-ui-caption text-nim-faint">
               Tip: Be explicit about scope and acceptance criteria.
             </div>
           </div>
@@ -263,18 +263,18 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
           {/* Models */}
           <div className="flex flex-col gap-3 rounded-ui-lg border border-nim bg-nim-secondary p-4">
             <div className="flex items-center justify-between gap-2">
-              <label className="text-[13px] font-medium text-nim">Models</label>
+              <label className="text-ui-body font-medium text-nim">Models</label>
               {selectedModels.length > 0 && (
-                <div className={`text-[11px] ${totalWorktrees > 10 ? 'text-nim-error' : 'text-nim-faint'}`}>
+                <div className={`text-ui-caption ${totalWorktrees > 10 ? 'text-nim-error' : 'text-nim-faint'}`}>
                   Total: {totalWorktrees} worktree{totalWorktrees !== 1 ? 's' : ''}
                   {totalWorktrees > 10 && ' (maximum 10)'}
                 </div>
               )}
             </div>
             {loading ? (
-              <div className="text-[13px] text-nim-faint py-3">Loading models...</div>
+              <div className="text-ui-body text-nim-faint py-3">Loading models...</div>
             ) : modelSelections.length === 0 ? (
-              <div className="text-[13px] text-nim-faint py-3">No agent models available. Configure API keys in Settings.</div>
+              <div className="text-ui-body text-nim-faint py-3">No agent models available. Configure API keys in Settings.</div>
             ) : (
               <div className="max-h-[260px] overflow-y-auto pr-1">
                 <div className="flex flex-col gap-2">
@@ -295,7 +295,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
                         disabled={creating}
                       />
                       <span className="shrink-0">{getProviderIcon(model.provider, { size: 14 })}</span>
-                      <span className="text-[13px] text-nim truncate">{getModelDisplayName(model)}</span>
+                      <span className="text-ui-body text-nim truncate">{getModelDisplayName(model)}</span>
                       <input
                         type="number"
                         min={1}
@@ -303,7 +303,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
                         value={model.count}
                         onChange={(e) => updateCount(model.id, parseInt(e.target.value) || 1)}
                         disabled={!model.checked || creating}
-                        className={`w-14 px-2 py-1 text-center text-[13px] bg-nim-secondary border border-nim rounded-ui-base text-nim outline-none focus:border-nim-focus ${
+                        className={`w-14 px-2 py-1 text-center text-ui-body bg-nim-secondary border border-nim rounded-ui-base text-nim outline-none focus:border-nim-focus ${
                           !model.checked ? 'opacity-30' : ''
                         }`}
                       />
@@ -312,19 +312,19 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
                 </div>
               </div>
             )}
-            <div className="text-[11px] text-nim-faint">
+            <div className="text-ui-caption text-nim-faint">
               Choose up to 5 sessions per model.
             </div>
           </div>
 
           {/* Analysis Model */}
           <div className="flex flex-col gap-2 rounded-ui-lg border border-nim bg-nim-secondary p-4">
-            <label className="text-[13px] font-medium text-nim">Analysis Model</label>
-            <p className="m-0 text-[11px] text-nim-muted">
+            <label className="text-ui-body font-medium text-nim">Analysis Model</label>
+            <p className="m-0 text-ui-caption text-nim-muted">
               When all sessions complete, an analysis session compares the results.
             </p>
             <select
-              className="w-full px-3 py-2 text-[13px] bg-nim border border-nim rounded-ui-lg text-nim outline-none focus:border-nim-focus transition-colors cursor-pointer"
+              className="w-full px-3 py-2 text-ui-body bg-nim border border-nim rounded-ui-lg text-nim outline-none focus:border-nim-focus transition-colors cursor-pointer"
               value={analysisModel}
               onChange={(e) => setAnalysisModel(e.target.value)}
               disabled={creating || loading || modelSelections.length === 0}
@@ -341,7 +341,7 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
 
           {/* Error */}
           {error && (
-            <div className="text-[13px] text-nim-error p-3 bg-nim-error/10 border border-nim-error/30 rounded-ui-lg select-text">
+            <div className="text-ui-body text-nim-error p-3 bg-nim-error/10 border border-nim-error/30 rounded-ui-lg select-text">
               {error}
             </div>
           )}
@@ -350,20 +350,20 @@ export const BlitzDialog: React.FC<BlitzDialogProps> = ({
         {/* Footer */}
         <div className="nim-modal-footer">
           <button
-            className="nim-btn-secondary px-5 py-2 text-sm font-medium rounded-ui-lg"
+            className="nim-btn-secondary px-5 py-2 text-ui-body font-medium rounded-ui-lg"
             onClick={onClose}
             disabled={creating}
           >
             Cancel
           </button>
           <button
-            className="nim-btn-primary px-5 py-2 text-sm font-semibold rounded-ui-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="nim-btn-primary px-5 py-2 text-ui-body font-semibold rounded-ui-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleSubmit}
             disabled={!isValid || creating}
           >
             {creating ? (
               <>
-                <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                <span className="material-symbols-outlined text-ui-body animate-spin">progress_activity</span>
                 Creating...
               </>
             ) : (

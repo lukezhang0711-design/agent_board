@@ -86,8 +86,8 @@ function CreateTeamDialogWrapper({
       >
         {/* Header */}
         <div className="px-6 pt-5 pb-0">
-          <h3 className="text-lg font-semibold text-[var(--nim-text)] mb-1">Create Team</h3>
-          <p className="text-[13px] text-[var(--nim-text-faint)] mb-5">
+          <h3 className="text-ui-title font-semibold text-[var(--nim-text)] mb-1">Create Team</h3>
+          <p className="text-ui-body text-[var(--nim-text-faint)] mb-5">
             Team members can collaborate on shared tracker items and documents.
           </p>
         </div>
@@ -97,13 +97,13 @@ function CreateTeamDialogWrapper({
           {/* Account Picker (only shown with multiple accounts) */}
           {showAccountPicker && (
             <div className="mb-4">
-              <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-2">
+              <label className="block text-ui-compact font-medium text-[var(--nim-text-muted)] mb-2">
                 Account
               </label>
               <select
                 value={selectedAccountOrgId}
                 onChange={(e) => setSelectedAccountOrgId(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-[13px] outline-none focus:border-[var(--nim-primary)] cursor-pointer"
+                className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-ui-body outline-none focus:border-[var(--nim-primary)] cursor-pointer"
               >
                 {data.accounts.map((account) => (
                   <option key={account.personalOrgId} value={account.personalOrgId}>
@@ -111,7 +111,7 @@ function CreateTeamDialogWrapper({
                   </option>
                 ))}
               </select>
-              <div className="text-[11px] text-[var(--nim-text-disabled)] mt-1">
+              <div className="text-ui-caption text-[var(--nim-text-disabled)] mt-1">
                 The team will be created under this account.
               </div>
             </div>
@@ -119,7 +119,7 @@ function CreateTeamDialogWrapper({
 
           {/* Team Name */}
           <div className="mb-4">
-            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-2">
+            <label className="block text-ui-compact font-medium text-[var(--nim-text-muted)] mb-2">
               Team Name
             </label>
             <input
@@ -127,43 +127,43 @@ function CreateTeamDialogWrapper({
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-[13px] outline-none focus:border-[var(--nim-primary)]"
+              className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] text-ui-body outline-none focus:border-[var(--nim-primary)]"
               autoFocus
             />
-            <div className="text-[11px] text-[var(--nim-text-disabled)] mt-1">
+            <div className="text-ui-caption text-[var(--nim-text-disabled)] mt-1">
               Visible to all team members.
             </div>
           </div>
 
           {/* Git Remote */}
           <div className="mb-4">
-            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-2">
+            <label className="block text-ui-compact font-medium text-[var(--nim-text-muted)] mb-2">
               Git Remote
             </label>
-            <div className="w-full px-3 py-2 border border-[var(--nim-bg-tertiary)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] text-[12px] font-mono">
+            <div className="w-full px-3 py-2 border border-[var(--nim-bg-tertiary)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-text-faint)] text-ui-compact font-mono">
               {data.gitRemote}
             </div>
             <div className="flex items-center gap-2 mt-1">
               <div className="w-1.5 h-1.5 rounded-ui-full bg-[var(--nim-success)]" />
-              <span className="text-[11px] text-[var(--nim-success)]">
+              <span className="text-ui-caption text-[var(--nim-success)]">
                 Detected from git remote origin
               </span>
             </div>
-            <div className="text-[11px] text-[var(--nim-text-disabled)] mt-2">
+            <div className="text-ui-caption text-[var(--nim-text-disabled)] mt-2">
               Any team member who opens a clone of this repo will be automatically connected.
             </div>
           </div>
 
           {/* Encryption Info */}
           <div className="mb-0">
-            <label className="block text-[12px] font-medium text-[var(--nim-text-muted)] mb-2">
+            <label className="block text-ui-compact font-medium text-[var(--nim-text-muted)] mb-2">
               Encryption
             </label>
             <div className="flex items-start gap-2 p-3 bg-[var(--nim-bg-secondary)] rounded-ui-base border border-[var(--nim-bg-tertiary)]">
               <MaterialSymbol icon="lock" size={16} className="text-[var(--nim-success)] shrink-0 mt-1" />
               <div>
-                <div className="text-[12px] font-medium text-[var(--nim-text)] mb-1">E2E Encrypted</div>
-                <div className="text-[11px] text-[var(--nim-text-faint)] leading-snug">
+                <div className="text-ui-compact font-medium text-[var(--nim-text)] mb-1">E2E Encrypted</div>
+                <div className="text-ui-caption text-[var(--nim-text-faint)] leading-snug">
                   A unique encryption key will be generated for this team. Keys are shared securely via ECDH exchange when members join.
                 </div>
               </div>
@@ -175,14 +175,14 @@ function CreateTeamDialogWrapper({
         <div className="flex justify-end gap-2 px-6 py-5 border-t border-[var(--nim-border)] mt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-[13px] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+            className="px-4 py-2 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-ui-body cursor-pointer hover:bg-[var(--nim-bg-hover)]"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={!teamName.trim()}
-            className={`px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-[13px] font-medium ${
+            className={`px-5 py-2 bg-[var(--nim-primary)] border-none rounded-ui-base text-white text-ui-body font-medium ${
               teamName.trim()
                 ? 'cursor-pointer opacity-100'
                 : 'cursor-not-allowed opacity-50'

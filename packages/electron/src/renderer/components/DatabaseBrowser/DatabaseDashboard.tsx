@@ -148,10 +148,10 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
   if (error) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4">
-        <div className="text-[var(--nim-error)] text-sm">{error}</div>
+        <div className="text-[var(--nim-error)] text-ui-body">{error}</div>
         <button
           onClick={loadStats}
-          className="py-2 px-4 rounded-ui-base text-sm border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+          className="py-2 px-4 rounded-ui-base text-ui-body border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
         >
           Retry
         </button>
@@ -171,10 +171,10 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Database Overview</h2>
+          <h2 className="text-ui-title font-semibold">Database Overview</h2>
           <button
             onClick={loadStats}
-            className="py-1 px-3 rounded-ui-base text-sm border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+            className="py-1 px-3 rounded-ui-base text-ui-body border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
           >
             Refresh
           </button>
@@ -183,42 +183,42 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
           <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
-            <div className="text-sm text-[var(--nim-text-muted)] mb-1">Total Size</div>
-            <div className="text-2xl font-semibold">{stats.totalSize}</div>
+            <div className="text-ui-body text-[var(--nim-text-muted)] mb-1">Total Size</div>
+            <div className="text-ui-headline font-semibold">{stats.totalSize}</div>
           </div>
           <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
-            <div className="text-sm text-[var(--nim-text-muted)] mb-1">Tables</div>
-            <div className="text-2xl font-semibold">{stats.tableStats.length}</div>
+            <div className="text-ui-body text-[var(--nim-text-muted)] mb-1">Tables</div>
+            <div className="text-ui-headline font-semibold">{stats.tableStats.length}</div>
           </div>
           <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
-            <div className="text-sm text-[var(--nim-text-muted)] mb-1">Total Rows</div>
-            <div className="text-2xl font-semibold">{totalRows.toLocaleString()}</div>
+            <div className="text-ui-body text-[var(--nim-text-muted)] mb-1">Total Rows</div>
+            <div className="text-ui-headline font-semibold">{totalRows.toLocaleString()}</div>
           </div>
         </div>
 
         {/* Backup Status */}
         {stats.backupStatus && (
           <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
-            <h3 className="text-sm font-semibold mb-3">Backup Status</h3>
+            <h3 className="text-ui-body font-semibold mb-3">Backup Status</h3>
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-ui-body">
                 <span className="text-[var(--nim-text-muted)]">Available Backups</span>
                 <span>{backupCount} of 3</span>
               </div>
               {stats.backupStatus.lastSuccessfulBackup && (
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-ui-body">
                   <span className="text-[var(--nim-text-muted)]">Last Successful Backup</span>
                   <span>{formatRelativeTime(stats.backupStatus.lastSuccessfulBackup)}</span>
                 </div>
               )}
               {stats.backupStatus.currentBackup && (
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-ui-body">
                   <span className="text-[var(--nim-text-muted)]">Current Backup Size</span>
                   <span>{formatBytes(getBackupSizeBytes(stats.backupStatus.currentBackup))}</span>
                 </div>
               )}
               {backupCount === 0 && (
-                <div className="text-sm text-[var(--nim-text-faint)]">
+                <div className="text-ui-body text-[var(--nim-text-faint)]">
                   No backups have been created yet. Backups are created automatically every 4 hours.
                 </div>
               )}
@@ -238,8 +238,8 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
           const overFloor = cur > minBytes * 1.05;
           return (
             <div className="database-dashboard-wal p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
-              <h3 className="text-sm font-semibold mb-3">Write-Ahead Log</h3>
-              <div className="space-y-2 text-sm">
+              <h3 className="text-ui-body font-semibold mb-3">Write-Ahead Log</h3>
+              <div className="space-y-2 text-ui-body">
                 <div className="flex items-center justify-between">
                   <span className="text-[var(--nim-text-muted)]">Current size</span>
                   <span data-testid="wal-current-size">
@@ -252,7 +252,7 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
                     style={{ width: `${Math.max(pct, 1)}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-xs text-[var(--nim-text-faint)]">
+                <div className="flex items-center justify-between text-ui-compact text-[var(--nim-text-faint)]">
                   <span>min {stats.walStats.minWalSize}</span>
                   <span>max {stats.walStats.maxWalSize}</span>
                 </div>
@@ -261,7 +261,7 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
                   <span>{stats.walStats.checkpointTimeout}</span>
                 </div>
                 {stats.walStats.description && (
-                  <div className="text-xs text-[var(--nim-text-faint)] pt-1">
+                  <div className="text-ui-compact text-[var(--nim-text-faint)] pt-1">
                     {stats.walStats.description}
                   </div>
                 )}
@@ -273,11 +273,11 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
         {/* Table Statistics */}
         <div className="rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary overflow-hidden">
           <div className="p-4 border-b border-[var(--nim-border)]">
-            <h3 className="text-sm font-semibold">Tables by Size</h3>
+            <h3 className="text-ui-body font-semibold">Tables by Size</h3>
           </div>
           <div className="divide-y divide-[var(--nim-border)]">
             {stats.tableStats.length === 0 ? (
-              <div className="p-4 text-sm text-[var(--nim-text-muted)]">No tables found</div>
+              <div className="p-4 text-ui-body text-[var(--nim-text-muted)]">No tables found</div>
             ) : (
               stats.tableStats.map((table) => {
                 const percentage = stats.totalSizeBytes > 0
@@ -291,8 +291,8 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
                     onClick={() => onTableSelect(table.name)}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-sm">{table.name}</span>
-                      <div className="flex items-center gap-4 text-sm text-[var(--nim-text-muted)]">
+                      <span className="font-medium text-ui-body">{table.name}</span>
+                      <div className="flex items-center gap-4 text-ui-body text-[var(--nim-text-muted)]">
                         <span>{table.rowCount.toLocaleString()} rows</span>
                         <span className="w-20 text-right">{table.size}</span>
                       </div>
@@ -313,14 +313,14 @@ export function DatabaseDashboard({ onTableSelect }: Props) {
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
-            <div className="text-sm text-[var(--nim-text-muted)] mb-1">AI Sessions</div>
-            <div className="text-xl font-semibold">
+            <div className="text-ui-body text-[var(--nim-text-muted)] mb-1">AI Sessions</div>
+            <div className="text-ui-title font-semibold">
               {parseInt(stats.basicStats?.ai_sessions_count || '0').toLocaleString()}
             </div>
           </div>
           <div className="p-4 rounded-ui-lg border border-[var(--nim-border)] bg-nim-secondary">
-            <div className="text-sm text-[var(--nim-text-muted)] mb-1">Document History Entries</div>
-            <div className="text-xl font-semibold">
+            <div className="text-ui-body text-[var(--nim-text-muted)] mb-1">Document History Entries</div>
+            <div className="text-ui-title font-semibold">
               {parseInt(stats.basicStats?.history_count || '0').toLocaleString()}
             </div>
           </div>

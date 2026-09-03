@@ -657,7 +657,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
               <input
                 ref={renameInputRef}
                 type="text"
-                className="w-full px-1 py-0.5 text-xs font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
+                className="w-full px-1 py-0.5 text-ui-compact font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
                 value={renameValue}
                 onChange={(e) => setRenameValue(e.target.value)}
                 onKeyDown={handleRenameKeyDown}
@@ -665,7 +665,7 @@ function SessionKanbanCard({ session, onSelect, onArchive, onRename, phaseColor,
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <div className="text-xs font-medium text-nim leading-snug line-clamp-2">
+              <div className="text-ui-compact font-medium text-nim leading-snug line-clamp-2">
                 {session.title}
               </div>
             )}
@@ -1277,7 +1277,7 @@ function SessionKanbanToolbar({ selectedCount, onClearSelection }: { selectedCou
     <div className="flex items-center gap-2 px-3 py-2 border-b border-nim bg-nim shrink-0" data-testid="kanban-toolbar">
       {/* Scope Title with PageHeader styling */}
       <div className="flex items-center gap-2 shrink-0 pr-2 border-r border-nim" data-testid="kanban-scope-header">
-        <span className="text-xs font-semibold text-nim">看板</span>
+        <span className="text-ui-compact font-semibold text-nim">看板</span>
         <span className="text-ui-caption text-nim-faint">本次派发相关</span>
       </div>
 
@@ -1412,7 +1412,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
     onOpenChange: (open) => { if (!open) onClose(); },
   });
 
-  const menuItemClass = 'flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0';
+  const menuItemClass = 'flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-ui-body cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)] [&_svg]:shrink-0';
   const count = sessionIds.length;
 
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
@@ -1429,7 +1429,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
           className="z-[1000] min-w-[160px] p-1 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
           onMouseLeave={onClose}
         >
-          <div className="px-3 py-2 text-[0.8125rem] text-[var(--nim-text-faint)] italic">
+          <div className="px-3 py-2 text-ui-body text-[var(--nim-text-faint)] italic">
             本列暂无会话
           </div>
         </div>
@@ -1484,7 +1484,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
               {SESSION_PHASE_COLUMNS.filter(col => col.value !== phase).map((col) => (
                 <button
                   key={col.value}
-                  className={`flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
+                  className={`flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text)] text-ui-body cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
                   onClick={(e) => { e.stopPropagation(); onClose(); onMoveAll(sessionIds, col.value); }}
                 >
                   <span className="w-2 h-2 rounded-ui-full shrink-0" style={{ backgroundColor: col.color }} />
@@ -1495,7 +1495,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
                 <>
                   <div className="h-px bg-[var(--nim-border)] my-1" />
                   <button
-                    className={`flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text-faint)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
+                    className={`flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-text-faint)] text-ui-body cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]`}
                     onClick={(e) => { e.stopPropagation(); onClose(); onRemovePhase(sessionIds); }}
                   >
                     <MaterialSymbol icon="close" size={14} />
@@ -1511,7 +1511,7 @@ function ColumnHeaderContextMenu({ phase, sessionIds, position, onClose, onSelec
 
         {/* Archive all */}
         <button
-          className="flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-error)] text-[0.8125rem] cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-error)] hover:text-white [&_svg]:shrink-0"
+          className="flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none rounded-ui-base text-[var(--nim-error)] text-ui-body cursor-pointer text-left transition-colors duration-150 hover:bg-[var(--nim-error)] hover:text-white [&_svg]:shrink-0"
           onClick={(e) => { e.stopPropagation(); onClose(); onArchiveAll(sessionIds); }}
         >
           <MaterialSymbol icon="archive" size={14} />
@@ -2139,7 +2139,7 @@ export const SessionKanbanBoard: React.FC<SessionKanbanBoardProps> = ({ onSessio
         <div className="flex-1 flex items-center justify-center text-nim-muted" data-testid="kanban-empty-state">
           <div className="text-center max-w-[300px]">
             <MaterialSymbol icon="view_kanban" size={48} className="opacity-30" />
-            <p className="mt-2 text-sm">看板上暂无会话</p>
+            <p className="mt-2 text-ui-body">看板上暂无会话</p>
           </div>
         </div>
       ) : (

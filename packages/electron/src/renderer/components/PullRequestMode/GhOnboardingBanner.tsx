@@ -84,23 +84,23 @@ export function GhOnboardingBanner({
       <div className="flex-1 min-w-0">
         {notInstalled ? (
           <>
-            <div className="font-medium text-nim text-sm">GitHub CLI is required</div>
-            <div className="text-nim-muted text-xs mt-1">
+            <div className="font-medium text-nim text-ui-body">GitHub CLI is required</div>
+            <div className="text-nim-muted text-ui-compact mt-1">
               PR review uses your <code className="font-mono">gh</code> CLI for all GitHub access.
               Nimbalyst stores no tokens.
             </div>
           </>
         ) : (
           <>
-            <div className="font-medium text-nim text-sm">Sign in to GitHub</div>
-            <div className="text-nim-muted text-xs mt-1 flex items-center gap-2 flex-wrap">
+            <div className="font-medium text-nim text-ui-body">Sign in to GitHub</div>
+            <div className="text-nim-muted text-ui-compact mt-1 flex items-center gap-2 flex-wrap">
               Run
               <code className="font-mono bg-nim-bg-primary px-2 py-0.5 rounded-ui-base text-nim">
                 {GH_LOGIN_COMMAND}
               </code>
               <button
                 type="button"
-                className="text-nim-accent hover:underline text-xs"
+                className="text-nim-accent hover:underline text-ui-compact"
                 onClick={handleCopyCommand}
                 title="Copy command"
               >
@@ -116,7 +116,7 @@ export function GhOnboardingBanner({
         {notInstalled && (
           <button
             type="button"
-            className="nim-button text-xs px-3 py-2"
+            className="nim-button text-ui-compact px-3 py-2"
             onClick={handleInstallClick}
           >
             Install gh
@@ -124,7 +124,7 @@ export function GhOnboardingBanner({
         )}
         <button
           type="button"
-          className="nim-button-secondary text-xs px-3 py-2"
+          className="nim-button-secondary text-ui-compact px-3 py-2"
           onClick={handleRecheck}
           disabled={isRechecking}
         >

@@ -27,9 +27,9 @@ export const SETTINGS_ALPHA_TOOLTIP =
 const PILL_BASE = 'inline-flex items-center font-medium lowercase bg-[var(--nim-bg-tertiary)] border border-[var(--nim-border)]';
 
 const SIZE_CLASSES: Record<NonNullable<AlphaBadgeProps['size']>, string> = {
-  xs: `${PILL_BASE} px-2 py-px rounded-full text-[10px] text-[var(--nim-text-faint)]`,
-  sm: `${PILL_BASE} px-3 py-0.5 rounded-full text-[11px] text-[var(--nim-text-muted)] align-middle`,
-  dot: 'inline-flex items-center justify-center text-[10px] leading-none font-semibold text-[var(--nim-text-faint)]',
+  xs: `${PILL_BASE} px-2 py-px rounded-full text-ui-micro text-[var(--nim-text-faint)]`,
+  sm: `${PILL_BASE} px-3 py-0.5 rounded-full text-ui-caption text-[var(--nim-text-muted)] align-middle`,
+  dot: 'inline-flex items-center justify-center text-ui-micro leading-none font-semibold text-[var(--nim-text-faint)]',
 };
 
 export const AlphaBadge: React.FC<AlphaBadgeProps> = ({
@@ -63,11 +63,11 @@ export const AlphaBadge: React.FC<AlphaBadgeProps> = ({
         <FloatingPortal>
           <div
             ref={refs.setFloating}
-            className="help-tooltip pointer-events-none z-[10002] max-w-[320px] px-3 py-3 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.15),0_2px_4px_rgba(0,0,0,0.1)] text-xs leading-normal text-[var(--nim-text-muted)] whitespace-pre-wrap"
+            className="help-tooltip pointer-events-none z-[10002] max-w-[320px] px-3 py-3 bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.15),0_2px_4px_rgba(0,0,0,0.1)] text-ui-compact leading-normal text-[var(--nim-text-muted)] whitespace-pre-wrap"
             style={floatingStyles}
             {...getFloatingProps()}
           >
-            <div className="mb-1 text-[13px] font-semibold text-[var(--nim-text)]">Alpha</div>
+            <div className="mb-1 text-ui-body font-semibold text-[var(--nim-text)]">Alpha</div>
             {tooltip}
           </div>
         </FloatingPortal>

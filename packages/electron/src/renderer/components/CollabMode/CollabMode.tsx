@@ -489,8 +489,8 @@ const CollabModeInner = forwardRef<CollabModeRef, CollabModeProps>(function Coll
           <div className="flex-1 flex items-center justify-center text-nim-muted">
             <div className="text-center">
               <MaterialSymbol icon="cloud_sync" size={48} className="text-nim-faint mb-3" />
-              <p className="text-base m-0">Select a shared document</p>
-              <p className="text-sm text-nim-faint mt-1 m-0">
+              <p className="text-ui-subhead m-0">Select a shared document</p>
+              <p className="text-ui-body text-nim-faint mt-1 m-0">
                 Choose a document from the sidebar to start collaborating
               </p>
             </div>

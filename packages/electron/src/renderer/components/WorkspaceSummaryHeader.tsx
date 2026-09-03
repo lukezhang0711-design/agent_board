@@ -46,11 +46,11 @@ export function WorkspaceSummaryHeader({
       >
         <div className="workspace-summary-header-top flex items-start gap-2">
           <div className="workspace-summary-header-title-row flex items-baseline gap-3 min-w-0 flex-1">
-            <h3 className="workspace-summary-header-name m-0 text-[15px] font-bold text-[var(--nim-text)] overflow-hidden text-ellipsis whitespace-nowrap tracking-tight leading-tight">
+            <h3 className="workspace-summary-header-name m-0 text-ui-subhead font-bold text-[var(--nim-text)] overflow-hidden text-ellipsis whitespace-nowrap tracking-tight leading-tight">
               {displayName}
             </h3>
             {subtitle ? (
-              <span className="workspace-summary-header-subtitle text-[13px] font-medium text-[var(--nim-text-muted)] opacity-70 whitespace-nowrap">
+              <span className="workspace-summary-header-subtitle text-ui-body font-medium text-[var(--nim-text-muted)] opacity-70 whitespace-nowrap">
                 {subtitle}
               </span>
             ) : null}
@@ -62,7 +62,7 @@ export function WorkspaceSummaryHeader({
           ) : null}
         </div>
         <div
-          className="workspace-summary-header-path mt-1 text-[11px] text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap opacity-75 font-normal"
+          className="workspace-summary-header-path mt-1 text-ui-caption text-[var(--nim-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap opacity-75 font-normal"
           title={workspacePath}
         >
           {workspacePath}

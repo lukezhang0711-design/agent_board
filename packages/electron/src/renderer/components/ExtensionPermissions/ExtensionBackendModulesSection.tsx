@@ -128,7 +128,7 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
   if (modules.length === 0) return null;
   if (!api) {
     return (
-      <div className="ext-backend-modules-section mb-5 text-xs text-[var(--nim-text-faint)] italic">
+      <div className="ext-backend-modules-section mb-5 text-ui-compact text-[var(--nim-text-faint)] italic">
         Privileged capabilities API not loaded yet. Restart Nimbalyst to manage backend module permissions.
       </div>
     );
@@ -136,7 +136,7 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
 
   return (
     <div className="ext-backend-modules-section mb-5">
-      <div className="text-xs font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">
+      <div className="text-ui-compact font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide mb-3">
         Privileged Capabilities
       </div>
 
@@ -158,23 +158,23 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
               className="ext-backend-module bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base p-3"
             >
               <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-[var(--nim-text)]">
+                <div className="flex items-center gap-2 text-ui-body font-medium text-[var(--nim-text)]">
                   <MaterialSymbol icon="memory" size={16} />
                   {mod.id}
-                  <span className="text-xs text-[var(--nim-text-faint)] font-mono">
+                  <span className="text-ui-compact text-[var(--nim-text-faint)] font-mono">
                     ({mod.runtime})
                   </span>
                 </div>
                 {stateDescription && (
                   <span
-                    className={`ext-backend-module-state text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-ui-base ${stateDescription.classes}`}
+                    className={`ext-backend-module-state text-ui-micro font-semibold uppercase tracking-wider px-2 py-0.5 rounded-ui-base ${stateDescription.classes}`}
                   >
                     {stateDescription.label}
                   </span>
                 )}
               </div>
 
-              <p className="m-0 mb-3 text-xs text-[var(--nim-text-muted)] leading-relaxed">
+              <p className="m-0 mb-3 text-ui-compact text-[var(--nim-text-muted)] leading-relaxed">
                 {mod.enablement.purpose}
               </p>
 
@@ -185,14 +185,14 @@ export const ExtensionBackendModulesSection: React.FC<ExtensionBackendModulesSec
                     return (
                       <div
                         key={permId}
-                        className="text-xs text-[var(--nim-text-faint)] italic"
+                        className="text-ui-compact text-[var(--nim-text-faint)] italic"
                       >
                         Unknown permission: {permId}
                       </div>
                     );
                   }
                   return (
-                    <div key={permId} className="flex items-start gap-2 text-xs">
+                    <div key={permId} className="flex items-start gap-2 text-ui-compact">
                       <span className={`mt-px ${RISK_TEXT[d.risk]}`}>
                         <MaterialSymbol icon="shield" size={12} />
                       </span>
@@ -240,7 +240,7 @@ const ScopePill: React.FC<{
   if (disabledReason) {
     return (
       <span
-        className="ext-backend-module-scope-pill px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-faint)] italic"
+        className="ext-backend-module-scope-pill px-2 py-1 text-ui-compact rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-faint)] italic"
         title={disabledReason}
       >
         {label}: n/a
@@ -249,13 +249,13 @@ const ScopePill: React.FC<{
   }
   if (!enabled) {
     return (
-      <span className="ext-backend-module-scope-pill px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-muted)]">
+      <span className="ext-backend-module-scope-pill px-2 py-1 text-ui-compact rounded-ui-base border border-[var(--nim-border)] text-[var(--nim-text-muted)]">
         {label}: not enabled
       </span>
     );
   }
   return (
-    <span className="ext-backend-module-scope-pill inline-flex items-center gap-1 px-2 py-1 text-xs rounded-ui-base border border-[var(--nim-success)] text-[var(--nim-success)]">
+    <span className="ext-backend-module-scope-pill inline-flex items-center gap-1 px-2 py-1 text-ui-compact rounded-ui-base border border-[var(--nim-success)] text-[var(--nim-success)]">
       <MaterialSymbol icon="check_circle" size={12} />
       {label}: enabled
       <button

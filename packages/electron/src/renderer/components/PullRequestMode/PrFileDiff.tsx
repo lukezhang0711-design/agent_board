@@ -163,13 +163,13 @@ export function PrFileDiff({ file, isDark, viewType = 'unified' }: PrFileDiffPro
 
   if (parsed.error) {
     return (
-      <div className="px-4 py-6 text-sm text-nim-error">Unable to render diff: {parsed.error}</div>
+      <div className="px-4 py-6 text-ui-body text-nim-error">Unable to render diff: {parsed.error}</div>
     );
   }
 
   if (!parsed.hunks || parsed.hunks.length === 0) {
     return (
-      <div className="px-4 py-6 text-sm text-nim-faint">
+      <div className="px-4 py-6 text-ui-body text-nim-faint">
         No textual changes to display for this file.
       </div>
     );

@@ -112,7 +112,7 @@ export const CodexUsageIndicator: React.FC<CodexUsageIndicatorProps> = ({ classN
           />
         </svg>
         {/* Percentage text */}
-        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-nim">
+        <span className="absolute inset-0 flex items-center justify-center text-ui-micro font-semibold text-nim">
           {limitsAvailable ? `${utilization}%` : '--'}
         </span>
       </button>

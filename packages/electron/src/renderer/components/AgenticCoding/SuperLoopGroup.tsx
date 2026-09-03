@@ -59,7 +59,7 @@ const SuperStatusBadge: React.FC<{ status: SuperLoopStatus }> = memo(({ status }
     pending: 'bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]',
   };
   return (
-    <span className={`text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium ${colorMap[status] || ''}`}>
+    <span className={`text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg font-medium ${colorMap[status] || ''}`}>
       {label}
     </span>
   );
@@ -176,12 +176,12 @@ const SuperIterationRow: React.FC<{
     }`}>
       <ProviderIcon provider="claude-code" size={14} />
     </div>
-    <span className={`flex-1 text-xs text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis ${
+    <span className={`flex-1 text-ui-compact text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis ${
       isActive ? 'font-medium' : ''
     }`}>
       {learning?.summary || iteration.exitReason || `Iteration ${iteration.iterationNumber}`}
     </span>
-    <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)] ml-2">
+    <span className="shrink-0 text-ui-caption text-[var(--nim-text-faint)] ml-2">
       {getRelativeTimeString(iteration.createdAt)}
     </span>
     <div className="shrink-0 flex items-center">
@@ -216,7 +216,7 @@ const SuperBlockedContinueUI: React.FC<{ loopId: string }> = memo(({ loopId }) =
   return (
     <div className="px-3 py-2 mx-2 mr-4 mb-1 rounded-ui-base bg-[var(--nim-bg-secondary)]">
       <textarea
-        className="w-full px-2 py-1 text-xs bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base resize-none text-[var(--nim-text)] placeholder:text-[var(--nim-text-muted)]"
+        className="w-full px-2 py-1 text-ui-compact bg-[var(--nim-bg)] border border-[var(--nim-border)] rounded-ui-base resize-none text-[var(--nim-text)] placeholder:text-[var(--nim-text-muted)]"
         rows={3}
         placeholder="Provide additional context or guidance to help overcome the blocker..."
         value={input}
@@ -224,7 +224,7 @@ const SuperBlockedContinueUI: React.FC<{ loopId: string }> = memo(({ loopId }) =
         disabled={isContinuing}
       />
       <button
-        className="mt-1 px-3 py-1 text-xs bg-[var(--nim-primary)] text-white rounded-ui-base hover:opacity-90 disabled:opacity-50"
+        className="mt-1 px-3 py-1 text-ui-compact bg-[var(--nim-primary)] text-white rounded-ui-base hover:opacity-90 disabled:opacity-50"
         onClick={handleContinue}
         disabled={isContinuing || !input.trim()}
       >
@@ -481,7 +481,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
     >
       {/* Header - matches BlitzGroup/WorkstreamGroup header structure */}
       <div
-        className={`super-loop-group-header flex items-center gap-0 text-[0.8125rem] text-[var(--nim-text)] transition-colors duration-150 rounded-ui-base mx-2 w-[calc(100%-1rem)] ${
+        className={`super-loop-group-header flex items-center gap-0 text-ui-body text-[var(--nim-text)] transition-colors duration-150 rounded-ui-base mx-2 w-[calc(100%-1rem)] ${
           isSelected ? 'bg-[var(--nim-bg-selected)]' : isActive ? 'bg-[var(--nim-bg-selected)]' : 'hover:bg-[var(--nim-bg-hover)]'
         }`}
         onContextMenu={handleContextMenu}
@@ -533,7 +533,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
                 <input
                   ref={renameInputRef}
                   type="text"
-                  className="flex-1 min-w-0 px-1 py-0 text-[0.8125rem] font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
+                  className="flex-1 min-w-0 px-1 py-0 text-ui-body font-medium border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none"
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
                   onKeyDown={handleRenameKeyDown}
@@ -549,7 +549,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
                     <MaterialSymbol icon="push_pin" size={12} className="shrink-0 text-[var(--nim-text-faint)] opacity-70" />
                   )}
                   {loop.isArchived && (
-                    <span className="text-[0.5625rem] px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">archived</span>
+                    <span className="text-ui-micro px-2 py-[0.0625rem] rounded-ui-lg font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-faint)]">archived</span>
                   )}
                 </>
               )}
@@ -558,10 +558,10 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
             </div>
             {/* Subtitle line */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)]">
+              <span className="shrink-0 text-ui-caption text-[var(--nim-text-faint)]">
                 {currentIteration}/{loop.maxIterations} iterations
               </span>
-              <span className="shrink-0 text-[0.6875rem] text-[var(--nim-text-faint)]">
+              <span className="shrink-0 text-ui-caption text-[var(--nim-text-faint)]">
                 {getRelativeTimeString(loop.updatedAt)}
               </span>
             </div>
@@ -652,7 +652,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
               <MaterialSymbol icon="progress_activity" size={16} className="animate-spin text-[var(--nim-text-muted)]" />
             </div>
           ) : iterations.length === 0 ? (
-            <div className="text-center py-3 text-xs text-[var(--nim-text-muted)]">
+            <div className="text-center py-3 text-ui-compact text-[var(--nim-text-muted)]">
               No iterations yet
             </div>
           ) : (
@@ -690,7 +690,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
         >
           {onRename && (
             <button
-              className="flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handleRenameClick}
             >
               <MaterialSymbol icon="edit" size={14} />
@@ -699,7 +699,7 @@ export const SuperLoopGroup: React.FC<SuperLoopGroupProps> = memo(({
           )}
           {onPinToggle && (
             <button
-              className="flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-[0.8125rem] text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+              className="flex items-center gap-2 w-full py-2 px-3 bg-transparent border-none cursor-pointer text-ui-body text-[var(--nim-text)] text-left rounded-ui-base transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
               onClick={handlePinToggle}
             >
               <MaterialSymbol icon="push_pin" size={14} />

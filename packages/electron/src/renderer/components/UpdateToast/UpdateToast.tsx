@@ -98,7 +98,7 @@ export function UpdateToast(): React.ReactElement | null {
               data-testid="update-checking-toast"
             >
               <div className="update-toast-spinner w-5 h-5 border-2 border-[var(--nim-bg-tertiary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin shrink-0" />
-              <div className="update-toast-title text-sm font-semibold text-[var(--nim-text)] mb-0 pr-0">Checking for updates...</div>
+              <div className="update-toast-title text-ui-body font-semibold text-[var(--nim-text)] mb-0 pr-0">Checking for updates...</div>
             </div>
           )}
 
@@ -123,8 +123,8 @@ export function UpdateToast(): React.ReactElement | null {
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
               </div>
-              <div className="update-toast-title text-sm font-semibold text-[var(--nim-text)] mb-1 pr-7">You're up to date!</div>
-              <div className="update-toast-subtitle text-xs text-[var(--nim-text-muted)] leading-normal mb-0">Nimbalyst {currentVersion} is the latest version.</div>
+              <div className="update-toast-title text-ui-body font-semibold text-[var(--nim-text)] mb-1 pr-7">You're up to date!</div>
+              <div className="update-toast-subtitle text-ui-compact text-[var(--nim-text-muted)] leading-normal mb-0">Nimbalyst {currentVersion} is the latest version.</div>
             </div>
           )}
 
@@ -172,9 +172,9 @@ export function UpdateToast(): React.ReactElement | null {
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               </button>
-              <div className="update-toast-title text-sm font-semibold text-[var(--nim-error)] mb-1 pr-7">Update Error</div>
-              <div className="update-toast-subtitle text-xs text-[var(--nim-text-muted)] leading-normal mb-1" data-testid="error-message">{errorMessage}</div>
-              <div className="text-xs text-[var(--nim-text-muted)] leading-normal mb-4">
+              <div className="update-toast-title text-ui-body font-semibold text-[var(--nim-error)] mb-1 pr-7">Update Error</div>
+              <div className="update-toast-subtitle text-ui-compact text-[var(--nim-text-muted)] leading-normal mb-1" data-testid="error-message">{errorMessage}</div>
+              <div className="text-ui-compact text-[var(--nim-text-muted)] leading-normal mb-4">
                 You can <a
                   href="https://nimbalyst.com/download"
                   target="_blank"
@@ -185,7 +185,7 @@ export function UpdateToast(): React.ReactElement | null {
               </div>
               <div className="update-toast-actions flex gap-2 flex-wrap">
                 <button
-                  className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="update-toast-btn update-toast-btn-secondary py-2 px-3 border border-[var(--nim-border)] rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-200 font-[inherit] whitespace-nowrap bg-[var(--nim-bg-tertiary)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={handleDismiss}
                   data-testid="error-dismiss-btn"
                 >

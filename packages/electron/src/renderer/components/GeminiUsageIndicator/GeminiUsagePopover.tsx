@@ -68,10 +68,10 @@ const UsageSection: React.FC<UsageSectionProps> = ({
     <div className="mb-4 last:mb-0">
       <div className="flex justify-between items-baseline mb-1">
         <div>
-          <div className="text-[13px] font-semibold text-nim">{title}</div>
-          <div className="text-[11px] text-nim-muted">{subtitle}</div>
+          <div className="text-ui-body font-semibold text-nim">{title}</div>
+          <div className="text-ui-caption text-nim-muted">{subtitle}</div>
         </div>
-        <div className={`text-[16px] font-semibold ${colors.text}`}>
+        <div className={`text-ui-subhead font-semibold ${colors.text}`}>
           {Math.round(utilization)}%
         </div>
       </div>
@@ -86,7 +86,7 @@ const UsageSection: React.FC<UsageSectionProps> = ({
           title={`${Math.round(timeElapsedPercent)}% of window elapsed`}
         />
       </div>
-      <div className="flex items-center gap-1 text-[11px] text-nim-muted">
+      <div className="flex items-center gap-1 text-ui-caption text-nim-muted">
         <MaterialSymbol icon="schedule" size={12} className="opacity-70" />
         <span>Resets in {formatResetTime(resetsAt)}</span>
       </div>
@@ -154,7 +154,7 @@ export const GeminiUsagePopover: React.FC<GeminiUsagePopoverProps> = ({
             <span className="text-blue-500 flex items-center">
               <MaterialSymbol icon="gemini" size={18} />
             </span>
-            <span className="text-[14px] font-semibold text-nim">Gemini Usage</span>
+            <span className="text-ui-body font-semibold text-nim">Gemini Usage</span>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -178,15 +178,15 @@ export const GeminiUsagePopover: React.FC<GeminiUsagePopoverProps> = ({
         {/* Content */}
         <div className="px-4 py-3">
           {usage.notStarted ? (
-            <div className="text-[13px] text-nim-muted">
+            <div className="text-ui-body text-nim-muted">
               {usage.error || 'Gemini usage will appear after your first request.'}
             </div>
           ) : usage.error ? (
-            <div className="text-[13px] text-nim-error">{usage.error}</div>
+            <div className="text-ui-body text-nim-error">{usage.error}</div>
           ) : (
             <>
               {!limitsAvailable && (
-                <div className="mb-3 text-[12px] text-nim-muted">
+                <div className="mb-3 text-ui-compact text-nim-muted">
                   Usage detected, but Gemini limits are unavailable in recent session data.
                 </div>
               )}
@@ -214,7 +214,7 @@ export const GeminiUsagePopover: React.FC<GeminiUsagePopoverProps> = ({
         <div className="px-4 py-2 border-t border-nim flex flex-col gap-2">
           <div className="flex items-center justify-between">
             {usage.lastUpdated && (
-              <span className="text-[10px] text-nim-faint">
+              <span className="text-ui-micro text-nim-faint">
                 Updated {formatLastUpdated(usage.lastUpdated)}
               </span>
             )}
@@ -223,14 +223,14 @@ export const GeminiUsagePopover: React.FC<GeminiUsagePopoverProps> = ({
                 setUsageIndicatorEnabled(false);
                 onClose();
               }}
-              className="text-[11px] text-nim-muted hover:text-nim transition-colors"
+              className="text-ui-caption text-nim-muted hover:text-nim transition-colors"
             >
               Disable
             </button>
           </div>
           <button
             onClick={() => window.electronAPI.openExternal('https://status.cloud.google.com/')}
-            className="flex items-center gap-1 text-[11px] text-nim-muted hover:text-nim transition-colors"
+            className="flex items-center gap-1 text-ui-caption text-nim-muted hover:text-nim transition-colors"
           >
             <MaterialSymbol icon="open_in_new" size={12} />
             <span>Google Cloud Status</span>

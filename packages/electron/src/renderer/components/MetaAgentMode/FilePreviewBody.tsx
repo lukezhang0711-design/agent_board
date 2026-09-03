@@ -86,7 +86,7 @@ function OpenWithSystemButton({
   return (
     <button
       type="button"
-      className="nim-btn-secondary rounded-ui-base px-3 py-1 text-xs"
+      className="nim-btn-secondary rounded-ui-base px-3 py-1 text-ui-compact"
       onClick={() => onOpenWithSystem(filePath)}
       data-testid="file-preview-open-system-fallback"
     >
@@ -243,7 +243,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
 
   if (state.phase === 'loading') {
     return (
-      <div className="px-4 py-6 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-loading">
+      <div className="px-4 py-6 text-ui-body text-[var(--nim-text-muted)]" data-testid="file-preview-loading">
         正在读取 {fileName(filePath)}…
       </div>
     );
@@ -252,11 +252,11 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
   if (state.phase === 'missing') {
     return (
       <div
-        className="file-preview-body file-preview-missing select-text m-3 rounded-ui-lg border border-dashed border-[var(--nim-warning)] px-4 py-4 text-sm text-[var(--nim-warning)]"
+        className="file-preview-body file-preview-missing select-text m-3 rounded-ui-lg border border-dashed border-[var(--nim-warning)] px-4 py-4 text-ui-body text-[var(--nim-warning)]"
         data-testid="file-preview-missing"
       >
         <div className="font-medium">文件不存在或已移动：</div>
-        <div className="mt-1 break-all font-mono text-xs">{filePath}</div>
+        <div className="mt-1 break-all font-mono text-ui-compact">{filePath}</div>
       </div>
     );
   }
@@ -264,11 +264,11 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
   if (state.phase === 'error') {
     return (
       <div
-        className="file-preview-body file-preview-error select-text m-3 rounded-ui-lg border border-[var(--nim-error)] px-4 py-4 text-sm text-[var(--nim-error)]"
+        className="file-preview-body file-preview-error select-text m-3 rounded-ui-lg border border-[var(--nim-error)] px-4 py-4 text-ui-body text-[var(--nim-error)]"
         data-testid="file-preview-error"
       >
         <div className="font-medium">无法读取这个文件：</div>
-        <div className="mt-1 break-all font-mono text-xs">{filePath}</div>
+        <div className="mt-1 break-all font-mono text-ui-compact">{filePath}</div>
         <div className="mt-1">{state.message}</div>
         <div className="mt-3">
           <OpenWithSystemButton filePath={filePath} onOpenWithSystem={onOpenWithSystem} />
@@ -281,7 +281,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
 
   if (classification.kind === 'markdown') {
     return (
-      <div ref={bodyRef} className="file-preview-body markdown-content select-text px-4 py-3 text-sm" data-testid="file-preview-markdown">
+      <div ref={bodyRef} className="file-preview-body markdown-content select-text px-4 py-3 text-ui-body" data-testid="file-preview-markdown">
         <MarkdownRenderer content={content} />
       </div>
     );
@@ -303,9 +303,9 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
   if (classification.kind === 'pdf') {
     if (!binaryUrl) {
       return (
-        <div className="file-preview-body select-text m-3 rounded-ui-lg border border-nim px-4 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-pdf-fallback">
+        <div className="file-preview-body select-text m-3 rounded-ui-lg border border-nim px-4 py-4 text-ui-body text-[var(--nim-text-muted)]" data-testid="file-preview-pdf-fallback">
           <div>这份 PDF 没法在面板里渲染。</div>
-          <div className="mt-1 break-all font-mono text-xs">{filePath}</div>
+          <div className="mt-1 break-all font-mono text-ui-compact">{filePath}</div>
           <div className="mt-3">
             <OpenWithSystemButton filePath={filePath} onOpenWithSystem={onOpenWithSystem} />
           </div>
@@ -335,11 +335,11 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
             data-testid="file-preview-html-frame"
           />
         ) : (
-          <div className="file-preview-body markdown-content select-text min-h-0 flex-1 overflow-auto px-3 py-2 text-sm" data-testid="file-preview-html-source">
+          <div className="file-preview-body markdown-content select-text min-h-0 flex-1 overflow-auto px-3 py-2 text-ui-body" data-testid="file-preview-html-source">
             <MarkdownRenderer content={toFencedCodeBlock(content, 'markup')} />
           </div>
         )}
-        <div className="shrink-0 border-t border-nim px-3 py-1 text-[11px] text-[var(--nim-text-faint)]" data-testid="file-preview-html-sandbox-note">
+        <div className="shrink-0 border-t border-nim px-3 py-1 text-ui-caption text-[var(--nim-text-faint)]" data-testid="file-preview-html-sandbox-note">
           沙箱渲染：脚本与外联资源已禁用
         </div>
       </div>
@@ -350,7 +350,7 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
     return (
       <div
         ref={bodyRef}
-        className="file-preview-body markdown-content select-text px-3 py-2 text-sm"
+        className="file-preview-body markdown-content select-text px-3 py-2 text-ui-body"
         data-testid="file-preview-code"
         data-language={classification.language ?? ''}
       >
@@ -360,9 +360,9 @@ export const FilePreviewBody: React.FC<FilePreviewBodyProps> = ({
   }
 
   return (
-    <div className="file-preview-body file-preview-unsupported select-text m-3 rounded-ui-lg border border-nim px-4 py-4 text-sm text-[var(--nim-text-muted)]" data-testid="file-preview-unsupported">
+    <div className="file-preview-body file-preview-unsupported select-text m-3 rounded-ui-lg border border-nim px-4 py-4 text-ui-body text-[var(--nim-text-muted)]" data-testid="file-preview-unsupported">
       <div>这个格式没法在面板里预览。</div>
-      <div className="mt-1 break-all font-mono text-xs">{filePath}</div>
+      <div className="mt-1 break-all font-mono text-ui-compact">{filePath}</div>
       <div className="mt-3">
         <OpenWithSystemButton filePath={filePath} onOpenWithSystem={onOpenWithSystem} />
       </div>

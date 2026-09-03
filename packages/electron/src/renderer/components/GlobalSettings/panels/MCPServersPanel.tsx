@@ -131,7 +131,7 @@ function MCPServerIcon({ templateId, name, isDark }: { templateId: string; name:
 
   if (!config) {
     // Fallback to first letter
-    return <span className="mcp-icon-fallback text-sm font-semibold text-[var(--nim-text-muted)] flex items-center justify-center w-full h-full">{name[0]}</span>;
+    return <span className="mcp-icon-fallback text-ui-body font-semibold text-[var(--nim-text-muted)] flex items-center justify-center w-full h-full">{name[0]}</span>;
   }
 
   if (config.type === 'simple-icons') {
@@ -164,7 +164,7 @@ function MCPServerIcon({ templateId, name, isDark }: { templateId: string; name:
 
   if (config.type === 'material-symbol') {
     return (
-      <span className="material-symbols-outlined mcp-icon-material text-xl text-[var(--nim-text-muted)]">
+      <span className="material-symbols-outlined mcp-icon-material text-ui-title text-[var(--nim-text-muted)]">
         {config.icon}
       </span>
     );
@@ -181,7 +181,7 @@ function MCPServerIcon({ templateId, name, isDark }: { templateId: string; name:
     );
   }
 
-  return <span className="mcp-icon-fallback text-sm font-semibold text-[var(--nim-text-muted)] flex items-center justify-center w-full h-full">{name[0]}</span>;
+  return <span className="mcp-icon-fallback text-ui-body font-semibold text-[var(--nim-text-muted)] flex items-center justify-center w-full h-full">{name[0]}</span>;
 }
 
 // Template categories
@@ -1674,15 +1674,15 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
       <div className="mcp-template-selection p-6 h-full overflow-y-auto" role="main" aria-label="Template selection">
         <button
           onClick={handleBackToList}
-          className="mcp-back-button inline-flex items-center gap-2 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.8125rem] cursor-pointer transition-all duration-150 mb-4 hover:bg-[var(--nim-bg-hover)]"
+          className="mcp-back-button inline-flex items-center gap-2 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body cursor-pointer transition-all duration-150 mb-4 hover:bg-[var(--nim-bg-hover)]"
           aria-label="Back to server list"
         >
           ← Back to servers
         </button>
 
         <div className="mcp-template-selection-header mb-6">
-          <h3 className="mcp-template-selection-title text-lg font-semibold text-[var(--nim-text)] m-0 mb-2">Add MCP Server</h3>
-          <p className="mcp-template-selection-description text-sm text-[var(--nim-text-muted)] m-0">
+          <h3 className="mcp-template-selection-title text-ui-title font-semibold text-[var(--nim-text)] m-0 mb-2">Add MCP Server</h3>
+          <p className="mcp-template-selection-description text-ui-body text-[var(--nim-text-muted)] m-0">
             Choose a template to get started quickly, or create a custom configuration.
           </p>
         </div>
@@ -1694,13 +1694,13 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
             value={templateSearch}
             onChange={(e) => setTemplateSearch(e.target.value)}
             placeholder="Search templates..."
-            className="mcp-template-search-input w-full py-3 pl-4 pr-10 border border-[var(--nim-border)] rounded-ui-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.9375rem] placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:outline-none"
+            className="mcp-template-search-input w-full py-3 pl-4 pr-10 border border-[var(--nim-border)] rounded-ui-lg bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-subhead placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:outline-none"
             aria-label="Search MCP server templates"
             autoFocus
           />
           {templateSearch && (
             <button
-              className="mcp-template-search-clear absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-xs cursor-pointer flex items-center justify-center hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
+              className="mcp-template-search-clear absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-none rounded-ui-full bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] text-ui-compact cursor-pointer flex items-center justify-center hover:bg-[var(--nim-text-faint)] hover:text-[var(--nim-bg)]"
               onClick={() => setTemplateSearch('')}
               aria-label="Clear search"
               title="Clear search"
@@ -1713,7 +1713,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {/* Custom/Scratch - always show unless searching */}
         {!templateSearch && (
           <div className="mcp-template-category mb-6">
-            <h4 className="mcp-template-category-title text-xs font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] m-0 mb-3 pb-2 border-b border-[var(--nim-border)]">Custom Configuration</h4>
+            <h4 className="mcp-template-category-title text-ui-compact font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] m-0 mb-3 pb-2 border-b border-[var(--nim-border)]">Custom Configuration</h4>
             <div className="mcp-template-grid grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
               <div
                 className="mcp-template-card mcp-template-scratch-card flex flex-col items-center justify-center min-h-[100px] p-4 border-2 border-dashed border-[var(--nim-border)] rounded-ui-lg bg-transparent cursor-pointer transition-all duration-150 hover:border-[var(--nim-primary)] hover:bg-[color-mix(in_srgb,var(--nim-primary)_5%,transparent)]"
@@ -1728,7 +1728,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                 tabIndex={0}
                 aria-label="Start from scratch - Configure all settings manually"
               >
-                <div className="mcp-template-scratch-text text-sm text-[var(--nim-text-muted)] text-center">
+                <div className="mcp-template-scratch-text text-ui-body text-[var(--nim-text-muted)] text-center">
                   + Start from scratch<br />
                   <small>Configure all settings manually</small>
                 </div>
@@ -1744,7 +1744,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
 
           return (
             <div key={category} className="mcp-template-category mb-6">
-              <h4 className="mcp-template-category-title text-xs font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] m-0 mb-3 pb-2 border-b border-[var(--nim-border)]">{CATEGORY_LABELS[category]}</h4>
+              <h4 className="mcp-template-category-title text-ui-compact font-semibold uppercase tracking-wider text-[var(--nim-text-faint)] m-0 mb-3 pb-2 border-b border-[var(--nim-border)]">{CATEGORY_LABELS[category]}</h4>
               <div className="mcp-template-grid grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3" role="list" aria-label={CATEGORY_LABELS[category]}>
                 {templates.map((template) => {
                   const badge = getAuthBadge(template.authType);
@@ -1764,9 +1764,9 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                       aria-label={`${template.name} - ${template.description} - ${badge.label} authentication`}
                     >
                       <div className="mcp-template-card-header flex items-center gap-3 mb-2">
-                        <div className="mcp-template-card-icon w-8 h-8 rounded-ui-base bg-[var(--nim-bg-tertiary)] flex items-center justify-center text-base shrink-0 overflow-hidden" aria-hidden="true">
+                        <div className="mcp-template-card-icon w-8 h-8 rounded-ui-base bg-[var(--nim-bg-tertiary)] flex items-center justify-center text-ui-subhead shrink-0 overflow-hidden" aria-hidden="true">
                           <MCPServerIcon templateId={template.id} name={template.name} isDark={isDark} />
-                          <span className="mcp-icon-fallback hidden text-sm font-semibold text-[var(--nim-text-muted)]">{template.name[0]}</span>
+                          <span className="mcp-icon-fallback hidden text-ui-body font-semibold text-[var(--nim-text-muted)]">{template.name[0]}</span>
                         </div>
                         <div className="mcp-template-card-name font-semibold text-ui-subhead text-[var(--nim-text)]">{template.name}</div>
                       </div>
@@ -1784,7 +1784,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
 
         {/* No results */}
         {filteredTemplates.length === 0 && templateSearch && (
-          <div className="mcp-template-no-results p-8 text-center text-[var(--nim-text-faint)] text-[0.9375rem]" role="status" aria-live="polite">
+          <div className="mcp-template-no-results p-8 text-center text-[var(--nim-text-faint)] text-ui-subhead" role="status" aria-live="polite">
             No templates match "{templateSearch}"
           </div>
         )}
@@ -1806,7 +1806,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {isNewConfig && (
           <button
             onClick={handleBackToTemplates}
-            className="mcp-back-button inline-flex items-center gap-2 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-[0.8125rem] cursor-pointer transition-all duration-150 mb-4 hover:bg-[var(--nim-bg-hover)]"
+            className="mcp-back-button inline-flex items-center gap-2 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body cursor-pointer transition-all duration-150 mb-4 hover:bg-[var(--nim-bg-hover)]"
             aria-label="Back to template selection"
           >
             ← Back to templates
@@ -1817,12 +1817,12 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {selectedTemplate && (
           <div className="mcp-config-header flex items-center justify-between mb-6 pb-4 border-b border-[var(--nim-border)]">
             <div className="mcp-config-title flex items-center gap-3">
-              <div className="mcp-config-title-icon w-9 h-9 rounded-ui-lg bg-[var(--nim-bg-tertiary)] flex items-center justify-center text-lg overflow-hidden" aria-hidden="true">
+              <div className="mcp-config-title-icon w-9 h-9 rounded-ui-lg bg-[var(--nim-bg-tertiary)] flex items-center justify-center text-ui-title overflow-hidden" aria-hidden="true">
                 <MCPServerIcon templateId={selectedTemplate.id} name={selectedTemplate.name} isDark={isDark} />
               </div>
               <div className="mcp-config-title-text">
-                <h4 className="m-0 text-base font-semibold text-[var(--nim-text)]">{selectedTemplate.name}</h4>
-                <p className="m-0 mt-1 text-xs text-[var(--nim-text-faint)]">{selectedTemplate.description}</p>
+                <h4 className="m-0 text-ui-subhead font-semibold text-[var(--nim-text)]">{selectedTemplate.name}</h4>
+                <p className="m-0 mt-1 text-ui-compact text-[var(--nim-text-faint)]">{selectedTemplate.description}</p>
               </div>
             </div>
             {selectedTemplate.docsUrl && (
@@ -1830,7 +1830,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                 href={selectedTemplate.docsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mcp-docs-link-button inline-flex items-center gap-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)] text-sm no-underline transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                className="mcp-docs-link-button inline-flex items-center gap-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg-secondary)] text-[var(--nim-primary)] text-ui-body no-underline transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                 aria-label={`View documentation for ${selectedTemplate.name}`}
               >
                 View Docs
@@ -1841,7 +1841,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
 
         {/* Server Name */}
         <div className="mcp-form-group mb-6">
-          <label htmlFor="server-name" className="block mb-2 font-medium text-sm text-[var(--nim-text)]">Server Name</label>
+          <label htmlFor="server-name" className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">Server Name</label>
           <input
             id="server-name"
             type="text"
@@ -1850,7 +1850,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
             onBlur={!isNewConfig ? autoSave : undefined}
             placeholder="my-server"
             aria-required="true"
-            className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm"
+            className="w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body"
           />
         </div>
 
@@ -1858,26 +1858,26 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {isOAuth && (
           <div className="mcp-oauth-section p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base mb-4" role="group" aria-label="OAuth Authorization">
             <div className="mcp-oauth-status flex items-center gap-3 mb-3">
-              <span className="mcp-oauth-label text-sm font-medium text-[var(--nim-text)]">Authorization:</span>
+              <span className="mcp-oauth-label text-ui-body font-medium text-[var(--nim-text)]">Authorization:</span>
               {isNativeOAuthConfig && (
-                <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]" role="status">
+                <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]" role="status">
                   Managed by Claude/Codex
                 </span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'checking' && (
-                <span className="mcp-oauth-badge checking inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-nim-primary-subtle text-[var(--nim-primary)]" role="status" aria-live="polite">Checking...</span>
+                <span className="mcp-oauth-badge checking inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-nim-primary-subtle text-[var(--nim-primary)]" role="status" aria-live="polite">Checking...</span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'authorized' && (
-                <span className="mcp-oauth-badge authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-nim-success-subtle text-[var(--nim-success)]" role="status" aria-live="polite">Authorized</span>
+                <span className="mcp-oauth-badge authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-nim-success-subtle text-[var(--nim-success)]" role="status" aria-live="polite">Authorized</span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'not-authorized' && (
-                <span className="mcp-oauth-badge not-authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-nim-warning-subtle text-[var(--nim-warning)]" role="status" aria-live="polite">Not authorized</span>
+                <span className="mcp-oauth-badge not-authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-nim-warning-subtle text-[var(--nim-warning)]" role="status" aria-live="polite">Not authorized</span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'not-required' && (
-                <span className="mcp-oauth-badge not-required inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]" role="status" aria-live="polite">Not required</span>
+                <span className="mcp-oauth-badge not-required inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]" role="status" aria-live="polite">Not required</span>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'unknown' && (
-                <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]" role="status">Unknown</span>
+                <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]" role="status">Unknown</span>
               )}
             </div>
             {isMcpRemoteOAuthConfig && oauthStatus !== 'not-required' && (
@@ -1886,7 +1886,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                 <button
                   onClick={handleAuthorize}
                   disabled={oauthAction !== 'idle'}
-                  className="mcp-oauth-button authorize px-4 py-2 rounded-ui-base text-sm font-medium cursor-pointer transition-all duration-150 bg-[var(--nim-primary)] text-white border-none disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:opacity-90"
+                  className="mcp-oauth-button authorize px-4 py-2 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 bg-[var(--nim-primary)] text-white border-none disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:opacity-90"
                   aria-label="Authorize OAuth connection"
                   aria-busy={oauthAction === 'authorizing'}
                 >
@@ -1897,7 +1897,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                 <button
                   onClick={handleRevoke}
                   disabled={oauthAction !== 'idle'}
-                  className="mcp-oauth-button revoke px-4 py-2 rounded-ui-base text-sm font-medium cursor-pointer transition-all duration-150 bg-transparent text-[var(--nim-error)] border border-[var(--nim-error)] disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:bg-[var(--nim-error)] hover:enabled:text-white"
+                  className="mcp-oauth-button revoke px-4 py-2 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 bg-transparent text-[var(--nim-error)] border border-[var(--nim-error)] disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:bg-[var(--nim-error)] hover:enabled:text-white"
                   aria-label="Revoke OAuth authorization"
                   aria-busy={oauthAction === 'revoking'}
                 >
@@ -1907,17 +1907,17 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
               </div>
             )}
             {isNativeOAuthConfig && (
-              <div className="mcp-oauth-hint text-xs text-[var(--nim-text-faint)] leading-snug" role="note">
+              <div className="mcp-oauth-hint text-ui-compact text-[var(--nim-text-faint)] leading-snug" role="note">
                 This server uses native MCP OAuth. Start a Claude or Codex session and let the client open the browser authorization flow.
               </div>
             )}
             {!isNativeOAuthConfig && testStatus === 'error' && testMessage && (
-              <div className="mcp-oauth-error mt-3 p-3 bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-error)_30%,transparent)] rounded-ui-base text-[var(--nim-error)] text-[0.8125rem] leading-snug" role="alert" aria-live="assertive">
+              <div className="mcp-oauth-error mt-3 p-3 bg-[color-mix(in_srgb,var(--nim-error)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-error)_30%,transparent)] rounded-ui-base text-[var(--nim-error)] text-ui-body leading-snug" role="alert" aria-live="assertive">
                 {testMessage}
                 {isStalePortError && (
                   <button
                     type="button"
-                    className="mcp-clear-cache-button block mt-3 px-3 py-2 text-[0.8125rem] font-medium text-white bg-[var(--nim-warning)] border-none rounded-ui-base cursor-pointer transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:brightness-90"
+                    className="mcp-clear-cache-button block mt-3 px-3 py-2 text-ui-body font-medium text-white bg-[var(--nim-warning)] border-none rounded-ui-base cursor-pointer transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:brightness-90"
                     onClick={handleClearAuthCacheAndRetry}
                     disabled={oauthAction !== 'idle'}
                     aria-label="Clear auth cache and retry authorization"
@@ -1928,7 +1928,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                 {testHelpUrl && (
                   <button
                     type="button"
-                    className="mcp-help-link-button block mt-2 px-2 py-1 text-xs font-medium text-[var(--nim-primary)] bg-transparent border border-[var(--nim-primary)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-primary)] hover:text-white"
+                    className="mcp-help-link-button block mt-2 px-2 py-1 text-ui-compact font-medium text-[var(--nim-primary)] bg-transparent border border-[var(--nim-primary)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-primary)] hover:text-white"
                     onClick={() => window.electronAPI.openExternal(testHelpUrl)}
                   >
                     Install Instructions
@@ -1943,14 +1943,14 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {requiredEnvVars.length > 0 && (
           <div className="mcp-required-section p-5 bg-[color-mix(in_srgb,var(--nim-warning)_8%,transparent)] border border-[color-mix(in_srgb,var(--nim-warning)_30%,transparent)] rounded-ui-lg mb-6">
             <div className="mcp-required-section-header flex items-center gap-2 mb-2">
-              <span className="mcp-required-icon flex items-center justify-center w-5 h-5 bg-[var(--nim-warning)] text-white rounded-ui-full text-xs font-bold shrink-0">!</span>
+              <span className="mcp-required-icon flex items-center justify-center w-5 h-5 bg-[var(--nim-warning)] text-white rounded-ui-full text-ui-compact font-bold shrink-0">!</span>
               <h4 className="mcp-required-section-title text-ui-subhead font-semibold text-[var(--nim-text)] m-0">Required: Enter Your Credentials</h4>
             </div>
             {requiredEnvVars.map(({ key, index }) => {
               const help = ENV_VAR_HELP[key];
               return (
                 <div key={key} className="mcp-required-field mb-4 last:mb-0">
-                  <label className="flex items-center gap-1 mb-2 font-medium text-sm text-[var(--nim-text)]">
+                  <label className="flex items-center gap-1 mb-2 font-medium text-ui-body text-[var(--nim-text)]">
                     {help?.label || key}
                     <span className="required-asterisk text-[var(--nim-warning)]">*</span>
                   </label>
@@ -1960,10 +1960,10 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                     onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
                     onBlur={!isNewConfig ? autoSave : undefined}
                     placeholder={`Enter your ${help?.label || key}`}
-                    className="w-full px-3 py-3 border-2 border-[color-mix(in_srgb,var(--nim-warning)_50%,transparent)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:outline-none"
+                    className="w-full px-3 py-3 border-2 border-[color-mix(in_srgb,var(--nim-warning)_50%,transparent)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body placeholder:text-[var(--nim-text-faint)] focus:border-[var(--nim-primary)] focus:outline-none"
                   />
                   {help && (
-                    <span className="mcp-field-help block mt-1 text-xs text-[var(--nim-text-faint)]">
+                    <span className="mcp-field-help block mt-1 text-ui-compact text-[var(--nim-text-faint)]">
                       {help.help}
                       {help.link && (
                         <>
@@ -1984,22 +1984,22 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {/* Test Connection Button (visible for templates, outside Advanced section) */}
         {selectedTemplate && !isNativeOAuthConfig && (
           <div className="mcp-form-group mb-6">
-            <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">Test Connection</label>
+            <label className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">Test Connection</label>
             <div className="mcp-test-standalone flex flex-col gap-2">
               <button
                 onClick={handleTestConnection}
                 disabled={testStatus === 'testing'}
-                className={`mcp-test-button self-start px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm cursor-pointer whitespace-nowrap min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed ${testStatus === 'testing' ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)]' : ''} ${testStatus === 'success' ? 'bg-[var(--nim-success)] text-white border-[var(--nim-success)]' : ''}`}
+                className={`mcp-test-button self-start px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body cursor-pointer whitespace-nowrap min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed ${testStatus === 'testing' ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)]' : ''} ${testStatus === 'success' ? 'bg-[var(--nim-success)] text-white border-[var(--nim-success)]' : ''}`}
                 aria-label="Test server connection"
                 aria-busy={testStatus === 'testing'}
               >
                 {testStatus === 'testing' ? 'Testing...' :
                  testStatus === 'success' ? 'Connected' : 'Test Connection'}
               </button>
-              {testStatus === 'error' && <span className="mcp-test-failed-label text-[var(--nim-error)] font-medium text-sm ml-2">Failed</span>}
+              {testStatus === 'error' && <span className="mcp-test-failed-label text-[var(--nim-error)] font-medium text-ui-body ml-2">Failed</span>}
               {testMessage && (
                 <div
-                  className={`mcp-test-message mt-2 p-2 rounded-ui-base text-sm flex items-center gap-2 ${testStatus === 'testing' ? 'bg-nim-primary-subtle text-[var(--nim-text-muted)] border border-nim-primary-subtle' : ''} ${testStatus === 'success' ? 'bg-nim-success-subtle text-[var(--nim-success)] border border-nim-success-subtle' : ''} ${testStatus === 'error' ? 'bg-nim-error-subtle text-[var(--nim-error)] border border-nim-error-subtle' : ''}`}
+                  className={`mcp-test-message mt-2 p-2 rounded-ui-base text-ui-body flex items-center gap-2 ${testStatus === 'testing' ? 'bg-nim-primary-subtle text-[var(--nim-text-muted)] border border-nim-primary-subtle' : ''} ${testStatus === 'success' ? 'bg-nim-success-subtle text-[var(--nim-success)] border border-nim-success-subtle' : ''} ${testStatus === 'error' ? 'bg-nim-error-subtle text-[var(--nim-error)] border border-nim-error-subtle' : ''}`}
                   role={testStatus === 'error' ? 'alert' : 'status'}
                   aria-live="polite"
                 >
@@ -2008,7 +2008,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   {testHelpUrl && testStatus === 'error' && (
                     <button
                       type="button"
-                      className="mcp-help-link-button ml-3 px-2 py-1 text-xs font-medium text-[var(--nim-primary)] bg-transparent border border-[var(--nim-primary)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-primary)] hover:text-white"
+                      className="mcp-help-link-button ml-3 px-2 py-1 text-ui-compact font-medium text-[var(--nim-primary)] bg-transparent border border-[var(--nim-primary)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-primary)] hover:text-white"
                       onClick={() => window.electronAPI.openExternal(testHelpUrl)}
                     >
                       Install Instructions
@@ -2023,9 +2023,9 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {/* Advanced Configuration (collapsed for templates) */}
         {selectedTemplate ? (
           <details className="mcp-advanced-section mt-6 border border-[var(--nim-border)] rounded-ui-lg overflow-hidden [&[open]>summary::after]:rotate-45">
-            <summary className="p-4 cursor-pointer flex items-center justify-between font-medium text-sm bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] list-none [&::-webkit-details-marker]:hidden after:content-[''] after:w-1.5 after:h-1.5 after:border-r-2 after:border-b-2 after:border-[var(--nim-text-faint)] after:-rotate-45 after:transition-transform after:duration-200">
+            <summary className="p-4 cursor-pointer flex items-center justify-between font-medium text-ui-body bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] list-none [&::-webkit-details-marker]:hidden after:content-[''] after:w-1.5 after:h-1.5 after:border-r-2 after:border-b-2 after:border-[var(--nim-text-faint)] after:-rotate-45 after:transition-transform after:duration-200">
               Advanced Configuration
-              <span className="mcp-advanced-hint text-xs text-[var(--nim-text-faint)] font-normal mr-2">Pre-configured, typically no changes needed</span>
+              <span className="mcp-advanced-hint text-ui-compact text-[var(--nim-text-faint)] font-normal mr-2">Pre-configured, typically no changes needed</span>
             </summary>
             <div className="mcp-advanced-content p-4 border-t border-[var(--nim-border)]">
               {renderAdvancedFields(true)}
@@ -2041,7 +2041,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
           {selectedServer && (
             <button
               onClick={handleDelete}
-              className="mcp-delete-button px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-error)] text-sm cursor-pointer hover:bg-[var(--nim-error)] hover:text-white hover:border-[var(--nim-error)]"
+              className="mcp-delete-button px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-error)] text-ui-body cursor-pointer hover:bg-[var(--nim-error)] hover:text-white hover:border-[var(--nim-error)]"
               aria-label={`Delete ${selectedServer.name} server`}
             >
               Delete
@@ -2050,7 +2050,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
           {isNewConfig && formName.trim() && (formCommand.trim() || formUrl.trim()) && (
             <button
               onClick={autoSave}
-              className="mcp-save-button ml-auto px-4 py-2 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-sm cursor-pointer hover:opacity-90"
+              className="mcp-save-button ml-auto px-4 py-2 border-none rounded-ui-base bg-[var(--nim-primary)] text-white text-ui-body cursor-pointer hover:opacity-90"
               disabled={saveStatus === 'saving'}
               aria-label="Add new MCP server"
               aria-busy={saveStatus === 'saving'}
@@ -2059,7 +2059,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
             </button>
           )}
           <span
-            className={`mcp-save-status text-sm ml-auto ${saveStatus === 'saving' ? 'text-[var(--nim-text-muted)]' : ''} ${saveStatus === 'saved' ? 'text-[var(--nim-success)]' : ''} ${saveStatus === 'error' ? 'text-[var(--nim-error)]' : ''}`}
+            className={`mcp-save-status text-ui-body ml-auto ${saveStatus === 'saving' ? 'text-[var(--nim-text-muted)]' : ''} ${saveStatus === 'saved' ? 'text-[var(--nim-success)]' : ''} ${saveStatus === 'error' ? 'text-[var(--nim-error)]' : ''}`}
             role="status"
             aria-live="polite"
             aria-atomic="true"
@@ -2083,14 +2083,14 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
     return (
       <>
         <div className={`mcp-form-group mb-6 ${readonly ? 'mcp-readonly-group' : ''}`}>
-          <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">Transport Type</label>
+          <label className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">Transport Type</label>
           <select
             value={formType}
             onChange={(e) => {
               setFormType(e.target.value as 'stdio' | 'sse' | 'http');
               if (isExistingServer) setTimeout(autoSave, 0);
             }}
-            className={`mcp-type-select w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm cursor-pointer ${readonly ? 'opacity-60 cursor-not-allowed bg-[var(--nim-bg-tertiary)]' : ''}`}
+            className={`mcp-type-select w-full px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body cursor-pointer ${readonly ? 'opacity-60 cursor-not-allowed bg-[var(--nim-bg-tertiary)]' : ''}`}
             disabled={readonly}
           >
             <option value="stdio">stdio (Local executable)</option>
@@ -2102,7 +2102,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {formType === 'stdio' ? (
           <>
             <div className={`mcp-form-group mb-6 ${readonly ? 'mcp-readonly-group' : ''}`}>
-              <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">Command</label>
+              <label className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">Command</label>
               <div className="mcp-command-row flex gap-2 items-center">
                 <input
                   type="text"
@@ -2110,24 +2110,24 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   onChange={(e) => setFormCommand(e.target.value)}
                   onBlur={isExistingServer ? autoSave : undefined}
                   placeholder="/path/to/server or npx @modelcontextprotocol/server-name"
-                  className={`mcp-command-input flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm ${readonly ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  className={`mcp-command-input flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body ${readonly ? 'opacity-60 cursor-not-allowed' : ''}`}
                   disabled={readonly}
                 />
                 <button
                   onClick={handleTestConnection}
                   disabled={testStatus === 'testing' || !formCommand.trim()}
-                  className={`mcp-test-button px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm cursor-pointer whitespace-nowrap min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed ${testStatus === 'testing' ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)]' : ''} ${testStatus === 'success' ? 'bg-[var(--nim-success)] text-white border-[var(--nim-success)]' : ''}`}
+                  className={`mcp-test-button px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body cursor-pointer whitespace-nowrap min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed ${testStatus === 'testing' ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)]' : ''} ${testStatus === 'success' ? 'bg-[var(--nim-success)] text-white border-[var(--nim-success)]' : ''}`}
                   aria-label="Test server connection"
                   aria-busy={testStatus === 'testing'}
                 >
                   {testStatus === 'testing' ? 'Testing...' :
                    testStatus === 'success' ? 'Connected' : 'Test'}
                 </button>
-                {testStatus === 'error' && <span className="mcp-test-failed-label text-[var(--nim-error)] font-medium text-sm ml-2">Failed</span>}
+                {testStatus === 'error' && <span className="mcp-test-failed-label text-[var(--nim-error)] font-medium text-ui-body ml-2">Failed</span>}
               </div>
               {testMessage && (
                 <div
-                  className={`mcp-test-message mt-2 p-2 rounded-ui-base text-sm flex items-center gap-2 ${testStatus === 'testing' ? 'bg-nim-primary-subtle text-[var(--nim-text-muted)] border border-nim-primary-subtle' : ''} ${testStatus === 'success' ? 'bg-nim-success-subtle text-[var(--nim-success)] border border-nim-success-subtle' : ''} ${testStatus === 'error' ? 'bg-nim-error-subtle text-[var(--nim-error)] border border-nim-error-subtle' : ''}`}
+                  className={`mcp-test-message mt-2 p-2 rounded-ui-base text-ui-body flex items-center gap-2 ${testStatus === 'testing' ? 'bg-nim-primary-subtle text-[var(--nim-text-muted)] border border-nim-primary-subtle' : ''} ${testStatus === 'success' ? 'bg-nim-success-subtle text-[var(--nim-success)] border border-nim-success-subtle' : ''} ${testStatus === 'error' ? 'bg-nim-error-subtle text-[var(--nim-error)] border border-nim-error-subtle' : ''}`}
                   role={testStatus === 'error' ? 'alert' : 'status'}
                   aria-live="polite"
                 >
@@ -2136,7 +2136,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   {testHelpUrl && testStatus === 'error' && (
                     <button
                       type="button"
-                      className="mcp-help-link-button ml-3 px-2 py-1 text-xs font-medium text-[var(--nim-primary)] bg-transparent border border-[var(--nim-primary)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-primary)] hover:text-white"
+                      className="mcp-help-link-button ml-3 px-2 py-1 text-ui-compact font-medium text-[var(--nim-primary)] bg-transparent border border-[var(--nim-primary)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-primary)] hover:text-white"
                       onClick={() => window.electronAPI.openExternal(testHelpUrl)}
                     >
                       Install Instructions
@@ -2147,7 +2147,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
             </div>
 
             <div className={`mcp-form-group mb-6 ${readonly ? 'mcp-readonly-group' : ''}`}>
-              <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">Arguments</label>
+              <label className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">Arguments</label>
               {formArgs.map((arg, index) => (
                 <div key={index} className="mcp-array-item flex gap-2 mb-2">
                   <input
@@ -2157,21 +2157,21 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                     onBlur={isExistingServer ? autoSave : undefined}
                     placeholder="argument"
                     disabled={readonly}
-                    className={`flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm ${readonly ? 'opacity-70 cursor-not-allowed bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]' : ''}`}
+                    className={`flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body ${readonly ? 'opacity-70 cursor-not-allowed bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)]' : ''}`}
                   />
                   {!readonly && (
-                    <button onClick={() => { removeArg(index); if (isExistingServer) setTimeout(autoSave, 0); }} className="mcp-remove-button w-7 h-7 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-faint)] text-lg leading-none cursor-pointer hover:bg-[var(--nim-error)] hover:text-white hover:border-[var(--nim-error)]">x</button>
+                    <button onClick={() => { removeArg(index); if (isExistingServer) setTimeout(autoSave, 0); }} className="mcp-remove-button w-7 h-7 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-faint)] text-ui-title leading-none cursor-pointer hover:bg-[var(--nim-error)] hover:text-white hover:border-[var(--nim-error)]">x</button>
                   )}
                 </div>
               ))}
               {!readonly && (
-                <button onClick={addArg} className="mcp-add-button w-full px-4 py-2 border border-dashed border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-primary)] text-sm cursor-pointer text-left hover:bg-[var(--nim-bg-hover)]">+ Add Argument</button>
+                <button onClick={addArg} className="mcp-add-button w-full px-4 py-2 border border-dashed border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-primary)] text-ui-body cursor-pointer text-left hover:bg-[var(--nim-bg-hover)]">+ Add Argument</button>
               )}
             </div>
           </>
         ) : (
           <div className={`mcp-form-group mb-6 ${readonly ? 'mcp-readonly-group' : ''}`}>
-            <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">Server URL</label>
+            <label className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">Server URL</label>
             <div className="mcp-command-row flex gap-2 items-center">
               <input
                 type="url"
@@ -2179,14 +2179,14 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                 onChange={(e) => setFormUrl(e.target.value)}
                 onBlur={isExistingServer ? autoSave : undefined}
                 placeholder={formType === 'http' ? 'https://mcp.example.com/mcp' : 'https://example.com/mcp/sse'}
-                className={`mcp-command-input flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm ${readonly ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`mcp-command-input flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body ${readonly ? 'opacity-60 cursor-not-allowed' : ''}`}
                 disabled={readonly}
               />
               {!isNativeOAuthConfig && (
                 <button
                   onClick={handleTestConnection}
                   disabled={testStatus === 'testing' || !formUrl.trim()}
-                  className={`mcp-test-button px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm cursor-pointer whitespace-nowrap min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed ${testStatus === 'testing' ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)]' : ''} ${testStatus === 'success' ? 'bg-[var(--nim-success)] text-white border-[var(--nim-success)]' : ''}`}
+                  className={`mcp-test-button px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body cursor-pointer whitespace-nowrap min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed ${testStatus === 'testing' ? 'bg-[var(--nim-bg-secondary)] text-[var(--nim-text-muted)]' : ''} ${testStatus === 'success' ? 'bg-[var(--nim-success)] text-white border-[var(--nim-success)]' : ''}`}
                   aria-label="Test server connection"
                   aria-busy={testStatus === 'testing'}
                 >
@@ -2194,11 +2194,11 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                    testStatus === 'success' ? 'Connected' : 'Test'}
                 </button>
               )}
-              {!isNativeOAuthConfig && testStatus === 'error' && <span className="mcp-test-failed-label text-[var(--nim-error)] font-medium text-sm ml-2">Failed</span>}
+              {!isNativeOAuthConfig && testStatus === 'error' && <span className="mcp-test-failed-label text-[var(--nim-error)] font-medium text-ui-body ml-2">Failed</span>}
             </div>
             {!isNativeOAuthConfig && testMessage && (
               <div
-                className={`mcp-test-message mt-2 p-2 rounded-ui-base text-sm flex items-center gap-2 ${testStatus === 'testing' ? 'bg-nim-primary-subtle text-[var(--nim-text-muted)] border border-nim-primary-subtle' : ''} ${testStatus === 'success' ? 'bg-nim-success-subtle text-[var(--nim-success)] border border-nim-success-subtle' : ''} ${testStatus === 'error' ? 'bg-nim-error-subtle text-[var(--nim-error)] border border-nim-error-subtle' : ''}`}
+                className={`mcp-test-message mt-2 p-2 rounded-ui-base text-ui-body flex items-center gap-2 ${testStatus === 'testing' ? 'bg-nim-primary-subtle text-[var(--nim-text-muted)] border border-nim-primary-subtle' : ''} ${testStatus === 'success' ? 'bg-nim-success-subtle text-[var(--nim-success)] border border-nim-success-subtle' : ''} ${testStatus === 'error' ? 'bg-nim-error-subtle text-[var(--nim-error)] border border-nim-error-subtle' : ''}`}
                 role={testStatus === 'error' ? 'alert' : 'status'}
                 aria-live="polite"
               >
@@ -2207,7 +2207,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                 {testHelpUrl && testStatus === 'error' && (
                   <button
                     type="button"
-                    className="mcp-help-link-button ml-3 px-2 py-1 text-xs font-medium text-[var(--nim-primary)] bg-transparent border border-[var(--nim-primary)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-primary)] hover:text-white"
+                    className="mcp-help-link-button ml-3 px-2 py-1 text-ui-compact font-medium text-[var(--nim-primary)] bg-transparent border border-[var(--nim-primary)] rounded-ui-base cursor-pointer transition-all duration-150 hover:bg-[var(--nim-primary)] hover:text-white"
                     onClick={() => window.electronAPI.openExternal(testHelpUrl)}
                   >
                     Install Instructions
@@ -2221,7 +2221,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {/* HTTP Headers (HTTP only) */}
         {formType === 'http' && !readonly && (
           <div className="mcp-form-group mb-6">
-            <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">HTTP Headers</label>
+            <label className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">HTTP Headers</label>
             {formHeaders.map((header, index) => (
               <div key={index} className="mcp-env-item flex gap-2 mb-2">
                 <input
@@ -2230,7 +2230,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   onChange={(e) => updateHeader(index, 'key', e.target.value)}
                   onBlur={isExistingServer ? autoSave : undefined}
                   placeholder="Header-Name"
-                  className="mcp-env-key flex-[0_0_150px] px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm"
+                  className="mcp-env-key flex-[0_0_150px] px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body"
                 />
                 <input
                   type="text"
@@ -2238,19 +2238,19 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   onChange={(e) => updateHeader(index, 'value', e.target.value)}
                   onBlur={isExistingServer ? autoSave : undefined}
                   placeholder="value"
-                  className="mcp-env-value flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm"
+                  className="mcp-env-value flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body"
                 />
-                <button onClick={() => { removeHeader(index); if (isExistingServer) setTimeout(autoSave, 0); }} className="mcp-remove-button w-7 h-7 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-faint)] text-lg leading-none cursor-pointer hover:bg-[var(--nim-error)] hover:text-white hover:border-[var(--nim-error)]">x</button>
+                <button onClick={() => { removeHeader(index); if (isExistingServer) setTimeout(autoSave, 0); }} className="mcp-remove-button w-7 h-7 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-faint)] text-ui-title leading-none cursor-pointer hover:bg-[var(--nim-error)] hover:text-white hover:border-[var(--nim-error)]">x</button>
               </div>
             ))}
-            <button onClick={addHeader} className="mcp-add-button w-full px-4 py-2 border border-dashed border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-primary)] text-sm cursor-pointer text-left hover:bg-[var(--nim-bg-hover)]">+ Add HTTP Header</button>
+            <button onClick={addHeader} className="mcp-add-button w-full px-4 py-2 border border-dashed border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-primary)] text-ui-body cursor-pointer text-left hover:bg-[var(--nim-bg-hover)]">+ Add HTTP Header</button>
           </div>
         )}
 
         {/* Additional env vars (not in required section) */}
         {!readonly && (
           <div className="mcp-form-group mb-6">
-            <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">Environment Variables</label>
+            <label className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">Environment Variables</label>
             {formEnv.map((envVar, index) => (
               <div key={index} className="mcp-env-item flex gap-2 mb-2">
                 <input
@@ -2259,7 +2259,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   onChange={(e) => updateEnvVar(index, 'key', e.target.value)}
                   onBlur={isExistingServer ? autoSave : undefined}
                   placeholder="KEY"
-                  className="mcp-env-key flex-[0_0_150px] px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm"
+                  className="mcp-env-key flex-[0_0_150px] px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body"
                 />
                 <input
                   type="text"
@@ -2267,39 +2267,39 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
                   onBlur={isExistingServer ? autoSave : undefined}
                   placeholder="value"
-                  className="mcp-env-value flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-sm"
+                  className="mcp-env-value flex-1 px-3 py-2 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body"
                 />
-                <button onClick={() => { removeEnvVar(index); if (isExistingServer) setTimeout(autoSave, 0); }} className="mcp-remove-button w-7 h-7 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-faint)] text-lg leading-none cursor-pointer hover:bg-[var(--nim-error)] hover:text-white hover:border-[var(--nim-error)]">x</button>
+                <button onClick={() => { removeEnvVar(index); if (isExistingServer) setTimeout(autoSave, 0); }} className="mcp-remove-button w-7 h-7 border border-[var(--nim-border)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text-faint)] text-ui-title leading-none cursor-pointer hover:bg-[var(--nim-error)] hover:text-white hover:border-[var(--nim-error)]">x</button>
               </div>
             ))}
-            <button onClick={addEnvVar} className="mcp-add-button w-full px-4 py-2 border border-dashed border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-primary)] text-sm cursor-pointer text-left hover:bg-[var(--nim-bg-hover)]">+ Add Environment Variable</button>
+            <button onClick={addEnvVar} className="mcp-add-button w-full px-4 py-2 border border-dashed border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-primary)] text-ui-body cursor-pointer text-left hover:bg-[var(--nim-bg-hover)]">+ Add Environment Variable</button>
           </div>
         )}
 
         {/* OAuth section for existing mcp-remote servers and HTTP transport */}
         {isExistingServer && isOAuthServer(currentConfig) && (
           <div className="mcp-form-group mb-6">
-            <label className="block mb-2 font-medium text-sm text-[var(--nim-text)]">OAuth Authorization</label>
+            <label className="block mb-2 font-medium text-ui-body text-[var(--nim-text)]">OAuth Authorization</label>
             <div className="mcp-oauth-section p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base">
               <div className="mcp-oauth-status flex items-center gap-3 mb-3">
-                <span className="mcp-oauth-label text-sm font-medium text-[var(--nim-text)]">Status:</span>
+                <span className="mcp-oauth-label text-ui-body font-medium text-[var(--nim-text)]">Status:</span>
                 {isNativeOAuthConfig && (
-                  <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]">Managed by Claude/Codex</span>
+                  <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]">Managed by Claude/Codex</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'checking' && (
-                  <span className="mcp-oauth-badge checking inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-nim-primary-subtle text-[var(--nim-primary)]">Checking...</span>
+                  <span className="mcp-oauth-badge checking inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-nim-primary-subtle text-[var(--nim-primary)]">Checking...</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'authorized' && (
-                  <span className="mcp-oauth-badge authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-nim-success-subtle text-[var(--nim-success)]">Authorized</span>
+                  <span className="mcp-oauth-badge authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-nim-success-subtle text-[var(--nim-success)]">Authorized</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'not-authorized' && (
-                  <span className="mcp-oauth-badge not-authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-nim-warning-subtle text-[var(--nim-warning)]">Not authorized</span>
+                  <span className="mcp-oauth-badge not-authorized inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-nim-warning-subtle text-[var(--nim-warning)]">Not authorized</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'not-required' && (
-                  <span className="mcp-oauth-badge not-required inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]">Not required</span>
+                  <span className="mcp-oauth-badge not-required inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]">Not required</span>
                 )}
                 {!isNativeOAuthConfig && oauthStatus === 'unknown' && (
-                  <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-xs font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]">Unknown</span>
+                  <span className="mcp-oauth-badge unknown inline-flex items-center px-3 py-1 rounded-ui-lg text-ui-compact font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] border border-[var(--nim-border)]">Unknown</span>
                 )}
               </div>
               {isMcpRemoteOAuthConfig && oauthStatus !== 'not-required' && (
@@ -2308,7 +2308,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   <button
                     onClick={handleAuthorize}
                     disabled={oauthAction !== 'idle'}
-                    className="mcp-oauth-button authorize px-4 py-2 rounded-ui-base text-sm font-medium cursor-pointer transition-all duration-150 bg-[var(--nim-primary)] text-white border-none disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:opacity-90"
+                    className="mcp-oauth-button authorize px-4 py-2 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 bg-[var(--nim-primary)] text-white border-none disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:opacity-90"
                   >
                     {oauthAction === 'authorizing' ? 'Authorizing...' : 'Authorize'}
                   </button>
@@ -2317,7 +2317,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                   <button
                     onClick={handleRevoke}
                     disabled={oauthAction !== 'idle'}
-                    className="mcp-oauth-button revoke px-4 py-2 rounded-ui-base text-sm font-medium cursor-pointer transition-all duration-150 bg-transparent text-[var(--nim-error)] border border-[var(--nim-error)] disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:bg-[var(--nim-error)] hover:enabled:text-white"
+                    className="mcp-oauth-button revoke px-4 py-2 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 bg-transparent text-[var(--nim-error)] border border-[var(--nim-error)] disabled:opacity-60 disabled:cursor-not-allowed hover:enabled:bg-[var(--nim-error)] hover:enabled:text-white"
                   >
                     {oauthAction === 'revoking' ? 'Revoking...' : 'Revoke'}
                   </button>
@@ -2325,12 +2325,12 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                 </div>
               )}
               {isNativeOAuthConfig && (
-                <div className="text-xs text-[var(--nim-text-faint)] leading-snug mt-2">
+                <div className="text-ui-compact text-[var(--nim-text-faint)] leading-snug mt-2">
                   Native MCP OAuth is completed by Claude or Codex when the server is first used.
                 </div>
               )}
               {!isNativeOAuthConfig && oauthStatus === 'not-required' && (
-                <div className="text-xs text-[var(--nim-text-faint)] leading-snug mt-2">
+                <div className="text-ui-compact text-[var(--nim-text-faint)] leading-snug mt-2">
                   This endpoint did not advertise OAuth. Use headers or environment variables if the server requires another auth method.
                 </div>
               )}
@@ -2355,13 +2355,13 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
         {viewState === 'list' && (
           <aside className="mcp-servers-sidebar flex-[0_0_280px] min-w-[220px] max-w-[350px] flex flex-col border border-[var(--nim-border)] rounded-ui-base overflow-hidden @[max-width:600px]:flex-[0_0_100%] @[max-width:600px]:max-w-full" aria-label="MCP servers list">
             <div className="mcp-servers-header flex justify-between items-center px-4 py-3 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]">
-              <h4 className="m-0 text-sm font-semibold text-[var(--nim-text)]">Servers</h4>
+              <h4 className="m-0 text-ui-body font-semibold text-[var(--nim-text)]">Servers</h4>
               <button
                 onClick={handleNewServer}
                 className="mcp-add-server-button flex items-center gap-2 px-3 py-2 rounded-ui-base border-none bg-[var(--nim-primary)] text-white text-ui-body font-medium cursor-pointer transition-opacity duration-150 hover:opacity-90"
                 aria-label="Add new MCP server"
               >
-                <span className="mcp-add-icon text-base leading-none" aria-hidden="true">+</span>
+                <span className="mcp-add-icon text-ui-subhead leading-none" aria-hidden="true">+</span>
                 <span>Add</span>
               </button>
             </div>
@@ -2381,11 +2381,11 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
 
             <div className="mcp-servers-list flex-1 overflow-y-auto" role="list">
               {servers.length === 0 ? (
-                <div className="mcp-empty-state px-4 py-8 text-center text-[var(--nim-text-faint)] text-sm flex flex-col items-center gap-4" role="status">
+                <div className="mcp-empty-state px-4 py-8 text-center text-[var(--nim-text-faint)] text-ui-body flex flex-col items-center gap-4" role="status">
                   <span className="mcp-empty-state-text text-[var(--nim-text-muted)]">No MCP servers configured</span>
                   <button
                     onClick={handleNewServer}
-                    className="mcp-empty-state-cta px-5 py-3 rounded-ui-base border-2 border-dashed border-[var(--nim-primary)] bg-transparent text-[var(--nim-primary)] text-sm font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)]"
+                    className="mcp-empty-state-cta px-5 py-3 rounded-ui-base border-2 border-dashed border-[var(--nim-primary)] bg-transparent text-[var(--nim-primary)] text-ui-body font-medium cursor-pointer transition-all duration-150 hover:bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)]"
                     aria-label="Add your first MCP server"
                   >
                     + Add Your First Server
@@ -2458,8 +2458,8 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
                         </div>
                       )}
                       <div className="mcp-server-item-info flex-1 min-w-0">
-                        <div className={`mcp-server-item-name font-medium text-sm mb-1 ${isActive ? 'text-white' : ''} ${isDisabled ? 'line-through' : ''}`}>{server.name}</div>
-                        <div className={`mcp-server-item-command text-xs overflow-hidden text-ellipsis whitespace-nowrap ${isActive ? 'text-white/80' : 'text-[var(--nim-text-faint)]'}`}>{server.command || server.url}</div>
+                        <div className={`mcp-server-item-name font-medium text-ui-body mb-1 ${isActive ? 'text-white' : ''} ${isDisabled ? 'line-through' : ''}`}>{server.name}</div>
+                        <div className={`mcp-server-item-command text-ui-compact overflow-hidden text-ellipsis whitespace-nowrap ${isActive ? 'text-white/80' : 'text-[var(--nim-text-faint)]'}`}>{server.command || server.url}</div>
                       </div>
                       {isOAuthServer(server) && serverOAuthStatuses[server.name] === 'not-authorized' && (
                         <div className={`mcp-server-status-icon mcp-server-status-not-authorized flex items-center justify-center shrink-0 ${isActive ? 'text-[var(--nim-warning)]' : 'text-[var(--nim-warning)]'}`}>
@@ -2481,7 +2481,7 @@ function MCPServersPanelInner({ scope = 'user', workspacePath }: MCPServersPanel
           {viewState === 'server-config' && renderServerConfig()}
 
           {viewState === 'list' && !selectedServer && (
-            <div className="mcp-no-selection flex items-center justify-center h-full text-[var(--nim-text-faint)] text-sm">
+            <div className="mcp-no-selection flex items-center justify-center h-full text-[var(--nim-text-faint)] text-ui-body">
               Select a server or click "Add" to create a new one
             </div>
           )}

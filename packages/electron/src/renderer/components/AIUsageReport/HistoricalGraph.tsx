@@ -52,7 +52,7 @@ export const HistoricalGraph: React.FC<HistoricalGraphProps> = ({ workspaceId })
   }, [timeRange, workspaceId]);
 
   if (loading) {
-    return <div className="historical-graph-loading flex items-center justify-center min-h-[400px] text-nim-muted text-base">Loading...</div>;
+    return <div className="historical-graph-loading flex items-center justify-center min-h-[400px] text-nim-muted text-ui-subhead">Loading...</div>;
   }
 
   const chartData = data.map((point) => ({
@@ -71,12 +71,12 @@ export const HistoricalGraph: React.FC<HistoricalGraphProps> = ({ workspaceId })
   return (
     <div className="historical-graph flex flex-col gap-6">
       <div className="historical-graph-controls flex justify-between items-center">
-        <h3 className="m-0 text-lg font-semibold text-nim">Token Usage Over Time</h3>
+        <h3 className="m-0 text-ui-title font-semibold text-nim">Token Usage Over Time</h3>
         <div className="time-range-selector flex gap-1">
           {(['week', 'month', 'quarter', 'year'] as const).map((range) => (
             <button
               key={range}
-              className={`px-3 py-2 border rounded-ui-base text-[13px] cursor-pointer transition-all duration-200 ${
+              className={`px-3 py-2 border rounded-ui-base text-ui-body cursor-pointer transition-all duration-200 ${
                 timeRange === range
                   ? 'bg-[var(--nim-primary)] text-white border-[var(--nim-primary)]'
                   : 'bg-nim-secondary border-nim text-nim-muted hover:bg-nim-hover hover:text-nim'
@@ -111,10 +111,10 @@ export const HistoricalGraph: React.FC<HistoricalGraphProps> = ({ workspaceId })
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <div className="no-data flex items-center justify-center min-h-[400px] text-nim-muted text-base">No data available for this time range</div>
+        <div className="no-data flex items-center justify-center min-h-[400px] text-nim-muted text-ui-subhead">No data available for this time range</div>
       )}
       {cacheDataIncomplete && (
-        <div className="text-[11px] text-[var(--nim-text-muted)]">
+        <div className="text-ui-caption text-[var(--nim-text-muted)]">
           Some engines did not report cache usage; gaps are unavailable data, not zero cache use.
         </div>
       )}

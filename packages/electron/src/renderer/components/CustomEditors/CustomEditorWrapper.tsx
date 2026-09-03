@@ -99,47 +99,47 @@ const ErrorFallback: React.FC<{
         >
           <MaterialSymbol icon={isRenderLoop ? 'loop' : 'error'} size={48} />
         </div>
-        <h2 className="m-0 mb-2 text-xl font-semibold text-[var(--nim-text)]">
+        <h2 className="m-0 mb-2 text-ui-title font-semibold text-[var(--nim-text)]">
           {isRenderLoop ? 'Render Loop Detected' : 'Custom Editor Error'}
         </h2>
         {extensionId && (
-          <p className="custom-editor-error-extension m-0 mb-4 text-[13px] text-[var(--nim-text-muted)]">
+          <p className="custom-editor-error-extension m-0 mb-4 text-ui-body text-[var(--nim-text-muted)]">
             Extension:{' '}
-            <code className="px-2 py-0.5 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-xs">
+            <code className="px-2 py-0.5 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-ui-compact">
               {extensionId}
             </code>
             {componentName && (
               <>
                 {' '}
                 / Component:{' '}
-                <code className="px-2 py-0.5 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-xs">
+                <code className="px-2 py-0.5 bg-[var(--nim-bg-secondary)] rounded-ui-base font-mono text-ui-compact">
                   {componentName}
                 </code>
               </>
             )}
           </p>
         )}
-        <p className="custom-editor-error-message m-0 mb-5 text-sm text-[var(--nim-text-muted)] leading-normal">
+        <p className="custom-editor-error-message m-0 mb-5 text-ui-body text-[var(--nim-text-muted)] leading-normal">
           {isRenderLoop
             ? 'The custom editor is rendering too rapidly, which may indicate an infinite loop. This has been stopped to prevent freezing.'
             : error?.message || 'An unexpected error occurred while rendering the custom editor.'}
         </p>
         {error?.stack && !isRenderLoop && (
           <details className="custom-editor-error-details m-0 mb-5 text-left">
-            <summary className="cursor-pointer text-[13px] text-[var(--nim-text-muted)] py-2 hover:text-[var(--nim-text)]">
+            <summary className="cursor-pointer text-ui-body text-[var(--nim-text-muted)] py-2 hover:text-[var(--nim-text)]">
               Error Details
             </summary>
-            <pre className="mt-2 p-3 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[11px] font-mono text-[var(--nim-text-muted)] overflow-x-auto whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto">
+            <pre className="mt-2 p-3 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-ui-caption font-mono text-[var(--nim-text-muted)] overflow-x-auto whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto">
               {error.stack}
             </pre>
           </details>
         )}
         {isRenderLoop && (
           <div className="custom-editor-error-hint m-0 mb-5 px-4 py-3 bg-[color-mix(in_srgb,var(--nim-warning)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-warning)_30%,transparent)] rounded-ui-lg text-left">
-            <strong className="block mb-2 text-[13px] text-[var(--nim-text)]">
+            <strong className="block mb-2 text-ui-body text-[var(--nim-text)]">
               Common causes:
             </strong>
-            <ul className="m-0 pl-5 text-xs text-[var(--nim-text-muted)] leading-relaxed">
+            <ul className="m-0 pl-5 text-ui-compact text-[var(--nim-text-muted)] leading-relaxed">
               <li>State updates in useEffect without proper dependencies</li>
               <li>Callback props recreated on every render</li>
               <li>Object/array references changing on every render</li>

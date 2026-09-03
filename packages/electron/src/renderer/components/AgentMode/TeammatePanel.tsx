@@ -125,7 +125,7 @@ const TeammateSection: React.FC<TeammateSectionProps> = React.memo(({
           className="text-[var(--nim-text-muted)] shrink-0"
         />
         <MaterialSymbol icon="group" size={16} className="text-[var(--nim-text-muted)] shrink-0" />
-        <span className="text-xs font-medium text-[var(--nim-text)]">Teammates</span>
+        <span className="text-ui-compact font-medium text-[var(--nim-text)]">Teammates</span>
         <span className="ml-auto text-ui-caption text-[var(--nim-text-muted)] font-mono">
           {runningCount}/{entries.length}
         </span>
@@ -175,7 +175,7 @@ const TaskSection: React.FC<TaskSectionProps> = React.memo(({
           className="text-[var(--nim-text-muted)] shrink-0"
         />
         <MaterialSymbol icon="swap_horiz" size={16} className="text-[var(--nim-text-muted)] shrink-0" />
-        <span className="text-xs font-medium text-[var(--nim-text)]">Sub-agents</span>
+        <span className="text-ui-compact font-medium text-[var(--nim-text)]">Sub-agents</span>
         <span className="ml-auto text-ui-caption text-[var(--nim-text-muted)] font-mono">
           {runningCount}/{tasks.length}
         </span>
@@ -259,7 +259,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ task }) => {
 
   return (
     <div
-      className={`task-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-xs ${
+      className={`task-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-ui-compact ${
         isRunning ? 'bg-[var(--nim-bg-hover)]' : ''
       } ${isDone ? 'opacity-60' : ''}`}
       data-status={task.status}
@@ -330,7 +330,7 @@ const TeammateItem: React.FC<TeammateItemProps> = React.memo(({ teammate, onClic
 
   return (
     <div
-      className={`teammate-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-xs cursor-pointer hover:bg-[var(--nim-bg-hover)] ${
+      className={`teammate-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-ui-compact cursor-pointer hover:bg-[var(--nim-bg-hover)] ${
         teammate.status === 'running' ? 'bg-[var(--nim-bg-hover)]' : ''
       } ${teammate.status === 'completed' || teammate.status === 'errored' ? 'opacity-60' : ''}`}
       data-status={teammate.status}

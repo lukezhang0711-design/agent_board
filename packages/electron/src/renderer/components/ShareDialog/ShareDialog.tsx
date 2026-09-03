@@ -242,7 +242,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       >
         {/* Close button */}
         <button
-          className="absolute top-4 right-4 w-8 h-8 p-0 flex items-center justify-center bg-transparent border-none text-[28px] leading-none cursor-pointer rounded-ui-base z-[1] text-[var(--nim-text-muted)] transition-[color,transform] duration-200 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:scale-110"
+          className="absolute top-4 right-4 w-8 h-8 p-0 flex items-center justify-center bg-transparent border-none text-ui-headline leading-none cursor-pointer rounded-ui-base z-[1] text-[var(--nim-text-muted)] transition-[color,transform] duration-200 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)] hover:scale-110"
           onClick={onClose}
           aria-label="Close"
         >
@@ -255,7 +255,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             <div className="w-10 h-10 rounded-ui-lg flex items-center justify-center bg-[var(--nim-primary)]/15 text-[var(--nim-primary)]">
               <MaterialSymbol icon="share" size={22} />
             </div>
-            <h2 className="m-0 text-lg font-semibold text-[var(--nim-text)]">
+            <h2 className="m-0 text-ui-title font-semibold text-[var(--nim-text)]">
               Share {contentLabel}
             </h2>
           </div>
@@ -263,17 +263,17 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           {/* Sign-in required */}
           {needsAuth ? (
             <div>
-              <p className="m-0 mb-4 text-[0.8125rem] text-[var(--nim-text-muted)]">
+              <p className="m-0 mb-4 text-ui-body text-[var(--nim-text-muted)]">
                 Sign in to share encrypted links.
               </p>
 
               {magicLinkSent ? (
                 <div className="text-center p-4 rounded-ui-lg bg-[var(--nim-bg-hover)]">
                   <MaterialSymbol icon="mail" size={32} className="text-[var(--nim-primary)] mb-2" />
-                  <p className="m-0 mb-1 text-[0.8125rem] font-medium text-[var(--nim-text)]">
+                  <p className="m-0 mb-1 text-ui-body font-medium text-[var(--nim-text)]">
                     Check your email
                   </p>
-                  <p className="m-0 mb-4 text-[0.75rem] text-[var(--nim-text-muted)]">
+                  <p className="m-0 mb-4 text-ui-compact text-[var(--nim-text-muted)]">
                     We sent a sign-in link to <strong>{authEmail}</strong>
                   </p>
                   <button
@@ -281,7 +281,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                       setMagicLinkSent(false);
                       setAuthEmail('');
                     }}
-                    className="px-4 py-2 rounded-ui-lg border border-[var(--nim-border)] bg-transparent text-[0.8125rem] text-[var(--nim-text-muted)] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+                    className="px-4 py-2 rounded-ui-lg border border-[var(--nim-border)] bg-transparent text-ui-body text-[var(--nim-text-muted)] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
                   >
                     Back
                   </button>
@@ -292,7 +292,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                   <button
                     onClick={handleGoogleSignIn}
                     disabled={authLoading || !isStytchAvailable}
-                    className="w-full px-4 py-3 flex items-center justify-center gap-3 bg-white border border-[var(--nim-border)] rounded-ui-lg text-[#333] font-medium text-[0.8125rem] cursor-pointer disabled:opacity-70 disabled:cursor-wait"
+                    className="w-full px-4 py-3 flex items-center justify-center gap-3 bg-white border border-[var(--nim-border)] rounded-ui-lg text-[#333] font-medium text-ui-body cursor-pointer disabled:opacity-70 disabled:cursor-wait"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -303,7 +303,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                     Continue with Google
                   </button>
 
-                  <div className="flex items-center gap-3 my-4 text-[var(--nim-text-faint)] text-[0.75rem]">
+                  <div className="flex items-center gap-3 my-4 text-[var(--nim-text-faint)] text-ui-compact">
                     <div className="flex-1 h-px bg-[var(--nim-border)]" />
                     or
                     <div className="flex-1 h-px bg-[var(--nim-border)]" />
@@ -317,19 +317,19 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                       onChange={(e) => setAuthEmail(e.target.value)}
                       placeholder="Enter your email"
                       disabled={!isStytchAvailable || authLoading}
-                      className="w-full px-3 py-2 mb-3 text-[0.8125rem] rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
+                      className="w-full px-3 py-2 mb-3 text-ui-body rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] outline-none focus:border-[var(--nim-primary)]"
                     />
                     <button
                       type="submit"
                       disabled={authLoading || !isStytchAvailable || !authEmail}
-                      className="w-full px-4 py-3 rounded-ui-lg border-none text-[0.8125rem] font-medium text-white bg-[var(--nim-primary)] cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                      className="w-full px-4 py-3 rounded-ui-lg border-none text-ui-body font-medium text-white bg-[var(--nim-primary)] cursor-pointer disabled:opacity-50 disabled:cursor-default"
                     >
                       {authLoading ? 'Sending...' : 'Send sign-in link'}
                     </button>
                   </form>
 
                   {authError && (
-                    <p className="m-0 mt-2 text-[0.75rem] text-red-400">
+                    <p className="m-0 mt-2 text-ui-compact text-red-400">
                       {authError}
                     </p>
                   )}
@@ -339,7 +339,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               {/* Footer cancel */}
               <div className="flex justify-end mt-5">
                 <button
-                  className="px-4 py-3 rounded-ui-lg border-none text-[0.8125rem] cursor-pointer text-[var(--nim-text-muted)] bg-transparent transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="px-4 py-3 rounded-ui-lg border-none text-ui-body cursor-pointer text-[var(--nim-text-muted)] bg-transparent transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={onClose}
                 >
                   Cancel
@@ -352,10 +352,10 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               <div className="flex gap-3 p-3 mb-5 rounded-ui-lg bg-[var(--nim-bg-hover)]">
                 <MaterialSymbol icon="lock" size={18} className="shrink-0 mt-1 text-[var(--nim-text-muted)]" />
                 <div>
-                  <p className="m-0 text-[0.8125rem] text-[var(--nim-text)]">
+                  <p className="m-0 text-ui-body text-[var(--nim-text)]">
                     Anyone with the link can view this {contentLabel}
                   </p>
-                  <p className="m-0 mt-1 text-[0.75rem] text-[var(--nim-text-faint)]">
+                  <p className="m-0 mt-1 text-ui-compact text-[var(--nim-text-faint)]">
                     Content is end-to-end encrypted.
                     <br />
                     No one without the link -- including Nimbalyst Servers -- can see it.
@@ -366,11 +366,11 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               {/* Expiration dropdown */}
               {shareState !== 'success' && (
                 <div className="mb-5">
-                  <label className="block text-[0.75rem] font-medium text-[var(--nim-text-muted)] mb-2">
+                  <label className="block text-ui-compact font-medium text-[var(--nim-text-muted)] mb-2">
                     Link expires after
                   </label>
                   <select
-                    className="w-full px-3 py-2 text-[0.8125rem] rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer outline-none transition-colors duration-150 focus:border-[var(--nim-primary)] [&>option]:bg-[var(--nim-bg)] [&>option]:text-[var(--nim-text)]"
+                    className="w-full px-3 py-2 text-ui-body rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] cursor-pointer outline-none transition-colors duration-150 focus:border-[var(--nim-primary)] [&>option]:bg-[var(--nim-bg)] [&>option]:text-[var(--nim-text)]"
                     value={String(expirationDays)}
                     onChange={(e) => {
                       setExpirationDays(Number(e.target.value));
@@ -382,7 +382,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                       </option>
                     ))}
                   </select>
-                  <p className="m-0 mt-2 text-[0.6875rem] text-[var(--nim-text-faint)]">
+                  <p className="m-0 mt-2 text-ui-caption text-[var(--nim-text-faint)]">
                     Your choice will be remembered for next time
                   </p>
                 </div>
@@ -391,7 +391,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               {/* Success state: show URL */}
               {shareState === 'success' && shareUrl && (
                 <div className="mb-5">
-                  <label className="block text-[0.75rem] font-medium text-[var(--nim-text-muted)] mb-2">
+                  <label className="block text-ui-compact font-medium text-[var(--nim-text-muted)] mb-2">
                     Share link
                   </label>
                   <div className="flex gap-2">
@@ -400,11 +400,11 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                       type="text"
                       readOnly
                       value={shareUrl}
-                      className="flex-1 min-w-0 px-3 py-2 text-[0.8125rem] rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-hover)] text-[var(--nim-text)] outline-none select-text"
+                      className="flex-1 min-w-0 px-3 py-2 text-ui-body rounded-ui-lg border border-[var(--nim-border)] bg-[var(--nim-bg-hover)] text-[var(--nim-text)] outline-none select-text"
                       onClick={() => urlInputRef.current?.select()}
                     />
                     <button
-                      className="shrink-0 flex items-center gap-2 px-3 py-2 text-[0.8125rem] rounded-ui-lg border border-[var(--nim-border)] bg-transparent text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
+                      className="shrink-0 flex items-center gap-2 px-3 py-2 text-ui-body rounded-ui-lg border border-[var(--nim-border)] bg-transparent text-[var(--nim-text)] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-hover)]"
                       onClick={handleCopyUrl}
                     >
                       <MaterialSymbol icon={urlCopied ? 'check' : 'content_copy'} size={14} />
@@ -417,7 +417,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               {/* Error state */}
               {shareState === 'error' && (
                 <div className="mb-5 p-3 rounded-ui-lg bg-red-500/10 border border-red-500/20">
-                  <p className="m-0 text-[0.8125rem] text-red-400">{errorMessage}</p>
+                  <p className="m-0 text-ui-body text-red-400">{errorMessage}</p>
                 </div>
               )}
 
@@ -425,7 +425,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               <div className="flex justify-end gap-2">
                 {shareState === 'success' ? (
                   <button
-                    className="px-5 py-3 rounded-ui-lg border-none text-[0.8125rem] font-medium cursor-pointer text-[var(--nim-text)] bg-[var(--nim-bg-hover)] transition-colors duration-150 hover:bg-[var(--nim-border)]"
+                    className="px-5 py-3 rounded-ui-lg border-none text-ui-body font-medium cursor-pointer text-[var(--nim-text)] bg-[var(--nim-bg-hover)] transition-colors duration-150 hover:bg-[var(--nim-border)]"
                     onClick={onClose}
                   >
                     Done
@@ -433,13 +433,13 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                 ) : (
                   <>
                     <button
-                      className="px-4 py-3 rounded-ui-lg border-none text-[0.8125rem] cursor-pointer text-[var(--nim-text-muted)] bg-transparent transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                      className="px-4 py-3 rounded-ui-lg border-none text-ui-body cursor-pointer text-[var(--nim-text-muted)] bg-transparent transition-colors duration-150 hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                       onClick={onClose}
                     >
                       Cancel
                     </button>
                     <button
-                      className="flex items-center gap-2 px-5 py-3 rounded-ui-lg border-none text-[0.8125rem] font-medium cursor-pointer text-white bg-[var(--nim-primary)] transition-all duration-150 hover:brightness-110 disabled:opacity-50 disabled:cursor-default"
+                      className="flex items-center gap-2 px-5 py-3 rounded-ui-lg border-none text-ui-body font-medium cursor-pointer text-white bg-[var(--nim-primary)] transition-all duration-150 hover:brightness-110 disabled:opacity-50 disabled:cursor-default"
                       onClick={handleShare}
                       disabled={shareState === 'sharing'}
                     >

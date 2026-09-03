@@ -42,9 +42,9 @@ export function AllTipsDialog({ isOpen, onClose }: AllTipsDialogProps): React.Re
         onClick={(e) => e.stopPropagation()}
       >
         <div className="all-tips-header flex items-center justify-between px-6 py-5 border-b border-[var(--nim-border)]">
-          <h2 className="m-0 text-lg font-semibold text-[var(--nim-text)]">All Tips</h2>
+          <h2 className="m-0 text-ui-title font-semibold text-[var(--nim-text)]">All Tips</h2>
           <button
-            className="all-tips-close nim-btn-icon w-8 h-8 text-[28px] leading-none rounded-ui-base transition-all duration-200"
+            className="all-tips-close nim-btn-icon w-8 h-8 text-ui-headline leading-none rounded-ui-base transition-all duration-200"
             onClick={onClose}
             aria-label="Close"
           >
@@ -64,15 +64,15 @@ export function AllTipsDialog({ isOpen, onClose }: AllTipsDialogProps): React.Re
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-[14px] font-semibold text-[var(--nim-text)] leading-snug">
+                <div className="text-ui-body font-semibold text-[var(--nim-text)] leading-snug">
                   {tip.content.title}
                 </div>
-                <div className="text-[12.5px] text-[var(--nim-text-muted)] mt-1 leading-relaxed line-clamp-3">
+                <div className="text-ui-compact text-[var(--nim-text-muted)] mt-1 leading-relaxed line-clamp-3">
                   {tip.content.body.replace(/\*\*/g, '')}
                 </div>
               </div>
               <button
-                className="shrink-0 px-3 py-2 bg-[var(--nim-bg)] border border-[var(--nim-border)] text-[var(--nim-text)] rounded-ui-base text-[12.5px] font-medium cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
+                className="shrink-0 px-3 py-2 bg-[var(--nim-bg)] border border-[var(--nim-border)] text-[var(--nim-text)] rounded-ui-base text-ui-compact font-medium cursor-pointer hover:bg-[var(--nim-bg-hover)] transition-colors"
                 onClick={() => handleShow(tip.id, tip.version)}
               >
                 Show

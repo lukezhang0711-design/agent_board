@@ -140,7 +140,7 @@ export function PullRequestListView({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by title or number"
             data-testid="pr-search-input"
-            className="nim-input w-full h-8 text-sm !py-0 !pl-7"
+            className="nim-input w-full h-8 text-ui-body !py-0 !pl-7"
           />
         </div>
 
@@ -148,7 +148,7 @@ export function PullRequestListView({
           ref={sortMenu.refs.setReference}
           {...sortMenu.getReferenceProps()}
           onClick={() => sortMenu.setIsOpen(!sortMenu.isOpen)}
-          className="flex items-center gap-1 h-8 px-2 text-xs text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors shrink-0"
+          className="flex items-center gap-1 h-8 px-2 text-ui-compact text-nim-muted hover:text-nim border border-nim rounded-ui-base transition-colors shrink-0"
           data-testid="pr-sort-button"
         >
           <MaterialSymbol icon="sort" size={15} />
@@ -165,7 +165,7 @@ export function PullRequestListView({
               {SORT_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-ui-compact transition-colors ${
                     sortKey === opt.id ? 'text-nim bg-nim-active' : 'text-nim-muted hover:bg-nim-tertiary hover:text-nim'
                   }`}
                   onClick={() => {
@@ -195,30 +195,30 @@ export function PullRequestListView({
       {/* Body */}
       <div className="flex-1 overflow-y-auto">
         {error ? (
-          <div className="flex flex-col items-center justify-center py-10 px-5 text-nim-error gap-2 text-sm">
+          <div className="flex flex-col items-center justify-center py-10 px-5 text-nim-error gap-2 text-ui-body">
             <MaterialSymbol icon="error" size={28} className="opacity-70" />
             <span className="text-center">{error}</span>
             <button
-              className="mt-1 text-xs text-nim-accent hover:underline"
+              className="mt-1 text-ui-compact text-nim-accent hover:underline"
               onClick={() => void runFetch()}
             >
               Retry
             </button>
           </div>
         ) : loading && prList.length === 0 ? (
-          <div className="flex items-center justify-center gap-2 py-10 text-nim-muted text-sm">
+          <div className="flex items-center justify-center gap-2 py-10 text-nim-muted text-ui-body">
             <div className="spinner w-5 h-5 border-[3px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin" />
             Loading pull requests…
           </div>
         ) : visibleRows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-[60px] px-5 text-nim-faint gap-2">
             <MaterialSymbol icon="inbox" size={40} className="opacity-50" />
-            <span className="text-sm text-center">
+            <span className="text-ui-body text-center">
               {hasActiveNarrowing ? 'No pull requests match these filters' : 'No pull requests'}
             </span>
             {hasActiveNarrowing && (
               <button
-                className="text-xs text-nim-accent hover:underline"
+                className="text-ui-compact text-nim-accent hover:underline"
                 onClick={() => {
                   setSearch('');
                   setLayout({ activeFilters: ['open'] });

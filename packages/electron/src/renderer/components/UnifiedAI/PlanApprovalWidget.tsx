@@ -833,7 +833,7 @@ const RedispatchTrace: React.FC<{
   testId: string;
 }> = ({ label, original, suggested, current, testId }) => (
   <div data-testid={testId} className="min-w-0">
-    <dt className="text-xs font-semibold text-nim-muted">{label}</dt>
+    <dt className="text-ui-compact font-semibold text-nim-muted">{label}</dt>
     <dd className="mt-1 min-w-0 text-ui-body text-nim">
       <div className="break-words text-nim-muted">原参数：{original}</div>
       <div className="break-words">
@@ -1152,13 +1152,13 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
     >
       <div className="flex items-start justify-between gap-3 border-b border-nim bg-nim-tertiary px-4 py-3">
         <div className="min-w-0">
-          <div className="mb-1 text-xs font-medium text-nim">重派审批</div>
-          <div className="break-words text-sm font-semibold text-nim">{args.title}</div>
-          <div className="mt-1 text-xs text-nim-muted">
+          <div className="mb-1 text-ui-compact font-medium text-nim">重派审批</div>
+          <div className="break-words text-ui-body font-semibold text-nim">{args.title}</div>
+          <div className="mt-1 text-ui-compact text-nim-muted">
             工单 {args.trackerItemId} · 第 {args.attemptCount} 次尝试
           </div>
         </div>
-        <span className="shrink-0 text-xs text-nim-muted">
+        <span className="shrink-0 text-ui-compact text-nim-muted">
           {completedResult
             ? completedResult.approved ? '重派已批准' : '重派已拒绝'
             : '待批准'}
@@ -1169,7 +1169,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
         {args.failureReason && (
           <div
             data-testid="redispatch-failure-reason"
-            className="rounded-ui-base border border-red-500/30 bg-red-500/10 p-3 text-xs leading-5 text-nim"
+            className="rounded-ui-base border border-red-500/30 bg-red-500/10 p-3 text-ui-compact leading-5 text-nim"
           >
             {args.failureReason}
           </div>
@@ -1177,7 +1177,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
         {args.changeSummary && (
           <div
             data-testid="redispatch-change-summary"
-            className="rounded-ui-base bg-nim-tertiary p-3 text-xs leading-5 text-nim-muted"
+            className="rounded-ui-base bg-nim-tertiary p-3 text-ui-compact leading-5 text-nim-muted"
           >
             {args.changeSummary}
           </div>
@@ -1195,9 +1195,9 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
             current={currentParameters.provider}
           />
           <div data-testid="redispatch-model-field" className="plan-module-model-field min-w-0">
-            <dt className="text-xs font-semibold text-nim-muted">模型</dt>
+            <dt className="text-ui-compact font-semibold text-nim-muted">模型</dt>
             <dd className="mt-1 min-w-0">
-              <div className="mb-1 break-words text-xs text-nim-muted">
+              <div className="mb-1 break-words text-ui-compact text-nim-muted">
                 原参数：{args.original.model}
               </div>
               <select
@@ -1206,7 +1206,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                 value={route?.model ?? ''}
                 onChange={(event) => handleModelChange(event.target.value)}
                 disabled={isSubmitting || completedResult !== null || modelCatalog.status !== 'ready'}
-                className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">请选择模型</option>
                 {modelCatalog.models.map((model) => (
@@ -1215,16 +1215,16 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   </option>
                 ))}
               </select>
-              <p data-testid="redispatch-model-trace" className="mt-1 text-xs text-nim-muted">
+              <p data-testid="redispatch-model-trace" className="mt-1 text-ui-compact text-nim-muted">
                 Head 建议：{args.suggested.model} → 当前：{currentParameters.model || '未选择'}
               </p>
             </dd>
           </div>
           {routeModel && routeModel.supportedEffortLevels.length > 0 ? (
             <div data-testid="redispatch-effort-field" className="plan-module-effort-field min-w-0">
-              <dt className="text-xs font-semibold text-nim-muted">思考强度</dt>
+              <dt className="text-ui-compact font-semibold text-nim-muted">思考强度</dt>
               <dd className="mt-1 min-w-0">
-                <div className="mb-1 break-words text-xs text-nim-muted">
+                <div className="mb-1 break-words text-ui-compact text-nim-muted">
                   原参数：{args.original.effortLevel ?? '未提供'}
                 </div>
                 <select
@@ -1233,7 +1233,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   value={route?.effortLevel ?? ''}
                   onChange={(event) => handleEffortChange(event.target.value)}
                   disabled={isSubmitting || completedResult !== null}
-                  className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {routeModel.supportedEffortLevels.map((effortLevel) => (
                     <option key={effortLevel} value={effortLevel}>
@@ -1241,7 +1241,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                     </option>
                   ))}
                 </select>
-                <p data-testid="redispatch-effort-trace" className="mt-1 text-xs text-nim-muted">
+                <p data-testid="redispatch-effort-trace" className="mt-1 text-ui-compact text-nim-muted">
                   Head 建议：{args.suggested.effortLevel ?? '未提供'} → 当前：{currentParameters.effortLevel ?? '未提供'}
                 </p>
               </dd>
@@ -1256,9 +1256,9 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
             />
           )}
           <div data-testid="redispatch-permission-scope-field" className="min-w-0">
-            <dt className="text-xs font-semibold text-nim-muted">权限范围</dt>
+            <dt className="text-ui-compact font-semibold text-nim-muted">权限范围</dt>
             <dd className="mt-1 min-w-0">
-              <div className="mb-1 break-words text-xs text-nim-muted">
+              <div className="mb-1 break-words text-ui-compact text-nim-muted">
                 原参数：{getDispatchPermissionScopeLabel(args.original.permissionScope)}
               </div>
               <select
@@ -1278,7 +1278,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   }));
                 }}
                 disabled={isSubmitting || completedResult !== null || dispatchCapabilities.permissionScopes.length === 0}
-                className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {dispatchCapabilities.permissionScopes.map((scope) => (
                   <option key={scope} value={scope}>
@@ -1286,15 +1286,15 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   </option>
                 ))}
               </select>
-              <p data-testid="redispatch-permission-scope-trace" className="mt-1 text-xs text-nim-muted">
+              <p data-testid="redispatch-permission-scope-trace" className="mt-1 text-ui-compact text-nim-muted">
                 Head 建议：{getDispatchPermissionScopeLabel(args.suggested.permissionScope)} → 当前：{getDispatchPermissionScopeLabel(currentParameters.permissionScope)}
               </p>
             </dd>
           </div>
           <div data-testid="redispatch-disturbance-level-field" className="min-w-0">
-            <dt className="text-xs font-semibold text-nim-muted">打扰程度</dt>
+            <dt className="text-ui-compact font-semibold text-nim-muted">打扰程度</dt>
             <dd className="mt-1 min-w-0">
-              <div className="mb-1 break-words text-xs text-nim-muted">
+              <div className="mb-1 break-words text-ui-compact text-nim-muted">
                 原参数：{getDispatchDisturbanceLevelLabel(args.original.disturbanceLevel)}
               </div>
               <select
@@ -1314,7 +1314,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   }));
                 }}
                 disabled={isSubmitting || completedResult !== null || dispatchCapabilities.disturbanceLevels.length === 0}
-                className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {dispatchCapabilities.disturbanceLevels.map((level) => (
                   <option key={level} value={level}>
@@ -1322,20 +1322,20 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   </option>
                 ))}
               </select>
-              <p data-testid="redispatch-disturbance-level-trace" className="mt-1 text-xs text-nim-muted">
+              <p data-testid="redispatch-disturbance-level-trace" className="mt-1 text-ui-compact text-nim-muted">
                 Head 建议：{getDispatchDisturbanceLevelLabel(args.suggested.disturbanceLevel)} → 当前：{getDispatchDisturbanceLevelLabel(currentParameters.disturbanceLevel)}
               </p>
               {dispatchPermission.notice && (
-                <p data-testid="redispatch-dispatch-downgrade" className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                <p data-testid="redispatch-dispatch-downgrade" className="mt-1 text-ui-compact text-amber-800 dark:text-amber-200">
                   {dispatchPermission.notice}
                 </p>
               )}
             </dd>
           </div>
           <div data-testid="redispatch-skill-field" className="plan-module-skill-field min-w-0">
-            <dt className="text-xs font-semibold text-nim-muted">技能</dt>
+            <dt className="text-ui-compact font-semibold text-nim-muted">技能</dt>
             <dd className="mt-1 min-w-0">
-              <div className="mb-1 break-words text-xs text-nim-muted">
+              <div className="mb-1 break-words text-ui-compact text-nim-muted">
                 原参数：{formatRedispatchParameter(args.original, 'skillIds', skillsById)}
               </div>
               <select
@@ -1344,7 +1344,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                 value={selectedBundle?.id ?? ''}
                 onChange={(event) => handleSkillBundleChange(event.target.value)}
                 disabled={isSubmitting || completedResult !== null || skillLibrary.status === 'loading'}
-                className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">不授予</option>
                 {skillLibrary.settings.bundles.map((bundle) => (
@@ -1357,7 +1357,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                 {selectedSkills.length > 0 ? selectedSkills.map((skill) => (
                   <span
                     key={skill.id}
-                    className="inline-flex max-w-full items-center gap-1 rounded-ui-full border border-nim bg-nim-secondary px-2 py-0.5 text-xs text-nim"
+                    className="inline-flex max-w-full items-center gap-1 rounded-ui-full border border-nim bg-nim-secondary px-2 py-0.5 text-ui-compact text-nim"
                   >
                     <span className="truncate">{skill.name}</span>
                     <button
@@ -1371,7 +1371,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                     </button>
                   </span>
                 )) : (
-                  <span className="text-xs text-nim-muted">不授予任何技能</span>
+                  <span className="text-ui-compact text-nim-muted">不授予任何技能</span>
                 )}
               </div>
               <select
@@ -1383,7 +1383,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   event.currentTarget.value = '';
                 }}
                 disabled={isSubmitting || completedResult !== null || addableSkills.length === 0}
-                className="mt-2 w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-2 w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">搜索添加技能</option>
                 {addableSkills.map((skill) => (
@@ -1392,20 +1392,20 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                   </option>
                 ))}
               </select>
-              <p data-testid="redispatch-skill-trace" className="mt-1 text-xs text-nim-muted">
+              <p data-testid="redispatch-skill-trace" className="mt-1 text-ui-compact text-nim-muted">
                 Head 建议：{formatRedispatchParameter(args.suggested, 'skillIds', skillsById)} → 当前：{formatSkillSelection(resolvedSkillSelection, skillsById)}
               </p>
               {(route?.provider ?? args.suggested.provider) === 'openai-codex' && (
-                <p data-testid="redispatch-skill-codex-notice" className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                <p data-testid="redispatch-skill-codex-notice" className="mt-1 text-ui-compact text-amber-800 dark:text-amber-200">
                   {CODEX_SKILL_CONTROL_NOTICE}
                 </p>
               )}
             </dd>
           </div>
           <div data-testid="redispatch-prompt-field" className="plan-module-done-criteria min-w-0">
-            <dt className="text-xs font-semibold text-nim-muted">任务书</dt>
+            <dt className="text-ui-compact font-semibold text-nim-muted">任务书</dt>
             <dd className="mt-1 min-w-0">
-              <div className="mb-1 whitespace-pre-wrap break-words text-xs text-nim-muted">
+              <div className="mb-1 whitespace-pre-wrap break-words text-ui-compact text-nim-muted">
                 原参数：{args.original.prompt}
               </div>
               <textarea
@@ -1414,9 +1414,9 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
                 onChange={(event) => setPrompt(event.target.value)}
                 rows={5}
                 disabled={isSubmitting || completedResult !== null}
-                className="w-full resize-y rounded-ui-base border border-nim bg-nim-secondary px-3 py-2 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full resize-y rounded-ui-base border border-nim bg-nim-secondary px-3 py-2 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               />
-              <p data-testid="redispatch-prompt-trace" className="mt-1 whitespace-pre-wrap break-words text-xs text-nim-muted">
+              <p data-testid="redispatch-prompt-trace" className="mt-1 whitespace-pre-wrap break-words text-ui-compact text-nim-muted">
                 Head 建议：{args.suggested.prompt} → 当前：{currentParameters.prompt || '未提供'}
               </p>
             </dd>
@@ -1424,7 +1424,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
         </dl>
 
         {routeModelUnavailable && isPending && (
-          <div data-testid="redispatch-model-invalid" className="text-xs text-amber-800 dark:text-amber-200">
+          <div data-testid="redispatch-model-invalid" className="text-ui-compact text-amber-800 dark:text-amber-200">
             Head 建议的模型不在当前清单里，请重新选一个。
           </div>
         )}
@@ -1436,7 +1436,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
               data-testid="redispatch-reject"
               onClick={() => void submitDecision(false)}
               disabled={isSubmitting}
-              className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-ui-compact font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               拒绝
             </button>
@@ -1445,7 +1445,7 @@ export const RedispatchWorkOrderWidget: React.FC<CustomToolWidgetProps> = (props
               data-testid="redispatch-approve"
               onClick={() => void submitDecision(true)}
               disabled={isSubmitting || routeModelUnavailable || !prompt.trim() || !effectiveWorkspacePath}
-              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-ui-compact font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               批准重派
             </button>
@@ -1563,19 +1563,19 @@ export const WorkspaceTrustChangeWidget: React.FC<CustomToolWidgetProps> = (prop
     >
       <div className="flex items-start justify-between gap-3 border-b border-nim bg-nim-tertiary px-4 py-3">
         <div className="min-w-0">
-          <div className="mb-1 text-xs font-medium text-nim">提升权限审批</div>
-          <div className="text-sm font-semibold text-nim">工人请求提升工作区权限</div>
+          <div className="mb-1 text-ui-compact font-medium text-nim">提升权限审批</div>
+          <div className="text-ui-body font-semibold text-nim">工人请求提升工作区权限</div>
         </div>
-        <span className="shrink-0 text-xs text-nim-muted">{status}</span>
+        <span className="shrink-0 text-ui-compact text-nim-muted">{status}</span>
       </div>
       <div className="space-y-3 p-4 text-ui-body text-nim">
         <dl data-testid="workspace-trust-change-details" className="space-y-2">
-          <div><dt className="text-xs font-semibold text-nim-muted">当前模式</dt><dd>{workspaceTrustModeLabel(args.before)}</dd></div>
-          <div><dt className="text-xs font-semibold text-nim-muted">目标模式</dt><dd>{args.target}</dd></div>
-          <div><dt className="text-xs font-semibold text-nim-muted">工作区</dt><dd className="break-all">{args.workspacePath}</dd></div>
-          <div><dt className="text-xs font-semibold text-nim-muted">发起会话</dt><dd className="break-all">{args.requestingSessionId}</dd></div>
+          <div><dt className="text-ui-compact font-semibold text-nim-muted">当前模式</dt><dd>{workspaceTrustModeLabel(args.before)}</dd></div>
+          <div><dt className="text-ui-compact font-semibold text-nim-muted">目标模式</dt><dd>{args.target}</dd></div>
+          <div><dt className="text-ui-compact font-semibold text-nim-muted">工作区</dt><dd className="break-all">{args.workspacePath}</dd></div>
+          <div><dt className="text-ui-compact font-semibold text-nim-muted">发起会话</dt><dd className="break-all">{args.requestingSessionId}</dd></div>
         </dl>
-        <p data-testid="workspace-trust-change-meaning" className="rounded-ui-base bg-nim-tertiary p-3 text-xs leading-5 text-nim-muted">
+        <p data-testid="workspace-trust-change-meaning" className="rounded-ui-base bg-nim-tertiary p-3 text-ui-compact leading-5 text-nim-muted">
           {args.meaning}
         </p>
         {isPending && (
@@ -1585,7 +1585,7 @@ export const WorkspaceTrustChangeWidget: React.FC<CustomToolWidgetProps> = (prop
               data-testid="workspace-trust-change-reject"
               onClick={() => void submitDecision(false)}
               disabled={isSubmitting}
-              className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-ui-compact font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               拒绝
             </button>
@@ -1594,7 +1594,7 @@ export const WorkspaceTrustChangeWidget: React.FC<CustomToolWidgetProps> = (prop
               data-testid="workspace-trust-change-approve"
               onClick={() => void submitDecision(true)}
               disabled={isSubmitting}
-              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-ui-base bg-[var(--nim-primary)] px-3 py-2 text-ui-compact font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               批准提高权限
             </button>
@@ -2457,7 +2457,7 @@ const SubmittedPlanApprovalCard: React.FC<{
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <div className="text-xs font-medium text-nim">方案审批</div>
+              <div className="text-ui-compact font-medium text-nim">方案审批</div>
               {agentRole === 'meta-agent' && (
                 <span
                   className="meta-agent-plan-marker rounded-ui-full border border-nim-primary bg-nim-primary-subtle px-2 py-0.5 text-ui-micro font-bold tracking-[0.1em] text-nim-primary"
@@ -2468,9 +2468,9 @@ const SubmittedPlanApprovalCard: React.FC<{
                 </span>
               )}
             </div>
-            <div className="text-sm font-semibold text-nim">{title}</div>
+            <div className="text-ui-body font-semibold text-nim">{title}</div>
           </div>
-          <span className="text-xs text-nim-muted shrink-0">
+          <span className="text-ui-compact text-nim-muted shrink-0">
             {displayResult === 'approved'
               ? '方案已批准'
               : displayResult === 'changes-requested'
@@ -2480,14 +2480,14 @@ const SubmittedPlanApprovalCard: React.FC<{
           {autoApproved && displayResult === 'approved' && (
             <span
               data-testid="plan-auto-approved-badge"
-              className="text-xs text-amber-700 dark:text-amber-300 shrink-0"
+              className="text-ui-compact text-amber-700 dark:text-amber-300 shrink-0"
             >
               已自动批准（测试模式）
             </span>
           )}
         </div>
         {isMultiModulePlan && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-nim-muted">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-ui-compact text-nim-muted">
             <span data-testid="plan-approval-module-count">
               方案包含 {modules.length} 个模块
             </span>
@@ -2499,7 +2499,7 @@ const SubmittedPlanApprovalCard: React.FC<{
         {isMultiModulePlan && rejectedModuleCount > 0 && (
           <div
             data-testid="plan-approval-revision-warning"
-            className="rounded-ui-base border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-200"
+            className="rounded-ui-base border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-ui-compact font-medium text-amber-800 dark:text-amber-200"
           >
             {rejectedModuleCount} 个模块待修订，Head 需重新递交
           </div>
@@ -2526,7 +2526,7 @@ const SubmittedPlanApprovalCard: React.FC<{
             data-testid="plan-approval-summary"
             className="mb-3 rounded-ui-base bg-nim-tertiary p-3"
           >
-            <div className="text-xs font-semibold text-nim mb-1">
+            <div className="text-ui-compact font-semibold text-nim mb-1">
               方案摘要
             </div>
             <div className="text-ui-body leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
@@ -2550,7 +2550,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                 className="plan-module-pagination flex flex-wrap items-center justify-between gap-3 rounded-ui-base border border-nim bg-nim-secondary px-3 py-2"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="shrink-0 text-xs font-medium text-nim">
+                  <span className="shrink-0 text-ui-compact font-medium text-nim">
                     第 {activeModuleIndex + 1} 个 / 共 {modules.length} 个
                   </span>
                   <div
@@ -2600,7 +2600,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       )
                     }
                     disabled={activeModuleIndex === 0}
-                    className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-ui-compact font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     上一个
                   </button>
@@ -2613,7 +2613,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       )
                     }
                     disabled={activeModuleIndex === modules.length - 1}
-                    className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-ui-compact font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     下一个
                   </button>
@@ -2727,7 +2727,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                   className="plan-module-card flex flex-col rounded-ui-base border border-nim bg-nim-tertiary p-3"
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0 break-words text-sm font-semibold text-nim">
+                    <div className="min-w-0 break-words text-ui-body font-semibold text-nim">
                       {module.title}
                     </div>
                     {isMultiModulePlan && (
@@ -2754,7 +2754,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                     className="plan-module-fields text-ui-body"
                   >
                     <div className="min-w-0">
-                      <dt className="text-xs font-semibold text-nim-muted">
+                      <dt className="text-ui-compact font-semibold text-nim-muted">
                         产出文件
                       </dt>
                       <dd className="mt-1 flex min-w-0 flex-col gap-1 text-nim select-text">
@@ -2774,7 +2774,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="text-xs font-semibold text-nim-muted">
+                      <dt className="text-ui-compact font-semibold text-nim-muted">
                         原料
                       </dt>
                       <dd className="mt-1 text-nim select-text">
@@ -2784,7 +2784,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="text-xs font-semibold text-nim-muted">
+                      <dt className="text-ui-compact font-semibold text-nim-muted">
                         提供方
                       </dt>
                       <dd className="mt-1 break-words text-nim select-text">
@@ -2794,7 +2794,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         {providerChanged && moduleRoute && (
                           <p
                             data-testid={`plan-module-provider-trace-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-nim-muted"
+                            className="mt-1 text-ui-compact text-nim-muted"
                           >
                             Head 建议：{suggestedRouteProvider} → 当前：{moduleRoute.provider}
                           </p>
@@ -2805,7 +2805,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       data-testid={`plan-module-model-field-${stableModuleIndex}`}
                       className="plan-module-model-field min-w-0"
                     >
-                      <dt className="text-xs font-semibold text-nim-muted">
+                      <dt className="text-ui-compact font-semibold text-nim-muted">
                         模型
                       </dt>
                       <dd className="mt-1 min-w-0">
@@ -2823,7 +2823,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           disabled={
                             modelCatalog.status !== 'ready' || moduleControlsDisabled
                           }
-                          className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">请选择模型</option>
                           {modelCatalog.models.map((model) => (
@@ -2835,14 +2835,14 @@ const SubmittedPlanApprovalCard: React.FC<{
                         {module.modelCatalogPending ? (
                           <p
                             data-testid={`plan-module-model-catalog-pending-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-nim-muted"
+                            className="mt-1 text-ui-compact text-nim-muted"
                           >
                             目录未就绪，模型待确认
                           </p>
                         ) : modelCatalog.status === 'ready' && !moduleRoute ? (
                           <p
                             data-testid={`plan-module-model-invalid-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-amber-800 dark:text-amber-200"
+                            className="mt-1 text-ui-compact text-amber-800 dark:text-amber-200"
                           >
                             Head 报的型号 <code>{module.model}</code> 不在当前清单里，请选一个
                           </p>
@@ -2850,7 +2850,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         {modelChanged && moduleRoute && (
                           <p
                             data-testid={`plan-module-model-trace-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-nim-muted"
+                            className="mt-1 text-ui-compact text-nim-muted"
                           >
                             Head 建议：{suggestedRouteModelText} → 当前：{moduleRoute.model}
                           </p>
@@ -2862,7 +2862,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         data-testid={`plan-module-effort-field-${stableModuleIndex}`}
                         className="plan-module-effort-field min-w-0"
                       >
-                        <dt className="text-xs font-semibold text-nim-muted">
+                        <dt className="text-ui-compact font-semibold text-nim-muted">
                           思考强度
                         </dt>
                         <dd className="mt-1 min-w-0">
@@ -2878,7 +2878,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                               )
                             }
                             disabled={moduleControlsDisabled}
-                            className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {routeModel.supportedEffortLevels.map((effortLevel) => (
                               <option key={effortLevel} value={effortLevel}>
@@ -2889,7 +2889,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           {effortLevelChanged && moduleRoute && (
                             <p
                               data-testid={`plan-module-effort-trace-${stableModuleIndex}`}
-                              className="mt-1 text-xs text-nim-muted"
+                              className="mt-1 text-ui-compact text-nim-muted"
                             >
                               Head 建议：{suggestedEffortLevel} → 当前：{moduleRoute.effortLevel}
                             </p>
@@ -2901,7 +2901,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       data-testid={`plan-module-permission-scope-field-${stableModuleIndex}`}
                       className="plan-module-permission-scope-field min-w-0"
                     >
-                      <dt className="text-xs font-semibold text-nim-muted">
+                      <dt className="text-ui-compact font-semibold text-nim-muted">
                         权限范围
                       </dt>
                       <dd className="mt-1 min-w-0">
@@ -2926,7 +2926,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             moduleControlsDisabled
                             || dispatchCapabilities.permissionScopes.length === 0
                           }
-                          className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {dispatchCapabilities.permissionScopes.length === 0 ? (
                             <option value="">该引擎不支持此档</option>
@@ -2941,7 +2941,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         {permissionScopeChanged && dispatchPermission && (
                           <p
                             data-testid={`plan-module-permission-scope-trace-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-nim-muted"
+                            className="mt-1 text-ui-compact text-nim-muted"
                           >
                             Head 建议：{getDispatchPermissionScopeLabel(suggestedDispatchPermission.permissionScope)} → 当前：{getDispatchPermissionScopeLabel(dispatchPermission.effective.permissionScope)}
                           </p>
@@ -2952,7 +2952,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       data-testid={`plan-module-disturbance-level-field-${stableModuleIndex}`}
                       className="plan-module-disturbance-level-field min-w-0"
                     >
-                      <dt className="text-xs font-semibold text-nim-muted">
+                      <dt className="text-ui-compact font-semibold text-nim-muted">
                         打扰程度
                       </dt>
                       <dd className="mt-1 min-w-0">
@@ -2977,7 +2977,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             moduleControlsDisabled
                             || dispatchCapabilities.disturbanceLevels.length === 0
                           }
-                          className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {dispatchCapabilities.disturbanceLevels.length === 0 ? (
                             <option value="">该引擎不支持此档</option>
@@ -2992,7 +2992,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         {disturbanceLevelChanged && dispatchPermission && (
                           <p
                             data-testid={`plan-module-disturbance-level-trace-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-nim-muted"
+                            className="mt-1 text-ui-compact text-nim-muted"
                           >
                             Head 建议：{getDispatchDisturbanceLevelLabel(suggestedDispatchPermission.disturbanceLevel)} → 当前：{getDispatchDisturbanceLevelLabel(dispatchPermission.effective.disturbanceLevel)}
                           </p>
@@ -3000,7 +3000,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         {dispatchPermission?.notice && (
                           <p
                             data-testid={`plan-module-dispatch-downgrade-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-amber-800 dark:text-amber-200"
+                            className="mt-1 text-ui-compact text-amber-800 dark:text-amber-200"
                           >
                             {dispatchPermission.notice}
                           </p>
@@ -3011,7 +3011,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       data-testid={`plan-module-skill-field-${stableModuleIndex}`}
                       className="plan-module-skill-field min-w-0"
                     >
-                      <dt className="flex items-center justify-between gap-2 text-xs font-semibold text-nim-muted">
+                      <dt className="flex items-center justify-between gap-2 text-ui-compact font-semibold text-nim-muted">
                         <span data-testid={`plan-module-skill-summary-${stableModuleIndex}`}>
                           技能：{skillSummary}
                         </span>
@@ -3030,7 +3030,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             ...current,
                             [moduleIndex]: !current[moduleIndex],
                           }))}
-                          className="ml-auto text-xs font-medium text-nim-link hover:text-nim-link-hover"
+                          className="ml-auto text-ui-compact font-medium text-nim-link hover:text-nim-link-hover"
                         >
                           {isSkillEditorExpanded ? '收起' : '调整'}
                         </button>
@@ -3038,7 +3038,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       {unavailableSkillNotice && (
                         <p
                           data-testid={`plan-module-skill-unavailable-${stableModuleIndex}`}
-                          className="mt-1 text-xs text-nim-muted"
+                          className="mt-1 text-ui-compact text-nim-muted"
                         >
                           {unavailableSkillNotice}
                         </p>
@@ -3058,7 +3058,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             handleModuleSkillBundleChange(moduleIndex, event.target.value)
                           }
                           disabled={moduleControlsDisabled || skillLibrary.status === 'loading'}
-                          className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {!rawSkillSelection && (
                             <option value="__all__">全部（{grantableSkills.length}）</option>
@@ -3082,7 +3082,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                               <span
                                 key={skill.id}
                                 data-testid={`plan-module-skill-tag-${stableModuleIndex}`}
-                                className="inline-flex max-w-full items-center gap-1 rounded-ui-full border border-nim bg-nim-secondary px-2 py-0.5 text-xs text-nim"
+                                className="inline-flex max-w-full items-center gap-1 rounded-ui-full border border-nim bg-nim-secondary px-2 py-0.5 text-ui-compact text-nim"
                               >
                                 <span className="truncate">{skill.name}</span>
                                 <button
@@ -3099,7 +3099,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           ) : (
                             <span
                               data-testid={`plan-module-skill-empty-${stableModuleIndex}`}
-                              className="text-xs text-nim-muted"
+                              className="text-ui-compact text-nim-muted"
                             >
                               不授予任何技能
                             </span>
@@ -3114,7 +3114,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             event.currentTarget.value = '';
                           }}
                           disabled={moduleControlsDisabled || addableSkills.length === 0}
-                          className="mt-2 w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-xs text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="mt-2 w-full min-w-0 rounded-ui-base border border-nim bg-nim-secondary px-2 py-1 text-ui-compact text-nim focus:border-nim-focus focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">搜索添加技能</option>
                           {addableSkills.map((skill) => (
@@ -3126,7 +3126,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         {skillSelectionChanged && (
                           <p
                             data-testid={`plan-module-skill-trace-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-nim-muted"
+                            className="mt-1 text-ui-compact text-nim-muted"
                           >
                             Head 建议：{formatSkillSelection(suggestedSkillSelection, skillsById)} → 当前：{formatSkillSelection(skillSelection, skillsById)}
                           </p>
@@ -3134,7 +3134,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         {providerForSkills === 'openai-codex' && (
                           <p
                             data-testid={`plan-module-skill-codex-notice-${stableModuleIndex}`}
-                            className="mt-1 text-xs text-amber-800 dark:text-amber-200"
+                            className="mt-1 text-ui-compact text-amber-800 dark:text-amber-200"
                           >
                             {CODEX_SKILL_CONTROL_NOTICE}
                           </p>
@@ -3144,7 +3144,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       </dd>
                     </div>
                     <div className="plan-module-done-criteria min-w-0">
-                      <dt className="text-xs font-semibold text-nim-muted">
+                      <dt className="text-ui-compact font-semibold text-nim-muted">
                         完成标准
                       </dt>
                       <dd className="mt-1 whitespace-pre-wrap break-words text-nim select-text">
@@ -3155,7 +3155,7 @@ const SubmittedPlanApprovalCard: React.FC<{
 
                   {module.candidates.length > 0 && (
                     <div data-testid="plan-candidate-matrix" className="mt-4">
-                      <div className="mb-2 text-xs font-semibold text-nim">
+                      <div className="mb-2 text-ui-compact font-semibold text-nim">
                         候选方案对比
                       </div>
                       <div className="overflow-x-auto pb-2">
@@ -3165,7 +3165,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                             gridTemplateColumns: `minmax(76px, 0.35fr) repeat(${module.candidates.length}, minmax(220px, 1fr))`,
                           }}
                         >
-                          <div className="sticky left-0 z-10 border-b border-r border-nim bg-nim-tertiary p-2 text-xs font-semibold text-nim-muted">
+                          <div className="sticky left-0 z-10 border-b border-r border-nim bg-nim-tertiary p-2 text-ui-compact font-semibold text-nim-muted">
                             字段
                           </div>
                           {module.candidates.map((candidate) => (
@@ -3176,7 +3176,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                               <div className="mb-2 whitespace-nowrap font-semibold">
                                 {candidate.name}
                               </div>
-                              <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-nim-muted">
+                              <label className="inline-flex cursor-pointer items-center gap-2 text-ui-compact text-nim-muted">
                                 <input
                                   type="radio"
                                   name={`plan-candidate-${args.planId}-${moduleIndex}`}
@@ -3201,7 +3201,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           ))}
                           {CANDIDATE_MATRIX_ROWS.map((row) => (
                             <React.Fragment key={row.key}>
-                              <div className="sticky left-0 z-10 border-b border-r border-nim bg-nim-tertiary p-2 text-xs font-semibold text-nim-muted">
+                              <div className="sticky left-0 z-10 border-b border-r border-nim bg-nim-tertiary p-2 text-ui-compact font-semibold text-nim-muted">
                                 {row.label}
                               </div>
                               {module.candidates.map((candidate) => (
@@ -3230,7 +3230,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                       {isModuleRejected && moduleApproval.feedback && (
                         <div
                           data-testid={`plan-module-feedback-${stableModuleIndex}`}
-                          className="mb-3 rounded-ui-base border border-amber-500/30 bg-amber-500/10 p-2 text-xs leading-relaxed text-amber-900 dark:text-amber-100"
+                          className="mb-3 rounded-ui-base border border-amber-500/30 bg-amber-500/10 p-2 text-ui-compact leading-relaxed text-amber-900 dark:text-amber-100"
                         >
                           意见：{moduleApproval.feedback}
                         </div>
@@ -3255,7 +3255,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                               }));
                             }}
                             disabled={isSubmitting}
-                            className="plan-module-request-changes rounded-ui-base border border-nim bg-transparent px-3 py-2 text-xs font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+                            className="plan-module-request-changes rounded-ui-base border border-nim bg-transparent px-3 py-2 text-ui-compact font-medium text-nim hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             打回这一条
                           </button>
@@ -3263,7 +3263,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           <div className="flex flex-col gap-2">
                             <label
                               htmlFor={`plan-module-feedback-${message.id}-${stableModuleIndex}`}
-                              className="text-xs font-medium text-nim"
+                              className="text-ui-compact font-medium text-nim"
                             >
                               打回意见
                             </label>
@@ -3301,7 +3301,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                               placeholder="写明这一模块需要修订的内容…"
                               rows={3}
                               disabled={isSubmitting}
-                              className="w-full resize-none rounded-ui-base border border-nim bg-nim-secondary px-3 py-2 text-xs text-nim placeholder:text-nim-muted focus:border-nim-focus focus:outline-none"
+                              className="w-full resize-none rounded-ui-base border border-nim bg-nim-secondary px-3 py-2 text-ui-compact text-nim placeholder:text-nim-muted focus:border-nim-focus focus:outline-none"
                             />
                             <div className="flex justify-end gap-2">
                               <button
@@ -3310,7 +3310,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                                   setActiveFeedbackModuleIndex(null)
                                 }
                                 disabled={isSubmitting}
-                                className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-xs text-nim-muted hover:bg-nim-hover disabled:opacity-50"
+                                className="rounded-ui-base border border-nim bg-transparent px-3 py-2 text-ui-compact text-nim-muted hover:bg-nim-hover disabled:opacity-50"
                               >
                                 取消
                               </button>
@@ -3326,7 +3326,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                                     moduleFeedback[stableModuleIndex] ?? ''
                                   ).trim() === ''
                                 }
-                                className="rounded-ui-base border border-nim-primary bg-transparent px-3 py-2 text-xs text-nim-primary hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-ui-base border border-nim-primary bg-transparent px-3 py-2 text-ui-compact text-nim-primary hover:bg-nim-hover disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 提交打回
                               </button>
@@ -3348,14 +3348,14 @@ const SubmittedPlanApprovalCard: React.FC<{
         </ol>
 
         {!isMultiModulePlan && (
-          <div className="mt-3 text-xs font-medium text-nim-muted">
+          <div className="mt-3 text-ui-compact font-medium text-nim-muted">
             {workOrderCount} 个工单
           </div>
         )}
 
         {!isMultiModulePlan && (
           <div className="mt-3 rounded-ui-base bg-nim-tertiary p-3">
-            <div className="text-xs font-semibold text-nim mb-1">总体风险</div>
+            <div className="text-ui-compact font-semibold text-nim mb-1">总体风险</div>
             <div className="text-ui-body leading-relaxed text-nim-muted whitespace-pre-wrap select-text">
               {risks}
             </div>
@@ -3374,7 +3374,7 @@ const SubmittedPlanApprovalCard: React.FC<{
               data-testid="plan-approval-actions"
               className="plan-approval-actions sticky bottom-0 z-20 -mx-4 -mb-4 mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-nim bg-nim-secondary/95 p-4 backdrop-blur"
             >
-              <span className="text-xs text-nim-muted">
+              <span className="text-ui-compact text-nim-muted">
                 批准所有未被打回的模块
               </span>
               <button
@@ -3437,7 +3437,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                   <div className="flex flex-col gap-2">
                     <label
                       htmlFor={`plan-change-feedback-${message.id}`}
-                      className="text-xs font-medium text-nim"
+                      className="text-ui-compact font-medium text-nim"
                     >
                       修订意见
                     </label>
@@ -3483,7 +3483,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                           setFeedback('');
                         }}
                         disabled={isSubmitting}
-                        className="px-3 py-2 rounded-ui-base border border-nim bg-transparent text-nim-muted text-xs cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-2 rounded-ui-base border border-nim bg-transparent text-nim-muted text-ui-compact cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         取消
                       </button>
@@ -3492,7 +3492,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                         data-testid="plan-approval-submit-changes"
                         onClick={() => void handleRequestChanges()}
                         disabled={isSubmitting || feedback.trim() === ''}
-                        className="px-3 py-2 rounded-ui-base border-none bg-nim-primary text-white text-xs cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-2 rounded-ui-base border-none bg-nim-primary text-white text-ui-compact cursor-pointer hover:bg-nim-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         提交修订
                       </button>
@@ -3504,7 +3504,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           )}
 
         {displayResult && isPending && hasRecordedResponse && (
-          <div className="mt-4 text-xs text-nim-muted">
+          <div className="mt-4 text-ui-compact text-nim-muted">
             {displayResult === 'approved'
               ? '审批已记录。Head 正在准备派活…'
               : '打回已记录。Head 正在准备修订…'}
@@ -3515,7 +3515,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           awaitingResponse &&
           responseSubmitted &&
           !confirmationTimedOut && (
-            <div className="mt-4 text-xs text-nim-muted">
+            <div className="mt-4 text-ui-compact text-nim-muted">
               Response submitted. Waiting for durable confirmation…
             </div>
           )}
@@ -3524,7 +3524,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           awaitingResponse &&
           responseSubmitted &&
           confirmationTimedOut && (
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-ui-base border border-red-500/40 bg-red-500/10 p-3 text-xs text-nim">
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-ui-base border border-red-500/40 bg-red-500/10 p-3 text-ui-compact text-nim">
               <span>
                 响应已保存，但未收到确认消息。请重试响应。
               </span>
@@ -3533,7 +3533,7 @@ const SubmittedPlanApprovalCard: React.FC<{
                 data-testid="plan-approval-retry-response"
                 onClick={() => void handleRetry()}
                 disabled={isSubmitting || !submittedResponse}
-                className="shrink-0 px-3 py-2 rounded-ui-base border border-nim bg-nim-tertiary text-nim text-xs cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                className="shrink-0 px-3 py-2 rounded-ui-base border border-nim bg-nim-tertiary text-nim text-ui-compact cursor-pointer hover:bg-nim-hover disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 重试响应
               </button>
@@ -3544,7 +3544,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           awaitingResponse &&
           !requestId &&
           !responseSubmitted && (
-            <div className="mt-4 text-xs text-nim-muted">
+            <div className="mt-4 text-ui-compact text-nim-muted">
               正在等待持久审批 ID…
             </div>
           )}
@@ -3553,7 +3553,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           awaitingResponse &&
           promptStatus === 'checking' &&
           !responseSubmitted && (
-            <div className="mt-4 text-xs text-nim-muted">
+            <div className="mt-4 text-ui-compact text-nim-muted">
               正在检查审批可用性…
             </div>
           )}
@@ -3564,7 +3564,7 @@ const SubmittedPlanApprovalCard: React.FC<{
           requestId &&
           !host &&
           !responseSubmitted && (
-            <div className="mt-4 text-xs text-nim-muted">
+            <div className="mt-4 text-ui-compact text-nim-muted">
               正在等待活动审批面板…
             </div>
           )}
@@ -3582,7 +3582,7 @@ const HeadNativePlanModeBlockedCard: React.FC<{ planFilePath: string | null }> =
     className="rounded-ui-base border border-nim-warning/60 bg-nim-warning/10 text-nim"
   >
     <div className="flex items-center justify-between gap-3 border-b border-nim-warning/30 px-4 py-3">
-      <div className="text-sm font-semibold">原生方案模式已禁用</div>
+      <div className="text-ui-body font-semibold">原生方案模式已禁用</div>
       <span
         data-testid="head-native-exit-plan-mode-invalid"
         className="rounded-ui-base px-2 py-0.5 text-ui-caption font-semibold uppercase text-nim-warning"
@@ -3596,7 +3596,7 @@ const HeadNativePlanModeBlockedCard: React.FC<{ planFilePath: string | null }> =
         提交审批。这个 Claude 原生 ExitPlanMode 请求已失效，不会在 Head 中审批。
       </p>
       {planFilePath && (
-        <div className="break-all rounded-ui-base bg-nim-bg-secondary px-2 py-1 text-xs">
+        <div className="break-all rounded-ui-base bg-nim-bg-secondary px-2 py-1 text-ui-compact">
           原生方案文件：{planFilePath}
         </div>
       )}
@@ -3617,7 +3617,7 @@ const NativeExitPlanModeFallback: React.FC<CustomToolWidgetProps> = (props) => {
   return (
     <div
       data-testid="exit-plan-mode-role-checking"
-      className="rounded-ui-base border border-nim-border bg-nim-bg-secondary px-4 py-3 text-sm text-nim-muted"
+      className="rounded-ui-base border border-nim-border bg-nim-bg-secondary px-4 py-3 text-ui-body text-nim-muted"
     >
       正在检查方案审批可用性…
     </div>

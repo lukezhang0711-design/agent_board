@@ -55,13 +55,13 @@ class PanelErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="panel-error flex flex-col items-center justify-center h-full p-8 text-center gap-3">
-          <span className="material-symbols-outlined panel-error-icon text-5xl text-[var(--nim-error)]">error</span>
-          <div className="panel-error-title text-base font-semibold text-[var(--nim-text)]">Panel Error</div>
-          <div className="panel-error-message text-[13px] text-[var(--nim-text-muted)] max-w-[300px] break-words">
+          <span className="material-symbols-outlined panel-error-icon text-ui-display text-[var(--nim-error)]">error</span>
+          <div className="panel-error-title text-ui-subhead font-semibold text-[var(--nim-text)]">Panel Error</div>
+          <div className="panel-error-message text-ui-body text-[var(--nim-text-muted)] max-w-[300px] break-words">
             {this.state.error?.message || 'An unknown error occurred'}
           </div>
           <button
-            className="panel-error-retry mt-2 px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-text)] text-[13px] cursor-pointer hover:bg-[var(--nim-bg-hover)]"
+            className="panel-error-retry mt-2 px-4 py-2 border border-[var(--nim-border)] rounded-ui-base bg-transparent text-[var(--nim-text)] text-ui-body cursor-pointer hover:bg-[var(--nim-bg-hover)]"
             onClick={() => this.setState({ hasError: false, error: undefined })}
           >
             Retry

@@ -135,7 +135,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
         ref={refs.setReference}
         {...getReferenceProps()}
         type="button"
-        className={`unified-quick-open-filter-chip inline-flex items-center gap-2 px-2 py-1 text-xs rounded-ui-base border cursor-pointer transition-colors duration-100 ${
+        className={`unified-quick-open-filter-chip inline-flex items-center gap-2 px-2 py-1 text-ui-compact rounded-ui-base border cursor-pointer transition-colors duration-100 ${
           value
             ? 'bg-[rgba(0,122,255,0.12)] border-[var(--nim-primary)] text-[var(--nim-primary)]'
             : 'bg-nim-secondary border-nim text-nim-muted hover:text-nim hover:bg-nim-hover'
@@ -173,7 +173,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
           >
             <button
               type="button"
-              className="w-full text-left px-3 py-2 text-sm rounded-ui-base cursor-pointer text-nim-muted hover:bg-nim-hover hover:text-nim"
+              className="w-full text-left px-3 py-2 text-ui-body rounded-ui-base cursor-pointer text-nim-muted hover:bg-nim-hover hover:text-nim"
               onClick={() => handlePick(null)}
             >
               Any
@@ -186,7 +186,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
                   <button
                     key={opt.value}
                     type="button"
-                    className={`w-full flex items-center gap-2 text-left px-3 py-2 text-sm rounded-ui-base cursor-pointer ${
+                    className={`w-full flex items-center gap-2 text-left px-3 py-2 text-ui-body rounded-ui-base cursor-pointer ${
                       opt.value === value
                         ? 'bg-[rgba(0,122,255,0.15)] text-[var(--nim-primary)]'
                         : 'text-nim hover:bg-nim-hover'
@@ -203,7 +203,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
                       <MaterialSymbol icon={opt.icon} size={14} className="shrink-0 text-nim-muted" />
                     )}
                     <span className="truncate flex-1">{opt.label}</span>
-                    <span className="text-[10px] text-nim-faint">{opt.value}</span>
+                    <span className="text-ui-micro text-nim-faint">{opt.value}</span>
                   </button>
                 ))}
               </>
@@ -219,7 +219,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
                   >
                     <button
                       type="button"
-                      className="flex-1 text-left px-3 py-2 text-sm cursor-pointer text-nim truncate"
+                      className="flex-1 text-left px-3 py-2 text-ui-body cursor-pointer text-nim truncate"
                       onClick={() => handlePick(entry)}
                       title={entry}
                     >
@@ -250,7 +250,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
                   <input
                     type="text"
                     autoFocus
-                    className="nim-input w-full text-sm py-1 px-2"
+                    className="nim-input w-full text-ui-body py-1 px-2"
                     placeholder={placeholder}
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
@@ -278,7 +278,7 @@ export const FilterChip = forwardRef<FilterChipHandle, FilterChipProps>(
 FilterChip.displayName = 'FilterChip';
 
 const MenuHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-nim-faint">
+  <div className="px-3 pt-2 pb-1 text-ui-micro font-semibold uppercase tracking-wider text-nim-faint">
     {children}
   </div>
 );

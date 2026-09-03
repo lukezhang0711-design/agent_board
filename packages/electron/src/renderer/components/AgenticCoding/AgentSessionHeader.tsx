@@ -186,7 +186,7 @@ export const AgentSessionHeader: React.FC<AgentSessionHeaderProps> = ({
   );
 
   const subtitleNode = isWorktreeSession ? (
-    <div className="agent-session-header-meta flex items-center gap-2 mt-1 text-xs text-[var(--nim-text-muted)]">
+    <div className="agent-session-header-meta flex items-center gap-2 mt-1 text-ui-compact text-[var(--nim-text-muted)]">
       {worktreeMetadata ? (
         <>
           <span className="agent-session-header-worktree-name text-[var(--nim-text-muted)] font-medium">{worktreeMetadata.name}</span>
@@ -254,7 +254,7 @@ export const AgentSessionHeader: React.FC<AgentSessionHeaderProps> = ({
   return (
     <PageHeader
       icon={iconNode}
-      title={<span className="agent-session-header-title m-0 text-base font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight">{displayTitle}</span>}
+      title={<span className="agent-session-header-title m-0 text-ui-subhead font-semibold text-[var(--nim-text)] whitespace-nowrap overflow-hidden text-ellipsis leading-tight">{displayTitle}</span>}
       subtitle={subtitleNode}
       actions={actionsNode}
       className="agent-session-header shrink-0 px-4 py-2 border-b border-[var(--nim-border)] bg-[var(--nim-bg)]"

@@ -81,12 +81,12 @@ export const MonacoDiffApprovalBar: React.FC<MonacoDiffApprovalBarProps> = ({
         <div className="monaco-diff-approval-bar-session flex items-center gap-2">
           <MaterialSymbol icon="smart_toy" size={18} className="monaco-diff-approval-bar-session-icon text-[var(--nim-primary)]" />
           <div className="monaco-diff-approval-bar-session-details flex flex-col gap-1">
-            <span className="monaco-diff-approval-bar-label text-[13px] font-medium text-[var(--nim-text)]">
+            <span className="monaco-diff-approval-bar-label text-ui-body font-medium text-[var(--nim-text)]">
               <span className="monaco-diff-approval-bar-session-name font-semibold text-[var(--nim-primary)]">{sessionInfo.sessionTitle}</span>
               {' '}edited {fileName || 'file'}
             </span>
             {sessionInfo.editedAt && (
-              <span className="monaco-diff-approval-bar-timestamp text-[11px] text-[var(--nim-text-faint)]">
+              <span className="monaco-diff-approval-bar-timestamp text-ui-caption text-[var(--nim-text-faint)]">
                 {formatRelativeTime(sessionInfo.editedAt)}
               </span>
             )}
@@ -97,7 +97,7 @@ export const MonacoDiffApprovalBar: React.FC<MonacoDiffApprovalBarProps> = ({
 
     // Fallback to original simple label
     return (
-      <span className="monaco-diff-approval-bar-label text-[13px] font-medium text-[var(--nim-text)]">
+      <span className="monaco-diff-approval-bar-label text-ui-body font-medium text-[var(--nim-text)]">
         AI changes to {fileName || 'file'}
       </span>
     );
@@ -110,7 +110,7 @@ export const MonacoDiffApprovalBar: React.FC<MonacoDiffApprovalBarProps> = ({
           {renderLabel()}
           {sessionInfo?.sessionId && onGoToSession && (
             <button
-              className="monaco-diff-approval-bar-goto flex items-center gap-1 px-3 py-1 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-xs font-medium cursor-pointer transition-all duration-150 font-inherit whitespace-nowrap hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
+              className="monaco-diff-approval-bar-goto flex items-center gap-1 px-3 py-1 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text-muted)] text-ui-compact font-medium cursor-pointer transition-all duration-150 font-inherit whitespace-nowrap hover:bg-[var(--nim-bg-hover)] hover:text-[var(--nim-text)] hover:border-[var(--nim-primary)]"
               onClick={handleGoToSession}
               type="button"
               title="Open the AI session that made these changes"
@@ -123,7 +123,7 @@ export const MonacoDiffApprovalBar: React.FC<MonacoDiffApprovalBarProps> = ({
         <div className="monaco-diff-approval-bar-actions flex items-center gap-2">
           <HelpTooltip testId="diff-revert-all-button">
             <button
-              className="monaco-diff-approval-bar-button monaco-diff-approval-bar-button-reject px-4 py-2 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-150 border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:opacity-85 hover:bg-[var(--nim-bg-hover)] active:scale-[0.98]"
+              className="monaco-diff-approval-bar-button monaco-diff-approval-bar-button-reject px-4 py-2 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 border border-[var(--nim-border)] bg-[var(--nim-bg)] text-[var(--nim-text)] hover:opacity-85 hover:bg-[var(--nim-bg-hover)] active:scale-[0.98]"
               onClick={handleRejectClick}
               type="button"
               data-testid="diff-revert-all-button"
@@ -133,7 +133,7 @@ export const MonacoDiffApprovalBar: React.FC<MonacoDiffApprovalBarProps> = ({
           </HelpTooltip>
           <HelpTooltip testId="diff-keep-all-button">
             <button
-              className="monaco-diff-approval-bar-button monaco-diff-approval-bar-button-accept px-4 py-2 rounded-ui-base text-[13px] font-medium cursor-pointer transition-all duration-150 border border-[var(--nim-primary)] bg-[var(--nim-primary)] text-white hover:opacity-90 active:scale-[0.98]"
+              className="monaco-diff-approval-bar-button monaco-diff-approval-bar-button-accept px-4 py-2 rounded-ui-base text-ui-body font-medium cursor-pointer transition-all duration-150 border border-[var(--nim-primary)] bg-[var(--nim-primary)] text-white hover:opacity-90 active:scale-[0.98]"
               onClick={handleAcceptClick}
               type="button"
               data-testid="diff-keep-all-button"

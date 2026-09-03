@@ -118,15 +118,15 @@ ${JSON.stringify(notification.context, null, 2)}
           onMouseLeave={() => resumeDismissTimer(notification)}
         >
           <div className="error-toast-header flex items-center gap-2 mb-2">
-            <div className="error-toast-icon text-xl leading-none">
+            <div className="error-toast-icon text-ui-title leading-none">
               {notification.severity === 'error' && '🚨'}
               {notification.severity === 'warning' && '⚠️'}
               {notification.severity === 'info' && 'ℹ️'}
             </div>
-            <div className="error-toast-title flex-1 font-semibold text-sm text-[var(--nim-text)]">{notification.title}</div>
+            <div className="error-toast-title flex-1 font-semibold text-ui-body text-[var(--nim-text)]">{notification.title}</div>
             {notification.dismissible && (
               <button
-                className="error-toast-close bg-transparent border-none text-2xl leading-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center text-[var(--nim-text-muted)] rounded-ui-base transition-colors duration-200 hover:bg-black/5"
+                className="error-toast-close bg-transparent border-none text-ui-headline leading-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center text-[var(--nim-text-muted)] rounded-ui-base transition-colors duration-200 hover:bg-black/5"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDismiss(notification.id);
@@ -139,13 +139,13 @@ ${JSON.stringify(notification.context, null, 2)}
             )}
           </div>
 
-          <div className="error-toast-message text-[13px] text-[var(--nim-text)] leading-normal mb-2">{notification.message}</div>
+          <div className="error-toast-message text-ui-body text-[var(--nim-text)] leading-normal mb-2">{notification.message}</div>
 
           {(notification.action || notification.details || notification.stack || notification.context) && (
             <div className="error-toast-actions flex gap-2 mt-3">
               {notification.action && (
                 <button
-                  className="error-toast-action-btn bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] px-3 py-2 rounded-ui-base text-xs font-medium cursor-pointer transition-colors duration-200 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]"
+                  className="error-toast-action-btn bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] px-3 py-2 rounded-ui-base text-ui-compact font-medium cursor-pointer transition-colors duration-200 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-focus)]"
                   onClick={() => handleActionClick(notification)}
                 >
                   {notification.action.label}
@@ -153,7 +153,7 @@ ${JSON.stringify(notification.context, null, 2)}
               )}
               {(notification.details || notification.stack || notification.context) && (
                 <button
-                  className="error-toast-copy-btn bg-[var(--nim-primary)] text-white border-none px-3 py-2 rounded-ui-base text-xs cursor-pointer transition-colors duration-200 hover:bg-[var(--nim-primary-hover)]"
+                  className="error-toast-copy-btn bg-[var(--nim-primary)] text-white border-none px-3 py-2 rounded-ui-base text-ui-compact cursor-pointer transition-colors duration-200 hover:bg-[var(--nim-primary-hover)]"
                   onClick={() => handleCopyDetails(notification)}
                 >
                   Copy Details

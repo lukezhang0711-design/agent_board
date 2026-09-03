@@ -30,7 +30,7 @@ export function WorkspaceWelcome({ workspaceName }: WorkspaceWelcomeProps) {
             />
           )}
         </div>
-        <h1 className="workspace-welcome-title text-[2rem] font-semibold m-0 mb-2 text-[var(--nim-text)]">
+        <h1 className="workspace-welcome-title text-ui-display font-semibold m-0 mb-2 text-[var(--nim-text)]">
           {workspaceName}
         </h1>
         <div className="workspace-welcome-tips nim-panel text-left mt-8 p-6">

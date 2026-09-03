@@ -59,14 +59,14 @@ export function CommitsTab({ workspaceId, remote, pr, refreshToken }: CommitsTab
   return (
     <div className="pr-commits-tab flex flex-col flex-1 min-h-0 overflow-y-auto" data-testid="pr-commits-tab">
       {loading && commits.length === 0 ? (
-        <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-sm">
+        <div className="flex items-center justify-center gap-2 py-6 text-nim-muted text-ui-body">
           <div className="spinner w-4 h-4 border-[2px] border-nim-secondary border-t-nim-accent rounded-ui-full animate-spin" />
           Loading commits…
         </div>
       ) : error ? (
-        <div className="text-nim-error text-sm p-4">{error}</div>
+        <div className="text-nim-error text-ui-body p-4">{error}</div>
       ) : commits.length === 0 ? (
-        <div className="text-nim-faint text-sm text-center py-6">No commits.</div>
+        <div className="text-nim-faint text-ui-body text-center py-6">No commits.</div>
       ) : (
         commits.map((commit) => (
           <div
@@ -75,8 +75,8 @@ export function CommitsTab({ workspaceId, remote, pr, refreshToken }: CommitsTab
             data-testid="pr-commit-row"
           >
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-nim truncate">{commit.message.split('\n')[0]}</div>
-              <div className="text-[11px] text-nim-faint flex items-center gap-2 mt-1">
+              <div className="text-ui-body text-nim truncate">{commit.message.split('\n')[0]}</div>
+              <div className="text-ui-caption text-nim-faint flex items-center gap-2 mt-1">
                 {commit.authorLogin && <span>{commit.authorLogin}</span>}
                 <span>{formatRelative(commit.authoredAt)}</span>
                 {(commit.additions > 0 || commit.deletions > 0) && (
@@ -93,7 +93,7 @@ export function CommitsTab({ workspaceId, remote, pr, refreshToken }: CommitsTab
               </div>
             </div>
             <button
-              className="flex items-center gap-1 px-2 py-1 rounded-ui-base text-[11px] font-mono text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors shrink-0"
+              className="flex items-center gap-1 px-2 py-1 rounded-ui-base text-ui-caption font-mono text-nim-muted hover:text-nim hover:bg-nim-tertiary transition-colors shrink-0"
               onClick={() => handleCopy(commit.sha)}
               title="Copy SHA"
             >

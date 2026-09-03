@@ -137,14 +137,14 @@ export const ExtensionPermissionPrompt: React.FC = () => {
         className="ext-permission-prompt nim-modal min-w-[480px] max-w-[640px] p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="ext-permission-prompt-title m-0 mb-2 text-lg font-semibold text-nim">
+        <h2 className="ext-permission-prompt-title m-0 mb-2 text-ui-title font-semibold text-nim">
           {title}
         </h2>
-        <p className="ext-permission-prompt-purpose m-0 mb-4 text-sm text-nim leading-relaxed">
+        <p className="ext-permission-prompt-purpose m-0 mb-4 text-ui-body text-nim leading-relaxed">
           {current.purpose}
         </p>
         {current.reason.kind === 're-prompt-update' && (
-          <div className="ext-permission-prompt-update-banner mb-4 flex items-start gap-2 rounded-ui-base border border-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)] p-3 text-xs text-nim">
+          <div className="ext-permission-prompt-update-banner mb-4 flex items-start gap-2 rounded-ui-base border border-[var(--nim-warning)] bg-[rgba(245,158,11,0.08)] p-3 text-ui-compact text-nim">
             <MaterialSymbol icon="upgrade" size={16} />
             <span>
               This extension updated and now requires {current.reason.addedPermissions.length} additional{' '}
@@ -159,7 +159,7 @@ export const ExtensionPermissionPrompt: React.FC = () => {
             and so on directly. The granular checkboxes below are only for
             host-brokered services (DB, secrets, MCP). Make this trade-off
             explicit so the user is informed before granting. */}
-        <div className="ext-permission-prompt-native-banner mb-4 flex items-start gap-2 rounded-ui-base border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] p-3 text-xs text-nim">
+        <div className="ext-permission-prompt-native-banner mb-4 flex items-start gap-2 rounded-ui-base border border-[var(--nim-error)] bg-[rgba(239,68,68,0.08)] p-3 text-ui-compact text-nim">
           <MaterialSymbol icon="warning" size={16} />
           <div className="flex-1 leading-relaxed">
             <div className="font-semibold mb-1">This extension will run native code on your computer.</div>
@@ -177,7 +177,7 @@ export const ExtensionPermissionPrompt: React.FC = () => {
             return (
               <div key={tier} className="ext-permission-prompt-group">
                 <div
-                  className={`ext-permission-prompt-group-title flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2 ${RISK_TEXT_CLASS[tier]}`}
+                  className={`ext-permission-prompt-group-title flex items-center gap-2 text-ui-compact font-semibold uppercase tracking-wider mb-2 ${RISK_TEXT_CLASS[tier]}`}
                 >
                   <MaterialSymbol icon={RISK_ICON[tier]} size={14} />
                   {RISK_LABEL[tier]}
@@ -191,15 +191,15 @@ export const ExtensionPermissionPrompt: React.FC = () => {
                         className="ext-permission-prompt-item flex items-start gap-2 rounded-ui-base border border-[var(--nim-border)] bg-[var(--nim-bg-tertiary)] p-3"
                       >
                         <div className="flex-1">
-                          <div className="ext-permission-prompt-item-label flex items-center gap-2 text-sm font-medium text-nim">
+                          <div className="ext-permission-prompt-item-label flex items-center gap-2 text-ui-body font-medium text-nim">
                             {d.label}
                             {isNew && (
-                              <span className="ext-permission-prompt-item-new text-[10px] font-semibold uppercase tracking-wider rounded-ui-base bg-[var(--nim-warning)] px-2 py-0.5 text-[var(--nim-bg)]">
+                              <span className="ext-permission-prompt-item-new text-ui-micro font-semibold uppercase tracking-wider rounded-ui-base bg-[var(--nim-warning)] px-2 py-0.5 text-[var(--nim-bg)]">
                                 New
                               </span>
                             )}
                           </div>
-                          <div className="ext-permission-prompt-item-description mt-1 text-xs text-nim-muted leading-relaxed">
+                          <div className="ext-permission-prompt-item-description mt-1 text-ui-compact text-nim-muted leading-relaxed">
                             {d.description}
                           </div>
                         </div>
@@ -212,7 +212,7 @@ export const ExtensionPermissionPrompt: React.FC = () => {
           })}
         </div>
 
-        <p className="ext-permission-prompt-footnote m-0 mb-4 text-xs text-nim-muted leading-relaxed">
+        <p className="ext-permission-prompt-footnote m-0 mb-4 text-ui-compact text-nim-muted leading-relaxed">
           You can revoke this at any time from Settings &rarr; Extensions.
         </p>
 

@@ -155,8 +155,8 @@ export function OpenAICodexPanel({
 
       {legacyAcpConfig.enabled && (
         <div data-testid="codex-acp-deprecation-notice" className="provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)]">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">
-            ACP Transport <span className="text-xs font-normal text-[var(--nim-text-muted)]">(deprecated)</span>
+          <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-3 text-[var(--nim-text)]">
+            ACP Transport <span className="text-ui-compact font-normal text-[var(--nim-text-muted)]">(deprecated)</span>
           </h4>
           <p className="text-ui-body text-[var(--nim-text-muted)] leading-relaxed">
             OpenAI Codex (ACP) is deprecated; existing sessions remain viewable, and we recommend using OpenAI Codex.
@@ -166,18 +166,18 @@ export function OpenAICodexPanel({
 
       {config.enabled && (
         <div data-testid="codex-auth-section" className="codex-auth-section provider-panel-section py-4 mb-4 border-b border-[var(--nim-border)] last:border-b-0 last:mb-0 last:pb-0">
-          <h4 className="provider-panel-section-title text-base font-semibold mb-3 text-[var(--nim-text)]">Sign In</h4>
+          <h4 className="provider-panel-section-title text-ui-subhead font-semibold mb-3 text-[var(--nim-text)]">Sign In</h4>
 
           {isLoggedIn ? (
             <div className="status-box-success mb-4 py-3 px-4 rounded-ui-lg text-ui-body flex items-center gap-3 justify-between bg-nim-success-subtle border border-nim-success-subtle">
               <div className="flex items-center gap-3 flex-1">
-                <span className="status-box-icon text-xl leading-none shrink-0 text-[var(--nim-success)]">✓</span>
+                <span className="status-box-icon text-ui-title leading-none shrink-0 text-[var(--nim-success)]">✓</span>
                 <div className="status-box-content flex flex-col gap-1 flex-1">
-                  <span className="status-box-title font-semibold text-sm text-[var(--nim-text)]">
+                  <span className="status-box-title font-semibold text-ui-body text-[var(--nim-text)]">
                     {authStatus?.authMode === 'chatgpt' ? 'Signed in with ChatGPT' : authStatus?.authMode === 'apikey' ? 'Signed in with API key' : 'Signed in'}
                   </span>
                   {(authStatus?.email || authStatus?.planType) && (
-                    <span className="status-box-subtitle text-xs text-[var(--nim-text-muted)]">
+                    <span className="status-box-subtitle text-ui-compact text-[var(--nim-text-muted)]">
                       {authStatus?.email ?? ''}{planLabel}
                     </span>
                   )}
@@ -185,14 +185,14 @@ export function OpenAICodexPanel({
               </div>
               <div className="status-box-actions flex gap-2 shrink-0">
                 <button
-                  className="btn-small py-2 px-3 rounded-ui-base text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="btn-small py-2 px-3 rounded-ui-base text-ui-compact font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={checkStatus}
                   disabled={authBusy !== null}
                 >
                   Refresh
                 </button>
                 <button
-                  className="btn-small py-2 px-3 rounded-ui-base text-xs font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
+                  className="btn-small py-2 px-3 rounded-ui-base text-ui-compact font-medium cursor-pointer transition-all bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]"
                   onClick={handleLogout}
                   disabled={authBusy !== null}
                   data-testid="codex-logout"
@@ -230,7 +230,7 @@ export function OpenAICodexPanel({
 
               {selectedAuthMethod === 'chatgpt' && (
                 <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg">
-                  <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
+                  <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mb-3">
                     Authenticate with your ChatGPT Pro, Plus, or Team subscription. No API credits needed.
                   </p>
                   <div className="flex gap-2">
@@ -258,7 +258,7 @@ export function OpenAICodexPanel({
 
               {selectedAuthMethod === 'api-key' && (
                 <div className="mb-4 p-4 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-lg">
-                  <p className="text-xs leading-relaxed text-[var(--nim-text-muted)] mb-3">
+                  <p className="text-ui-compact leading-relaxed text-[var(--nim-text-muted)] mb-3">
                     Use an OpenAI API key. Pay-per-use with API credits — more expensive than the ChatGPT subscription path.
                   </p>
                   <div className="api-key-row flex gap-2 items-center">
@@ -289,7 +289,7 @@ export function OpenAICodexPanel({
           )}
 
           {authError && (
-            <p className="text-xs text-[var(--nim-error)] mt-2" data-testid="codex-auth-error">{authError}</p>
+            <p className="text-ui-compact text-[var(--nim-error)] mt-2" data-testid="codex-auth-error">{authError}</p>
           )}
         </div>
       )}

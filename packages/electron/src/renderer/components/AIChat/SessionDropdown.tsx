@@ -108,7 +108,7 @@ export function SessionDropdown({
       <button
         ref={menu.refs.setReference}
         {...menu.getReferenceProps()}
-        className="session-dropdown-trigger flex items-center gap-1 px-2 py-2 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] text-[13px] cursor-pointer transition-all duration-200 h-8 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+        className="session-dropdown-trigger flex items-center gap-1 px-2 py-2 bg-transparent border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] text-ui-body cursor-pointer transition-all duration-200 h-8 hover:bg-[var(--nim-bg-hover)] hover:border-[var(--nim-border-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={() => menu.setIsOpen(!menu.isOpen)}
         title="Session History"
       >
@@ -132,7 +132,7 @@ export function SessionDropdown({
           >
             {onOpenSessionManager && (
               <button
-                className="session-dropdown-all-sessions flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none text-[var(--nim-text)] text-[13px] cursor-pointer transition-colors duration-200 text-left hover:bg-[var(--nim-bg-hover)]"
+                className="session-dropdown-all-sessions flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none text-[var(--nim-text)] text-ui-body cursor-pointer transition-colors duration-200 text-left hover:bg-[var(--nim-bg-hover)]"
                 onClick={() => {
                   onOpenSessionManager();
                   menu.setIsOpen(false);
@@ -149,12 +149,12 @@ export function SessionDropdown({
               {sessions.map(session => (
                     <div
                       key={session.id}
-                      className={`session-dropdown-item flex items-center justify-between px-3 py-3 border-none text-[var(--nim-text)] text-[13px] cursor-pointer transition-colors duration-200 w-full text-left hover:bg-[var(--nim-bg-hover)] ${session.id === currentSessionId ? 'active bg-[var(--nim-bg-selected)] font-medium' : ''}`}
+                      className={`session-dropdown-item flex items-center justify-between px-3 py-3 border-none text-[var(--nim-text)] text-ui-body cursor-pointer transition-colors duration-200 w-full text-left hover:bg-[var(--nim-bg-hover)] ${session.id === currentSessionId ? 'active bg-[var(--nim-bg-selected)] font-medium' : ''}`}
                     >
                       {renamingId === session.id ? (
                         <input
                           type="text"
-                          className="session-rename-input flex-1 px-2 py-1 border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-[13px] outline-none"
+                          className="session-rename-input flex-1 px-2 py-1 border border-[var(--nim-primary)] rounded-ui-base bg-[var(--nim-bg)] text-[var(--nim-text)] text-ui-body outline-none"
                           value={renameValue}
                           onChange={(e) => setRenameValue(e.target.value)}
                           onBlur={submitRename}
@@ -174,18 +174,18 @@ export function SessionDropdown({
                             <SessionStatusIndicator sessionId={session.id} />
                             <span className="session-name overflow-hidden text-ellipsis whitespace-nowrap">{formatSessionName(session)}</span>
                             {session.provider && session.provider !== 'claude-code' && (
-                              <span className={`session-provider-badge provider-${session.provider} inline-flex items-center px-1 py-px rounded-ui-base text-[9px] font-semibold uppercase tracking-wide shrink-0`}>
+                              <span className={`session-provider-badge provider-${session.provider} inline-flex items-center px-1 py-px rounded-ui-base text-ui-micro font-semibold uppercase tracking-wide shrink-0`}>
                                 {getProviderLabel(session.provider)}
                               </span>
                             )}
                             {session.model && (
-                              <span className="session-model-badge inline-flex items-center px-2 py-px rounded-ui-base text-[10px] font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] shrink-0">
+                              <span className="session-model-badge inline-flex items-center px-2 py-px rounded-ui-base text-ui-micro font-medium bg-[var(--nim-bg-tertiary)] text-[var(--nim-text-muted)] shrink-0">
                                 {parseModelInfo(session.model)?.shortModelName}
                               </span>
                             )}
                           </div>
                           {session.messageCount !== undefined && session.messageCount > 0 && (
-                            <span className="session-message-count text-[11px] text-[var(--nim-text-muted)]">{session.messageCount} turns</span>
+                            <span className="session-message-count text-ui-caption text-[var(--nim-text-muted)]">{session.messageCount} turns</span>
                           )}
                         </div>
                       )}
@@ -220,7 +220,7 @@ export function SessionDropdown({
               ))}
             </div>
             {sessions.length === 0 && (
-              <div className="session-dropdown-empty p-5 text-center text-[var(--nim-text-muted)] text-[13px]">
+              <div className="session-dropdown-empty p-5 text-center text-[var(--nim-text-muted)] text-ui-body">
                 <span>No sessions yet</span>
               </div>
             )}

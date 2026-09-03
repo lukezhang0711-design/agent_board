@@ -62,7 +62,7 @@ export const TaskListPanel: React.FC<TaskListPanelProps> = React.memo(({
           size={16}
           className="text-[var(--nim-text-muted)] shrink-0"
         />
-        <span className="task-list-panel-title text-xs font-medium text-[var(--nim-text)]">
+        <span className="task-list-panel-title text-ui-compact font-medium text-[var(--nim-text)]">
           Task List
         </span>
         <span className="task-list-panel-count ml-auto text-ui-caption text-[var(--nim-text-muted)] font-mono">
@@ -101,7 +101,7 @@ const TaskRow: React.FC<TaskRowProps> = React.memo(({ task, openIds }) => {
 
   return (
     <div
-      className={`task-list-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-xs ${
+      className={`task-list-item flex items-start gap-2 py-1 px-1 rounded-ui-base text-ui-compact ${
         task.status === 'in_progress' ? 'bg-[var(--nim-bg-hover)]' : ''
       } ${task.status === 'completed' ? 'opacity-60' : ''}`}
       data-status={task.status}

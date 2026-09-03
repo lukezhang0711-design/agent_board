@@ -36,12 +36,12 @@ export function WorkspaceHeader({
       <div className="workspace-header-top flex items-start gap-3">
         <div className="workspace-name-row flex items-baseline gap-3 min-w-0 flex-1">
           <h1
-            className="workspace-name m-0 text-base font-bold text-[var(--nim-text)] overflow-hidden text-ellipsis whitespace-nowrap tracking-tight leading-tight"
+            className="workspace-name m-0 text-ui-subhead font-bold text-[var(--nim-text)] overflow-hidden text-ellipsis whitespace-nowrap tracking-tight leading-tight"
           >
             {displayName}
           </h1>
           <span
-            className="workspace-subtitle text-[13px] font-medium text-[var(--nim-text-muted)] opacity-70 whitespace-nowrap"
+            className="workspace-subtitle text-ui-body font-medium text-[var(--nim-text-muted)] opacity-70 whitespace-nowrap"
           >
             {subtitle}
           </span>
@@ -53,7 +53,7 @@ export function WorkspaceHeader({
         )}
       </div>
       <span
-        className="workspace-path block mt-1 text-[11px] text-[var(--nim-text-faint)] overflow-hidden text-ellipsis whitespace-nowrap opacity-75 font-normal"
+        className="workspace-path block mt-1 text-ui-caption text-[var(--nim-text-faint)] overflow-hidden text-ellipsis whitespace-nowrap opacity-75 font-normal"
       >
         {workspacePath}
       </span>

@@ -169,7 +169,7 @@ export function HistoryWindow() {
     return (
       <div className="history-window flex flex-col items-center justify-center h-screen bg-[var(--nim-bg)] font-sans text-[var(--nim-text-muted)]">
         <MaterialSymbol icon="hourglass_empty" size={48} />
-        <p className="mt-3 text-sm">Loading history...</p>
+        <p className="mt-3 text-ui-body">Loading history...</p>
       </div>
     );
   }
@@ -178,7 +178,7 @@ export function HistoryWindow() {
     return (
       <div className="history-window flex flex-col items-center justify-center h-screen bg-[var(--nim-bg)] font-sans text-[var(--nim-error)]">
         <MaterialSymbol icon="error" size={48} />
-        <p className="mt-3 text-sm">{error}</p>
+        <p className="mt-3 text-ui-body">{error}</p>
       </div>
     );
   }
@@ -186,20 +186,20 @@ export function HistoryWindow() {
   return (
     <div className="history-window flex flex-col h-screen bg-[var(--nim-bg)] font-sans">
       <div className="history-header p-5 border-b border-[var(--nim-border)] bg-[var(--nim-bg-secondary)]">
-        <h1 className="m-0 text-2xl font-semibold text-[var(--nim-text)]">File History</h1>
-        <p className="file-path mt-2 text-[13px] text-[var(--nim-text-muted)] font-mono">{filePath}</p>
+        <h1 className="m-0 text-ui-headline font-semibold text-[var(--nim-text)]">File History</h1>
+        <p className="file-path mt-2 text-ui-body text-[var(--nim-text-muted)] font-mono">{filePath}</p>
       </div>
 
       <div className="history-content flex flex-1 overflow-hidden">
         <div className="snapshots-list w-80 border-r border-[var(--nim-border)] flex flex-col">
           <div className="snapshots-header px-5 py-4 border-b border-[var(--nim-border)]">
-            <h2 className="m-0 text-sm font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Snapshots ({snapshots.length})</h2>
+            <h2 className="m-0 text-ui-body font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Snapshots ({snapshots.length})</h2>
           </div>
 
           {snapshots.length === 0 ? (
             <div className="no-snapshots flex flex-col items-center justify-center p-10 text-[var(--nim-text-faint)]">
               <MaterialSymbol icon="history_toggle_off" size={48} />
-              <p className="mt-3 text-sm">No snapshots available</p>
+              <p className="mt-3 text-ui-body">No snapshots available</p>
             </div>
           ) : (
             <div className="snapshots flex-1 overflow-y-auto">
@@ -221,8 +221,8 @@ export function HistoryWindow() {
                     <MaterialSymbol icon={getTypeIcon(snapshot.type)} size={20} />
                   </div>
                   <div className="snapshot-info flex-1 min-w-0">
-                    <div className="snapshot-date text-sm text-[var(--nim-text)] mb-1">{formatDate(snapshot.timestamp)}</div>
-                    <div className="snapshot-meta flex gap-3 text-xs text-[var(--nim-text-muted)]">
+                    <div className="snapshot-date text-ui-body text-[var(--nim-text)] mb-1">{formatDate(snapshot.timestamp)}</div>
+                    <div className="snapshot-meta flex gap-3 text-ui-compact text-[var(--nim-text-muted)]">
                       <span className={`snapshot-type inline-flex items-center px-2 py-0.5 rounded-ui-base font-medium ${
                         selectedSnapshot?.timestamp === snapshot.timestamp
                           ? 'bg-[var(--nim-accent-subtle)] text-[var(--nim-primary)]'
@@ -249,10 +249,10 @@ export function HistoryWindow() {
 
         <div className="snapshot-preview flex-1 flex flex-col overflow-hidden">
           <div className="preview-header flex items-center justify-between px-5 py-4 border-b border-[var(--nim-border)]">
-            <h2 className="m-0 text-sm font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Preview</h2>
+            <h2 className="m-0 text-ui-body font-semibold text-[var(--nim-text-muted)] uppercase tracking-wide">Preview</h2>
             {selectedSnapshot && (
               <div className="preview-actions flex gap-2">
-                <button className="btn-restore nim-btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-ui-base" onClick={handleRestore}>
+                <button className="btn-restore nim-btn-primary flex items-center gap-2 px-4 py-2 text-ui-body font-medium rounded-ui-base" onClick={handleRestore}>
                   <MaterialSymbol icon="restore" size={18} />
                   Restore This Version
                 </button>
@@ -262,12 +262,12 @@ export function HistoryWindow() {
 
           {selectedSnapshot ? (
             <div className="preview-content flex-1 overflow-auto p-5 bg-[var(--nim-bg-secondary)]">
-              <pre className="m-0 font-mono text-[13px] leading-relaxed text-[var(--nim-text)] whitespace-pre-wrap break-words">{previewContent}</pre>
+              <pre className="m-0 font-mono text-ui-body leading-relaxed text-[var(--nim-text)] whitespace-pre-wrap break-words">{previewContent}</pre>
             </div>
           ) : (
             <div className="no-preview flex-1 flex flex-col items-center justify-center text-[var(--nim-text-faint)]">
               <MaterialSymbol icon="preview_off" size={48} />
-              <p className="mt-3 text-sm">Select a snapshot to preview</p>
+              <p className="mt-3 text-ui-body">Select a snapshot to preview</p>
             </div>
           )}
         </div>

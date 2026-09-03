@@ -366,10 +366,10 @@ export const TerminalBottomPanel: React.FC<TerminalBottomPanelProps> = ({
             </div>
           ))}
           {terminals.length === 0 && (
-            <div className="terminal-bottom-panel-empty flex-1 flex flex-col items-center justify-center gap-3 text-[var(--nim-text-muted)] text-sm">
+            <div className="terminal-bottom-panel-empty flex-1 flex flex-col items-center justify-center gap-3 text-[var(--nim-text-muted)] text-ui-body">
               <p>No terminals open</p>
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] text-[13px] cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)]"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border)] rounded-ui-base text-[var(--nim-text)] text-ui-body cursor-pointer transition-colors duration-150 hover:bg-[var(--nim-bg-tertiary)] hover:border-[var(--nim-primary)]"
                 onClick={handleCreateTerminal}
               >
                 <MaterialSymbol icon="terminal" size={16} />

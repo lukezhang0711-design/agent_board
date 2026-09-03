@@ -271,7 +271,7 @@ export function ShareToTeamDialog({
               setSelectedFolder(node.path);
             }
           }}
-          className={`relative flex items-center gap-1 px-2 py-2 rounded-ui-base text-[13px] cursor-pointer select-none ${
+          className={`relative flex items-center gap-1 px-2 py-2 rounded-ui-base text-ui-body cursor-pointer select-none ${
             isSelected
               ? 'bg-[var(--nim-primary)]/20 text-[var(--nim-text)]'
               : 'text-[var(--nim-text)] hover:bg-[var(--nim-bg-tertiary)]'
@@ -306,7 +306,7 @@ export function ShareToTeamDialog({
           </span>
           <span className="flex-1 truncate">{node.name}</span>
           {isLastUsed && (
-            <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-ui-full bg-[var(--nim-primary)]/15 text-[var(--nim-primary)]">
+            <span className="text-ui-micro font-medium uppercase tracking-wide px-2 py-0.5 rounded-ui-full bg-[var(--nim-primary)]/15 text-[var(--nim-primary)]">
               last used
             </span>
           )}
@@ -333,7 +333,7 @@ export function ShareToTeamDialog({
               }}
               onBlur={commitNewFolder}
               placeholder="Folder name"
-              className="flex-1 bg-[var(--nim-bg)] border border-[var(--nim-primary)] rounded-ui-base text-[13px] text-[var(--nim-text)] px-2 py-1 outline-none"
+              className="flex-1 bg-[var(--nim-bg)] border border-[var(--nim-primary)] rounded-ui-base text-ui-body text-[var(--nim-text)] px-2 py-1 outline-none"
             />
           </div>
         )}
@@ -366,10 +366,10 @@ export function ShareToTeamDialog({
             <MaterialSymbol icon="group" size={18} />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-[14px] font-semibold text-[var(--nim-text)] m-0 leading-tight">
+            <h2 className="text-ui-body font-semibold text-[var(--nim-text)] m-0 leading-tight">
               Share to Team
             </h2>
-            <p className="text-[12px] text-[var(--nim-text-faint)] m-0 mt-1 leading-snug">
+            <p className="text-ui-compact text-[var(--nim-text-faint)] m-0 mt-1 leading-snug">
               Pick where this document should live in your team space.
             </p>
           </div>
@@ -385,18 +385,18 @@ export function ShareToTeamDialog({
 
         {/* Body */}
         <div className="px-5 pt-3 pb-2">
-          <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-2">
+          <div className="text-ui-caption uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-2">
             Source file
           </div>
           <div className="flex items-center gap-3 px-3 py-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-ui-base mb-4">
             <MaterialSymbol icon="description" size={20} className="text-[var(--nim-primary)] shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium text-[var(--nim-text)] truncate">{fileName}</div>
-              <div className="text-[11px] text-[var(--nim-text-faint)] truncate">{sourceRelPath}</div>
+              <div className="text-ui-body font-medium text-[var(--nim-text)] truncate">{fileName}</div>
+              <div className="text-ui-caption text-[var(--nim-text-faint)] truncate">{sourceRelPath}</div>
             </div>
           </div>
 
-          <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-2">
+          <div className="text-ui-caption uppercase tracking-wider font-semibold text-[var(--nim-text-faint)] mb-2">
             Shared name
           </div>
           <div className="flex items-center gap-2 px-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-ui-base mb-4 focus-within:border-[var(--nim-primary)]">
@@ -411,19 +411,19 @@ export function ShareToTeamDialog({
                   handleConfirm();
                 }
               }}
-              className="flex-1 bg-transparent border-none text-[var(--nim-text)] text-[13px] py-2 outline-none font-inherit"
+              className="flex-1 bg-transparent border-none text-[var(--nim-text)] text-ui-body py-2 outline-none font-inherit"
               placeholder="document.md"
             />
           </div>
 
           <div className="flex items-center justify-between mb-2">
-            <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--nim-text-faint)]">
+            <div className="text-ui-caption uppercase tracking-wider font-semibold text-[var(--nim-text-faint)]">
               Destination folder
             </div>
             <button
               type="button"
               onClick={() => beginNewFolder(selectedFolder || null)}
-              className="text-[11px] text-[var(--nim-primary)] hover:underline inline-flex items-center gap-1"
+              className="text-ui-caption text-[var(--nim-primary)] hover:underline inline-flex items-center gap-1"
             >
               <MaterialSymbol icon="create_new_folder" size={13} />
               New folder
@@ -442,7 +442,7 @@ export function ShareToTeamDialog({
                   setSelectedFolder('');
                 }
               }}
-              className={`relative flex items-center gap-1 px-2 py-2 rounded-ui-base text-[13px] cursor-pointer select-none ${
+              className={`relative flex items-center gap-1 px-2 py-2 rounded-ui-base text-ui-body cursor-pointer select-none ${
                 selectedFolder === ''
                   ? 'bg-[var(--nim-primary)]/20 text-[var(--nim-text)]'
                   : 'text-[var(--nim-text)] hover:bg-[var(--nim-bg-tertiary)]'
@@ -460,7 +460,7 @@ export function ShareToTeamDialog({
               </span>
               <span className="flex-1 truncate">Team root</span>
               {hasLastSharedFolder && lastSharedFolder === '' && (
-                <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-ui-full bg-[var(--nim-primary)]/15 text-[var(--nim-primary)]">
+                <span className="text-ui-micro font-medium uppercase tracking-wide px-2 py-0.5 rounded-ui-full bg-[var(--nim-primary)]/15 text-[var(--nim-primary)]">
                   last used
                 </span>
               )}
@@ -488,13 +488,13 @@ export function ShareToTeamDialog({
                   }}
                   onBlur={commitNewFolder}
                   placeholder="Folder name"
-                  className="flex-1 bg-[var(--nim-bg)] border border-[var(--nim-primary)] rounded-ui-base text-[13px] text-[var(--nim-text)] px-2 py-1 outline-none"
+                  className="flex-1 bg-[var(--nim-bg)] border border-[var(--nim-primary)] rounded-ui-base text-ui-body text-[var(--nim-text)] px-2 py-1 outline-none"
                 />
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-ui-base mb-3 text-[12px] text-[var(--nim-text-muted)]">
+          <div className="flex items-center gap-2 px-3 py-2 bg-[var(--nim-bg-secondary)] border border-[var(--nim-border-subtle,var(--nim-border))] rounded-ui-base mb-3 text-ui-compact text-[var(--nim-text-muted)]">
             <MaterialSymbol icon="place" size={14} className="text-[var(--nim-text-faint)]" />
             <span>Will be shared as</span>
             <span className="text-[var(--nim-text)] font-medium truncate" title={destinationFolderLabel}>
@@ -511,7 +511,7 @@ export function ShareToTeamDialog({
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-2 bg-transparent rounded-ui-base text-[var(--nim-text-muted)] text-[13px] hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
+            className="px-3 py-2 bg-transparent rounded-ui-base text-[var(--nim-text-muted)] text-ui-body hover:bg-[var(--nim-bg-tertiary)] hover:text-[var(--nim-text)]"
           >
             Cancel
           </button>
@@ -519,7 +519,7 @@ export function ShareToTeamDialog({
             type="button"
             onClick={handleConfirm}
             disabled={!sharedName.trim()}
-            className={`px-3 py-2 rounded-ui-base text-[13px] font-medium inline-flex items-center gap-2 ${
+            className={`px-3 py-2 rounded-ui-base text-ui-body font-medium inline-flex items-center gap-2 ${
               sharedName.trim()
                 ? 'bg-[var(--nim-primary)] text-[#0f1115] hover:bg-[var(--nim-primary-hover)] hover:text-white cursor-pointer'
                 : 'bg-[var(--nim-primary)] text-[#0f1115] opacity-50 cursor-not-allowed'

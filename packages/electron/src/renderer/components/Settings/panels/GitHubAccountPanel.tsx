@@ -82,14 +82,14 @@ export function GitHubAccountPanel({ scope, workspacePath }: GitHubAccountPanelP
       <PageHeader icon="account_circle" title="GitHub Account" className="mb-5" />
 
       {loading ? (
-        <div className="flex items-center gap-2 py-6 text-[var(--nim-text-muted)] text-sm">
+        <div className="flex items-center gap-2 py-6 text-[var(--nim-text-muted)] text-ui-body">
           <div className="spinner w-4 h-4 border-[2px] border-[var(--nim-bg-secondary)] border-t-[var(--nim-primary)] rounded-ui-full animate-spin" />
           Loading accounts…
         </div>
       ) : error ? (
-        <div className="flex flex-col items-start gap-2 py-4 text-[var(--nim-error)] text-sm">
+        <div className="flex flex-col items-start gap-2 py-4 text-[var(--nim-error)] text-ui-body">
           <span>{error}</span>
-          <button className="text-xs text-[var(--nim-primary)] hover:underline" onClick={() => void reload()}>
+          <button className="text-ui-compact text-[var(--nim-primary)] hover:underline" onClick={() => void reload()}>
             Retry
           </button>
         </div>

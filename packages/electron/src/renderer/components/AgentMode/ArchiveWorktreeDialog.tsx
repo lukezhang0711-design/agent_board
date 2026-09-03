@@ -76,7 +76,7 @@ export function ArchiveWorktreeDialog({
         />
 
         <div className="archive-worktree-dialog-body px-6 pb-5">
-          <p className="mb-4 text-sm leading-relaxed text-[var(--nim-text-muted)]">
+          <p className="mb-4 text-ui-body leading-relaxed text-[var(--nim-text-muted)]">
             {contextMessage ? `${contextMessage} ` : ''}
             {isBulk
               ? <>Are you sure you want to archive <strong className="font-medium text-[var(--nim-text)]">{worktreeCount} worktrees</strong>?</>
@@ -88,10 +88,10 @@ export function ArchiveWorktreeDialog({
             <div className="archive-worktree-warning flex items-start gap-3 mb-4 p-3 rounded-ui-lg bg-[var(--nim-warning)]/10 border border-[var(--nim-warning)]/30">
               <MaterialSymbol icon="warning" size={20} className="text-[var(--nim-warning)] shrink-0 mt-1" />
               <div>
-                <p className="m-0 text-sm font-medium text-[var(--nim-warning)]">
+                <p className="m-0 text-ui-body font-medium text-[var(--nim-warning)]">
                   Uncommitted changes will be lost
                 </p>
-                <p className="m-0 mt-1 text-[0.8125rem] text-[var(--nim-text-muted)]">
+                <p className="m-0 mt-1 text-ui-body text-[var(--nim-text-muted)]">
                   {isBulk
                     ? <>{uncommittedWorktreeCount} {uncommittedWorktreeCount === 1 ? 'worktree has' : 'worktrees have'} uncommitted changes ({uncommittedFileCount} {uncommittedFileCount === 1 ? 'file' : 'files'} total). These changes will be permanently deleted.</>
                     : <>This worktree has {uncommittedFileCount === 1 ? '1 file' : `${uncommittedFileCount} files`} with uncommitted changes. These changes will be permanently deleted.</>
@@ -105,10 +105,10 @@ export function ArchiveWorktreeDialog({
             <div className="archive-worktree-warning flex items-start gap-3 mb-4 p-3 rounded-ui-lg bg-[var(--nim-warning)]/10 border border-[var(--nim-warning)]/30">
               <MaterialSymbol icon="warning" size={20} className="text-[var(--nim-warning)] shrink-0 mt-1" />
               <div>
-                <p className="m-0 text-sm font-medium text-[var(--nim-warning)]">
+                <p className="m-0 text-ui-body font-medium text-[var(--nim-warning)]">
                   Unmerged commits will be lost
                 </p>
-                <p className="m-0 mt-1 text-[0.8125rem] text-[var(--nim-text-muted)]">
+                <p className="m-0 mt-1 text-ui-body text-[var(--nim-text-muted)]">
                   {isBulk
                     ? <>{unmergedWorktreeCount} {unmergedWorktreeCount === 1 ? 'worktree has' : 'worktrees have'} unmerged commits{(unmergedCommitCount ?? 0) > 0 ? ` (${unmergedCommitCount} ${unmergedCommitCount === 1 ? 'commit' : 'commits'} total)` : ''}.</>
                     : (unmergedCommitCount ?? 0) > 0
@@ -121,7 +121,7 @@ export function ArchiveWorktreeDialog({
             </div>
           )}
 
-          <p className="archive-worktree-dialog-info m-0 text-[0.8125rem] text-[var(--nim-text-faint)]">
+          <p className="archive-worktree-dialog-info m-0 text-ui-body text-[var(--nim-text-faint)]">
             {isBulk
               ? 'Archiving will remove all worktrees from disk and mark their associated sessions as archived.'
               : 'Archiving will remove the worktree from disk and mark all associated sessions as archived.'

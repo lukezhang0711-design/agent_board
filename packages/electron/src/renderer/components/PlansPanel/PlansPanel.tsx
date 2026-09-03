@@ -194,8 +194,8 @@ export function PlansPanel({ currentFilePath, onPlanSelect }: PlansPanelProps): 
       <div className="plans-list flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-track-transparent scrollbar-thumb-nim-scrollbar hover:scrollbar-thumb-nim-scrollbar-hover">
         {filteredPlans.length === 0 ? (
           <div className="plans-empty flex flex-col items-center justify-center py-[60px] px-5 text-nim-faint text-center">
-            <span className="material-symbols-outlined text-5xl mb-3 opacity-50">description</span>
-            <div className="plans-empty-text text-[13px] leading-normal">
+            <span className="material-symbols-outlined text-ui-display mb-3 opacity-50">description</span>
+            <div className="plans-empty-text text-ui-body leading-normal">
               {searchTerm || statusFilter !== 'all' || priorityFilter !== 'all' || hideCompleted
                 ? 'No plans match your filters'
                 : 'No plan documents found'}

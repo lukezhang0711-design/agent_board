@@ -204,14 +204,14 @@ const ExtensionAgentSettingsPanel: React.FC<{
   if (!ExtPanel) {
     return (
       <div className="settings-extension-provider-panel">
-        <h2 className="text-lg font-semibold text-[var(--nim-text)] mb-2">{extEntry.name || extEntry.id}</h2>
-        <p className="text-sm text-[var(--nim-text-muted)] mb-4 max-w-[60ch]">
+        <h2 className="text-ui-title font-semibold text-[var(--nim-text)] mb-2">{extEntry.name || extEntry.id}</h2>
+        <p className="text-ui-body text-[var(--nim-text-muted)] mb-4 max-w-[60ch]">
           This agent provider comes from an installed extension. Choose its models from the model
           selector in the chat input. To configure or manage the extension, open Installed Extensions.
         </p>
         <button
           type="button"
-          className="px-3 py-2 rounded-ui-base text-xs bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
+          className="px-3 py-2 rounded-ui-base text-ui-compact bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
           onClick={onOpenInstalledExtensions}
         >
           Open Installed Extensions
@@ -871,7 +871,7 @@ export function SettingsView({
               <div className="settings-project-indicator flex items-start gap-3 py-3 px-4 mb-6 bg-[color-mix(in_srgb,var(--nim-primary)_10%,transparent)] border border-[color-mix(in_srgb,var(--nim-primary)_30%,transparent)] rounded-ui-lg text-[var(--nim-text)] [&_.material-symbols-outlined]:text-[var(--nim-info)] [&_.material-symbols-outlined]:shrink-0 [&_.material-symbols-outlined]:mt-1">
                 <MaterialSymbol icon="info" size={20} />
                 <div className="settings-project-indicator-text flex flex-col gap-1">
-                  <strong className="text-sm font-semibold text-[var(--nim-text)]">
+                  <strong className="text-ui-body font-semibold text-[var(--nim-text)]">
                     There {workspaceMcpServerCount === 1 ? 'is' : 'are'} {workspaceMcpServerCount} additional MCP {workspaceMcpServerCount === 1 ? 'server' : 'servers'} configured just for this project.
                   </strong>
                   <span className="text-ui-body text-[var(--nim-text-muted)] leading-[1.4]">Switch to the Project tab above to view or edit project-specific MCP servers.</span>
@@ -958,15 +958,15 @@ export function SettingsView({
           .replace(/\b\w/g, (c) => c.toUpperCase());
         return (
           <div className="settings-extension-provider-panel">
-            <h2 className="text-lg font-semibold text-[var(--nim-text)] mb-2">{label}</h2>
-            <p className="text-sm text-[var(--nim-text-muted)] mb-4 max-w-[60ch]">
+            <h2 className="text-ui-title font-semibold text-[var(--nim-text)] mb-2">{label}</h2>
+            <p className="text-ui-body text-[var(--nim-text-muted)] mb-4 max-w-[60ch]">
               This agent provider comes from an installed extension. Choose its models from the
               model selector in the chat input. To configure or manage the extension, open Installed
               Extensions.
             </p>
             <button
               type="button"
-              className="px-3 py-2 rounded-ui-base text-xs bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
+              className="px-3 py-2 rounded-ui-base text-ui-compact bg-[var(--nim-bg-secondary)] text-[var(--nim-text)] border border-[var(--nim-border)] hover:bg-[var(--nim-bg-hover)]"
               onClick={() => setSelectedCategory('installed-extensions')}
             >
               Open Installed Extensions
@@ -995,12 +995,12 @@ export function SettingsView({
     <div className="settings-view flex flex-col h-full bg-[var(--nim-bg)] text-[var(--nim-text)]">
       {/* Settings Header */}
       <header className="settings-view-header h-[52px] bg-[var(--nim-bg-secondary)] border-b border-[var(--nim-border)] flex items-center px-5 gap-4 shrink-0">
-        <h1 className="settings-view-title text-base font-semibold text-[var(--nim-text)] m-0">Settings</h1>
+        <h1 className="settings-view-title text-ui-subhead font-semibold text-[var(--nim-text)] m-0">Settings</h1>
 
         <div className="settings-scope-container flex items-center gap-3">
           <div className="settings-scope-tabs flex bg-[var(--nim-bg-tertiary)] p-1 rounded-ui-lg">
             <button
-              className={`settings-scope-tab py-2 px-4 rounded-ui-base text-xs font-medium cursor-pointer transition-all duration-150 border-none ${
+              className={`settings-scope-tab py-2 px-4 rounded-ui-base text-ui-compact font-medium cursor-pointer transition-all duration-150 border-none ${
                 scope === 'user'
                   ? 'bg-[var(--nim-primary)] text-white shadow-sm'
                   : 'bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -1010,7 +1010,7 @@ export function SettingsView({
               User
             </button>
             <button
-              className={`settings-scope-tab py-2 px-4 rounded-ui-base text-xs font-medium cursor-pointer transition-all duration-150 border-none disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`settings-scope-tab py-2 px-4 rounded-ui-base text-ui-compact font-medium cursor-pointer transition-all duration-150 border-none disabled:opacity-50 disabled:cursor-not-allowed ${
                 scope === 'project'
                   ? 'bg-[var(--nim-primary)] text-white shadow-sm'
                   : 'bg-transparent text-[var(--nim-text-muted)] hover:text-[var(--nim-text)] hover:bg-[var(--nim-bg-hover)]'
@@ -1030,7 +1030,7 @@ export function SettingsView({
         </div>
 
         <span className="flex-1" />
-        <span className={`settings-save-status text-xs min-w-[60px] ${
+        <span className={`settings-save-status text-ui-compact min-w-[60px] ${
           saveStatus === 'saving' ? 'text-[var(--nim-text-muted)]' :
           saveStatus === 'saved' ? 'text-[var(--nim-success)]' :
           saveStatus === 'error' ? 'text-[var(--nim-error)]' :
@@ -1055,7 +1055,7 @@ export function SettingsView({
           <div className="settings-panel-container max-w-[800px]">
             {selectedCatalogWarning && (
               <div
-                className="mb-4 rounded-ui-lg border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] px-3 py-2 text-xs leading-relaxed text-[var(--nim-error)]"
+                className="mb-4 rounded-ui-lg border border-[var(--nim-error)] bg-[color-mix(in_srgb,var(--nim-error)_8%,transparent)] px-3 py-2 text-ui-compact leading-relaxed text-[var(--nim-error)]"
                 role="alert"
                 data-testid="settings-model-catalog-warning"
               >
