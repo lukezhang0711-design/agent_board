@@ -373,9 +373,6 @@ export class DispatchSkillLibraryService {
     }
 
     if (options.enrich !== false) {
-      const pendingSkills: DispatchSkillDescriptor[] = [];
-      const seenPendingNames = new Set<string>();
-
       for (const skill of skills) {
         const enrichment = skillTaxonomyCacheManager.enrichAndCache(
           skill.name,
@@ -386,28 +383,7 @@ export class DispatchSkillLibraryService {
         skill.summaryZh = enrichment.summaryZh;
         if (enrichment.enrichmentFailed) {
           skill.enrichmentFailed = true;
-          if (skill.description?.trim() && !seenPendingNames.has(skill.name)) {
-            seenPendingNames.add(skill.name);
-            pendingSkills.push(skill);
-          }
         }
-      }
-
-      if (pendingSkills.length > 0) {
-        void (async () => {
-          for (let i = 0; i < pendingSkills.length; i += 3) {
-            const batch = pendingSkills.slice(i, i + 3);
-            await Promise.all(
-              batch.map((item) =>
-                skillTaxonomyCacheManager.enrichAndCacheAsync(
-                  item.name,
-                  item.description,
-                  item.content,
-                ),
-              ),
-            );
-          }
-        })();
       }
     }
 
