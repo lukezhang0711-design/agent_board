@@ -121,6 +121,20 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     return () => unsubscribe?.();
   }, [skills]);
 
+  useEffect(() => {
+    const unsubscribe = window.electronAPI?.on?.('dispatch-skills:updated', async () => {
+      try {
+        const listResult = await window.electronAPI?.invoke?.('dispatch-skills:list', workspacePath);
+        if (Array.isArray(listResult?.skills)) {
+          setSkills(listResult.skills);
+        }
+      } catch {
+        // Silently keep current skills on background refresh failure
+      }
+    });
+    return () => unsubscribe?.();
+  }, [workspacePath]);
+
   const mergedCards = useMemo(() => mergeSkillsByName(skills, settings), [skills, settings]);
   const activeTaxonomy = useMemo(
     () => getEffectiveSkillTaxonomy(settings.taxonomy),
