@@ -154,7 +154,9 @@ export function mergeSkillsByName(
     const category: SkillCategory = categoryCandidate && categories.includes(categoryCandidate)
       ? categoryCandidate
       : categories[0];
-    const enrichmentFailed = enrichment?.summaryZh
+    const hasSuccessfulEnrichment = Boolean(enrichment?.summaryZh)
+      || descriptors.some((d) => Boolean(d.summaryZh?.trim()) && !d.enrichmentFailed);
+    const enrichmentFailed = hasSuccessfulEnrichment
       ? false
       : descriptors.some((d) => d.enrichmentFailed);
 

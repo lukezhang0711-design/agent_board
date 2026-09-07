@@ -1228,3 +1228,77 @@ test('replays the approved collaboration chain through real IPC, durable state, 
     { timeout: 10_000 },
   ).toBeGreaterThan(0);
 });
+
+test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作链路（3 并发技能生成负载）', async () => {
+  // 1. 设置页面可见性为 true，使得按需生成接受请求
+  await invokeElectron(page, 'dispatch-skills:set-page-visibility', true);
+
+  // 2. 同时发起 3 个技能中文说明按需生成请求，打满允许的 3 并发上限
+  const loadSkills = [
+    {
+      name: 'concurrent-load-skill-1',
+      description: 'First concurrent background skill description to test isolation and verify no deadlock on main IPC chain.',
+    },
+    {
+      name: 'concurrent-load-skill-2',
+      description: 'Second concurrent background skill description to test isolation and verify no deadlock on main IPC chain.',
+    },
+    {
+      name: 'concurrent-load-skill-3',
+      description: 'Third concurrent background skill description to test isolation and verify no deadlock on main IPC chain.',
+    },
+  ];
+
+  const skillGenerationPromises = loadSkills.map((s) =>
+    invokeElectron<{ success: boolean; summaryZh?: string; enrichmentFailed?: boolean }>(
+      page,
+      'dispatch-skills:generate-summary',
+      s,
+    ),
+  );
+
+  // 3. 在 3 并发技能生成负载持续期间，完整跑通协作主链核心环节：
+  //    创建总指挥 Session -> 建立 MCP Client -> 提交协作方案 -> 等待方案卡片展示 -> 点击批准 -> 验证审批生命周期与数据库持久化
+  const loadHeadSessionId = await createMetaAgentSession('Concurrent skill load Head');
+  const client = await createMetaAgentClient(loadHeadSessionId);
+  const submittedRequestIds = new Set<string>();
+
+  const plan = await startPlanSubmission(client, loadHeadSessionId, submittedRequestIds, {
+    title: 'Concurrent skill load verification plan',
+    planItems: ['Verify IPC message passing under load', 'Verify database write and retrieval integrity'],
+    workOrderCount: 1,
+    risks: 'Background skill generation must never lock up SQLite database or IPC message loop.',
+  });
+
+  const card = await waitForPendingApprovalCard(loadHeadSessionId);
+  await expect(card).toContainText('Concurrent skill load verification plan');
+
+  await resetRendererEvents(page);
+  await card.getByTestId('plan-approval-approve').click();
+
+  const planResult = parseMcpToolResult<{ approved: boolean; deliveryMethod: string }>(await plan.completion);
+  expect(planResult).toMatchObject({
+    approved: true,
+    deliveryMethod: 'direct',
+  });
+
+  await assertApprovalLifecycle(loadHeadSessionId, plan.requestId, {
+    decision: 'approved',
+    method: 'direct',
+  });
+
+  // 4. 等待 3 个并发生成请求完成，验证无崩溃、无未捕获异常、正常返回
+  const results = await Promise.all(skillGenerationPromises);
+  expect(results).toHaveLength(3);
+  for (const res of results) {
+    expect(res).toBeDefined();
+    expect(typeof res.success).toBe('boolean');
+  }
+
+  // 验证渲染层收到审批事件
+  await expect.poll(
+    async () => (await getRendererEvents(page, loadHeadSessionId)).length,
+    { timeout: 10_000 },
+  ).toBeGreaterThan(0);
+});
+

@@ -54,7 +54,28 @@ function libraryEnableCheckbox(skillName: string): HTMLInputElement {
   return checkbox;
 }
 
+class MockIntersectionObserver {
+  private cb: (entries: Array<{ isIntersecting: boolean; target?: Element }>, observer: any) => void;
+  constructor(cb: (entries: Array<{ isIntersecting: boolean; target?: Element }>, observer: any) => void) {
+    this.cb = cb;
+  }
+  observe(target: Element) {
+    this.cb([{ isIntersecting: true, target }], this);
+  }
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+
+let savedIntersectionObserver: any;
+
 beforeEach(() => {
+  savedIntersectionObserver = (globalThis as any).IntersectionObserver;
+  (window as any).IntersectionObserver = MockIntersectionObserver;
+  (globalThis as any).IntersectionObserver = MockIntersectionObserver;
+
   invoke.mockReset();
   invoke.mockImplementation(async (channel: string, key?: string) => {
     if (channel === 'dispatch-skills:list') {
@@ -75,6 +96,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (savedIntersectionObserver) {
+    (window as any).IntersectionObserver = savedIntersectionObserver;
+    (globalThis as any).IntersectionObserver = savedIntersectionObserver;
+  }
   cleanup();
   vi.restoreAllMocks();
 });
@@ -478,5 +503,204 @@ describe('SkillLibraryPanel', () => {
     fireEvent.click(screen.getByText('工具环境'));
     const noDescCard = await screen.findByTestId('skill-card-no-desc');
     expect(noDescCard.textContent).toContain('这个技能没有自带说明');
+  });
+
+  it('绿④: 10 个未翻译技能渲染时，单次在飞生成请求不超过 3 个', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const unEnrichedSkills = Array.from({ length: 10 }, (_, i) => ({
+      id: `claude:user:concurrent-skill-${i}`,
+      engine: 'claude' as const,
+      name: `concurrent-skill-${i}`,
+      source: 'user' as const,
+      scope: 'global' as const,
+      category: '规划决策' as const,
+      description: `English description ${i} for concurrency test.`,
+      enrichmentFailed: true,
+    }));
+
+    invoke.mockImplementation(async (channel: string, payload?: any) => {
+      if (channel === 'dispatch-skills:list') {
+        return { skills: unEnrichedSkills };
+      }
+      if (channel === 'dispatch-skills:generate-summary') {
+        inFlight++;
+        if (inFlight > maxInFlight) maxInFlight = inFlight;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        inFlight--;
+        return {
+          success: true,
+          summaryZh: `中文说明 ${payload?.name}`,
+          category: '规划决策',
+          enrichmentFailed: false,
+        };
+      }
+      return undefined;
+    });
+
+    render(<SkillLibraryPanel workspacePath="/workspace" />);
+    const categoryHeader = await screen.findByText('规划决策');
+    fireEvent.click(categoryHeader);
+
+    await waitFor(
+      () => {
+        const calls = invoke.mock.calls.filter(([c]) => c === 'dispatch-skills:generate-summary');
+        expect(calls.length).toBe(10);
+      },
+      { timeout: 4000 }
+    );
+
+    expect(maxInFlight).toBeLessThanOrEqual(3);
+    expect(maxInFlight).toBeGreaterThan(0);
+  });
+
+  it('绿⑤: 50 个未翻译技能滚动/渲染时，单页面会话总生成数不超过 20', async () => {
+    const unEnrichedSkills = Array.from({ length: 50 }, (_, i) => ({
+      id: `claude:user:fifty-skill-${i}`,
+      engine: 'claude' as const,
+      name: `fifty-skill-${i}`,
+      source: 'user' as const,
+      scope: 'global' as const,
+      category: '规划决策' as const,
+      description: `English description for fifty test ${i}.`,
+      enrichmentFailed: true,
+    }));
+
+    invoke.mockImplementation(async (channel: string, payload?: any) => {
+      if (channel === 'dispatch-skills:list') {
+        return { skills: unEnrichedSkills };
+      }
+      if (channel === 'dispatch-skills:generate-summary') {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return {
+          success: true,
+          summaryZh: `中文说明 ${payload?.name}`,
+          category: '规划决策',
+          enrichmentFailed: false,
+        };
+      }
+      return undefined;
+    });
+
+    render(<SkillLibraryPanel workspacePath="/workspace" />);
+    const categoryHeader = await screen.findByText('规划决策');
+    fireEvent.click(categoryHeader);
+
+    await waitFor(
+      () => {
+        const calls = invoke.mock.calls.filter(([c]) => c === 'dispatch-skills:generate-summary');
+        expect(calls.length).toBe(20);
+      },
+      { timeout: 4000 }
+    );
+
+    // Wait until generated cards update in DOM
+    await waitFor(() => {
+      expect(screen.getByText('中文说明 fifty-skill-0')).toBeTruthy();
+    });
+
+    await new Promise((r) => setTimeout(r, 100));
+    const finalCalls = invoke.mock.calls.filter(([c]) => c === 'dispatch-skills:generate-summary');
+    expect(finalCalls.length).toBe(20);
+  });
+
+  it('绿⑥: 首屏不阻塞，生成器未返回时即渲染原文', async () => {
+    let resolveGenerator: ((val: any) => void) | null = null;
+    const generatorPromise = new Promise((resolve) => {
+      resolveGenerator = resolve;
+    });
+
+    const pendingSkill = [
+      {
+        id: 'claude:user:slow-gen-skill',
+        engine: 'claude' as const,
+        name: 'slow-gen-skill',
+        source: 'user' as const,
+        scope: 'global' as const,
+        category: '规划决策' as const,
+        description: 'First sentence of raw English description. More details.',
+        enrichmentFailed: true,
+      },
+    ];
+
+    invoke.mockImplementation(async (channel: string) => {
+      if (channel === 'dispatch-skills:list') {
+        return { skills: pendingSkill };
+      }
+      if (channel === 'dispatch-skills:generate-summary') {
+        return generatorPromise;
+      }
+      return undefined;
+    });
+
+    render(<SkillLibraryPanel workspacePath="/workspace" />);
+    const categoryHeader = await screen.findByText('规划决策');
+    fireEvent.click(categoryHeader);
+
+    const card = await screen.findByTestId('skill-card-slow-gen-skill');
+    expect(card.textContent).toContain('First sentence of raw English description.');
+
+    resolveGenerator!({
+      success: true,
+      summaryZh: '缓慢生成的中文说明',
+      category: '规划决策',
+      enrichmentFailed: false,
+    });
+
+    await waitFor(() => {
+      expect(card.textContent).toContain('缓慢生成的中文说明');
+    });
+  });
+
+  it('绿⑭: 真实组件端到端通信验证（挂载上报、按需生成、就地刷新、卸载离线）', async () => {
+    const unEnrichedSkill = [
+      {
+        id: 'codex:user:e2e-skill',
+        engine: 'codex' as const,
+        name: 'e2e-skill',
+        source: 'user' as const,
+        scope: 'global' as const,
+        category: '开发实现' as const,
+        description: 'Build docker container for deployment.',
+        enrichmentFailed: true,
+      },
+    ];
+
+    invoke.mockImplementation(async (channel: string, payload?: any) => {
+      if (channel === 'dispatch-skills:list') {
+        return { skills: unEnrichedSkill };
+      }
+      if (channel === 'dispatch-skills:generate-summary') {
+        return {
+          success: true,
+          summaryZh: '构建用于部署的 Docker 容器',
+          category: '开发实现',
+          enrichmentFailed: false,
+        };
+      }
+      return undefined;
+    });
+
+    const { unmount } = render(<SkillLibraryPanel workspacePath="/workspace" />);
+
+    expect(invoke).toHaveBeenCalledWith('dispatch-skills:set-page-visibility', true);
+
+    const categoryHeader = await screen.findByText('开发实现');
+    fireEvent.click(categoryHeader);
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('dispatch-skills:generate-summary', {
+        name: 'e2e-skill',
+        description: 'Build docker container for deployment.',
+      });
+    });
+
+    const card = await screen.findByTestId('skill-card-e2e-skill');
+    await waitFor(() => {
+      expect(card.textContent).toContain('构建用于部署的 Docker 容器');
+    });
+
+    unmount();
+    expect(invoke).toHaveBeenCalledWith('dispatch-skills:set-page-visibility', false);
   });
 });

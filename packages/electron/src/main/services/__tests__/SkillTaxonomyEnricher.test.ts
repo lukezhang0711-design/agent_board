@@ -4,6 +4,7 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CATEGORY_REPRESENTATIVE_USAGES,
+  KNOWN_SKILL_CATALOG,
   SKILL_CATEGORIES,
   SkillTaxonomyCacheManager,
   computeSkillHash,
@@ -104,5 +105,160 @@ describe('SkillTaxonomyEnricher', () => {
     expect(inferSkillCategory('ship-it', 'deploy to production')).toBe('发布部署');
     expect(inferSkillCategory('command-guard', 'safety guardrails for dangerous operations')).toBe('安全管控');
     expect(inferSkillCategory('my-random-tool', 'random unknown helper')).toBe('工具环境');
+  });
+
+  it('绿②/GJ保住: 9 条死条目已清理、connect-chrome 已补齐，已知表精确为 81 项', () => {
+    const catalogKeys = Object.keys(KNOWN_SKILL_CATALOG);
+    expect(catalogKeys.length).toBe(81);
+
+    // 9 条死条目已彻底移除
+    const deadItems = [
+      'apple-design',
+      'frontend-design',
+      'linear-design',
+      'vercel-design',
+      'front-design',
+      'playwright',
+      'screenshot',
+      'ai-hotspot-radar',
+      'qdii-dca-advisor',
+    ];
+    for (const item of deadItems) {
+      expect(KNOWN_SKILL_CATALOG[item], `Dead item ${item} should be removed`).toBeUndefined();
+    }
+
+    // connect-chrome 已补齐
+    expect(KNOWN_SKILL_CATALOG['connect-chrome']).toEqual({
+      category: '工具环境',
+      summaryZh: '连接或启动 Chrome 浏览器进行 AI 协同操控',
+    });
+  });
+
+  it('绿⑧: 命中写死表时不触发生成；「这个技能没有自带说明」兜底零回归', async () => {
+    const manager = new SkillTaxonomyCacheManager(cacheFile);
+    const mockGen = vi.fn().mockResolvedValue('假中文');
+    manager.setAiGenerator(mockGen);
+
+    // 1. 命中写死表 81 条之一：不触发生成器
+    const catalogResult = await manager.enrichAsync('connect-chrome', 'Connect or launch Chrome browser');
+    expect(catalogResult.summaryZh).toBe('连接或启动 Chrome 浏览器进行 AI 协同操控');
+    expect(catalogResult.category).toBe('工具环境');
+    expect(catalogResult.enrichmentFailed).toBe(false);
+    expect(mockGen).toHaveBeenCalledTimes(0);
+
+    // 2. 原文没有自带说明：如实标"这个技能没有自带说明"，绝不调用生成器
+    const emptyDescResult = await manager.enrichAsync('custom-tool', '');
+    expect(emptyDescResult.summaryZh).toBe('这个技能没有自带说明');
+    expect(emptyDescResult.category).toBe('工具环境');
+    expect(emptyDescResult.enrichmentFailed).toBe(false);
+    expect(mockGen).toHaveBeenCalledTimes(0);
+
+    // 3. 只有空格说明：同样如实兜底
+    const spaceDescResult = await manager.enrichAsync('custom-tool-2', '   \n  ');
+    expect(spaceDescResult.summaryZh).toBe('这个技能没有自带说明');
+    expect(mockGen).toHaveBeenCalledTimes(0);
+
+    // 4. 自带中文说明的技能：提取首句并截断，不触发生成器
+    const zhDescResult = await manager.enrichAsync('zh-skill', '快速创建数据库表结构与索引配置。详细用法见文档。');
+    expect(zhDescResult.summaryZh).toBe('快速创建数据库表结构与索引配置');
+    expect(zhDescResult.enrichmentFailed).toBe(false);
+    expect(mockGen).toHaveBeenCalledTimes(0);
+  });
+
+  it('绿⑦: 生成失败、超时、空结果、格式不合要求时，保留英文原文且 enrichmentFailed 为 true（绝不编造中文）', async () => {
+    const manager = new SkillTaxonomyCacheManager(cacheFile);
+
+    // 记录核对样本：原说明与兜底结果对照
+    const testSamples = [
+      {
+        name: 'cloud-deploy',
+        desc: 'Deploy microservice containers to remote Kubernetes clusters.',
+        mockOutput: '', // 空结果
+        errorDesc: '空结果',
+      },
+      {
+        name: 'security-scanner',
+        desc: 'Scans source code for hardcoded secrets and leaked tokens.',
+        mockOutput: 'Scanned 120 files successfully without errors', // 非中文无意义输出
+        errorDesc: '格式不合（无中文）',
+      },
+      {
+        name: 'data-pipeline',
+        desc: 'Extract, transform and load analytics events into warehouse.',
+        mockReject: new Error('Command timed out after 15000ms'), // 超时抛错
+        errorDesc: '15秒超时异常',
+      },
+    ];
+
+    for (const sample of testSamples) {
+      let mockGen;
+      if (sample.mockReject) {
+        mockGen = vi.fn().mockRejectedValue(sample.mockReject);
+      } else {
+        mockGen = vi.fn().mockResolvedValue(sample.mockOutput);
+      }
+
+      const res = await manager.enrichAsync(sample.name, sample.desc, undefined, undefined, mockGen);
+      expect(mockGen).toHaveBeenCalledTimes(1);
+      // 保留英文原文首句，绝不编造中文
+      expect(res.enrichmentFailed).toBe(true);
+      expect(sample.desc).toContain(res.summaryZh.replace(/\.\.\.$/, ''));
+      expect(res.category).toBeDefined();
+    }
+
+    // 验证正常中文真生成样本
+    const successGen = vi.fn().mockResolvedValue('将微服务容器部署至远程集群');
+    const successRes = await manager.enrichAsync(
+      'k8s-deploy',
+      'Deploy microservice containers to remote Kubernetes clusters.',
+      undefined,
+      undefined,
+      successGen,
+    );
+    expect(successRes.enrichmentFailed).toBe(false);
+    expect(successRes.summaryZh).toBe('将微服务容器部署至远程集群');
+    expect(successRes.category).toBe('发布部署');
+  });
+
+  it('绿⑫: 命中成功缓存生成调用为 0；旧失败缓存首次可见能启动 1 次；说明变化对新哈希生成', async () => {
+    const manager = new SkillTaxonomyCacheManager(cacheFile);
+    let genCount = 0;
+    const mockGen = vi.fn().mockImplementation(async () => {
+      genCount++;
+      return `生成中文说明 ${genCount}`;
+    });
+    manager.setAiGenerator(mockGen);
+
+    // 1. 首次为表外英文技能生成
+    const res1 = await manager.enrichAsync('my-worker', 'Deploy serverless functions to edge nodes');
+    expect(res1.summaryZh).toBe('生成中文说明 1');
+    expect(res1.enrichmentFailed).toBe(false);
+    expect(mockGen).toHaveBeenCalledTimes(1);
+
+    // 2. 再次调用：命中成功缓存，生成器调用保持为 1（本次为 0）
+    const res2 = await manager.enrichAsync('my-worker', 'Deploy serverless functions to edge nodes');
+    expect(res2.summaryZh).toBe('生成中文说明 1');
+    expect(res2.enrichmentFailed).toBe(false);
+    expect(mockGen).toHaveBeenCalledTimes(1);
+
+    // 3. 模拟旧缓存中存在 enrichmentFailed: true（来自扫描阶段的无中文标记）
+    const failHash = computeSkillHash('failed-skill', 'Old failed skill description');
+    manager.set(failHash, {
+      category: '开发实现',
+      summaryZh: 'Old failed skill description',
+      enrichmentFailed: true,
+    });
+    manager.save();
+
+    // 首次在视口按需生成时，能够启动 1 次生成！
+    const resFromFailedCache = await manager.enrichAsync('failed-skill', 'Old failed skill description');
+    expect(resFromFailedCache.summaryZh).toBe('生成中文说明 2');
+    expect(resFromFailedCache.enrichmentFailed).toBe(false);
+    expect(mockGen).toHaveBeenCalledTimes(2);
+
+    // 4. 说明内容修改后：生成新哈希并针对新哈希调用生成
+    const resModified = await manager.enrichAsync('my-worker', 'Deploy serverless functions with zero downtime');
+    expect(resModified.summaryZh).toBe('生成中文说明 3');
+    expect(mockGen).toHaveBeenCalledTimes(3);
   });
 });

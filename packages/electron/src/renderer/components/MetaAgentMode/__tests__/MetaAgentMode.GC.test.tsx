@@ -29,6 +29,15 @@ vi.mock('../../UnifiedAI/SessionTranscript', () => ({
       data-emergency-stop={String(props.showStopAndClearQueue)}
       data-disable-mode-toggle={String(props.disableModeToggle)}
     >
+      {props.showStopAndClearQueue && (
+        <button
+          type="button"
+          data-testid="transcript-emergency-stop-control"
+          onClick={() => props.onStopAndClearQueue?.()}
+        >
+          transcript stop
+        </button>
+      )}
       <button
         type="button"
         data-testid="transcript-file-link"
@@ -471,6 +480,43 @@ describe('施工单 GC: 总指挥主窗口 + 侧边栏（补派）红绿验收�
       const previewRail = await screen.findByTestId('file-preview-rail');
       expect(previewRail).toBeTruthy();
       expect(screen.getByTestId('file-preview-path').textContent).toContain('report.sql');
+    });
+  });
+
+  describe('施工单 GN: 停止按钮去重', () => {
+    it('绿①: 有活在跑的夹具下，主窗口只渲染出一个停止控件', async () => {
+      render(
+        <Provider store={store}>
+          <MetaAgentMode workspacePath="/workspace" sessionId="meta-1" />
+        </Provider>
+      );
+
+      // 页头停止按钮存在且可用
+      const headerStop = await screen.findByTestId('meta-agent-stop-all');
+      expect(headerStop).toBeTruthy();
+      expect(headerStop.textContent).toBe('全部停下');
+
+      // SessionTranscript 接收到的 showStopAndClearQueue 恒为 false
+      const transcript = await screen.findByTestId('session-transcript');
+      expect(transcript.getAttribute('data-emergency-stop')).toBe('false');
+
+      // 反向断言：SessionTranscript 内部的停止按钮未被渲染
+      expect(screen.queryByTestId('transcript-emergency-stop-control')).toBeNull();
+
+      // 点击页头全部停下仍正确发出 IPC
+      fireEvent.click(headerStop);
+      await waitFor(() => {
+        expect(invoke).toHaveBeenCalledWith('meta-agent:stop-and-clear', 'meta-1', '/workspace');
+      });
+    });
+
+    it('绿②: 反向断言——SessionTranscript 组件文件未被改动', () => {
+      const transcriptPath = path.resolve(__dirname, '../../UnifiedAI/SessionTranscript.tsx');
+      expect(fs.existsSync(transcriptPath)).toBe(true);
+      const content = fs.readFileSync(transcriptPath, 'utf8');
+      // SessionTranscript 必须仍完整保留 showStopAndClearQueue 接口
+      expect(content).toContain('showStopAndClearQueue?: boolean;');
+      expect(content).toContain('onStopAndClearQueue?: () => void | Promise<void>;');
     });
   });
 });

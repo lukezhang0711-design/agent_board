@@ -39,6 +39,11 @@ import {
 import { getEnhancedPath } from '../services/CLIManager';
 import { logger } from '../utils/logger';
 import { dispatchSkillLibraryService } from '../services/DispatchSkillLibraryService';
+import {
+    skillTaxonomyCacheManager,
+    computeSkillHash,
+    isStaticEnriched,
+} from '../services/SkillTaxonomyEnricher';
 import { getSettingsService, isSettingKey } from '../services/SettingsService';
 import { SessionNamingService } from '../services/SessionNamingService';
 import { SoundNotificationService } from '../services/SoundNotificationService';
@@ -61,6 +66,51 @@ let syncStatusListenerSetup = false;
 
 // Track if Stytch has been initialized
 let stytchInitialized = false;
+
+// ============================================================
+// 施工单 GN: 技能按需生成会话与并发状态管理
+// ============================================================
+export interface SkillGenerationWindowSession {
+    callCount: number;
+    attemptedHashes: Set<string>;
+    pageVisible: boolean;
+}
+
+const windowSkillSessions = new Map<number, SkillGenerationWindowSession>();
+let activeGlobalSkillGenerations = 0;
+
+function getOrCreateWindowSkillSession(sender: any): SkillGenerationWindowSession {
+    const windowId = sender?.id ?? 0;
+    let sessionState = windowSkillSessions.get(windowId);
+    if (!sessionState) {
+        sessionState = {
+            callCount: 0,
+            attemptedHashes: new Set<string>(),
+            pageVisible: true,
+        };
+        windowSkillSessions.set(windowId, sessionState);
+
+        if (sender && typeof sender.once === 'function') {
+            sender.once('destroyed', () => {
+                windowSkillSessions.delete(windowId);
+            });
+        }
+    }
+    return sessionState;
+}
+
+export function _resetSkillGenerationStateForTest(): void {
+    windowSkillSessions.clear();
+    activeGlobalSkillGenerations = 0;
+}
+
+export function _getActiveGlobalSkillGenerationsForTest(): number {
+    return activeGlobalSkillGenerations;
+}
+
+export function _getWindowSkillSessionForTest(windowId: number): SkillGenerationWindowSession | undefined {
+    return windowSkillSessions.get(windowId);
+}
 
 type BuildInfo = {
     commit: string;
@@ -198,6 +248,108 @@ export function registerSettingsHandlers() {
             errors: errors.length > 0 ? errors : undefined,
             error: errors.length > 0 ? errors.join('\n') : undefined,
         };
+    });
+
+    // 施工单 GN: 技能库页面可见性通告（页面挂载/进入时为 true，卸载/切走时为 false）
+    safeHandle('dispatch-skills:set-page-visibility', (event, visible: boolean) => {
+        const sessionState = getOrCreateWindowSkillSession(event?.sender);
+        sessionState.pageVisible = Boolean(visible);
+        return { success: true, pageVisible: sessionState.pageVisible };
+    });
+
+    // 施工单 GN: 技能中文说明按需单条生成请求
+    safeHandle('dispatch-skills:generate-summary', async (event, payload: {
+        name: string;
+        description?: string;
+        content?: string;
+    }) => {
+        const { name, description, content } = payload ?? {};
+        if (!name || typeof name !== 'string') {
+            return { success: false, error: 'Invalid skill name' };
+        }
+
+        const sessionState = getOrCreateWindowSkillSession(event?.sender);
+
+        // 1. 页面离开后不启动新调用
+        if (!sessionState.pageVisible) {
+            return {
+                success: false,
+                skipped: true,
+                reason: 'page_not_visible',
+                summaryZh: description?.trim() || '这个技能没有自带说明',
+                enrichmentFailed: true,
+            };
+        }
+
+        const hash = computeSkillHash(name, description, content);
+
+        // 2. 检查成功缓存：若已有成功结果（enrichmentFailed !== true），直接返回成功缓存，生成调用计 0 次
+        const cached = skillTaxonomyCacheManager.get(hash);
+        if (cached && !cached.enrichmentFailed) {
+            return {
+                success: true,
+                category: cached.category,
+                summaryZh: cached.summaryZh,
+                enrichmentFailed: false,
+            };
+        }
+
+        // 3. 静态规则（无说明、已有中文、写死表 81 条）：直接走 enrichAsync，不调用 AI 引擎子进程，不消耗调用配额
+        if (isStaticEnriched(name, description)) {
+            const result = await skillTaxonomyCacheManager.enrichAsync(name, description, content, hash);
+            return { success: true, ...result };
+        }
+
+        // 4. 重复可见通知拦截 / 失败后不重试：本窗口内同一 hash 失败后不重试
+        if (sessionState.attemptedHashes.has(hash)) {
+            const existing = skillTaxonomyCacheManager.get(hash);
+            return {
+                success: Boolean(existing && !existing.enrichmentFailed),
+                skipped: true,
+                reason: 'already_attempted',
+                category: existing?.category ?? '工具环境',
+                summaryZh: existing?.summaryZh ?? (description?.trim() || ''),
+                enrichmentFailed: existing ? existing.enrichmentFailed : true,
+            };
+        }
+
+        // 5. 检查单窗口会话总量限额：最多 20 次
+        if (sessionState.callCount >= 20) {
+            return {
+                success: false,
+                skipped: true,
+                reason: 'quota_exceeded',
+                summaryZh: description?.trim() || '',
+                enrichmentFailed: true,
+            };
+        }
+
+        // 6. 检查全局实际并发上限：最多 3 个
+        if (activeGlobalSkillGenerations >= 3) {
+            return {
+                success: false,
+                skipped: true,
+                reason: 'concurrency_limit',
+                summaryZh: description?.trim() || '',
+                enrichmentFailed: true,
+            };
+        }
+
+        // 真正启动生成调用（失败/超时也计一次）
+        sessionState.callCount++;
+        sessionState.attemptedHashes.add(hash);
+        activeGlobalSkillGenerations++;
+
+        try {
+            const result = await skillTaxonomyCacheManager.enrichAsync(name, description, content, hash);
+            return {
+                success: !result.enrichmentFailed,
+                ...result,
+                pageVisible: sessionState.pageVisible,
+            };
+        } finally {
+            activeGlobalSkillGenerations--;
+        }
     });
 
     // Spellcheck toggle - controls Chromium's built-in spellchecker for all windows

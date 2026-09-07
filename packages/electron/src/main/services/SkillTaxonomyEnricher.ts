@@ -1,3 +1,4 @@
+import childProcess from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
@@ -6,6 +7,10 @@ import {
   DEFAULT_SKILL_CATEGORIES,
   type SkillCategory,
 } from '../../shared/skillTaxonomy';
+import {
+  isClaudeExecutableInstalled,
+  resolveClaudeExecutablePath,
+} from './ai/claudeExecutableResolver';
 
 /** Factory defaults only. Owner-approved taxonomy data is the runtime source of truth. */
 export const SKILL_CATEGORIES = DEFAULT_SKILL_CATEGORIES;
@@ -39,7 +44,7 @@ interface DiskCacheFormat {
 }
 
 // Built-in high-quality Chinese descriptions (< 30 characters) and taxonomy for common skills
-const KNOWN_SKILL_CATALOG: Record<string, { category: SkillCategory; summaryZh: string }> = {
+export const KNOWN_SKILL_CATALOG: Record<string, { category: SkillCategory; summaryZh: string }> = {
   'ask-matt': { category: '工具环境', summaryZh: '寻找适合当前场景的工作流与技能指引' },
   'autoplan': { category: '规划决策', summaryZh: '自动串联 CEO、设计、工程等多维度方案评审' },
   'benchmark': { category: '质量保障', summaryZh: '使用无头浏览器对应用进行性能回归与基准测试' },
@@ -120,15 +125,7 @@ const KNOWN_SKILL_CATALOG: Record<string, { category: SkillCategory; summaryZh: 
   'writing-fragments': { category: '文档写作', summaryZh: '通过问答挖掘并提炼写作素材片段与核心论据' },
   'writing-great-skills': { category: '文档写作', summaryZh: '编写高质量技能规范的原则、范式与编写指引' },
   'writing-shape': { category: '文档写作', summaryZh: '将零散材料通过对话加工塑造成结构完整的文章' },
-  'apple-design': { category: '界面设计', summaryZh: '遵循 Apple 风格设计规范指引进行前端与 UI 实现' },
-  'frontend-design': { category: '界面设计', summaryZh: '打造高品质、生产级别的现代化前端界面' },
-  'linear-design': { category: '界面设计', summaryZh: '遵循 Linear 风格设计规范指引进行前端与 UI 实现' },
-  'vercel-design': { category: '界面设计', summaryZh: '遵循 Vercel 风格设计规范指引进行前端与 UI 实现' },
-  'front-design': { category: '界面设计', summaryZh: '采用移动端优先理念构建高质量前端界面' },
-  'playwright': { category: '工具环境', summaryZh: '使用 Playwright 在终端驱动真实浏览器自动化' },
-  'screenshot': { category: '工具环境', summaryZh: '截取全屏或特定窗口的系统屏幕截图' },
-  'ai-hotspot-radar': { category: '工具环境', summaryZh: '汇总、排序并提取 AI 领域最新热点动态' },
-  'qdii-dca-advisor': { category: '工具环境', summaryZh: '协助进行 QDII 境外指数基金定投决策与测算' },
+  'connect-chrome': { category: '工具环境', summaryZh: '连接或启动 Chrome 浏览器进行 AI 协同操控' },
 };
 
 export function computeSkillHash(name: string, description?: string, content?: string): string {
@@ -214,6 +211,18 @@ function truncateTo30(text: string): string {
 }
 
 /**
+ * 判断某个技能是否属于静态规则处理范畴（无需调用 AI 引擎子进程）：
+ * 包括无说明、已有中文说明、或在 KNOWN_SKILL_CATALOG 静态表中。
+ */
+export function isStaticEnriched(name: string, description?: string): boolean {
+  const trimmed = (description ?? '').trim();
+  if (!trimmed) return true;
+  if (/[\u4e00-\u9fa5]/.test(trimmed)) return true;
+  if (KNOWN_SKILL_CATALOG[name.trim().toLowerCase()]) return true;
+  return false;
+}
+
+/**
  * Generate Chinese one-sentence summary (<= 30 chars) and category for a skill.
  */
 export function generateSkillEnrichment(
@@ -268,11 +277,68 @@ export function generateSkillEnrichment(
   };
 }
 
+export type SkillSummaryAiGenerator = (description: string) => Promise<string>;
+
+/**
+ * Generate Chinese one-sentence summary (< 30 chars) using the lightest main process engine channel:
+ * resolveClaudeExecutablePath from ./ai/claudeExecutableResolver running `claude -p` headless single prompt.
+ */
+export async function generateSkillSummaryWithEngine(description: string): Promise<string> {
+  const deps = {
+    homedir: os.homedir(),
+    pathExists: fs.existsSync,
+    enhancedPath: process.env.PATH,
+  };
+  if (!isClaudeExecutableInstalled(deps)) {
+    throw new Error('Claude CLI is not installed');
+  }
+  const executable = resolveClaudeExecutablePath(deps);
+  const prompt = [
+    '请用一句中文说明这个技能帮用户干什么。',
+    '硬性要求：',
+    '1. 30字以内的一句话。',
+    '2. 讲清帮你干什么，不要复述触发条件。',
+    '3. 产品名或引擎名（如 Claude、Codex、Gemini、GitHub 等）保持原样不翻译。',
+    '4. 只输出这一句中文，不要任何前后缀或解释。',
+    '',
+    `技能原始说明：\n${description}`,
+  ].join('\n');
+
+  return new Promise((resolve, reject) => {
+    const env = { ...process.env };
+    // 铁律：调引擎时把 ANTHROPIC_API_KEY 从环境里删掉（防误扣费）
+    delete env.ANTHROPIC_API_KEY;
+    childProcess.execFile(
+      executable,
+      ['-p', prompt],
+      { timeout: 15000, env },
+      (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        const text = (stdout ?? '').trim().replace(/^["'“”]+|["'“”]+$/g, '');
+        if (!text) {
+          reject(new Error('Empty response from engine'));
+          return;
+        }
+        // 绿⑦: 必须包含中文，绝不接受无中文或无关输出
+        if (!/[\u4e00-\u9fa5]/.test(text)) {
+          reject(new Error('Response does not contain Chinese'));
+          return;
+        }
+        resolve(text);
+      },
+    );
+  });
+}
+
 export class SkillTaxonomyCacheManager {
   private cachePath: string;
   private memoryCache: Map<string, SkillEnrichmentCacheEntry> = new Map();
   private loaded: boolean = false;
   private dirty: boolean = false;
+  private aiGenerator: SkillSummaryAiGenerator = generateSkillSummaryWithEngine;
 
   constructor(customPath?: string) {
     if (customPath) {
@@ -290,6 +356,14 @@ export class SkillTaxonomyCacheManager {
       }
       this.cachePath = path.join(baseDir, 'skill-taxonomy-cache.json');
     }
+  }
+
+  public setAiGenerator(generator: SkillSummaryAiGenerator): void {
+    this.aiGenerator = generator;
+  }
+
+  public getAiGenerator(): SkillSummaryAiGenerator {
+    return this.aiGenerator;
   }
 
   public getCachePath(): string {
@@ -352,6 +426,9 @@ export class SkillTaxonomyCacheManager {
     }
   }
 
+  /**
+   * 同步丰富并缓存（扫描路径专用：绝不启动任何异步生成或子进程）
+   */
   public enrichAndCache(
     name: string,
     description?: string,
@@ -373,6 +450,98 @@ export class SkillTaxonomyCacheManager {
     this.set(hash, generated);
     this.save();
     return generated;
+  }
+
+  /**
+   * 按需单条真生成（仅用户可见时触发，复用落盘缓存，失败保留英文原文不编造）
+   */
+  public async enrichAsync(
+    name: string,
+    description?: string,
+    content?: string,
+    providedHash?: string,
+    customGenerator?: SkillSummaryAiGenerator,
+  ): Promise<SkillEnrichmentResult> {
+    this.load();
+    const hash = providedHash ?? computeSkillHash(name, description, content);
+    const cached = this.get(hash);
+    // 绿⑫: 命中成功缓存直接返回，生成器调用为 0
+    if (cached && !cached.enrichmentFailed) {
+      return {
+        category: cached.category,
+        summaryZh: cached.summaryZh,
+        enrichmentFailed: false,
+      };
+    }
+
+    const trimmedDesc = (description ?? '').trim();
+    // 绿⑧: 没有自带说明的技能，绝不调用生成器，如实兜底
+    if (!trimmedDesc) {
+      return {
+        category: '工具环境',
+        summaryZh: '这个技能没有自带说明',
+        enrichmentFailed: false,
+      };
+    }
+
+    // 绿⑧: 命中写死表 81 条，绝不调用生成器
+    const normalizedName = name.trim().toLowerCase();
+    const catalogEntry = KNOWN_SKILL_CATALOG[normalizedName];
+    if (catalogEntry) {
+      return {
+        category: catalogEntry.category,
+        summaryZh: truncateTo30(catalogEntry.summaryZh),
+        enrichmentFailed: false,
+      };
+    }
+
+    const category = inferSkillCategory(name, description);
+    // 自带中文的技能，直接提取首句，绝不调用生成器
+    const hasChinese = /[\u4e00-\u9fa5]/.test(trimmedDesc);
+    if (hasChinese) {
+      const firstSentenceMatch = /^([^。!！?？\n]+)/.exec(trimmedDesc);
+      const firstSentence = firstSentenceMatch ? firstSentenceMatch[1].trim() : trimmedDesc;
+      return {
+        category,
+        summaryZh: truncateTo30(firstSentence),
+        enrichmentFailed: false,
+      };
+    }
+
+    // 表外英文技能：提取原文首句作为失败兜底
+    let cleanDesc = trimmedDesc.replace(/^A\s+/i, '').replace(/^An\s+/i, '');
+    const firstSentence = cleanDesc.split(/\.|\n/)[0].trim();
+    const rawSummary = firstSentence || trimmedDesc;
+    const fallbackSummary = rawSummary.length > 120 ? rawSummary.slice(0, 120) + '...' : rawSummary;
+
+    const generator = customGenerator ?? this.aiGenerator;
+    try {
+      const generatedRaw = await generator(trimmedDesc);
+      const trimmedGen = (generatedRaw ?? '').trim().replace(/^["'“”]+|["'“”]+$/g, '');
+      if (!trimmedGen || !/[\u4e00-\u9fa5]/.test(trimmedGen)) {
+        throw new Error('Empty or invalid response from generator');
+      }
+      const firstSentenceMatch = /^([^。!！?？\n]+)/.exec(trimmedGen);
+      const sentence = firstSentenceMatch ? firstSentenceMatch[1].trim() : trimmedGen;
+      const result: SkillEnrichmentResult = {
+        category,
+        summaryZh: truncateTo30(sentence),
+        enrichmentFailed: false,
+      };
+      this.set(hash, result);
+      this.save();
+      return result;
+    } catch {
+      // 绿⑦: 失败保留英文原文 + enrichmentFailed: true 标记，绝不编造中文
+      const fallback: SkillEnrichmentResult = {
+        category,
+        summaryZh: fallbackSummary,
+        enrichmentFailed: true,
+      };
+      this.set(hash, fallback);
+      this.save();
+      return fallback;
+    }
   }
 }
 

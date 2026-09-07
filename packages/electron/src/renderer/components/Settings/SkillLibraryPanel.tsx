@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CODEX_SKILL_CONTROL_NOTICE,
   DISPATCH_SKILL_SETTINGS_KEY,
@@ -40,6 +40,188 @@ function makeBundleId(name: string): string {
   return `bundle-${name.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-').replace(/^-+|-+$/g, '') || Date.now()}`;
 }
 
+interface SkillCardItemProps {
+  card: MergedSkillCard;
+  editingBundle: DispatchSkillBundle | null;
+  isCardInEditingBundle: boolean;
+  isExpanded: boolean;
+  onToggleBundleSkill: (card: MergedSkillCard, checked: boolean) => void;
+  onToggleSkillDisabled: (card: MergedSkillCard, disabled: boolean) => void;
+  onToggleCardExpanded: (name: string) => void;
+  onVisibleChange?: (name: string, isVisible: boolean) => void;
+}
+
+function SkillCardItem({
+  card,
+  editingBundle,
+  isCardInEditingBundle,
+  isExpanded,
+  onToggleBundleSkill,
+  onToggleSkillDisabled,
+  onToggleCardExpanded,
+  onVisibleChange,
+}: SkillCardItemProps) {
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !onVisibleChange) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      onVisibleChange(card.name, true);
+      return () => {
+        onVisibleChange(card.name, false);
+      };
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        onVisibleChange(card.name, entry.isIntersecting);
+      }
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      onVisibleChange(card.name, false);
+    };
+  }, [card.name, onVisibleChange]);
+
+  return (
+    <div
+      ref={cardRef}
+      key={card.name}
+      data-testid={`skill-card-${card.name}`}
+      className={`flex flex-col justify-between gap-3 rounded-ui-lg border p-3 transition-all duration-150 bg-[var(--nim-bg)] ${
+        card.disabled
+          ? 'border-[var(--nim-border-subtle)] opacity-70'
+          : 'border-[var(--nim-border)] hover:border-[var(--nim-border-strong)] shadow-xs'
+      }`}
+    >
+      <div className="flex flex-col gap-3">
+        {/* Card Top: Name (with bundle checkbox in editing mode) & Switch */}
+        <div className="flex items-start justify-between gap-2">
+          {editingBundle ? (
+            <label className="flex items-center gap-2 cursor-pointer select-none min-w-0">
+              <input
+                type="checkbox"
+                data-testid={`bundle-skill-checkbox-${card.name}`}
+                checked={isCardInEditingBundle}
+                onChange={(e) => onToggleBundleSkill(card, e.target.checked)}
+                className="rounded-ui-base text-[var(--nim-primary)] cursor-pointer mt-1"
+              />
+              <span className="font-semibold text-ui-body text-[var(--nim-text)] leading-snug break-words">
+                {card.name}
+              </span>
+            </label>
+          ) : (
+            <span className="font-semibold text-ui-body text-[var(--nim-text)] leading-snug break-words">
+              {card.name}
+            </span>
+          )}
+
+          <label className="flex shrink-0 items-center gap-2 text-ui-compact text-[var(--nim-text-muted)] cursor-pointer select-none">
+            启用
+            <input
+              type="checkbox"
+              checked={!card.disabled}
+              onChange={(e) => onToggleSkillDisabled(card, !e.currentTarget.checked)}
+            />
+          </label>
+        </div>
+
+        {/* Engine Badges & Content Comparison Badge */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
+              card.engines.claude
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
+            }`}
+          >
+            Claude {card.engines.claude ? '✓' : '✗'}
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
+              card.engines.codex
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
+            }`}
+          >
+            Codex {card.engines.codex ? '✓' : '✗'}
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
+              card.engines.gemini
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
+            }`}
+          >
+            Gemini {card.engines.gemini ? '✓' : '✗'}
+          </span>
+
+          {card.contentMatch === 'same' && (
+            <span className="px-2 py-0.5 rounded-ui-base text-ui-caption bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)]">
+              内容一致
+            </span>
+          )}
+          {card.contentMatch === 'different' && (
+            <span className="px-2 py-0.5 rounded-ui-base text-ui-caption bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
+              两家内容不一样
+            </span>
+          )}
+        </div>
+
+        {/* One-sentence Chinese summary or untranslated notice */}
+        <div className="text-ui-compact text-[var(--nim-text)] leading-relaxed">
+          {card.hasDescription ? (
+            card.enrichmentFailed ? (
+              <span className="text-amber-600 dark:text-amber-400">
+                [未翻译] {card.summaryZh}
+              </span>
+            ) : (
+              <span>{card.summaryZh}</span>
+            )
+          ) : (
+            <span className="text-[var(--nim-text-muted)] italic">这个技能没有自带说明</span>
+          )}
+        </div>
+
+        {/* Expanded full description */}
+        {isExpanded && card.rawDescription && (
+          <div className="mt-1 rounded-ui-base bg-[var(--nim-bg-subtle)] p-3 text-ui-compact text-[var(--nim-text-muted)] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto border border-[var(--nim-border-subtle)]">
+            {card.rawDescription}
+          </div>
+        )}
+      </div>
+
+      {/* Card Footer: Metadata & Expand button */}
+      <div className="pt-2 border-t border-[var(--nim-border-subtle)] flex flex-col gap-2 text-ui-caption text-[var(--nim-text-muted)]">
+        <div className="flex items-center justify-between gap-2">
+          <span>约 {card.estimatedTokens} token (估算)</span>
+          {card.hasDescription && (
+            <button
+              type="button"
+              className="text-ui-caption text-[var(--nim-primary)] hover:underline cursor-pointer border-none bg-transparent p-0"
+              onClick={() => onToggleCardExpanded(card.name)}
+            >
+              {isExpanded ? '收起说明' : '展开说明'}
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>
+            {card.scopes.map((s) => SCOPE_LABELS[s] ?? s).join('/')} · {card.sources.map((s) => SOURCE_LABELS[s] ?? s).join('/')}
+          </span>
+          <span>·</span>
+          <span>
+            {card.bundleNames.length > 0 ? `在「${card.bundleNames.join('」「')}」中` : '未加入包'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
   const [skills, setSkills] = useState<DispatchSkillDescriptor[]>([]);
   const [settings, setSettings] = useState<DispatchSkillSettings>(() =>
@@ -54,6 +236,23 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
   const [scanErrors, setScanErrors] = useState<string[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+
+  const visibleCardNamesRef = useRef<Set<string>>(new Set());
+  const inFlightCountRef = useRef(0);
+  const attemptedCardNamesRef = useRef<Set<string>>(new Set());
+  const panelSessionCallsRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  // 页面生命周期通告（挂载为 true，卸载为 false）
+  useEffect(() => {
+    isMountedRef.current = true;
+    void window.electronAPI?.invoke?.('dispatch-skills:set-page-visibility', true);
+
+    return () => {
+      isMountedRef.current = false;
+      void window.electronAPI?.invoke?.('dispatch-skills:set-page-visibility', false);
+    };
+  }, []);
 
   const persistSettings = useCallback(async (next: DispatchSkillSettings) => {
     setSettings(next);
@@ -292,6 +491,85 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     });
   };
 
+  const scheduleEnrichment = useCallback(() => {
+    if (!isMountedRef.current) return;
+    if (inFlightCountRef.current >= 3) return;
+    if (panelSessionCallsRef.current >= 20) return;
+
+    // 筛选可见、未翻译（enrichmentFailed === true）、有自带说明、且本会话尚未尝试过的技能
+    const candidates = mergedCards.filter(
+      (c) =>
+        visibleCardNamesRef.current.has(c.name) &&
+        c.enrichmentFailed &&
+        c.hasDescription &&
+        !attemptedCardNamesRef.current.has(c.name)
+    );
+
+    if (candidates.length === 0) return;
+
+    const availableSlots = Math.min(
+      3 - inFlightCountRef.current,
+      20 - panelSessionCallsRef.current,
+      candidates.length
+    );
+
+    const toProcess = candidates.slice(0, availableSlots);
+    for (const card of toProcess) {
+      attemptedCardNamesRef.current.add(card.name);
+      inFlightCountRef.current++;
+      panelSessionCallsRef.current++;
+
+      window.electronAPI
+        ?.invoke?.('dispatch-skills:generate-summary', {
+          name: card.name,
+          description: card.rawDescription,
+        })
+        .then((result: any) => {
+          if (!isMountedRef.current) return;
+          if (result && result.success && !result.enrichmentFailed && result.summaryZh) {
+            setSkills((prev) =>
+              prev.map((s) => {
+                if (s.name.trim() === card.name.trim()) {
+                  return {
+                    ...s,
+                    summaryZh: result.summaryZh,
+                    category: result.category ?? s.category,
+                    enrichmentFailed: false,
+                  };
+                }
+                return s;
+              })
+            );
+          }
+        })
+        .catch(() => {
+          // 失败保留原文，不重试
+        })
+        .finally(() => {
+          inFlightCountRef.current--;
+          if (isMountedRef.current) {
+            scheduleEnrichment();
+          }
+        });
+    }
+  }, [mergedCards]);
+
+  const handleCardVisibleChange = useCallback(
+    (name: string, isVisible: boolean) => {
+      if (isVisible) {
+        visibleCardNamesRef.current.add(name);
+        scheduleEnrichment();
+      } else {
+        visibleCardNamesRef.current.delete(name);
+      }
+    },
+    [scheduleEnrichment]
+  );
+
+  useEffect(() => {
+    scheduleEnrichment();
+  }, [scheduleEnrichment]);
+
   const renderCard = (card: MergedSkillCard) => {
     const isExpanded = expandedCardNames.has(card.name);
     const isCardInEditingBundle = editingBundle
@@ -299,137 +577,17 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
       : false;
 
     return (
-      <div
+      <SkillCardItem
         key={card.name}
-        data-testid={`skill-card-${card.name}`}
-        className={`flex flex-col justify-between gap-3 rounded-ui-lg border p-3 transition-all duration-150 bg-[var(--nim-bg)] ${
-          card.disabled
-            ? 'border-[var(--nim-border-subtle)] opacity-70'
-            : 'border-[var(--nim-border)] hover:border-[var(--nim-border-strong)] shadow-xs'
-        }`}
-      >
-        <div className="flex flex-col gap-3">
-          {/* Card Top: Name (with bundle checkbox in editing mode) & Switch */}
-          <div className="flex items-start justify-between gap-2">
-            {editingBundle ? (
-              <label className="flex items-center gap-2 cursor-pointer select-none min-w-0">
-                <input
-                  type="checkbox"
-                  data-testid={`bundle-skill-checkbox-${card.name}`}
-                  checked={isCardInEditingBundle}
-                  onChange={(e) => toggleBundleSkillForCard(card, e.target.checked)}
-                  className="rounded-ui-base text-[var(--nim-primary)] cursor-pointer mt-1"
-                />
-                <span className="font-semibold text-ui-body text-[var(--nim-text)] leading-snug break-words">
-                  {card.name}
-                </span>
-              </label>
-            ) : (
-              <span className="font-semibold text-ui-body text-[var(--nim-text)] leading-snug break-words">
-                {card.name}
-              </span>
-            )}
-
-            <label className="flex shrink-0 items-center gap-2 text-ui-compact text-[var(--nim-text-muted)] cursor-pointer select-none">
-              启用
-              <input
-                type="checkbox"
-                checked={!card.disabled}
-                onChange={(e) => toggleSkillDisabled(card, !e.currentTarget.checked)}
-              />
-            </label>
-          </div>
-
-          {/* Engine Badges & Content Comparison Badge */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
-                card.engines.claude
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                  : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
-              }`}
-            >
-              Claude {card.engines.claude ? '✓' : '✗'}
-            </span>
-            <span
-              className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
-                card.engines.codex
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                  : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
-              }`}
-            >
-              Codex {card.engines.codex ? '✓' : '✗'}
-            </span>
-            <span
-              className={`px-2 py-0.5 rounded-ui-base text-ui-caption font-mono border ${
-                card.engines.gemini
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                  : 'bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border-[var(--nim-border-subtle)]'
-              }`}
-            >
-              Gemini {card.engines.gemini ? '✓' : '✗'}
-            </span>
-
-            {card.contentMatch === 'same' && (
-              <span className="px-2 py-0.5 rounded-ui-base text-ui-caption bg-[var(--nim-bg-subtle)] text-[var(--nim-text-muted)] border border-[var(--nim-border-subtle)]">
-                内容一致
-              </span>
-            )}
-            {card.contentMatch === 'different' && (
-              <span className="px-2 py-0.5 rounded-ui-base text-ui-caption bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
-                两家内容不一样
-              </span>
-            )}
-          </div>
-
-          {/* One-sentence Chinese summary or untranslated notice */}
-          <div className="text-ui-compact text-[var(--nim-text)] leading-relaxed">
-            {card.hasDescription ? (
-              card.enrichmentFailed ? (
-                <span className="text-amber-600 dark:text-amber-400">
-                  [未翻译] {card.summaryZh}
-                </span>
-              ) : (
-                <span>{card.summaryZh}</span>
-              )
-            ) : (
-              <span className="text-[var(--nim-text-muted)] italic">这个技能没有自带说明</span>
-            )}
-          </div>
-
-          {/* Expanded full description */}
-          {isExpanded && card.rawDescription && (
-            <div className="mt-1 rounded-ui-base bg-[var(--nim-bg-subtle)] p-3 text-ui-compact text-[var(--nim-text-muted)] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto border border-[var(--nim-border-subtle)]">
-              {card.rawDescription}
-            </div>
-          )}
-        </div>
-
-        {/* Card Footer: Metadata & Expand button */}
-        <div className="pt-2 border-t border-[var(--nim-border-subtle)] flex flex-col gap-2 text-ui-caption text-[var(--nim-text-muted)]">
-          <div className="flex items-center justify-between gap-2">
-            <span>约 {card.estimatedTokens} token (估算)</span>
-            {card.hasDescription && (
-              <button
-                type="button"
-                className="text-ui-caption text-[var(--nim-primary)] hover:underline cursor-pointer border-none bg-transparent p-0"
-                onClick={() => toggleCardExpanded(card.name)}
-              >
-                {isExpanded ? '收起说明' : '展开说明'}
-              </button>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span>
-              {card.scopes.map((s) => SCOPE_LABELS[s] ?? s).join('/')} · {card.sources.map((s) => SOURCE_LABELS[s] ?? s).join('/')}
-            </span>
-            <span>·</span>
-            <span>
-              {card.bundleNames.length > 0 ? `在「${card.bundleNames.join('」「')}」中` : '未加入包'}
-            </span>
-          </div>
-        </div>
-      </div>
+        card={card}
+        editingBundle={editingBundle}
+        isCardInEditingBundle={isCardInEditingBundle}
+        isExpanded={isExpanded}
+        onToggleBundleSkill={toggleBundleSkillForCard}
+        onToggleSkillDisabled={toggleSkillDisabled}
+        onToggleCardExpanded={toggleCardExpanded}
+        onVisibleChange={handleCardVisibleChange}
+      />
     );
   };
 
