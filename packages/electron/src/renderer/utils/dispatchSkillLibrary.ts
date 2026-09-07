@@ -49,6 +49,7 @@ export interface MergedSkillCard {
   disabled: boolean;
   hasCodex: boolean;
   paths: string[];
+  content?: string;
 }
 
 export interface SkillCategoryGroup {
@@ -140,6 +141,7 @@ export function mergeSkillsByName(
     }
 
     const rawDescription = descriptors.find((d) => d.description?.trim())?.description?.trim();
+    const content = descriptors.find((d) => d.content?.trim())?.content;
     const hasDescription = Boolean(rawDescription);
     const summary = extractOneSentenceSummary(rawDescription);
     const estimatedTokens = estimateSkillTokens(rawDescription);
@@ -177,6 +179,7 @@ export function mergeSkillsByName(
       engines,
       contentMatch,
       rawDescription,
+      content,
       summary,
       summaryZh,
       category,

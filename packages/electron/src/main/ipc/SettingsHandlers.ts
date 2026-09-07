@@ -262,6 +262,7 @@ export function registerSettingsHandlers() {
         name: string;
         description?: string;
         content?: string;
+        workspacePath?: string;
     }) => {
         const { name, description, content } = payload ?? {};
         if (!name || typeof name !== 'string') {

@@ -458,6 +458,11 @@ describe('施工单 GC: 总指挥主窗口 + 侧边栏（补派）红绿验收�
       expect(stopButton).toBeTruthy();
       expect(stopButton.textContent).toBe('全部停下');
 
+      // 等待子任务加载完成后按钮变为可用状态（非 disabled）再点击
+      await waitFor(() => {
+        expect(stopButton.hasAttribute('disabled')).toBe(false);
+      });
+
       // 点击全部停下
       fireEvent.click(stopButton);
 
@@ -502,6 +507,11 @@ describe('施工单 GC: 总指挥主窗口 + 侧边栏（补派）红绿验收�
 
       // 反向断言：SessionTranscript 内部的停止按钮未被渲染
       expect(screen.queryByTestId('transcript-emergency-stop-control')).toBeNull();
+
+      // 等待子任务加载完成后按钮变为可用状态（非 disabled）再点击
+      await waitFor(() => {
+        expect(headerStop.hasAttribute('disabled')).toBe(false);
+      });
 
       // 点击页头全部停下仍正确发出 IPC
       fireEvent.click(headerStop);

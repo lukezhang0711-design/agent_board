@@ -689,10 +689,10 @@ describe('SkillLibraryPanel', () => {
     fireEvent.click(categoryHeader);
 
     await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith('dispatch-skills:generate-summary', {
+      expect(invoke).toHaveBeenCalledWith('dispatch-skills:generate-summary', expect.objectContaining({
         name: 'e2e-skill',
         description: 'Build docker container for deployment.',
-      });
+      }));
     });
 
     const card = await screen.findByTestId('skill-card-e2e-skill');

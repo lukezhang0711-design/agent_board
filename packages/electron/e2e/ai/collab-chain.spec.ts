@@ -99,11 +99,21 @@ let page: Page;
 let workspacePath: string;
 let scriptedProvider: ScriptedCollaborationProvider;
 let originalAlphaFeatures: Record<string, boolean> | null = null;
+let engineStateDir: string;
 const mcpClients: MetaAgentMcpClient[] = [];
 const PLAN_APPROVAL_SCREENSHOT_DIR = path.resolve(
   __dirname,
   '../../../../e2e_test_output/plan-approval-layout',
 );
+
+async function countRunningEngineProcesses(): Promise<number> {
+  try {
+    const files = await fs.readdir(engineStateDir);
+    return files.filter((f) => f.startsWith('running-') && f.endsWith('.json')).length;
+  } catch {
+    return 0;
+  }
+}
 
 async function invokeElectron<T>(targetPage: Page, channel: string, ...args: unknown[]): Promise<T> {
   return await targetPage.evaluate(
@@ -738,9 +748,18 @@ test.beforeAll(async ({}, testInfo) => {
   execFileSync('git', ['add', '.'], { cwd: workspacePath, stdio: 'pipe' });
   execFileSync('git', ['commit', '-m', 'Initial workspace'], { cwd: workspacePath, stdio: 'pipe' });
 
+  const fakeEnginePath = path.resolve(__dirname, 'fixtures/skill-summary-engine.cjs');
+  engineStateDir = path.join(workspacePath, '.skill-engine-state');
+  await fs.mkdir(engineStateDir, { recursive: true });
+
   electronApp = await launchElectronApp({
     workspace: workspacePath,
     permissionMode: 'allow-all',
+    env: {
+      NODE_ENV: 'test',
+      NIMBALYST_TEST_SKILL_SUMMARY_ENGINE: fakeEnginePath,
+      NIMBALYST_SKILL_ENGINE_STATE_DIR: engineStateDir,
+    },
   });
   page = await electronApp.firstWindow();
   await waitForAppReady(page);
@@ -1232,20 +1251,21 @@ test('replays the approved collaboration chain through real IPC, durable state, 
 test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作链路（3 并发技能生成负载）', async () => {
   // 1. 设置页面可见性为 true，使得按需生成接受请求
   await invokeElectron(page, 'dispatch-skills:set-page-visibility', true);
+  const runTag = Date.now().toString(36);
 
-  // 2. 同时发起 3 个技能中文说明按需生成请求，打满允许的 3 并发上限
+  // 阶段 1：方案渲染与批准阶段的 3 并发技能生成负载
   const loadSkills = [
     {
-      name: 'concurrent-load-skill-1',
-      description: 'First concurrent background skill description to test isolation and verify no deadlock on main IPC chain.',
+      name: `r4-skill-1-${runTag}`,
+      description: 'Inspect project dependencies and analyze modules.',
     },
     {
-      name: 'concurrent-load-skill-2',
-      description: 'Second concurrent background skill description to test isolation and verify no deadlock on main IPC chain.',
+      name: `r4-skill-2-${runTag}`,
+      description: 'Audit security rules and protect file changes.',
     },
     {
-      name: 'concurrent-load-skill-3',
-      description: 'Third concurrent background skill description to test isolation and verify no deadlock on main IPC chain.',
+      name: `r4-skill-3-${runTag}`,
+      description: 'Review codebase architecture and visual layout.',
     },
   ];
 
@@ -1256,6 +1276,9 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
       s,
     ),
   );
+
+  // 必须先等实际在跑的假生成进程数确实达到 3，验证真实在飞并发负载已形成
+  await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
 
   // 3. 在 3 并发技能生成负载持续期间，完整跑通协作主链核心环节：
   //    创建总指挥 Session -> 建立 MCP Client -> 提交协作方案 -> 等待方案卡片展示 -> 点击批准 -> 验证审批生命周期与数据库持久化
@@ -1292,7 +1315,9 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   expect(results).toHaveLength(3);
   for (const res of results) {
     expect(res).toBeDefined();
-    expect(typeof res.success).toBe('boolean');
+    expect(res.success).toBe(true);
+    expect(res.enrichmentFailed).toBe(false);
+    expect(res.summaryZh).toBeTruthy();
   }
 
   // 验证渲染层收到审批事件
@@ -1300,5 +1325,93 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     async () => (await getRendererEvents(page, loadHeadSessionId)).length,
     { timeout: 10_000 },
   ).toBeGreaterThan(0);
+
+  // 阶段 2：派工与子任务运行阶段的 3 并发技能生成负载
+  const phase2Skills = [
+    {
+      name: `r4-skill-4-${runTag}`,
+      description: 'Scaffold exercises and test suites for module.',
+    },
+    {
+      name: `r4-skill-5-${runTag}`,
+      description: 'Run test driven development and benchmark performance.',
+    },
+    {
+      name: `r4-skill-6-${runTag}`,
+      description: 'Sync knowledge graph and generate handoff document.',
+    },
+  ];
+
+  const skillGenPromisesPhase2 = phase2Skills.map((s) =>
+    invokeElectron<{ success: boolean; summaryZh?: string; enrichmentFailed?: boolean }>(
+      page,
+      'dispatch-skills:generate-summary',
+      s,
+    ),
+  );
+
+  // 等待第 2 阶段在跑数达到 3
+  await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
+
+  // 在并发负载下派发子任务工单并等待完成
+  const child = await createImplementationChild(
+    client,
+    plan.planId,
+    'Load verification subtask',
+    'Execute subtask under background skill generation load.',
+  );
+  const childTurn = sendRealProviderTurn(child.sessionId, '[scripted:hold=r4-child] Execute subtask.');
+  await scriptedProvider.waitForPrompt('scripted:hold=r4-child');
+  scriptedProvider.releaseHold('r4-child');
+  await expect(childTurn).resolves.toMatchObject({
+    content: 'Scripted provider completed the requested collaboration turn.',
+  });
+  await expect.poll(async () => getWorkOrderStatus(child.sessionId), { timeout: 15_000 }).toBe('completed');
+
+  const phase2Results = await Promise.all(skillGenPromisesPhase2);
+  expect(phase2Results).toHaveLength(3);
+  for (const res of phase2Results) {
+    expect(res.success).toBe(true);
+    expect(res.enrichmentFailed).toBe(false);
+  }
+
+  // 阶段 3：交付与最终总结阶段的 3 并发技能生成负载
+  const phase3Skills = [
+    {
+      name: `r4-skill-7-${runTag}`,
+      description: 'Publish and land release version.',
+    },
+    {
+      name: `r4-skill-8-${runTag}`,
+      description: 'Convert documentation to PDF.',
+    },
+    {
+      name: `r4-skill-9-${runTag}`,
+      description: 'Connect Chrome browser for UI test.',
+    },
+  ];
+
+  const skillGenPromisesPhase3 = phase3Skills.map((s) =>
+    invokeElectron<{ success: boolean; summaryZh?: string; enrichmentFailed?: boolean }>(
+      page,
+      'dispatch-skills:generate-summary',
+      s,
+    ),
+  );
+
+  // 等待第 3 阶段在跑数达到 3
+  await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
+
+  // 在并发负载下完成总指挥收敛总结与交付
+  await resetRendererEvents(page);
+  const summaryResult = await sendRealProviderTurn(loadHeadSessionId, 'Produce final collaboration summary.');
+  expect(summaryResult.content).toBe(SCRIPTED_FINAL_SUMMARY);
+
+  const phase3Results = await Promise.all(skillGenPromisesPhase3);
+  expect(phase3Results).toHaveLength(3);
+  for (const res of phase3Results) {
+    expect(res.success).toBe(true);
+    expect(res.enrichmentFailed).toBe(false);
+  }
 });
 

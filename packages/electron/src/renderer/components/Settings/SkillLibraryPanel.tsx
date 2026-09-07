@@ -242,6 +242,11 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
   const attemptedCardNamesRef = useRef<Set<string>>(new Set());
   const panelSessionCallsRef = useRef(0);
   const isMountedRef = useRef(true);
+  const activeWorkspaceRef = useRef(workspacePath);
+
+  useEffect(() => {
+    activeWorkspaceRef.current = workspacePath;
+  }, [workspacePath]);
 
   // 页面生命周期通告（挂载为 true，卸载为 false）
   useEffect(() => {
@@ -514,18 +519,29 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     );
 
     const toProcess = candidates.slice(0, availableSlots);
+    const targetWorkspace = workspacePath;
     for (const card of toProcess) {
       attemptedCardNamesRef.current.add(card.name);
       inFlightCountRef.current++;
       panelSessionCallsRef.current++;
 
+      const payload: Record<string, unknown> = {
+        name: card.name,
+        description: card.rawDescription,
+      };
+      const cardContent = card.content ?? card.descriptors.find((d) => d.content?.trim())?.content;
+      if (cardContent) {
+        payload.content = cardContent;
+      }
+      if (targetWorkspace) {
+        payload.workspacePath = targetWorkspace;
+      }
+
       window.electronAPI
-        ?.invoke?.('dispatch-skills:generate-summary', {
-          name: card.name,
-          description: card.rawDescription,
-        })
+        ?.invoke?.('dispatch-skills:generate-summary', payload)
         .then((result: any) => {
           if (!isMountedRef.current) return;
+          if (activeWorkspaceRef.current !== targetWorkspace) return;
           if (result && result.success && !result.enrichmentFailed && result.summaryZh) {
             setSkills((prev) =>
               prev.map((s) => {
@@ -552,7 +568,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           }
         });
     }
-  }, [mergedCards]);
+  }, [mergedCards, workspacePath]);
 
   const handleCardVisibleChange = useCallback(
     (name: string, isVisible: boolean) => {

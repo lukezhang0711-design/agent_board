@@ -10,6 +10,8 @@ import {
   computeSkillHash,
   generateSkillEnrichment,
   inferSkillCategory,
+  validateAndExtractSkillSummary,
+  resolveSkillSummaryEngineExecutable,
   type SkillCategory,
 } from '../SkillTaxonomyEnricher';
 
@@ -260,5 +262,96 @@ describe('SkillTaxonomyEnricher', () => {
     const resModified = await manager.enrichAsync('my-worker', 'Deploy serverless functions with zero downtime');
     expect(resModified.summaryZh).toBe('生成中文说明 3');
     expect(mockGen).toHaveBeenCalledTimes(3);
+  });
+
+  describe('GN-R1 补充验证: R1、R2、R3 专项单元测试', () => {
+    it('R2: validateAndExtractSkillSummary 拦截报错、鉴权失败与闲聊拒绝', () => {
+      // 无效输入
+      expect(validateAndExtractSkillSummary('')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary(undefined)).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('No Chinese words at all')).toEqual({ valid: false });
+
+      // 鉴权/报错
+      expect(validateAndExtractSkillSummary('登录已过期，请重新登录后再试')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('API key expired or unauthorized')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('权限不足无法执行此操作')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('Error: failed to connect to service')).toEqual({ valid: false });
+
+      // 闲聊/拒答
+      expect(validateAndExtractSkillSummary('今天天气很好，适合去公园散步')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('你好，我是AI语言模型助手')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('很抱歉，我无法回答该问题')).toEqual({ valid: false });
+
+      // 有效正常说明（支持剥离【技能说明】前缀）
+      const valid1 = validateAndExtractSkillSummary('【技能说明】分析项目依赖并报告漏洞');
+      expect(valid1).toEqual({ valid: true, summary: '分析项目依赖并报告漏洞' });
+
+      const valid2 = validateAndExtractSkillSummary('技能说明：连接Chrome浏览器协同操控');
+      expect(valid2).toEqual({ valid: true, summary: '连接Chrome浏览器协同操控' });
+
+      const valid3 = validateAndExtractSkillSummary('检查代码架构与排版。这是第二句不应进入。');
+      expect(valid3).toEqual({ valid: true, summary: '检查代码架构与排版' });
+    });
+
+    it('R1: resolveSkillSummaryEngineExecutable 严格限制于测试模式且无回退', () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      const originalTestEngine = process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
+
+      try {
+        // 1. NODE_ENV === 'test' 且路径不存在：必须抛错，严禁回退到真实 Claude
+        process.env.NODE_ENV = 'test';
+        process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = '/non/existent/path/fake-engine.cjs';
+        expect(() => resolveSkillSummaryEngineExecutable()).toThrow(/Test skill summary engine not found/);
+
+        // 2. NODE_ENV === 'test' 且路径有效：解析成功
+        const validPath = path.resolve(__dirname, '../../../../e2e/ai/fixtures/skill-summary-engine.cjs');
+        process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = validPath;
+        expect(resolveSkillSummaryEngineExecutable()).toBe(validPath);
+
+        // 3. 生产模式（NODE_ENV !== 'test'）：反向断言，无论环境变量如何设置均被严格忽略
+        process.env.NODE_ENV = 'production';
+        process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = validPath;
+        // 在没有安装真实 Claude 的测试机上，会抛出 Claude CLI is not installed 或返回真实路径，绝不会返回 validPath
+        try {
+          const resolved = resolveSkillSummaryEngineExecutable();
+          expect(resolved).not.toBe(validPath);
+        } catch (err: any) {
+          expect(err.message).toContain('Claude CLI is not installed');
+        }
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+        if (originalTestEngine) {
+          process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = originalTestEngine;
+        } else {
+          delete process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
+        }
+      }
+    });
+
+    it('R3: 页面省略 content 异步生成后，重新扫描能复用成功缓存', async () => {
+      const manager = new SkillTaxonomyCacheManager(cacheFile);
+      const name = 'gn-r3-probe-skill';
+      const description = 'Inspect project dependencies.';
+      const content = '# Heading\nDetailed skill instructions.';
+
+      // 扫描入口实参形态（带 content）
+      manager.enrichAndCache(name, description, content);
+
+      // 页面/IPC 调用形态（省略 content）
+      const asyncRes = await manager.enrichAsync(
+        name,
+        description,
+        undefined,
+        undefined,
+        async () => '检查项目依赖关系',
+      );
+      expect(asyncRes.enrichmentFailed).toBe(false);
+      expect(asyncRes.summaryZh).toBe('检查项目依赖关系');
+
+      // 再次执行扫描入口形态（带 content）
+      const rescanned = manager.enrichAndCache(name, description, content);
+      expect(rescanned.enrichmentFailed).toBe(false);
+      expect(rescanned.summaryZh).toBe('检查项目依赖关系');
+    });
   });
 });
