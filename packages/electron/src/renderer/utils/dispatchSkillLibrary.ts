@@ -106,6 +106,10 @@ export function extractOneSentenceSummary(description?: string): string {
   return firstSentence;
 }
 
+export function computeSkillContentKey(name: string, description?: string, content?: string): string {
+  return `${name.trim()}:::${(description ?? '').trim()}:::${(content ?? '').trim()}`;
+}
+
 export function mergeSkillsByName(
   skills: readonly DispatchSkillDescriptor[],
   settings: DispatchSkillSettings,
@@ -140,8 +144,11 @@ export function mergeSkillsByName(
       contentMatch = allSame ? 'same' : 'different';
     }
 
-    const rawDescription = descriptors.find((d) => d.description?.trim())?.description?.trim();
-    const content = descriptors.find((d) => d.content?.trim())?.content;
+    const primaryDescriptor = descriptors.find((d) => d.description?.trim() && d.content?.trim())
+      ?? descriptors.find((d) => d.description?.trim())
+      ?? descriptors[0];
+    const rawDescription = primaryDescriptor?.description?.trim();
+    const content = primaryDescriptor?.content;
     const hasDescription = Boolean(rawDescription);
     const summary = extractOneSentenceSummary(rawDescription);
     const estimatedTokens = estimateSkillTokens(rawDescription);

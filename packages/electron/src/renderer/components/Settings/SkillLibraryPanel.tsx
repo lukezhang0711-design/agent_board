@@ -7,6 +7,7 @@ import {
   mergeSkillsByName,
   readDispatchSkillSettings,
   sanitizeDispatchSkillSettingsForLibrary,
+  computeSkillContentKey,
   type DispatchSkillBundle,
   type DispatchSkillDescriptor,
   type DispatchSkillSettings,
@@ -239,7 +240,7 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
 
   const visibleCardNamesRef = useRef<Set<string>>(new Set());
   const inFlightCountRef = useRef(0);
-  const attemptedCardNamesRef = useRef<Set<string>>(new Set());
+  const attemptedContentKeysRef = useRef<Set<string>>(new Set());
   const panelSessionCallsRef = useRef(0);
   const isMountedRef = useRef(true);
   const activeWorkspaceRef = useRef(workspacePath);
@@ -501,13 +502,13 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     if (inFlightCountRef.current >= 3) return;
     if (panelSessionCallsRef.current >= 20) return;
 
-    // 筛选可见、未翻译（enrichmentFailed === true）、有自带说明、且本会话尚未尝试过的技能
+    // 筛选可见、未翻译（enrichmentFailed === true）、有自带说明、且本会话尚未尝试过的技能（按内容身份去重）
     const candidates = mergedCards.filter(
       (c) =>
         visibleCardNamesRef.current.has(c.name) &&
         c.enrichmentFailed &&
         c.hasDescription &&
-        !attemptedCardNamesRef.current.has(c.name)
+        !attemptedContentKeysRef.current.has(computeSkillContentKey(c.name, c.rawDescription, c.content))
     );
 
     if (candidates.length === 0) return;
@@ -521,7 +522,8 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
     const toProcess = candidates.slice(0, availableSlots);
     const targetWorkspace = workspacePath;
     for (const card of toProcess) {
-      attemptedCardNamesRef.current.add(card.name);
+      const contentKey = computeSkillContentKey(card.name, card.rawDescription, card.content);
+      attemptedContentKeysRef.current.add(contentKey);
       inFlightCountRef.current++;
       panelSessionCallsRef.current++;
 
@@ -529,9 +531,8 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         name: card.name,
         description: card.rawDescription,
       };
-      const cardContent = card.content ?? card.descriptors.find((d) => d.content?.trim())?.content;
-      if (cardContent) {
-        payload.content = cardContent;
+      if (card.content) {
+        payload.content = card.content;
       }
       if (targetWorkspace) {
         payload.workspacePath = targetWorkspace;
@@ -545,7 +546,10 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
           if (result && result.success && !result.enrichmentFailed && result.summaryZh) {
             setSkills((prev) =>
               prev.map((s) => {
-                if (s.name.trim() === card.name.trim()) {
+                const sameName = s.name.trim() === card.name.trim();
+                const sameDesc = (s.description ?? '').trim() === (card.rawDescription ?? '').trim();
+                const sameContent = (s.content ?? '').trim() === (card.content ?? '').trim();
+                if (sameName && sameDesc && sameContent) {
                   return {
                     ...s,
                     summaryZh: result.summaryZh,

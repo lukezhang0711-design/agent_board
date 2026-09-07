@@ -264,25 +264,34 @@ describe('SkillTaxonomyEnricher', () => {
     expect(mockGen).toHaveBeenCalledTimes(3);
   });
 
-  describe('GN-R1 补充验证: R1、R2、R3 专项单元测试', () => {
-    it('R2: validateAndExtractSkillSummary 拦截报错、鉴权失败与闲聊拒绝', () => {
+  describe('GN-R2 专项单元测试: 输出判定、测试隔离与内容身份', () => {
+    it('GN-R2: validateAndExtractSkillSummary 精准放行合法技能并拦截错误/闲聊', () => {
       // 无效输入
       expect(validateAndExtractSkillSummary('')).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary(undefined)).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary('No Chinese words at all')).toEqual({ valid: false });
 
-      // 鉴权/报错
+      // 错误/网络报错/鉴权失效（即便包含中文也坚决拦截）
       expect(validateAndExtractSkillSummary('登录已过期，请重新登录后再试')).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary('API key expired or unauthorized')).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary('权限不足无法执行此操作')).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary('Error: failed to connect to service')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('服务器暂时不可达，请稍后再试')).toEqual({ valid: false });
 
-      // 闲聊/拒答
+      // 闲聊/餐饮/通用建议
       expect(validateAndExtractSkillSummary('今天天气很好，适合去公园散步')).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary('你好，我是AI语言模型助手')).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary('很抱歉，我无法回答该问题')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('这道菜口感很好，值得你试一试')).toEqual({ valid: false });
 
-      // 有效正常说明（支持剥离【技能说明】前缀）
+      // 合法业务主题（绝不能因“天气”、“认证”等业务词被误伤）
+      const weatherSkill = validateAndExtractSkillSummary('查询城市天气预报');
+      expect(weatherSkill).toEqual({ valid: true, summary: '查询城市天气预报' });
+
+      const authSkill = validateAndExtractSkillSummary('检查 OAuth 认证配置');
+      expect(authSkill).toEqual({ valid: true, summary: '检查 OAuth 认证配置' });
+
+      // 支持剥离【技能说明】前缀
       const valid1 = validateAndExtractSkillSummary('【技能说明】分析项目依赖并报告漏洞');
       expect(valid1).toEqual({ valid: true, summary: '分析项目依赖并报告漏洞' });
 
@@ -293,25 +302,34 @@ describe('SkillTaxonomyEnricher', () => {
       expect(valid3).toEqual({ valid: true, summary: '检查代码架构与排版' });
     });
 
-    it('R1: resolveSkillSummaryEngineExecutable 严格限制于测试模式且无回退', () => {
+    it('GN-R2: resolveSkillSummaryEngineExecutable 四种互斥分支与严苛测试隔离', () => {
       const originalNodeEnv = process.env.NODE_ENV;
       const originalTestEngine = process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
+      const validPath = path.resolve(__dirname, '../../../../e2e/ai/fixtures/skill-summary-engine.cjs');
 
       try {
-        // 1. NODE_ENV === 'test' 且路径不存在：必须抛错，严禁回退到真实 Claude
+        // 1. 测试模式、变量未配置或为空值：直接失败，绝不回退真实程序
         process.env.NODE_ENV = 'test';
+        delete process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
+        expect(() => resolveSkillSummaryEngineExecutable()).toThrow(/Test skill summary engine is not configured/);
+
+        process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = '   ';
+        expect(() => resolveSkillSummaryEngineExecutable()).toThrow(/Test skill summary engine is not configured/);
+
+        // 2. 测试模式、非绝对路径或文件不存在：直接失败
+        process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = 'relative/path.cjs';
+        expect(() => resolveSkillSummaryEngineExecutable()).toThrow(/must be an absolute path/);
+
         process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = '/non/existent/path/fake-engine.cjs';
         expect(() => resolveSkillSummaryEngineExecutable()).toThrow(/Test skill summary engine not found/);
 
-        // 2. NODE_ENV === 'test' 且路径有效：解析成功
-        const validPath = path.resolve(__dirname, '../../../../e2e/ai/fixtures/skill-summary-engine.cjs');
+        // 3. 测试模式、有效绝对路径：返回指定测试程序
         process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = validPath;
         expect(resolveSkillSummaryEngineExecutable()).toBe(validPath);
 
-        // 3. 生产模式（NODE_ENV !== 'test'）：反向断言，无论环境变量如何设置均被严格忽略
+        // 4. 正常运行模式：无论环境变量如何设置均被严格忽略
         process.env.NODE_ENV = 'production';
         process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = validPath;
-        // 在没有安装真实 Claude 的测试机上，会抛出 Claude CLI is not installed 或返回真实路径，绝不会返回 validPath
         try {
           const resolved = resolveSkillSummaryEngineExecutable();
           expect(resolved).not.toBe(validPath);
@@ -328,30 +346,35 @@ describe('SkillTaxonomyEnricher', () => {
       }
     });
 
-    it('R3: 页面省略 content 异步生成后，重新扫描能复用成功缓存', async () => {
+    it('GN-R2: 统一定义 name+description+content 内容身份指纹与去重', async () => {
       const manager = new SkillTaxonomyCacheManager(cacheFile);
-      const name = 'gn-r3-probe-skill';
-      const description = 'Inspect project dependencies.';
-      const content = '# Heading\nDetailed skill instructions.';
+      const name = 'same-name-skill';
+      const descA = 'Inspect project dependencies.';
+      const contentA = '# Project A\nDependency tree.';
+      const descB = 'Deploy a new service.';
+      const contentB = '# Project B\nDeployment scripts.';
 
-      // 扫描入口实参形态（带 content）
-      manager.enrichAndCache(name, description, content);
+      const hashA = computeSkillHash(name, descA, contentA);
+      const hashB = computeSkillHash(name, descB, contentB);
+      expect(hashA).not.toBe(hashB);
 
-      // 页面/IPC 调用形态（省略 content）
-      const asyncRes = await manager.enrichAsync(
-        name,
-        description,
-        undefined,
-        undefined,
-        async () => '检查项目依赖关系',
-      );
-      expect(asyncRes.enrichmentFailed).toBe(false);
-      expect(asyncRes.summaryZh).toBe('检查项目依赖关系');
+      // 为 Project A 生成并写入缓存
+      const resA = await manager.enrichAsync(name, descA, contentA, undefined, async () => '分析项目依赖');
+      expect(resA.summaryZh).toBe('分析项目依赖');
+      expect(resA.enrichmentFailed).toBe(false);
 
-      // 再次执行扫描入口形态（带 content）
-      const rescanned = manager.enrichAndCache(name, description, content);
-      expect(rescanned.enrichmentFailed).toBe(false);
-      expect(rescanned.summaryZh).toBe('检查项目依赖关系');
+      // 同名异内容 Project B 能够生成新说明，不被 A 污染
+      const resB = await manager.enrichAsync(name, descB, contentB, undefined, async () => '发布新服务');
+      expect(resB.summaryZh).toBe('发布新服务');
+      expect(resB.enrichmentFailed).toBe(false);
+
+      // 重新访问 Project A 内容，命中 A 的缓存
+      const resACached = manager.enrichAndCache(name, descA, contentA);
+      expect(resACached.summaryZh).toBe('分析项目依赖');
+
+      // 重新访问 Project B 内容，命中 B 的缓存
+      const resBCached = manager.enrichAndCache(name, descB, contentB);
+      expect(resBCached.summaryZh).toBe('发布新服务');
     });
   });
 });

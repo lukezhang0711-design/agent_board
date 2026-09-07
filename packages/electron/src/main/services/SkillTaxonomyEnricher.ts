@@ -282,10 +282,23 @@ export function generateSkillEnrichment(
 export type SkillSummaryAiGenerator = (description: string) => Promise<string>;
 
 const INVALID_SUMMARY_PATTERNS = [
-  // 鉴权、登录、系统错误、API 错误
-  /(登录|过期|认证|未授权|权限不足|无权访问|token|error|api[ _-]?key|unauthorized|forbidden|credentials|auth|failed|exception)/i,
-  // 闲聊、助手人设、问候、婉拒、无关日常
-  /(天气|公园|散步|你好|您好|早上好|下午好|晚上好|作为.*(?:ai|助手|模型|语言模型)|我是.*(?:ai|助手|模型)|很抱歉|非常抱歉|对不起|无法回答|无法完成|不能处理)/i,
+  // 1. 系统/网络/服务错误状态与异常（避免用单个业务词如认证、token、天气误杀）
+  /(?:服务器|服务|网络|网关|接口|连接|数据库|系统|请求).*(?:不可达|不可用|超时|断开|失败|拒绝|异常|错误|崩溃|50[0-4]|40[1-4])/i,
+  // 2. 交互提示、重试与人工指令（技能说明不应是命令用户做某事的指令）
+  /(?:请(?:稍后|重新|再次|联系)?(?:重试|再试|尝试|登录|检查)|稍后再试|请先)/i,
+  // 3. 鉴权失效与过期状态（允许正常的认证、token业务主题如“检查 OAuth 认证配置”）
+  /(?:已过期|已失效|已耗尽|已用完|鉴权失败|认证失败|未授权|禁止访问|无权访问|权限不足)/i,
+  // 4. 英文报错与异常字眼
+  /(?:error|exception|failed|timeout|bad gateway|status code|rate limit|unauthorized|forbidden|internal server)/i,
+  // 5. 闲聊问候、拒答与第二人称对话口吻（技能说明讲干什么，不对话）
+  /^(?:你好|您好|早上好|下午好|晚上好|哈喽|嗨)[，,！!\s]/i,
+  /(?:作为|我是).*(?:ai|助手|模型|语言模型|机器人)/i,
+  /^(?:很抱歉|非常抱歉|对不起|抱歉|很遗憾)/i,
+  /(?:无法|不能)(?:回答|完成|提供|处理|生成|概括|理解)/i,
+  /(?:值得你|适合你|建议你|你可以|您可以|值得您|试一试|尝一尝)/i,
+  // 6. 日常闲聊偏题主题（天气闲聊、公园散步、做菜餐饮等与软件技能无关的闲聊）
+  /(?:今天天气|天气很好|适合去公园|去公园|散步)/i,
+  /(?:这道菜|口感|味道很好|很好吃|美味|食谱|烹饪|一道菜)/i,
 ];
 
 /**
@@ -327,21 +340,22 @@ export function validateAndExtractSkillSummary(text?: string): { valid: boolean;
 /**
  * 解析技能生成引擎可执行程序路径。
  * 铁律：若需测试模式假程序注入，只能限于明确的测试模式（NODE_ENV === 'test'），
- * 正常安装版不可被普通设置切换到该路径（须有反向断言保护）。
- * 测试模式下路径缺失直接报错失败，严禁悄悄回退到真实 Claude 账号。
+ * 测试模式下缺少或未配置变量必须直接失败，严禁悄悄回退到真实 Claude 账号。
+ * 正常运行模式（NODE_ENV !== 'test'）：忽略测试注入变量，仍按既有正式路径解析；不把测试开关暴露到普通设置。
  */
 export function resolveSkillSummaryEngineExecutable(): string {
-  const testEnginePath = process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
   if (process.env.NODE_ENV === 'test') {
-    if (testEnginePath) {
-      if (!path.isAbsolute(testEnginePath)) {
-        throw new Error(`Test skill summary engine must be an absolute path: ${testEnginePath}`);
-      }
-      if (!fs.existsSync(testEnginePath)) {
-        throw new Error(`Test skill summary engine not found at: ${testEnginePath}`);
-      }
-      return testEnginePath;
+    const testEnginePath = process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
+    if (!testEnginePath || !testEnginePath.trim()) {
+      throw new Error('Test skill summary engine is not configured (NIMBALYST_TEST_SKILL_SUMMARY_ENGINE is required in test mode)');
     }
+    if (!path.isAbsolute(testEnginePath)) {
+      throw new Error(`Test skill summary engine must be an absolute path: ${testEnginePath}`);
+    }
+    if (!fs.existsSync(testEnginePath)) {
+      throw new Error(`Test skill summary engine not found at: ${testEnginePath}`);
+    }
+    return testEnginePath;
   }
 
   // 生产环境或非 test 模式下，NIMBALYST_TEST_SKILL_SUMMARY_ENGINE 严格忽略（反向断言保证）
@@ -543,18 +557,7 @@ export class SkillTaxonomyCacheManager {
     customGenerator?: SkillSummaryAiGenerator,
   ): Promise<SkillEnrichmentResult> {
     this.load();
-    let hash = providedHash ?? computeSkillHash(name, description, content);
-
-    // R3 修复：若页面或调用方省略 content（即 content 为 undefined），检查现有缓存中同名同说明条目
-    // 若匹配到现有带 content 的缓存 hash，自动对齐，确保重新扫描时能 100% 复用成功缓存
-    if (!providedHash && content === undefined) {
-      for (const [existingHash, entry] of this.memoryCache.entries()) {
-        if (entry.name === name && (entry.description ?? '').trim() === (description ?? '').trim()) {
-          hash = existingHash;
-          break;
-        }
-      }
-    }
+    const hash = providedHash ?? computeSkillHash(name, description, content);
 
     const cached = this.get(hash);
     // 绿⑫: 命中成功缓存直接返回，生成器调用为 0
@@ -620,11 +623,6 @@ export class SkillTaxonomyCacheManager {
         enrichmentFailed: false,
       };
       this.set(hash, result, name, description);
-      // 同时写入省略 content 的无内容 hash，确保双向命中
-      const noContentHash = computeSkillHash(name, description);
-      if (noContentHash !== hash) {
-        this.set(noContentHash, result, name, description);
-      }
       this.save();
       return result;
     } catch {
@@ -635,10 +633,6 @@ export class SkillTaxonomyCacheManager {
         enrichmentFailed: true,
       };
       this.set(hash, fallback, name, description);
-      const noContentHash = computeSkillHash(name, description);
-      if (noContentHash !== hash) {
-        this.set(noContentHash, fallback, name, description);
-      }
       this.save();
       return fallback;
     }

@@ -745,7 +745,7 @@ test.beforeAll(async ({}, testInfo) => {
   execFileSync('git', ['init'], { cwd: workspacePath, stdio: 'pipe' });
   execFileSync('git', ['config', 'user.email', 'e2e@example.com'], { cwd: workspacePath, stdio: 'pipe' });
   execFileSync('git', ['config', 'user.name', 'E2E Test'], { cwd: workspacePath, stdio: 'pipe' });
-  execFileSync('git', ['add', '.'], { cwd: workspacePath, stdio: 'pipe' });
+  execFileSync('git', ['add', 'README.md'], { cwd: workspacePath, stdio: 'pipe' });
   execFileSync('git', ['commit', '-m', 'Initial workspace'], { cwd: workspacePath, stdio: 'pipe' });
 
   const fakeEnginePath = path.resolve(__dirname, 'fixtures/skill-summary-engine.cjs');
@@ -791,6 +791,19 @@ test.afterAll(async () => {
   }
   await electronApp?.close().catch(() => undefined);
   await scriptedProvider?.stop().catch(() => undefined);
+  if (engineStateDir) {
+    try {
+      const srcLog = path.join(engineStateDir, 'events.log');
+      const destDir = path.resolve(__dirname, '../../../../验收证据/GN-R2');
+      await fs.mkdir(destDir, { recursive: true });
+      const stat = await fs.stat(srcLog).catch(() => null);
+      if (stat) {
+        await fs.copyFile(srcLog, path.join(destDir, 'events.log'));
+      }
+    } catch (err) {
+      console.warn('Failed to copy events.log:', err);
+    }
+  }
   if (workspacePath) {
     await fs.rm(workspacePath, { recursive: true, force: true }).catch(() => undefined);
   }
@@ -1248,6 +1261,58 @@ test('replays the approved collaboration chain through real IPC, durable state, 
   ).toBeGreaterThan(0);
 });
 
+test('绿⑭: 真实技能库入口 -> 可见项 -> 未替换页面通信 -> 指定假程序 -> 缓存落盘 -> 页面更新 -> 重新扫描复用', async () => {
+  const skillName = `e2e-live-skill-${Date.now().toString(36)}`;
+  // 1. 创建本地工作区技能文件
+  const e2eSkillDir = path.join(workspacePath, '.claude', 'skills', skillName);
+  await fs.mkdir(e2eSkillDir, { recursive: true });
+  await fs.writeFile(
+    path.join(e2eSkillDir, 'SKILL.md'),
+    `---
+name: ${skillName}
+description: Inspect and manage project dependencies and modules.
+---
+# Live E2E Skill Content
+`,
+    'utf8',
+  );
+
+  // 2. 点击左侧导航栏的技能库图标直接进入技能库设置页
+  const skillLibraryButton = page.locator('[data-testid="gutter-skill-library-button"]');
+  await expect(skillLibraryButton).toBeVisible({ timeout: 10_000 });
+  await skillLibraryButton.click();
+
+  const skillPanel = page.locator('.skill-library-panel');
+  await expect(skillPanel).toBeVisible({ timeout: 10_000 });
+
+  // 3. 搜索技能名称使其卡片在视口中可见并展开
+  const searchInput = page.getByPlaceholder('搜索技能名称或说明...');
+  await expect(searchInput).toBeVisible({ timeout: 10_000 });
+  await searchInput.fill(skillName);
+
+  const card = page.locator(`[data-testid="skill-card-${skillName}"]`);
+  await expect(card).toBeVisible({ timeout: 10_000 });
+
+  // 4. 真实页面通信调用假引擎生成中文说明，等待落盘并在页面上更新
+  await expect(card).toContainText('检查与分析项目依赖关系', { timeout: 20_000 });
+  await expect(card).not.toContainText('[未翻译]');
+
+  // 5. 重新扫描验证磁盘缓存已持久化且直接复用
+  const listResult = await invokeElectron<{ skills: Array<{ name: string; summaryZh?: string; enrichmentFailed?: boolean }> }>(
+    page,
+    'dispatch-skills:list',
+    workspacePath,
+  );
+  const matched = listResult.skills.find((s) => s.name === skillName);
+  expect(matched).toBeDefined();
+  expect(matched?.summaryZh).toBe('检查与分析项目依赖关系');
+  expect(matched?.enrichmentFailed).toBeFalsy();
+
+  // 6. 返回 Agent 模式保证后续测试隔离
+  await switchToAgentMode(page);
+  await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.agentMode)).toBeVisible({ timeout: 10_000 });
+});
+
 test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作链路（3 并发技能生成负载）', async () => {
   // 1. 设置页面可见性为 true，使得按需生成接受请求
   await invokeElectron(page, 'dispatch-skills:set-page-visibility', true);
@@ -1414,4 +1479,3 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     expect(res.enrichmentFailed).toBe(false);
   }
 });
-
