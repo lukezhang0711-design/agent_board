@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "entries": {
+    "97d926253911f62ae3712794f9f716da89658eec1e9bd210cc733664ff2182f5": {
+      "category": "界面设计",
+      "summaryZh": "审查代码库架构与排版",
+      "enrichmentFailed": false,
+      "hash": "97d926253911f62ae3712794f9f716da89658eec1e9bd210cc733664ff2182f5",
+      "name": "r4-skill-3-mtrc54f0",
+      "description": "Review codebase architecture and visual layout.\nGN-R4-LOAD r4-skill-3-mtrc54f0",
+      "updatedAt": "2026-09-07T14:27:59.165Z"
+    },
+    "c830ce34f8e673ff84b4039e1f64362f2a3beb5241039a181ea755b695885211": {
+      "category": "工具环境",
+      "summaryZh": "检查与分析项目依赖关系",
+      "enrichmentFailed": false,
+      "hash": "c830ce34f8e673ff84b4039e1f64362f2a3beb5241039a181ea755b695885211",
+      "name": "r4-skill-1-mtrc54f0",
+      "description": "Inspect project dependencies and analyze modules.\nGN-R4-LOAD r4-skill-1-mtrc54f0",
+      "updatedAt": "2026-09-07T14:27:59.166Z"
+    },
+    "064e919a5b78f152b554d5fdf5ad4cd8af61145861b1b6725d36036c4f53ea41": {
+      "category": "安全管控",
+      "summaryZh": "审计安全规则并保护改动",
+      "enrichmentFailed": false,
+      "hash": "064e919a5b78f152b554d5fdf5ad4cd8af61145861b1b6725d36036c4f53ea41",
+      "name": "r4-skill-2-mtrc54f0",
+      "description": "Audit security rules and protect file changes.\nGN-R4-LOAD r4-skill-2-mtrc54f0",
+      "updatedAt": "2026-09-07T14:27:59.166Z"
+    }
+  }
+}

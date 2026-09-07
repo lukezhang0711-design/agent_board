@@ -1,0 +1,19 @@
+{
+  "original_assertions": 127,
+  "current_assertions": 150,
+  "removed_assertions": [
+    {
+      "text": "expect(cachePath).toBeTruthy()",
+      "page": true
+    },
+    {
+      "text": "expect.poll(async () => { try { const content = await fs.readFile(cachePath, 'utf8'); const data = JSON.parse(content); const entries = Object.values(data.entries ?? data) as any[]; return entries.some((e) => e.summaryZh === '检查与分析项目依赖关系' && !e.enrichmentFailed); } catch { return false; } }, { timeout: 10_000 }).toBe(true)",
+      "page": true
+    },
+    {
+      "text": "expect.poll(async () => { try { const content = await fs.readFile(cachePath, 'utf8'); const data = JSON.parse(content); const entries = Object.values(data.entries ?? data) as any[]; return entries.some((e) => e.summaryZh === '审计安全规则并保护改动' && !e.enrichmentFailed); } catch { return false; } }, { timeout: 10_000 }).toBe(true)",
+      "page": true
+    }
+  ],
+  "all_original_non_page_assertions_preserved": true
+}

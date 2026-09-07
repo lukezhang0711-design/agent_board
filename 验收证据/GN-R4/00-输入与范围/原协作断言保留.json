@@ -1,0 +1,8 @@
+{
+  "original_three_tests_byte_identical": true,
+  "sha256": "b907ccd5814711949a3468b2afba3a3fe9f124b145aa2a13ed96234285c5a8ca",
+  "original_three_assertion_count": 66,
+  "expect(planResult).toMatchObject({\n    approved: true,\n    deliveryMethod: 'direct',\n  });": true,
+  "expect.poll(async () => getWorkOrderStatus(child.sessionId), { timeout: 15_000 }).toBe('completed')": true,
+  "expect(summaryResult.content).toBe(SCRIPTED_FINAL_SUMMARY);": true
+}

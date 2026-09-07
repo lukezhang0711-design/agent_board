@@ -1,0 +1,5 @@
+{"title":"creates a real meta-agent session from the New Meta Agent renderer entry point","status":"passed","expectedStatus":"passed","bodyStartedAt":1788791566280,"bodyCompletedAt":1788791566632,"observedBodyMs":352,"errors":[]}
+{"title":"captures paginated plan approval layouts across narrow, medium, and wide card containers","status":"passed","expectedStatus":"passed","bodyStartedAt":1788791566643,"bodyCompletedAt":1788791573746,"observedBodyMs":7103,"errors":[]}
+{"title":"replays the approved collaboration chain through real IPC, durable state, dispatch gates, and renderer events","status":"passed","expectedStatus":"passed","bodyStartedAt":1788791573752,"bodyCompletedAt":1788791587722,"observedBodyMs":13970,"errors":[]}
+{"title":"绿⑭: 真实技能库入口 -> 可见项 -> 未替换页面通信 -> 指定假程序 -> 缓存落盘 -> 页面更新 -> 重新扫描复用","status":"passed","expectedStatus":"passed","bodyStartedAt":1788791587745,"bodyCompletedAt":1788791604935,"observedBodyMs":17190,"errors":[]}
+{"title":"绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作链路（3 并发技能生成负载）","status":"passed","expectedStatus":"passed","bodyStartedAt":1788791604943,"bodyCompletedAt":1788791607759,"observedBodyMs":2816,"errors":[]}

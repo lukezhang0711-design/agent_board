@@ -1,0 +1,11 @@
+
+> @nimbalyst/electron@0.65.4 typecheck
+> tsc --noEmit
+
+src/main/services/__tests__/SkillTaxonomyEnricher.test.ts(56,50): error TS2345: Argument of type '(label: string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; }, payload: string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; } | { ...; } | { ...; }, exitCode: string | ... 2 more ...' is not assignable to parameter of type '(...args: (string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; })[] | [string, { type: string; subtype: string; result: string; }, number, boolean] | [...]) => Awaitable<...>'.
+  Types of parameters 'label' and 'args' are incompatible.
+    Type '(string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; })[] | [string, { type: string; subtype: string; result: string; }, number, boolean] | [...]' is not assignable to type '[label: string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; }, payload: string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; } | { ...; } | { ...; }, exitCode: string | ... 2 more ...'.
+      Type '(string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; })[]' is not assignable to type '[label: string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; }, payload: string | number | boolean | { is_error: string | number | boolean | null; type: string; subtype: string; result: string; } | { ...; } | { ...; }, exitCode: string | ... 2 more ...'.
+        Target requires 4 element(s) but source may have fewer.
+src/main/services/__tests__/SkillTaxonomyEnricher.test.ts(101,33): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/main/services/__tests__/SkillTaxonomyEnricher.test.ts(101,100): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.

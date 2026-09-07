@@ -5,7 +5,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   createTempWorkspace,
   launchElectronApp,
@@ -100,6 +100,91 @@ let workspacePath: string;
 let scriptedProvider: ScriptedCollaborationProvider;
 let originalAlphaFeatures: Record<string, boolean> | null = null;
 let engineStateDir: string;
+let evidenceDir: string;
+let cachePath: string;
+let testBodyStartedAt: number;
+type SkillInput = { name: string; description: string; content?: string };
+type EngineProcess = { pid: number; startTime: number; description: string };
+type LoadPhase = {
+  phase: number;
+  node: string;
+  capturedAt: number;
+  skills: Array<SkillInput & { hash: string }>;
+  liveProcesses: EngineProcess[];
+  boundaries: Array<{ boundary: 'start' | 'complete'; at: number; pids: Array<{ pid: number; alive: boolean }> }>;
+  endedBeforeNodeAt?: number;
+  ends?: unknown[];
+};
+const lifecycleEvidence = { phases: [] as LoadPhase[], pageChecks: [] as unknown[] };
+
+function skillHash(skill: SkillInput): string {
+  return createHash('sha256').update(JSON.stringify([
+    skill.name.trim(), skill.description.trim(), (skill.content ?? '').trim(),
+  ])).digest('hex');
+}
+
+function isAlive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
+async function engineEvents(): Promise<Array<EngineProcess & { event: string; at: number; endTime?: number }>> {
+  const raw = await fs.readFile(path.join(engineStateDir, 'process-events.jsonl'), 'utf8').catch(() => '');
+  return raw.trim() ? raw.trim().split('\n').map(line => JSON.parse(line)) : [];
+}
+
+async function saveLifecycle(): Promise<void> {
+  await fs.writeFile(path.join(evidenceDir, 'collab-load-lifecycle.json'), JSON.stringify(lifecycleEvidence, null, 2));
+}
+
+async function capturePhase(phaseNumber: number, skills: SkillInput[], liveProcesses: EngineProcess[]): Promise<LoadPhase> {
+  const phase: LoadPhase = { phase: phaseNumber, node: ['plan_approval', 'child_execution', 'final_summary'][phaseNumber - 1], capturedAt: Date.now(), skills: skills.map(skill => ({ ...skill, hash: skillHash(skill) })), liveProcesses, boundaries: [] };
+  lifecycleEvidence.phases.push(phase);
+  await saveLifecycle();
+  expect(liveProcesses).toHaveLength(3);
+  expect(new Set(liveProcesses.map(proc => proc.pid)).size).toBe(3);
+  expect(liveProcesses.map(proc => proc.description).sort()).toEqual(skills.map(skill => skill.description).sort());
+  return phase;
+}
+
+async function releasePhase(phase: LoadPhase): Promise<void> {
+  await Promise.all(phase.liveProcesses.map(proc => fs.writeFile(path.join(engineStateDir, `release-${proc.pid}`), 'release')));
+}
+
+async function assertNodeLoad(phase: LoadPhase, boundary: 'start' | 'complete'): Promise<void> {
+  if (boundary === 'start' && process.env.NIMBALYST_TEST_LOAD_ENDED_BEFORE_NODE === String(phase.phase)) {
+    // 反向 D：确实达到 3 个存活，释放并等待全部退出后，才尝试节点。
+    expect(phase.liveProcesses.filter(proc => isAlive(proc.pid))).toHaveLength(3);
+    await releasePhase(phase);
+    await new Promise(resolve => setTimeout(resolve, 3200));
+    expect(phase.liveProcesses.filter(proc => isAlive(proc.pid))).toHaveLength(0);
+    expect(await countRunningEngineProcesses()).toBe(0);
+    phase.endedBeforeNodeAt = Date.now();
+    console.log('CHIEF_LOAD_ENDED', JSON.stringify({ phase: phase.phase, aliveBeforeMainNode: 0, at: phase.endedBeforeNodeAt }));
+  }
+  const snapshot = { boundary, at: Date.now(), pids: phase.liveProcesses.map(proc => ({ pid: proc.pid, alive: isAlive(proc.pid) })) };
+  phase.boundaries.push(snapshot);
+  await saveLifecycle(); // 断言失败也保留本次节点和 PID 状态
+  console.log('GN_R4_NODE_LOAD', JSON.stringify({ phase: phase.phase, ...snapshot }));
+  expect(snapshot.pids.filter(proc => proc.alive), `phase ${phase.phase} ${boundary}: all three captured PIDs must be alive at the main-chain node`).toHaveLength(3);
+}
+
+async function assertPhaseLifetime(phase: LoadPhase): Promise<void> {
+  const events = await engineEvents();
+  phase.ends = events.filter(event => event.event !== 'START' && phase.liveProcesses.some(proc => proc.pid === event.pid));
+  await saveLifecycle();
+  expect(phase.boundaries.map(node => node.boundary)).toEqual(['start', 'complete']);
+  for (const proc of phase.liveProcesses) {
+    const start = events.filter(event => event.event === 'START' && event.pid === proc.pid);
+    const end = events.filter(event => event.event === 'END' && event.pid === proc.pid);
+    expect(start).toHaveLength(1);
+    expect(end).toHaveLength(1);
+    expect(start[0].description).toBe(proc.description);
+    expect(start[0].at).toBeLessThanOrEqual(phase.boundaries[0].at);
+    expect(end[0].endTime).toBeGreaterThanOrEqual(phase.boundaries[1].at);
+    await expect.poll(() => isAlive(proc.pid), { timeout: 3000 }).toBe(false);
+  }
+}
+
 const mcpClients: MetaAgentMcpClient[] = [];
 const PLAN_APPROVAL_SCREENSHOT_DIR = path.resolve(
   __dirname,
@@ -130,10 +215,10 @@ async function countRunningEngineProcesses(): Promise<number> {
   }
 }
 
-async function getLiveEngineProcessInfo(): Promise<Array<{ pid: number; startTime: number }>> {
+async function getLiveEngineProcessInfo(): Promise<EngineProcess[]> {
   try {
     const files = await fs.readdir(engineStateDir);
-    const list: Array<{ pid: number; startTime: number }> = [];
+    const list: EngineProcess[] = [];
     for (const f of files) {
       if (f.startsWith('running-') && f.endsWith('.json')) {
         try {
@@ -141,7 +226,7 @@ async function getLiveEngineProcessInfo(): Promise<Array<{ pid: number; startTim
           const data = JSON.parse(content);
           if (data && typeof data.pid === 'number') {
             process.kill(data.pid, 0);
-            list.push({ pid: data.pid, startTime: data.startTime ?? 0 });
+            list.push({ pid: data.pid, startTime: data.startTime ?? 0, description: data.description });
           }
         } catch {}
       }
@@ -774,6 +859,9 @@ async function getWorkOrderStatus(sessionId: string): Promise<string | null> {
 
 test.beforeAll(async ({}, testInfo) => {
   testInfo.setTimeout(120_000);
+  const runRoot = process.env.NIMBALYST_GN_EVIDENCE_DIR || path.resolve(__dirname, '../../../../验收证据/GN-R4');
+  await fs.mkdir(runRoot, { recursive: true });
+  evidenceDir = await fs.mkdtemp(path.join(runRoot, `e2e-${Date.now()}-`));
   scriptedProvider = new ScriptedCollaborationProvider();
   await scriptedProvider.start();
 
@@ -799,8 +887,10 @@ test.beforeAll(async ({}, testInfo) => {
   electronApp = await launchElectronApp({
     workspace: workspacePath,
     permissionMode: 'allow-all',
+    recordVideo: { dir: path.join(evidenceDir, 'videos') },
     env: {
       NODE_ENV: 'test',
+      NIMBALYST_USER_DATA_DIR: path.join(workspacePath, '.electron-user-data'),
       NIMBALYST_TEST_SKILL_SUMMARY_ENGINE: fakeEnginePath,
       NIMBALYST_SKILL_ENGINE_STATE_DIR: engineStateDir,
       ...(process.env.NIMBALYST_SKILL_ENGINE_FAIL_ALL ? { NIMBALYST_SKILL_ENGINE_FAIL_ALL: process.env.NIMBALYST_SKILL_ENGINE_FAIL_ALL } : {}),
@@ -808,6 +898,10 @@ test.beforeAll(async ({}, testInfo) => {
       ...(process.env.NIMBALYST_SKILL_ENGINE_CUSTOM_OUTPUT ? { NIMBALYST_SKILL_ENGINE_CUSTOM_OUTPUT: process.env.NIMBALYST_SKILL_ENGINE_CUSTOM_OUTPUT } : {}),
     },
   });
+  const userData = await electronApp.evaluate(({ app }) => app.getPath('userData'));
+  expect(userData).toBe(path.join(workspacePath, '.electron-user-data'));
+  cachePath = path.join(userData, 'skill-taxonomy-cache.json');
+  await fs.writeFile(path.join(evidenceDir, 'isolated-paths.json'), JSON.stringify({ workspacePath, userData, cachePath, engineStateDir }, null, 2));
   page = await electronApp.firstWindow();
   await waitForAppReady(page);
   originalAlphaFeatures = await invokeElectron<Record<string, boolean>>(page, 'alpha-features:get');
@@ -820,6 +914,17 @@ test.beforeAll(async ({}, testInfo) => {
   await switchToAgentMode(page);
   await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.agentMode)).toBeVisible();
   await installRendererEventRecorder(page);
+});
+
+test.beforeEach(() => { testBodyStartedAt = Date.now(); });
+
+test.afterEach(async ({}, testInfo) => {
+  if (!evidenceDir) return;
+  await fs.appendFile(path.join(evidenceDir, 'test-results.jsonl'), JSON.stringify({
+    title: testInfo.title, status: testInfo.status, expectedStatus: testInfo.expectedStatus,
+    bodyStartedAt: testBodyStartedAt, bodyCompletedAt: Date.now(), observedBodyMs: Date.now() - testBodyStartedAt, errors: testInfo.errors.map(error => error.message),
+  }) + '\n');
+  await saveLifecycle();
 });
 
 test.afterAll(async () => {
@@ -836,21 +941,22 @@ test.afterAll(async () => {
       await invokeElectron(page, 'alpha-features:set', originalAlphaFeatures).catch(() => undefined);
     }
   }
+  // 只清理本轮已记录且仍存活的假进程；失败事件在删除临时目录前也必须归档。
+  if (engineStateDir && evidenceDir) {
+    const survivors = await getLiveEngineProcessInfo();
+    for (const proc of survivors) {
+      if (isAlive(proc.pid)) process.kill(proc.pid, 'SIGTERM');
+    }
+    await expect.poll(() => survivors.filter(proc => isAlive(proc.pid)).length, { timeout: 3000 }).toBe(0);
+    await fs.cp(engineStateDir, path.join(evidenceDir, 'engine-state'), { recursive: true });
+    await saveLifecycle();
+    if (cachePath) await fs.copyFile(cachePath, path.join(evidenceDir, 'skill-taxonomy-cache.json')).catch(error => {
+      if (error.code !== 'ENOENT') throw error;
+    });
+    await fs.writeFile(path.join(evidenceDir, 'cleanup.json'), JSON.stringify({ killedPids: survivors.map(proc => proc.pid), aliveAfterCleanup: survivors.filter(proc => isAlive(proc.pid)) }, null, 2));
+  }
   await electronApp?.close().catch(() => undefined);
   await scriptedProvider?.stop().catch(() => undefined);
-  if (engineStateDir) {
-    try {
-      const srcLog = path.join(engineStateDir, 'events.log');
-      const destDir = path.resolve(__dirname, '../../../../验收证据/GN-R3');
-      await fs.mkdir(destDir, { recursive: true });
-      const stat = await fs.stat(srcLog).catch(() => null);
-      if (stat) {
-        await fs.copyFile(srcLog, path.join(destDir, 'events.log'));
-      }
-    } catch (err) {
-      console.warn('Failed to copy events.log:', err);
-    }
-  }
   if (workspacePath) {
     await fs.rm(workspacePath, { recursive: true, force: true }).catch(() => undefined);
   }
@@ -1324,6 +1430,24 @@ description: Inspect and manage project dependencies and modules.
     'utf8',
   );
 
+  const scanned = await invokeElectron<{ skills: SkillInput[] }>(page, 'dispatch-skills:list', workspacePath);
+  const initialSkill = scanned.skills.find(skill => skill.name === skillName)!;
+  expect(initialSkill).toBeDefined();
+  expect((await engineEvents()).filter(event => event.event === 'START' && event.description === initialSkill.description)).toHaveLength(0);
+  const versions = [initialSkill];
+  async function verifyPageCache(label: string, skill: SkillInput, summaryZh: string, expectedStarts: number) {
+    const hash = skillHash(skill);
+    await expect.poll(async () => {
+      const cache = JSON.parse(await fs.readFile(cachePath, 'utf8'));
+      return cache.entries[hash];
+    }, { timeout: 10_000 }).toMatchObject({ hash, name: skillName, description: skill.description, summaryZh, enrichmentFailed: false });
+    const starts = (await engineEvents()).filter(event => event.event === 'START' && versions.some(version => version.description === event.description));
+    const cache = JSON.parse(await fs.readFile(cachePath, 'utf8'));
+    lifecycleEvidence.pageChecks.push({ label, skill, hash, expectedStarts, actualStarts: starts.length, starts, cacheEntry: cache.entries[hash] });
+    await saveLifecycle();
+    expect(starts).toHaveLength(expectedStarts);
+  }
+
   // 2. 点击左侧导航栏的技能库图标直接进入技能库设置页
   const skillLibraryButton = page.locator('[data-testid="gutter-skill-library-button"]');
   await expect(skillLibraryButton).toBeVisible({ timeout: 10_000 });
@@ -1339,24 +1463,18 @@ description: Inspect and manage project dependencies and modules.
 
   const card = page.locator(`[data-testid="skill-card-${skillName}"]`);
   await expect(card).toBeVisible({ timeout: 10_000 });
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toBeInViewport();
+
+  await expect(card).toContainText(initialSkill.description);
+  await expect(searchInput).toBeEnabled();
 
   // 4. 真实页面通信调用假引擎生成中文说明，等待落盘并在页面上更新
   await expect(card).toContainText('检查与分析项目依赖关系', { timeout: 20_000 });
   await expect(card).not.toContainText('[未翻译]');
 
-  // 5. 核对磁盘缓存文件真正落盘
-  const cachePath = await invokeElectron<string>(page, 'dispatch-skills:get-cache-path');
-  expect(cachePath).toBeTruthy();
-  await expect.poll(async () => {
-    try {
-      const content = await fs.readFile(cachePath, 'utf8');
-      const data = JSON.parse(content);
-      const entries = Object.values(data.entries ?? data) as any[];
-      return entries.some((e) => e.summaryZh === '检查与分析项目依赖关系' && !e.enrichmentFailed);
-    } catch {
-      return false;
-    }
-  }, { timeout: 10_000 }).toBe(true);
+  // 5. 通过 Electron 测试对象取得隔离 userData，按 name + hash 核缓存。
+  await verifyPageCache('首次生成', initialSkill, '检查与分析项目依赖关系', 1);
 
   // 6. 实际离开页面再重新打开技能库（验证成功缓存直接复用，不重复生成）
   await switchToAgentMode(page);
@@ -1366,8 +1484,13 @@ description: Inspect and manage project dependencies and modules.
   await expect(skillPanel).toBeVisible({ timeout: 10_000 });
   await searchInput.fill(skillName);
   await expect(card).toBeVisible({ timeout: 10_000 });
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toBeInViewport();
   await expect(card).toContainText('检查与分析项目依赖关系');
   await expect(card).not.toContainText('[未翻译]');
+
+  await page.waitForTimeout(1000);
+  await verifyPageCache('离开重开', initialSkill, '检查与分析项目依赖关系', 1);
 
   // 7. 同名正文更新：离开页面后更新 SKILL.md 的内容（正文和描述变化）
   await switchToAgentMode(page);
@@ -1384,27 +1507,27 @@ description: Audit security rules and protect file changes.
     'utf8',
   );
 
+  const rescanned = await invokeElectron<{ skills: SkillInput[] }>(page, 'dispatch-skills:list', workspacePath);
+  const updatedSkill = rescanned.skills.find(skill => skill.name === skillName)!;
+  expect(updatedSkill).toBeDefined();
+  expect(skillHash(updatedSkill)).not.toBe(skillHash(initialSkill));
+  versions.push(updatedSkill);
+
   // 8. 重新打开技能库，验证同名新内容触发重新生成并更新页面与磁盘缓存
   await skillLibraryButton.click();
   await expect(skillPanel).toBeVisible({ timeout: 10_000 });
   await searchInput.fill(skillName);
   await expect(card).toBeVisible({ timeout: 10_000 });
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toBeInViewport();
 
   // 等待新内容生成完成并在页面更新显示
   await expect(card).toContainText('审计安全规则并保护改动', { timeout: 20_000 });
   await expect(card).not.toContainText('[未翻译]');
 
-  // 再次核对磁盘缓存：新内容的说明也已落盘
-  await expect.poll(async () => {
-    try {
-      const content = await fs.readFile(cachePath, 'utf8');
-      const data = JSON.parse(content);
-      const entries = Object.values(data.entries ?? data) as any[];
-      return entries.some((e) => e.summaryZh === '审计安全规则并保护改动' && !e.enrichmentFailed);
-    } catch {
-      return false;
-    }
-  }, { timeout: 10_000 }).toBe(true);
+  await verifyPageCache('同名内容更新', updatedSkill, '审计安全规则并保护改动', 2);
+  const cache = JSON.parse(await fs.readFile(cachePath, 'utf8'));
+  expect(cache.entries[skillHash(initialSkill)]).toMatchObject({ name: skillName, summaryZh: '检查与分析项目依赖关系', enrichmentFailed: false });
 
   // 9. 返回 Agent 模式保证后续测试隔离
   await switchToAgentMode(page);
@@ -1415,20 +1538,6 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   // 1. 设置页面可见性为 true，使得按需生成接受请求
   await invokeElectron(page, 'dispatch-skills:set-page-visibility', true);
   const runTag = Date.now().toString(36);
-
-  const lifecycleEvidence = {
-    runTag,
-    recordedAt: new Date().toISOString(),
-    phases: [] as Array<{
-      phase: number;
-      name: string;
-      skillNames: string[];
-      liveProcesses: Array<{ pid: number; startTime: number }>;
-      mainChainNode: string;
-      mainChainTimestamp: number;
-      completedAt: number;
-    }>,
-  };
 
   // 阶段 1：方案渲染与批准阶段的 3 并发技能生成负载
   const loadSkills = [
@@ -1444,7 +1553,7 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
       name: `r4-skill-3-${runTag}`,
       description: 'Review codebase architecture and visual layout.',
     },
-  ];
+  ].map(skill => ({ ...skill, description: `${skill.description}\nGN-R4-LOAD ${skill.name}` }));
 
   const skillGenerationPromises = loadSkills.map((s) =>
     invokeElectron<{ success: boolean; summaryZh?: string; enrichmentFailed?: boolean }>(
@@ -1457,6 +1566,8 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   // 必须先等实际在跑且真实存活的假生成进程数确实达到 3，验证真实在飞并发负载已形成
   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
   const phase1LiveProcs = await getLiveEngineProcessInfo();
+  const phase1 = await capturePhase(1, loadSkills, phase1LiveProcs);
+  await assertNodeLoad(phase1, 'start');
 
   // 3. 在 3 并发技能生成负载持续期间，完整跑通协作主链核心环节：
   //    创建总指挥 Session -> 建立 MCP Client -> 提交协作方案 -> 等待方案卡片展示 -> 点击批准 -> 验证审批生命周期与数据库持久化
@@ -1494,15 +1605,8 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     method: 'direct',
   });
 
-  lifecycleEvidence.phases.push({
-    phase: 1,
-    name: 'PlanApproval',
-    skillNames: loadSkills.map((s) => s.name),
-    liveProcesses: phase1LiveProcs,
-    mainChainNode: 'plan_approved',
-    mainChainTimestamp: Date.now(),
-    completedAt: Date.now(),
-  });
+  await assertNodeLoad(phase1, 'complete');
+  await releasePhase(phase1);
 
   // 4. 等待 3 个并发生成请求完成，验证无崩溃、无未捕获异常、正常返回
   const results = await Promise.all(skillGenerationPromises);
@@ -1513,6 +1617,8 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     expect(res.enrichmentFailed).toBe(false);
     expect(res.summaryZh).toBeTruthy();
   }
+
+  await assertPhaseLifetime(phase1);
 
   // 验证渲染层收到审批事件
   await expect.poll(
@@ -1534,7 +1640,7 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
       name: `r4-skill-6-${runTag}`,
       description: 'Sync knowledge graph and generate handoff document.',
     },
-  ];
+  ].map(skill => ({ ...skill, description: `${skill.description}\nGN-R4-LOAD ${skill.name}` }));
 
   const skillGenPromisesPhase2 = phase2Skills.map((s) =>
     invokeElectron<{ success: boolean; summaryZh?: string; enrichmentFailed?: boolean }>(
@@ -1547,6 +1653,8 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   // 等待第 2 阶段在跑数达到 3
   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
   const phase2LiveProcs = await getLiveEngineProcessInfo();
+  const phase2 = await capturePhase(2, phase2Skills, phase2LiveProcs);
+  await assertNodeLoad(phase2, 'start');
 
   // 在并发负载下派发子任务工单并等待完成
   const child = await createImplementationChild(
@@ -1563,15 +1671,8 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   });
   await expect.poll(async () => getWorkOrderStatus(child.sessionId), { timeout: 15_000 }).toBe('completed');
 
-  lifecycleEvidence.phases.push({
-    phase: 2,
-    name: 'ChildExecution',
-    skillNames: phase2Skills.map((s) => s.name),
-    liveProcesses: phase2LiveProcs,
-    mainChainNode: 'child_completed',
-    mainChainTimestamp: Date.now(),
-    completedAt: Date.now(),
-  });
+  await assertNodeLoad(phase2, 'complete');
+  await releasePhase(phase2);
 
   const phase2Results = await Promise.all(skillGenPromisesPhase2);
   expect(phase2Results).toHaveLength(3);
@@ -1579,6 +1680,8 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     expect(res.success).toBe(true);
     expect(res.enrichmentFailed).toBe(false);
   }
+
+  await assertPhaseLifetime(phase2);
 
   // 阶段 3：交付与最终总结阶段的 3 并发技能生成负载
   const phase3Skills = [
@@ -1594,7 +1697,7 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
       name: `r4-skill-9-${runTag}`,
       description: 'Connect Chrome browser for UI test.',
     },
-  ];
+  ].map(skill => ({ ...skill, description: `${skill.description}\nGN-R4-LOAD ${skill.name}` }));
 
   const skillGenPromisesPhase3 = phase3Skills.map((s) =>
     invokeElectron<{ success: boolean; summaryZh?: string; enrichmentFailed?: boolean }>(
@@ -1607,21 +1710,16 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   // 等待第 3 阶段在跑数达到 3
   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
   const phase3LiveProcs = await getLiveEngineProcessInfo();
+  const phase3 = await capturePhase(3, phase3Skills, phase3LiveProcs);
+  await assertNodeLoad(phase3, 'start');
 
   // 在并发负载下完成总指挥收敛总结与交付
   await resetRendererEvents(page);
   const summaryResult = await sendRealProviderTurn(loadHeadSessionId, 'Produce final collaboration summary.');
   expect(summaryResult.content).toBe(SCRIPTED_FINAL_SUMMARY);
 
-  lifecycleEvidence.phases.push({
-    phase: 3,
-    name: 'FinalSummary',
-    skillNames: phase3Skills.map((s) => s.name),
-    liveProcesses: phase3LiveProcs,
-    mainChainNode: 'summary_completed',
-    mainChainTimestamp: Date.now(),
-    completedAt: Date.now(),
-  });
+  await assertNodeLoad(phase3, 'complete');
+  await releasePhase(phase3);
 
   const phase3Results = await Promise.all(skillGenPromisesPhase3);
   expect(phase3Results).toHaveLength(3);
@@ -1630,12 +1728,6 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     expect(res.enrichmentFailed).toBe(false);
   }
 
-  // 将三阶段负载实证归档至 验收证据/GN-R3/
-  const destDir = path.resolve(__dirname, '../../../../验收证据/GN-R3');
-  await fs.mkdir(destDir, { recursive: true });
-  await fs.writeFile(
-    path.join(destDir, 'collab-load-lifecycle.json'),
-    JSON.stringify(lifecycleEvidence, null, 2),
-    'utf8',
-  );
+  await assertPhaseLifetime(phase3);
+  expect(lifecycleEvidence.phases).toHaveLength(3);
 });

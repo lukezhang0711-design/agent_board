@@ -1,4 +1,6 @@
 import fs from 'fs';
+import { createHash } from 'node:crypto';
+import { computeSkillContentKey } from '../../../renderer/utils/dispatchSkillLibrary';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,6 +31,134 @@ describe('SkillTaxonomyEnricher', () => {
     if (tmpDir) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
       tmpDir = null;
+    }
+  });
+
+
+  it('GN-R4: 默认缓存路径在首次访问时确定，显式隔离缓存路径仍优先', () => {
+    const home = vi.spyOn(os, 'homedir').mockReturnValue(path.join(tmpDir!, 'before-bootstrap'));
+    try {
+      const manager = new SkillTaxonomyCacheManager();
+      const explicit = new SkillTaxonomyCacheManager(cacheFile);
+      home.mockReturnValue(path.join(tmpDir!, 'after-bootstrap'));
+      expect(manager.getCachePath()).toBe(path.join(tmpDir!, 'after-bootstrap', '.nimbalyst', 'skill-taxonomy-cache.json'));
+      expect(explicit.getCachePath()).toBe(cacheFile);
+    } finally {
+      home.mockRestore();
+    }
+  });
+
+  const success = { type: 'result', subtype: 'success', is_error: false, result: '检查账户余额与错误记录' };
+  it.each<[string, unknown, number, boolean]>([
+    ['missing', { type: 'result', subtype: 'success', result: '检查项目依赖' }, 0, true],
+    ...[null, 'true', 'false', 1, 0, true].map<[string, unknown, number, boolean]>(value => [
+      `is_error-${JSON.stringify(value)}`, { ...success, is_error: value }, 0, true,
+    ]),
+    ['boolean-false', success, 0, false],
+    ['bad-json', '{broken json', 0, true],
+    ['plain-text', '账户余额不足', 0, true],
+    ['wrong-type', { ...success, type: 'assistant' }, 0, true],
+    ['error-branch-false', { ...success, subtype: 'error_during_execution' }, 0, true],
+    ['error-branch-true', { ...success, subtype: 'error_during_execution', is_error: true }, 0, true],
+    ['empty-result', { ...success, result: ' ' }, 0, true],
+    ['non-string-result', { ...success, result: 1 }, 0, true],
+    ['non-chinese', { ...success, result: 'Inspect modules' }, 0, true],
+    ['first-sentence', { ...success, result: '检查项目依赖。随后说明不入缓存。' }, 0, false],
+    ['error-exit-false', success, 1, true],
+    ['error-exit-missing', { type: 'result', subtype: 'success', result: '检查项目依赖' }, 1, true],
+  ])('GN-R4: 真实进程协议矩阵 %s，stdout/参数/次数/最终缓存均可追溯', async (label, payload, exitCode, failed) => {
+    const script = path.join(tmpDir!, 'engine.cjs');
+    const calls = path.join(tmpDir!, 'calls.jsonl');
+    const stdout = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    fs.writeFileSync(script, `#!/usr/bin/env node
+const fs = require('fs');
+const stdout = ${JSON.stringify(stdout)};
+fs.appendFileSync(${JSON.stringify(calls)}, JSON.stringify({pid:process.pid,args:process.argv.slice(2),stdout,exitCode:${exitCode},hasApiKey:'ANTHROPIC_API_KEY' in process.env})+'\\n');
+process.stdout.write(stdout);
+process.exitCode = ${exitCode};
+`);
+    fs.chmodSync(script, 0o755);
+    vi.stubEnv('NODE_ENV', 'test');
+    vi.stubEnv('NIMBALYST_TEST_SKILL_SUMMARY_ENGINE', script);
+    vi.stubEnv('ANTHROPIC_API_KEY', 'test-sentinel-must-be-removed');
+    try {
+      const manager = new SkillTaxonomyCacheManager(cacheFile);
+      const result = await manager.enrichAsync('gn-r4-protocol', 'Inspect modules.', '# Body');
+      const starts = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+      const cache = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      const evidence = { label, stdout, starts, startCount: starts.length, result, cache };
+      console.log('GN_R4_PROTOCOL', JSON.stringify(evidence));
+      if (process.env.NIMBALYST_GN_EVIDENCE_DIR) {
+        fs.writeFileSync(path.join(process.env.NIMBALYST_GN_EVIDENCE_DIR, `protocol-${label}.json`), JSON.stringify(evidence, null, 2));
+      }
+      expect(starts).toHaveLength(1);
+      expect(starts[0].hasApiKey).toBe(false);
+      const args = starts[0].args as string[];
+      expect(args.slice(0, 7)).toEqual(['--tools', '', '--safe-mode', '--disable-slash-commands', '--strict-mcp-config', '--output-format', 'json']);
+      expect(result.enrichmentFailed).toBe(failed);
+      expect(Object.values(cache.entries).filter((entry: any) => entry.enrichmentFailed === false)).toHaveLength(failed ? 0 : 1);
+      expect(new SkillTaxonomyCacheManager(cacheFile).get(computeSkillHash('gn-r4-protocol', 'Inspect modules.', '# Body'))).toMatchObject(result);
+      if (failed) expect(result.summaryZh).toBe('Inspect modules');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('GN-R4: 前后台数组身份一致，任意分隔符都是原文，旧冒号缓存不回退', async () => {
+    for (const separator of [':', ':::', '\n', '\0', '\\"']) {
+      const a = ['skill', `Inspect${separator}notes`, '# body'] as const;
+      const b = ['skill', 'Inspect', `notes${separator}# body`] as const;
+      expect(computeSkillContentKey(...a)).not.toBe(computeSkillContentKey(...b));
+      expect(computeSkillHash(...a)).not.toBe(computeSkillHash(...b));
+      for (const [name, description, content] of [a, b]) {
+        expect(computeSkillHash(name, description, content)).toBe(createHash('sha256').update(computeSkillContentKey(name, description, content)).digest('hex'));
+      }
+    }
+    expect(computeSkillContentKey(' skill ', undefined, ' \n')).toBe(computeSkillContentKey('skill', '', ''));
+    expect(computeSkillHash(' skill ', undefined, ' \n')).toBe(computeSkillHash('skill', '', ''));
+    const name = 'chief-content-identity';
+    const versions = [
+      ['Inspect dependencies:notes', '# body'],
+      ['Inspect dependencies', 'notes:# body'],
+      ['Inspect dependencies changed', 'notes:# body'], // 只改说明
+      ['Inspect dependencies', 'notes:# body changed'], // 只改正文
+    ];
+    const oldHash = createHash('sha256').update(`${name}:${versions[0].join(':')}`).digest('hex');
+    const oldEntry = { category: '工具环境', summaryZh: '错误旧编号摘要', enrichmentFailed: false, hash: oldHash };
+    fs.writeFileSync(cacheFile, JSON.stringify({ version: 1, entries: { [oldHash]: oldEntry } }));
+    const calls = path.join(tmpDir!, 'identity-calls.jsonl');
+    const script = path.join(tmpDir!, 'identity-engine.cjs');
+    fs.writeFileSync(script, `#!/usr/bin/env node
+const fs = require('fs');
+const args = process.argv.slice(2);
+const result = args[args.indexOf('-p')+1].includes('dependencies:notes') ? '检查旧内容' : '检查新内容';
+const stdout = JSON.stringify({type:'result',subtype:'success',is_error:false,result});
+fs.appendFileSync(${JSON.stringify(calls)}, JSON.stringify({pid:process.pid,args,stdout})+'\\n');
+process.stdout.write(stdout);
+`);
+    fs.chmodSync(script, 0o755);
+    vi.stubEnv('NODE_ENV', 'test');
+    vi.stubEnv('NIMBALYST_TEST_SKILL_SUMMARY_ENGINE', script);
+    const steps: unknown[] = [];
+    try {
+      for (const [index, count] of [[0, 1], [1, 2], [0, 2], [1, 2], [1, 2], [2, 3], [3, 4]]) {
+        const [description, content] = versions[index];
+        const result = await new SkillTaxonomyCacheManager(cacheFile).enrichAsync(name, description, content);
+        const starts = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+        steps.push({ name, description, content, hash: computeSkillHash(name, description, content), result, starts: starts.length });
+        expect(result.summaryZh).toBe(index === 0 ? '检查旧内容' : '检查新内容');
+        expect(result.enrichmentFailed).toBe(false);
+        expect(starts).toHaveLength(count);
+      }
+      const cache = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      expect(cache.entries[oldHash]).toEqual(oldEntry); // 自然忽略，保留真实旧数据
+      const evidence = { steps, starts: fs.readFileSync(calls, 'utf8'), cache };
+      console.log('GN_R4_CACHE_IDENTITY', JSON.stringify(evidence));
+      if (process.env.NIMBALYST_GN_EVIDENCE_DIR) {
+        fs.writeFileSync(path.join(process.env.NIMBALYST_GN_EVIDENCE_DIR, 'cache-identity.json'), JSON.stringify(evidence, null, 2));
+      }
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 

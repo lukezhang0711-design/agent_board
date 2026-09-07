@@ -105,6 +105,41 @@ afterEach(() => {
 });
 
 describe('SkillLibraryPanel', () => {
+
+  it('GN-R4: A→B→A 更新同名正文后，迟到的 A 旧内容与 B 结果都不能覆盖当前卡片', async () => {
+    let versionA = 'old-a';
+    const pending: Array<{ content: string; resolve: (value: unknown) => void }> = [];
+    invoke.mockImplementation((channel: string, payload?: any) => {
+      if (channel === 'dispatch-skills:list') return Promise.resolve({ skills: [{
+        id: 'codex:project:identity', engine: 'codex', name: 'identity', source: 'project', scope: 'project',
+        description: 'Inspect dependencies.', content: payload === '/a' ? versionA : 'body-b',
+        category: '开发实现', enrichmentFailed: true,
+      }] });
+      if (channel === 'dispatch-skills:generate-summary') return new Promise(resolve => pending.push({ content: payload.content, resolve }));
+      return Promise.resolve(undefined);
+    });
+    const { rerender } = render(<SkillLibraryPanel workspacePath="/a" />);
+    fireEvent.click(await screen.findByText('开发实现'));
+    await waitFor(() => expect(pending).toHaveLength(1));
+    rerender(<SkillLibraryPanel workspacePath="/b" />);
+    await waitFor(() => expect(pending).toHaveLength(2));
+    versionA = 'new-a';
+    rerender(<SkillLibraryPanel workspacePath="/a" />);
+    await waitFor(() => expect(pending).toHaveLength(3));
+    expect(pending.map(item => item.content)).toEqual(['old-a', 'body-b', 'new-a']);
+    await act(async () => pending[2].resolve({ success: true, enrichmentFailed: false, summaryZh: '当前新内容' }));
+    await waitFor(() => expect(screen.getByTestId('skill-card-identity').textContent).toContain('当前新内容'));
+    await act(async () => {
+      pending[0].resolve({ success: true, enrichmentFailed: false, summaryZh: '迟到旧内容' });
+      pending[1].resolve({ success: true, enrichmentFailed: false, summaryZh: '迟到其他项目' });
+    });
+    expect(screen.getByTestId('skill-card-identity').textContent).toContain('当前新内容');
+    expect(screen.queryByText('迟到旧内容')).toBeNull();
+    expect(screen.queryByText('迟到其他项目')).toBeNull();
+    expect(pending).toHaveLength(3);
+    console.log('GN_R4_LATE_CONTENT', JSON.stringify({ requests: pending.map(item => item.content), card: screen.getByTestId('skill-card-identity').textContent }));
+  });
+
   it('绿①: 清空后读取，bundles 为空数组；反向断言 DEFAULT_DISPATCH_SKILL_BUNDLES 不存在', () => {
     expect((dispatchSkillLibraryModule as any).DEFAULT_DISPATCH_SKILL_BUNDLES).toBeUndefined();
     expect(readDispatchSkillSettings(undefined)).toEqual({ disabledSkillIds: [], bundles: [] });

@@ -1,0 +1,4 @@
+{
+  "command": "ps -axo pid,ppid,comm,args",
+  "native_dependency_users": []
+}

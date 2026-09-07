@@ -107,7 +107,7 @@ export function extractOneSentenceSummary(description?: string): string {
 }
 
 export function computeSkillContentKey(name: string, description?: string, content?: string): string {
-  return `${name.trim()}\0${(description ?? '').trim()}\0${(content ?? '').trim()}`;
+  return JSON.stringify([name.trim(), (description ?? '').trim(), (content ?? '').trim()]);
 }
 
 export function mergeSkillsByName(

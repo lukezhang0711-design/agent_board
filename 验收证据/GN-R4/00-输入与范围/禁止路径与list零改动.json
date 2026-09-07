@@ -1,0 +1,14 @@
+{
+  "packages/electron/src/main/services/DispatchSkillLibraryService.ts": {
+    "zero_diff_from_main_baseline": true
+  },
+  "packages/electron/src/renderer/components/UnifiedAI/SessionTranscript.tsx": {
+    "zero_diff_from_main_baseline": true
+  },
+  "dispatch-skills:list": {
+    "byte_identical": true
+  },
+  "dispatch-skills:get-cache-path": {
+    "absent_from_product_handler": true
+  }
+}

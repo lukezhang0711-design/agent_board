@@ -1,0 +1,11 @@
+{
+  "command": "node '验收证据/GN-R4/scope-audit.cjs'",
+  "cwd": "/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN",
+  "started_at": "2026-09-07T22:35:44.599727+08:00",
+  "ended_at": "2026-09-07T22:35:45.111013+08:00",
+  "exit_code": 1,
+  "total_seconds": 0.511,
+  "test_duration_lines": [],
+  "test_case_duration_lines": [],
+  "error_TS_count": 0
+}

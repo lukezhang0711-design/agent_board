@@ -1,0 +1,25 @@
+{
+  "test_skill_names": [
+    "e2e-live-skill-mtrbt056"
+  ],
+  "actual_cache_locations": [
+    {
+      "path": "/Users/lukezhang/Library/Application Support/Electron/skill-taxonomy-cache.json",
+      "entries": {
+        "5bb8bef55371943552bd33d70c775dd8044db588797b6248f9ebdeadc307c462": {
+          "category": "工具环境",
+          "summaryZh": "检查与分析项目依赖关系",
+          "enrichmentFailed": false,
+          "hash": "5bb8bef55371943552bd33d70c775dd8044db588797b6248f9ebdeadc307c462",
+          "name": "e2e-live-skill-mtrbt056",
+          "description": "Inspect and manage project dependencies and modules.",
+          "updatedAt": "2026-09-07T14:18:38.078Z"
+        }
+      }
+    }
+  ],
+  "bundle_evidence": {
+    "manager_constructed_at": 383665,
+    "custom_userData_set_at": 534593
+  }
+}

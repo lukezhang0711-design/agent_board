@@ -1,0 +1,53 @@
+{
+  "parent": "8a383887e8cdbe7fccd9073f0967a1e13e12922f",
+  "baseline": "28a1b7f3b963077a95faa0157fdbe2fa25ce159d",
+  "branch": "fix/skill-summary-and-stop-dedup",
+  "head": "8a383887e8cdbe7fccd9073f0967a1e13e12922f",
+  "changedSourceFiles": [
+    "packages/electron/e2e/ai/collab-chain.spec.ts",
+    "packages/electron/e2e/ai/fixtures/skill-summary-engine.cjs",
+    "packages/electron/src/main/ipc/SettingsHandlers.ts",
+    "packages/electron/src/main/ipc/__tests__/SettingsHandlers.skillSummaries.test.ts",
+    "packages/electron/src/main/services/SkillTaxonomyEnricher.ts",
+    "packages/electron/src/main/services/__tests__/SkillTaxonomyEnricher.test.ts",
+    "packages/electron/src/renderer/components/Settings/__tests__/SkillLibraryPanel.test.tsx",
+    "packages/electron/src/renderer/utils/dispatchSkillLibrary.ts"
+  ],
+  "forbiddenZeroDiff": {
+    "packages/electron/src/main/services/DispatchSkillLibraryService.ts": true,
+    "packages/electron/src/renderer/components/UnifiedAI/SessionTranscript.tsx": true
+  },
+  "stopChangeIsOnlyVisibilityProp": true,
+  "listHandlerByteIdentical": true,
+  "productionCachePathIpcAbsent": true,
+  "originalThreeTests": {
+    "byteIdentical": true,
+    "sha256": "b907ccd5814711949a3468b2afba3a3fe9f124b145aa2a13ed96234285c5a8ca"
+  },
+  "assertions": {
+    "original": 127,
+    "current": 153,
+    "removed": [
+      {
+        "text": "expect(cachePath).toBeTruthy()",
+        "page": true
+      },
+      {
+        "text": "expect.poll(async () => { try { const content = await fs.readFile(cachePath, 'utf8'); const data = JSON.parse(content); const entries = Object.values(data.entries ?? data) as any[]; return entries.some((e) => e.summaryZh === '检查与分析项目依赖关系' && !e.enrichmentFailed); } catch { return false; } }, { timeout: 10_000 }).toBe(true)",
+        "page": true
+      },
+      {
+        "text": "expect.poll(async () => { try { const content = await fs.readFile(cachePath, 'utf8'); const data = JSON.parse(content); const entries = Object.values(data.entries ?? data) as any[]; return entries.some((e) => e.summaryZh === '审计安全规则并保护改动' && !e.enrichmentFailed); } catch { return false; } }, { timeout: 10_000 }).toBe(true)",
+        "page": true
+      }
+    ],
+    "allOriginalNonPageAssertionsPreserved": true
+  },
+  "originalProbeHashesUnchanged": {
+    "格式与后端身份.test.ts": "4c7d97ba3bed2fe550ee9070433e034cbb13f090791e1a0846b269c309b93a26",
+    "vitest.config.mjs": "015cc87a800ee70df0bd6570cb92985bd089ce47e44d00e485cd86226c1e60d6",
+    "切项目与内容身份.test.tsx": "8b09fe8a261001e6452f58fdf011bcd6d292333f8a18cda4669a7d4ef4dea038",
+    "真实超时与隔离.test.ts": "d92ca93f942233363cd61ca233077d0fe191cf5b50ae2ee52f61a0a4efea6d5a"
+  },
+  "diffCheckPassed": true
+}

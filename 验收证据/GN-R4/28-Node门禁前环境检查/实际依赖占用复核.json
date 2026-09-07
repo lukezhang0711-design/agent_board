@@ -1,0 +1,17 @@
+{
+  "reason": "初次按 Electron 字样宽匹配命中了其他应用的 crashpad；逐个均非本工地或 Nimbalyst，未终止任何进程。再核共享原生库真实占用。",
+  "checks": [
+    {
+      "path": "/Users/lukezhang/Desktop/Agent运行面板/agent_board/node_modules/better-sqlite3/build/Release/test_extension.node",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "path": "/Users/lukezhang/Desktop/Agent运行面板/agent_board/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

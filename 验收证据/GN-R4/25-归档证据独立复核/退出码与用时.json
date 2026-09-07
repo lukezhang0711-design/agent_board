@@ -1,0 +1,11 @@
+{
+  "command": "python3 '验收证据/GN-R4/verify-archive.py' '22-E2E最终五项' '16-A全部生成失败' '17-B失效进程标记' '18-C主链打回' '19-D1批准节点前负载结束' '20-D2子任务节点前负载结束' '21-D3总结节点前负载结束'",
+  "cwd": "/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN",
+  "started_at": "2026-09-07T22:42:39.806620+08:00",
+  "ended_at": "2026-09-07T22:42:39.860693+08:00",
+  "exit_code": 0,
+  "total_seconds": 0.054,
+  "test_duration_lines": [],
+  "test_case_duration_lines": [],
+  "error_TS_count": 0
+}

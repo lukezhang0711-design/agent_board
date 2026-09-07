@@ -1,0 +1,15 @@
+  • electron-builder  version=26.8.1
+  • loaded configuration  file=package.json ("build" field)
+  • packageManager not detected by file, falling back to environment detection  resolvedPackageManager=npm detected=/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN/packages/electron
+  • detected workspace root for project using lock file  pm=npm config=undefined resolved=/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN projectDir=/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN/packages/electron
+  • executing @electron/rebuild  electronVersion=41.0.4 arch=arm64 buildFromSource=false workspaceRoot=/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN projectDir=./ appDir=./
+  • installing native dependencies  arch=arm64
+  • preparing       moduleName=better-sqlite3 arch=arm64
+  • finished        moduleName=better-sqlite3 arch=arm64
+  • preparing       moduleName=better-sqlite3 arch=arm64
+  • finished        moduleName=better-sqlite3 arch=arm64
+  • preparing       moduleName=leveldown arch=arm64
+  • finished        moduleName=leveldown arch=arm64
+  • preparing       moduleName=node-pty arch=arm64
+  • finished        moduleName=node-pty arch=arm64
+  • completed installing native dependencies

@@ -1,0 +1,1454 @@
+{
+  "version": 1,
+  "entries": {
+    "b39531806ab843ac759d1431315b12b96b20e17965073198c87ba2cffdb81068": {
+      "category": "规划决策",
+      "summaryZh": "需要深度思考与方案权衡时，制定详尽架构规划",
+      "enrichmentFailed": false,
+      "hash": "b39531806ab843ac759d1431315b12b96b20e17965073198c87ba2cffdb81068",
+      "name": "deep-planning",
+      "description": "Use when the task needs real thinking, not just execution — planning or proposing solutions (出方案/规划/写计划), decomposing work (拆解), orchestrating subagents (调度/编排), brainstorming and idea generation (脑暴/头脑风暴/想点子/有什么办法), open-ended analysis and judgment calls (怎么看/该不该/为什么/评估/分析), strategy questions, audits or reviews at scale, or anything hard to reverse or spanning more than an hour of work. Especially when a stakeholder hands over a pre-chosen solution (\"use AI for X\", \"加个缓存就行\"), when the question itself may hide the real problem, or when the first answer to mind feels obviously right — it is usually just obvious, not right.",
+      "updatedAt": "2026-09-07T14:29:48.813Z"
+    },
+    "bb1722ce7976755a00c5cb3ab25a764917ec1c5ac61cdc04e252f5abcb134e7c": {
+      "category": "工具环境",
+      "summaryZh": "快速无头浏览器工具，用于 QA 测试与页面交互",
+      "enrichmentFailed": false,
+      "hash": "bb1722ce7976755a00c5cb3ab25a764917ec1c5ac61cdc04e252f5abcb134e7c",
+      "name": "gstack",
+      "description": "Fast headless browser for QA testing and site dogfooding. Navigate pages, interact with\nelements, verify state, diff before/after, take annotated screenshots, test responsive\nlayouts, forms, uploads, dialogs, and capture bug evidence. Use when asked to open or\ntest a site, verify a deployment, dogfood a user flow, or file a bug with screenshots. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.814Z"
+    },
+    "e61115625185316e761d398c4cd179e8eb093140890ec7f407904f850465d6fd": {
+      "category": "规划决策",
+      "summaryZh": "自动串联 CEO、设计、工程等多维度方案评审",
+      "enrichmentFailed": false,
+      "hash": "e61115625185316e761d398c4cd179e8eb093140890ec7f407904f850465d6fd",
+      "name": "autoplan",
+      "description": "Auto-review pipeline — reads the full CEO, design, eng, and DX review skills from disk\nand runs them sequentially with auto-decisions using 6 decision principles. Surfaces\ntaste decisions (close approaches, borderline scope, codex disagreements) at a final\napproval gate. One command, fully reviewed plan out.\nUse when asked to \"auto review\", \"autoplan\", \"run all reviews\", \"review this plan\nautomatically\", or \"make the decisions for me\".\nProactively suggest when the user has a plan file and wants to run the full review\ngauntlet without answering 15-30 intermediate questions. (gstack)\nVoice triggers (speech-to-text aliases): \"auto plan\", \"automatic review\".",
+      "updatedAt": "2026-09-07T14:29:48.814Z"
+    },
+    "85952cc2bb9af9f727f543f88c433edfda49d627ed3315f1d87958828fc54691": {
+      "category": "质量保障",
+      "summaryZh": "使用无头浏览器对应用进行性能回归与基准测试",
+      "enrichmentFailed": false,
+      "hash": "85952cc2bb9af9f727f543f88c433edfda49d627ed3315f1d87958828fc54691",
+      "name": "benchmark",
+      "description": "Performance regression detection using the browse daemon. Establishes\nbaselines for page load times, Core Web Vitals, and resource sizes.\nCompares before/after on every PR. Tracks performance trends over time.\nUse when: \"performance\", \"benchmark\", \"page speed\", \"lighthouse\", \"web vitals\",\n\"bundle size\", \"load time\". (gstack)\nVoice triggers (speech-to-text aliases): \"speed test\", \"check performance\".",
+      "updatedAt": "2026-09-07T14:29:48.814Z"
+    },
+    "5941f8813c56ca11ff1179b712e8dc242065842de76e8af71cef9c3a30b5c034": {
+      "category": "质量保障",
+      "summaryZh": "跨模型运行基准测试，对比各模型的能力表现",
+      "enrichmentFailed": false,
+      "hash": "5941f8813c56ca11ff1179b712e8dc242065842de76e8af71cef9c3a30b5c034",
+      "name": "benchmark-models",
+      "description": "Cross-model benchmark for gstack skills. Runs the same prompt through Claude,\nGPT (via Codex CLI), and Gemini side-by-side — compares latency, tokens, cost,\nand optionally quality via LLM judge. Answers \"which model is actually best\nfor this skill?\" with data instead of vibes. Separate from /benchmark, which\nmeasures web page performance. Use when: \"benchmark models\", \"compare models\",\n\"which model is best for X\", \"cross-model comparison\", \"model shootout\". (gstack)\nVoice triggers (speech-to-text aliases): \"compare models\", \"model shootout\", \"which model is best\".",
+      "updatedAt": "2026-09-07T14:29:48.815Z"
+    },
+    "097c432bef0c85dec91a0ae8c1babeb10e6b0bd5d7dbb9cab29370d805136fc6": {
+      "category": "工具环境",
+      "summaryZh": "启动快速无头浏览器，用于页面测试与交互验证",
+      "enrichmentFailed": false,
+      "hash": "097c432bef0c85dec91a0ae8c1babeb10e6b0bd5d7dbb9cab29370d805136fc6",
+      "name": "browse",
+      "description": "Fast headless browser for QA testing and site dogfooding. Navigate any URL, interact with\nelements, verify page state, diff before/after actions, take annotated screenshots, check\nresponsive layouts, test forms and uploads, handle dialogs, and assert element states.\n~100ms per command. Use when you need to test a feature, verify a deployment, dogfood a\nuser flow, or file a bug with evidence. Use when asked to \"open in browser\", \"test the\nsite\", \"take a screenshot\", or \"dogfood this\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.815Z"
+    },
+    "94c8f26b756ee9bf022dc0118edd389fe1ad933e8562d15f2b4f63d2282fd2d0": {
+      "category": "发布部署",
+      "summaryZh": "部署上线后进行金丝雀监控，验证线上健康状态",
+      "enrichmentFailed": false,
+      "hash": "94c8f26b756ee9bf022dc0118edd389fe1ad933e8562d15f2b4f63d2282fd2d0",
+      "name": "canary",
+      "description": "Post-deploy canary monitoring. Watches the live app for console errors,\nperformance regressions, and page failures using the browse daemon. Takes\nperiodic screenshots, compares against pre-deploy baselines, and alerts\non anomalies. Use when: \"monitor deploy\", \"canary\", \"post-deploy check\",\n\"watch production\", \"verify deploy\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.815Z"
+    },
+    "6545dd86a26196a14270a89d51fab30bba1a5d66cd72f212bf97d78092b56ffa": {
+      "category": "安全管控",
+      "summaryZh": "危险命令安全防护，在执行高危破坏性操作前告警",
+      "enrichmentFailed": false,
+      "hash": "6545dd86a26196a14270a89d51fab30bba1a5d66cd72f212bf97d78092b56ffa",
+      "name": "careful",
+      "description": "Safety guardrails for destructive commands. Warns before rm -rf, DROP TABLE,\nforce-push, git reset --hard, kubectl delete, and similar destructive operations.\nUser can override each warning. Use when touching prod, debugging live systems,\nor working in a shared environment. Use when asked to \"be careful\", \"safety mode\",\n\"prod mode\", or \"careful mode\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.815Z"
+    },
+    "c89ee147e656d5f944ac8fc0950f08197f7c5957acdce8e3966df7fd3c68edee": {
+      "category": "质量保障",
+      "summaryZh": "Claude Code CLI wrapper for non-Claude hosts - three modes",
+      "enrichmentFailed": true,
+      "hash": "c89ee147e656d5f944ac8fc0950f08197f7c5957acdce8e3966df7fd3c68edee",
+      "name": "claude",
+      "description": "Claude Code CLI wrapper for non-Claude hosts - three modes. Review: independent\ndiff review via claude -p. Challenge: adversarial failure-mode review. Consult:\nask Claude about the repo with read-only file tools. Use when asked for \"claude\nreview\", \"claude challenge\", \"ask claude\", \"second opinion from claude\", or\n\"outside voice\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.816Z"
+    },
+    "ff44e6cb005f7d64218d90eaa6be85d940c919f7a1602c6bfc2937988d0e532b": {
+      "category": "工具环境",
+      "summaryZh": "恢复此前保存的工作上下文、git 状态与决策记录",
+      "enrichmentFailed": false,
+      "hash": "ff44e6cb005f7d64218d90eaa6be85d940c919f7a1602c6bfc2937988d0e532b",
+      "name": "context-restore",
+      "description": "Restore working context saved earlier by /context-save. Loads the most recent\nsaved state (across all branches by default) so you can pick up where you\nleft off — even across Conductor workspace handoffs.\nUse when asked to \"resume\", \"restore context\", \"where was I\", or\n\"pick up where I left off\". Pair with /context-save.\nFormerly /checkpoint resume — renamed because Claude Code treats /checkpoint\nas a native rewind alias in current environments. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.817Z"
+    },
+    "14bbdc7998615af8880cad3f8767b9ec5a84eefad52244cb7a78f85317e6a02e": {
+      "category": "工具环境",
+      "summaryZh": "保存当前工作上下文、分支状态与决策记录到磁盘",
+      "enrichmentFailed": false,
+      "hash": "14bbdc7998615af8880cad3f8767b9ec5a84eefad52244cb7a78f85317e6a02e",
+      "name": "context-save",
+      "description": "Save working context. Captures git state, decisions made, and remaining work\nso any future session can pick up without losing a beat.\nUse when asked to \"save progress\", \"save state\", \"context save\", or\n\"save my work\". Pair with /context-restore to resume later.\nFormerly /checkpoint — renamed because Claude Code treats /checkpoint as a\nnative rewind alias in current environments, which was shadowing this skill.\n(gstack)",
+      "updatedAt": "2026-09-07T14:29:48.817Z"
+    },
+    "eba6b7091e22d640d33fdb61d974759bfac984a36a78ed645afebce35a0a0efa": {
+      "category": "安全管控",
+      "summaryZh": "开启安全官模式，执行基础设施与代码安全审计",
+      "enrichmentFailed": false,
+      "hash": "eba6b7091e22d640d33fdb61d974759bfac984a36a78ed645afebce35a0a0efa",
+      "name": "cso",
+      "description": "Chief Security Officer mode. Infrastructure-first security audit: secrets archaeology,\ndependency supply chain, CI/CD pipeline security, LLM/AI security, skill supply chain\nscanning, plus OWASP Top 10, STRIDE threat modeling, and active verification.\nTwo modes: daily (zero-noise, 8/10 confidence gate) and comprehensive (monthly deep\nscan, 2/10 bar). Trend tracking across audit runs.\nUse when: \"security audit\", \"threat model\", \"pentest review\", \"OWASP\", \"CSO review\". (gstack)\nVoice triggers (speech-to-text aliases): \"see-so\", \"see so\", \"security review\", \"security check\", \"vulnerability scan\", \"run security\".",
+      "updatedAt": "2026-09-07T14:29:48.818Z"
+    },
+    "ba6849f1ea80f38da3a8f75c92371447786bfe6bf3aa65ecf9d892cfa62186e7": {
+      "category": "界面设计",
+      "summaryZh": "深入理解产品与用户需求，提供界面设计咨询",
+      "enrichmentFailed": false,
+      "hash": "ba6849f1ea80f38da3a8f75c92371447786bfe6bf3aa65ecf9d892cfa62186e7",
+      "name": "design-consultation",
+      "description": "Design consultation: understands your product, researches the landscape, proposes a\ncomplete design system (aesthetic, typography, color, layout, spacing, motion), and\ngenerates font+color preview pages. Creates DESIGN.md as your project's design source\nof truth. For existing sites, use /plan-design-review to infer the system instead.\nUse when asked to \"design system\", \"brand guidelines\", or \"create DESIGN.md\".\nProactively suggest when starting a new project's UI with no existing\ndesign system or DESIGN.md. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.818Z"
+    },
+    "a5c10a0627b4a191120348e8ca331957ca4b2e49417463e68aa272537e169323": {
+      "category": "界面设计",
+      "summaryZh": "生成生产级高质量 HTML 页面与 UI 呈现",
+      "enrichmentFailed": false,
+      "hash": "a5c10a0627b4a191120348e8ca331957ca4b2e49417463e68aa272537e169323",
+      "name": "design-html",
+      "description": "Design finalization: generates production-quality Pretext-native HTML/CSS.\nWorks with approved mockups from /design-shotgun, CEO plans from /plan-ceo-review,\ndesign review context from /plan-design-review, or from scratch with a user\ndescription. Text actually reflows, heights are computed, layouts are dynamic.\n30KB overhead, zero deps. Smart API routing: picks the right Pretext patterns\nfor each design type. Use when: \"finalize this design\", \"turn this into HTML\",\n\"build me a page\", \"implement this design\", or after any planning skill.\nProactively suggest when user has approved a design or has a plan ready. (gstack)\nVoice triggers (speech-to-text aliases): \"build the design\", \"code the mockup\", \"make it real\".",
+      "updatedAt": "2026-09-07T14:29:48.819Z"
+    },
+    "f16f45f42eabb16ab8ee0062cfa66d6299610d0c0f1a02e926a3382cf7cdb810": {
+      "category": "界面设计",
+      "summaryZh": "从设计师视角审查界面视觉、间距与排版一致性",
+      "enrichmentFailed": false,
+      "hash": "f16f45f42eabb16ab8ee0062cfa66d6299610d0c0f1a02e926a3382cf7cdb810",
+      "name": "design-review",
+      "description": "Designer's eye QA: finds visual inconsistency, spacing issues, hierarchy problems,\nAI slop patterns, and slow interactions — then fixes them. Iteratively fixes issues\nin source code, committing each fix atomically and re-verifying with before/after\nscreenshots. For plan-mode design review (before implementation), use /plan-design-review.\nUse when asked to \"audit the design\", \"visual QA\", \"check if it looks good\", or \"design polish\".\nProactively suggest when the user mentions visual inconsistencies or\nwants to polish the look of a live site. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.820Z"
+    },
+    "e222ec36e6cc2d1f5661abe43e8a16cb2c07b3b963bac6c30118b102211ed8d1": {
+      "category": "界面设计",
+      "summaryZh": "批量生成多种 AI 设计变体并开启对比面板",
+      "enrichmentFailed": false,
+      "hash": "e222ec36e6cc2d1f5661abe43e8a16cb2c07b3b963bac6c30118b102211ed8d1",
+      "name": "design-shotgun",
+      "description": "Design shotgun: generate multiple AI design variants, open a comparison board,\ncollect structured feedback, and iterate. Standalone design exploration you can\nrun anytime. Use when: \"explore designs\", \"show me options\", \"design variants\",\n\"visual brainstorm\", or \"I don't like how this looks\".\nProactively suggest when the user describes a UI feature but hasn't seen\nwhat it could look like. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.821Z"
+    },
+    "1675b32beccba02ee245a5ebe12cfbc1630e5adf238d52d78dee6179ff0c7c8b": {
+      "category": "质量保障",
+      "summaryZh": "使用浏览器实测开发者体验，审查易用性与文档",
+      "enrichmentFailed": false,
+      "hash": "1675b32beccba02ee245a5ebe12cfbc1630e5adf238d52d78dee6179ff0c7c8b",
+      "name": "devex-review",
+      "description": "Live developer experience audit. Uses the browse tool to actually TEST the\ndeveloper experience: navigates docs, tries the getting started flow, times\nTTHW, screenshots error messages, evaluates CLI help text. Produces a DX\nscorecard with evidence. Compares against /plan-devex-review scores if they\nexist (the boomerang: plan said 3 minutes, reality says 8). Use when asked to\n\"test the DX\", \"DX audit\", \"developer experience test\", or \"try the\nonboarding\". Proactively suggest after shipping a developer-facing feature. (gstack)\nVoice triggers (speech-to-text aliases): \"dx audit\", \"test the developer experience\", \"try the onboarding\", \"developer experience test\".",
+      "updatedAt": "2026-09-07T14:29:48.822Z"
+    },
+    "080c2743b102811533e3fee1862eaa01c8a07205d434c03ff458a4eae4cb1b73": {
+      "category": "文档写作",
+      "summaryZh": "为新功能、模块或整个工程从头生成完整文档",
+      "enrichmentFailed": false,
+      "hash": "080c2743b102811533e3fee1862eaa01c8a07205d434c03ff458a4eae4cb1b73",
+      "name": "document-generate",
+      "description": "Generate missing documentation from scratch for a feature, module, or entire project.\nUses the Diataxis framework (tutorial / how-to / reference / explanation) to produce\ncomplete, structured documentation. Can be invoked standalone or called by\n/document-release when it finds coverage gaps. Use when asked to \"write docs\",\n\"generate documentation\", \"document this feature\", \"create a tutorial\", or\n\"explain this module\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.822Z"
+    },
+    "035c221e3749da03a7252149551df0e26a527f87ca89bf074cfb12e7c852c608": {
+      "category": "文档写作",
+      "summaryZh": "发布上线后根据代码变更对照更新项目文档",
+      "enrichmentFailed": false,
+      "hash": "035c221e3749da03a7252149551df0e26a527f87ca89bf074cfb12e7c852c608",
+      "name": "document-release",
+      "description": "Post-ship documentation update. Reads all project docs, cross-references the\ndiff, builds a Diataxis coverage map (reference/how-to/tutorial/explanation),\nupdates README/ARCHITECTURE/CONTRIBUTING/CLAUDE.md to match what shipped,\ndetects architecture diagram drift, polishes CHANGELOG voice with a sell-test\nrubric, cleans up TODOS, and optionally bumps VERSION. Surfaces documentation\ndebt in the PR body. Use when asked to \"update the docs\", \"sync documentation\",\nor \"post-ship docs\". Proactively suggest after a PR is merged or code is shipped. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.822Z"
+    },
+    "32854925bc497d919fc3b793ca690fd5d9c862f7fefd832c1e7715023d595f64": {
+      "category": "安全管控",
+      "summaryZh": "锁定文件改动范围，禁止修改指定目录以外的文件",
+      "enrichmentFailed": false,
+      "hash": "32854925bc497d919fc3b793ca690fd5d9c862f7fefd832c1e7715023d595f64",
+      "name": "freeze",
+      "description": "Restrict file edits to a specific directory for the session. Blocks Edit and\nWrite outside the allowed path. Use when debugging to prevent accidentally\n\"fixing\" unrelated code, or when you want to scope changes to one module.\nUse when asked to \"freeze\", \"restrict edits\", \"only edit this folder\",\nor \"lock down edits\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.823Z"
+    },
+    "723851612f72f9b3ea3e0286297b3103387ff52da48d463f869716f37939b10f": {
+      "category": "安全管控",
+      "summaryZh": "全方位安全防护：拦截危险命令并限定改动目录",
+      "enrichmentFailed": false,
+      "hash": "723851612f72f9b3ea3e0286297b3103387ff52da48d463f869716f37939b10f",
+      "name": "guard",
+      "description": "Full safety mode: destructive command warnings + directory-scoped edits.\nCombines /careful (warns before rm -rf, DROP TABLE, force-push, etc.) with\n/freeze (blocks edits outside a specified directory). Use for maximum safety\nwhen touching prod or debugging live systems. Use when asked to \"guard mode\",\n\"full safety\", \"lock it down\", or \"maximum safety\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.823Z"
+    },
+    "907b071c60cd9311b7af85fc843c31ff76982344d67384139c75bfb07e9e3944": {
+      "category": "质量保障",
+      "summaryZh": "聚合运行类型检查、代码规范、测试与质量体检",
+      "enrichmentFailed": false,
+      "hash": "907b071c60cd9311b7af85fc843c31ff76982344d67384139c75bfb07e9e3944",
+      "name": "health",
+      "description": "Code quality dashboard. Wraps existing project tools (type checker, linter,\ntest runner, dead code detector, shell linter), computes a weighted composite\n0-10 score, and tracks trends over time. Use when: \"health check\",\n\"code quality\", \"how healthy is the codebase\", \"run all checks\",\n\"quality score\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.823Z"
+    },
+    "9201175e031e445c1e04c6c4e2b90c282739fcb48c49d2bcf98315678cd35f3f": {
+      "category": "质量保障",
+      "summaryZh": "系统化排查根本原因：调查、分析、假设与验证",
+      "enrichmentFailed": false,
+      "hash": "9201175e031e445c1e04c6c4e2b90c282739fcb48c49d2bcf98315678cd35f3f",
+      "name": "investigate",
+      "description": "Systematic debugging with root cause investigation. Four phases: investigate,\nanalyze, hypothesize, implement. Iron Law: no fixes without root cause.\nUse when asked to \"debug this\", \"fix this bug\", \"why is this broken\",\n\"investigate this error\", or \"root cause analysis\".\nProactively invoke this skill (do NOT debug directly) when the user reports\nerrors, 500 errors, stack traces, unexpected behavior, \"it was working\nyesterday\", or is troubleshooting why something stopped working. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.823Z"
+    },
+    "87965208152a3bb2ecdebcda040ae828cb21b4c8c60533945b410e8e76c988c8": {
+      "category": "发布部署",
+      "summaryZh": "合并 PR、等待 CI、部署上线并验证线上健康度",
+      "enrichmentFailed": false,
+      "hash": "87965208152a3bb2ecdebcda040ae828cb21b4c8c60533945b410e8e76c988c8",
+      "name": "land-and-deploy",
+      "description": "Land and deploy workflow. Merges the PR, waits for CI and deploy,\nverifies production health via canary checks. Takes over after /ship\ncreates the PR. Use when: \"merge\", \"land\", \"deploy\", \"merge and verify\",\n\"land it\", \"ship it to production\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.824Z"
+    },
+    "d447cc6c315437dca70f0a8f9f54cf86d3fc6c65766ab2f7ef22589624043b1c": {
+      "category": "发布部署",
+      "summaryZh": "查看版本发布队列看板与各版本占用状态",
+      "enrichmentFailed": false,
+      "hash": "d447cc6c315437dca70f0a8f9f54cf86d3fc6c65766ab2f7ef22589624043b1c",
+      "name": "landing-report",
+      "description": "Read-only queue dashboard for workspace-aware ship. Shows which VERSION slots\nare currently claimed by open PRs, which sibling Conductor workspaces have\nWIP work likely to ship soon, and what slot /ship would pick next. No\nmutations — just a snapshot. Use when asked to \"landing report\", \"what's in\nthe queue\", \"show me open PRs\", or \"which version do I claim next\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.824Z"
+    },
+    "b01d0890ac33f58a36a57ebf97f0bbebd55a8bd3f7b5e8bd8444163ac60f7d27": {
+      "category": "文档写作",
+      "summaryZh": "检索、整理与导出跨会话积累的项目认知与经验",
+      "enrichmentFailed": false,
+      "hash": "b01d0890ac33f58a36a57ebf97f0bbebd55a8bd3f7b5e8bd8444163ac60f7d27",
+      "name": "learn",
+      "description": "Manage project learnings. Review, search, prune, and export what gstack\nhas learned across sessions. Use when asked to \"what have we learned\",\n\"show learnings\", \"prune stale learnings\", or \"export learnings\".\nProactively suggest when the user asks about past patterns or wonders\n\"didn't we fix this before?\"",
+      "updatedAt": "2026-09-07T14:29:48.825Z"
+    },
+    "fea2d6b8fcb8dcdda5f529f316ec97de283a46f733fd18436d2fcfde78422e58": {
+      "category": "文档写作",
+      "summaryZh": "将 Markdown 文件转换为出版级高质量 PDF 文档",
+      "enrichmentFailed": false,
+      "hash": "fea2d6b8fcb8dcdda5f529f316ec97de283a46f733fd18436d2fcfde78422e58",
+      "name": "make-pdf",
+      "description": "Turn any markdown file into a publication-quality PDF. Proper 1in margins,\nintelligent page breaks, page numbers, cover pages, running headers, curly\nquotes and em dashes, clickable TOC, diagonal DRAFT watermark. Not a draft\nartifact — a finished artifact. Use when asked to \"make a PDF\", \"export to\nPDF\", \"turn this markdown into a PDF\", or \"generate a document\". (gstack)\nVoice triggers (speech-to-text aliases): \"make this a pdf\", \"make it a pdf\", \"export to pdf\", \"turn this into a pdf\", \"turn this markdown into a pdf\", \"generate a pdf\", \"make a pdf from\", \"pdf this markdown\".",
+      "updatedAt": "2026-09-07T14:29:48.825Z"
+    },
+    "e80ecadd6c6dc5403725d4234936199b58ae8d1865ca319a56e849d43fda3c71": {
+      "category": "规划决策",
+      "summaryZh": "以创业导师模式对产品需求真实性与定位深度复盘",
+      "enrichmentFailed": false,
+      "hash": "e80ecadd6c6dc5403725d4234936199b58ae8d1865ca319a56e849d43fda3c71",
+      "name": "office-hours",
+      "description": "YC Office Hours — two modes. Startup mode: six forcing questions that expose\ndemand reality, status quo, desperate specificity, narrowest wedge, observation,\nand future-fit. Builder mode: design thinking brainstorming for side projects,\nhackathons, learning, and open source. Saves a design doc.\nUse when asked to \"brainstorm this\", \"I have an idea\", \"help me think through\nthis\", \"office hours\", or \"is this worth building\".\nProactively invoke this skill (do NOT answer directly) when the user describes\na new product idea, asks whether something is worth building, wants to think\nthrough design decisions for something that doesn't exist yet, or is exploring\na concept before any code is written.\nUse before /plan-ceo-review or /plan-eng-review. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.826Z"
+    },
+    "63dc6931fb08d2eee304e878edaa48c8dfe0dd5ed9946efea7253c5e8731e457": {
+      "category": "工具环境",
+      "summaryZh": "启动带界面的 Chromium 浏览器进行 AI 协同操控",
+      "enrichmentFailed": false,
+      "hash": "63dc6931fb08d2eee304e878edaa48c8dfe0dd5ed9946efea7253c5e8731e457",
+      "name": "open-gstack-browser",
+      "description": "Launch GStack Browser — AI-controlled Chromium with the sidebar extension baked in.\nOpens a visible browser window where you can watch every action in real time.\nThe sidebar shows a live activity feed and chat. Anti-bot stealth built in.\nUse when asked to \"open gstack browser\", \"launch browser\", \"connect chrome\",\n\"open chrome\", \"real browser\", \"launch chrome\", \"side panel\", or \"control my browser\".\nVoice triggers (speech-to-text aliases): \"show me the browser\".",
+      "updatedAt": "2026-09-07T14:29:48.826Z"
+    },
+    "5be34b7bfa9378c84fc7aa1fba8a25617d0270f1f5d4cf63b900849670b4cfc2": {
+      "category": "工具环境",
+      "summaryZh": "生成配对密钥，将远程 AI Agent 与本地浏览器连接",
+      "enrichmentFailed": false,
+      "hash": "5be34b7bfa9378c84fc7aa1fba8a25617d0270f1f5d4cf63b900849670b4cfc2",
+      "name": "pair-agent",
+      "description": "Pair a remote AI agent with your browser. One command generates a setup key and\nprints instructions the other agent can follow to connect. Works with OpenClaw,\nHermes, Codex, Cursor, or any agent that can make HTTP requests. The remote agent\ngets its own tab with scoped access (read+write by default, admin on request).\nUse when asked to \"pair agent\", \"connect agent\", \"share browser\", \"remote browser\",\n\"let another agent use my browser\", or \"give browser access\". (gstack)\nVoice triggers (speech-to-text aliases): \"pair agent\", \"connect agent\", \"share my browser\", \"remote browser access\".",
+      "updatedAt": "2026-09-07T14:29:48.827Z"
+    },
+    "0e3ba423ef2d7a52e64bce3ba310bda8d8a90115a2ddcc99fe55f797addf9156": {
+      "category": "规划决策",
+      "summaryZh": "以 CEO 视角重新审视业务目标与核心产品价值",
+      "enrichmentFailed": false,
+      "hash": "0e3ba423ef2d7a52e64bce3ba310bda8d8a90115a2ddcc99fe55f797addf9156",
+      "name": "plan-ceo-review",
+      "description": "CEO/founder-mode plan review. Rethink the problem, find the 10-star product,\nchallenge premises, expand scope when it creates a better product. Four modes:\nSCOPE EXPANSION (dream big), SELECTIVE EXPANSION (hold scope + cherry-pick\nexpansions), HOLD SCOPE (maximum rigor), SCOPE REDUCTION (strip to essentials).\nUse when asked to \"think bigger\", \"expand scope\", \"strategy review\", \"rethink this\",\nor \"is this ambitious enough\".\nProactively suggest when the user is questioning scope or ambition of a plan,\nor when the plan feels like it could be thinking bigger. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.827Z"
+    },
+    "cc86d03b8dddc7e610d79d346851e53c17117c2004df220c4fb74e938274c6f6": {
+      "category": "规划决策",
+      "summaryZh": "以设计视角对产品交互与视觉规划进行维度评审",
+      "enrichmentFailed": false,
+      "hash": "cc86d03b8dddc7e610d79d346851e53c17117c2004df220c4fb74e938274c6f6",
+      "name": "plan-design-review",
+      "description": "Designer's eye plan review — interactive, like CEO and Eng review.\nRates each design dimension 0-10, explains what would make it a 10,\nthen fixes the plan to get there. Works in plan mode. For live site\nvisual audits, use /design-review. Use when asked to \"review the design plan\"\nor \"design critique\".\nProactively suggest when the user has a plan with UI/UX components that\nshould be reviewed before implementation. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.828Z"
+    },
+    "b36d20f14c4bcac9471d581b4959e1c56547ab80ef8e75369467738e4385ec74": {
+      "category": "规划决策",
+      "summaryZh": "以开发者体验视角对接口易用性与上手路径评审",
+      "enrichmentFailed": false,
+      "hash": "b36d20f14c4bcac9471d581b4959e1c56547ab80ef8e75369467738e4385ec74",
+      "name": "plan-devex-review",
+      "description": "Interactive developer experience plan review. Explores developer personas,\nbenchmarks against competitors, designs magical moments, and traces friction\npoints before scoring. Three modes: DX EXPANSION (competitive advantage),\nDX POLISH (bulletproof every touchpoint), DX TRIAGE (critical gaps only).\nUse when asked to \"DX review\", \"developer experience audit\", \"devex review\",\nor \"API design review\".\nProactively suggest when the user has a plan for developer-facing products\n(APIs, CLIs, SDKs, libraries, platforms, docs). (gstack)\nVoice triggers (speech-to-text aliases): \"dx review\", \"developer experience review\", \"devex review\", \"devex audit\", \"API design review\", \"onboarding review\".",
+      "updatedAt": "2026-09-07T14:29:48.828Z"
+    },
+    "c3b3dc525141edfebb05b57c1808ace344fa50914a1d16f9838efbcadadd89fd": {
+      "category": "规划决策",
+      "summaryZh": "以工程主管视角敲定系统架构、数据流与边界方案",
+      "enrichmentFailed": false,
+      "hash": "c3b3dc525141edfebb05b57c1808ace344fa50914a1d16f9838efbcadadd89fd",
+      "name": "plan-eng-review",
+      "description": "Eng manager-mode plan review. Lock in the execution plan — architecture,\ndata flow, diagrams, edge cases, test coverage, performance. Walks through\nissues interactively with opinionated recommendations. Use when asked to\n\"review the architecture\", \"engineering review\", or \"lock in the plan\".\nProactively suggest when the user has a plan or design doc and is about to\nstart coding — to catch architecture issues before implementation. (gstack)\nVoice triggers (speech-to-text aliases): \"tech review\", \"technical review\", \"plan engineering review\".",
+      "updatedAt": "2026-09-07T14:29:48.829Z"
+    },
+    "4fa53214bd63cbeab365c28edb9d16c2163f50a32ce9493381969f2a3c32e032": {
+      "category": "规划决策",
+      "summaryZh": "调优规划阶段的提问灵敏度与思考倾向",
+      "enrichmentFailed": false,
+      "hash": "4fa53214bd63cbeab365c28edb9d16c2163f50a32ce9493381969f2a3c32e032",
+      "name": "plan-tune",
+      "description": "Self-tuning question sensitivity + developer psychographic for gstack (v1: observational).\nReview which AskUserQuestion prompts fire across gstack skills, set per-question preferences\n(never-ask / always-ask / ask-only-for-one-way), inspect the dual-track\nprofile (what you declared vs what your behavior suggests), and enable/disable\nquestion tuning. Conversational interface — no CLI syntax required.\n\nUse when asked to \"tune questions\", \"stop asking me that\", \"too many questions\",\n\"show my profile\", \"what questions have I been asked\", \"show my vibe\",\n\"developer profile\", or \"turn off question tuning\". (gstack)\n\nProactively suggest when the user says the same gstack question has come up before,\nor when they explicitly override a recommendation for the Nth time.",
+      "updatedAt": "2026-09-07T14:29:48.829Z"
+    },
+    "3daf838bcbfbc246057a4df1edd4680574ed1858c1e3ac1d8cfc1e11a36a179a": {
+      "category": "质量保障",
+      "summaryZh": "以对话方式记录缺陷并自动在 Issue 跟踪器建单",
+      "enrichmentFailed": false,
+      "hash": "3daf838bcbfbc246057a4df1edd4680574ed1858c1e3ac1d8cfc1e11a36a179a",
+      "name": "qa",
+      "description": "Systematically QA test a web application and fix bugs found. Runs QA testing,\nthen iteratively fixes bugs in source code, committing each fix atomically and\nre-verifying. Use when asked to \"qa\", \"QA\", \"test this site\", \"find bugs\",\n\"test and fix\", or \"fix what's broken\".\nProactively suggest when the user says a feature is ready for testing\nor asks \"does this work?\". Three tiers: Quick (critical/high only),\nStandard (+ medium), Exhaustive (+ cosmetic). Produces before/after health scores,\nfix evidence, and a ship-readiness summary. For report-only mode, use /qa-only. (gstack)\nVoice triggers (speech-to-text aliases): \"quality check\", \"test the app\", \"run QA\".",
+      "updatedAt": "2026-09-07T14:29:48.830Z"
+    },
+    "aaec01cb9254dfe93802c10d308f0fa6b987e04de9f22839a4339e98bd58586e": {
+      "category": "质量保障",
+      "summaryZh": "系统化测试 Web 应用并产出结构化测试报告",
+      "enrichmentFailed": false,
+      "hash": "aaec01cb9254dfe93802c10d308f0fa6b987e04de9f22839a4339e98bd58586e",
+      "name": "qa-only",
+      "description": "Report-only QA testing. Systematically tests a web application and produces a\nstructured report with health score, screenshots, and repro steps — but never\nfixes anything. Use when asked to \"just report bugs\", \"qa report only\", or\n\"test but don't fix\". For the full test-fix-verify loop, use /qa instead.\nProactively suggest when the user wants a bug report without any code changes. (gstack)\nVoice triggers (speech-to-text aliases): \"bug report\", \"just check for bugs\".",
+      "updatedAt": "2026-09-07T14:29:48.830Z"
+    },
+    "33fb20df6b36e70ba5c80eafc9a2fbf42fe0d86ea11ac7b6533b3874d0e5611b": {
+      "category": "质量保障",
+      "summaryZh": "分析提交历史与代码指标，开展每周研发复盘",
+      "enrichmentFailed": false,
+      "hash": "33fb20df6b36e70ba5c80eafc9a2fbf42fe0d86ea11ac7b6533b3874d0e5611b",
+      "name": "retro",
+      "description": "Weekly engineering retrospective. Analyzes commit history, work patterns,\nand code quality metrics with persistent history and trend tracking.\nTeam-aware: breaks down per-person contributions with praise and growth areas.\nUse when asked to \"weekly retro\", \"what did we ship\", or \"engineering retrospective\".\nProactively suggest at the end of a work week or sprint. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.831Z"
+    },
+    "c57f778beff03c6e929e3a2f44e122abe4a315c7e0237ff9bb4a0d3e80f25f7e": {
+      "category": "质量保障",
+      "summaryZh": "对比指定基准节点，对代码改动开展全面审查",
+      "enrichmentFailed": false,
+      "hash": "c57f778beff03c6e929e3a2f44e122abe4a315c7e0237ff9bb4a0d3e80f25f7e",
+      "name": "review",
+      "description": "Pre-landing PR review. Analyzes diff against the base branch for SQL safety, LLM trust\nboundary violations, conditional side effects, and other structural issues. Use when\nasked to \"review this PR\", \"code review\", \"pre-landing review\", or \"check my diff\".\nProactively suggest when the user is about to merge or land code changes. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.831Z"
+    },
+    "96072c48ae17a6f9072e421070813672cf5130d970a44fcea542913b735e6484": {
+      "category": "工具环境",
+      "summaryZh": "通过浏览器提取网页内容并生成结构化抓取结果",
+      "enrichmentFailed": false,
+      "hash": "96072c48ae17a6f9072e421070813672cf5130d970a44fcea542913b735e6484",
+      "name": "scrape",
+      "description": "Pull data from a web page. First call on a new intent prototypes the flow\nvia $B primitives and returns JSON. Subsequent calls on a matching intent\nroute to a codified browser-skill and return in ~200ms. Read-only — for\nmutating flows (form fills, clicks, submissions), use /automate.\nUse when asked to \"scrape\", \"get data from\", \"pull\", \"extract from\", or\n\"what's on\" a page. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.832Z"
+    },
+    "f8b3fc89d08643ef3c67782f62e894cde0b95f9f6f99ab9c8bb5ab539a6b5ab8": {
+      "category": "工具环境",
+      "summaryZh": "将宿主浏览器 Cookie 导入无头浏览器调试会话",
+      "enrichmentFailed": false,
+      "hash": "f8b3fc89d08643ef3c67782f62e894cde0b95f9f6f99ab9c8bb5ab539a6b5ab8",
+      "name": "setup-browser-cookies",
+      "description": "Import cookies from your real Chromium browser into the headless browse session.\nOpens an interactive picker UI where you select which cookie domains to import.\nUse before QA testing authenticated pages. Use when asked to \"import cookies\",\n\"login to the site\", or \"authenticate the browser\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.832Z"
+    },
+    "089c8ac06c4e0bf47f00e282de9d370e19b6319c0b986386df0560743635e8fb": {
+      "category": "发布部署",
+      "summaryZh": "配置云平台部署参数，准备自动上线流程",
+      "enrichmentFailed": false,
+      "hash": "089c8ac06c4e0bf47f00e282de9d370e19b6319c0b986386df0560743635e8fb",
+      "name": "setup-deploy",
+      "description": "Configure deployment settings for /land-and-deploy. Detects your deploy\nplatform (Fly.io, Render, Vercel, Netlify, Heroku, GitHub Actions, custom),\nproduction URL, health check endpoints, and deploy status commands. Writes\nthe configuration to CLAUDE.md so all future deploys are automatic.\nUse when: \"setup deploy\", \"configure deployment\", \"set up land-and-deploy\",\n\"how do I deploy with gstack\", \"add deploy config\".",
+      "updatedAt": "2026-09-07T14:29:48.832Z"
+    },
+    "c7b5cb4e7d89638726325e22c0cd83d92b90ec31f14a2e5f314de317477fc03e": {
+      "category": "工具环境",
+      "summaryZh": "初始化本地或远程 gbrain 记忆数据库环境",
+      "enrichmentFailed": false,
+      "hash": "c7b5cb4e7d89638726325e22c0cd83d92b90ec31f14a2e5f314de317477fc03e",
+      "name": "setup-gbrain",
+      "description": "Set up gbrain for this coding agent: install the CLI, initialize a\nlocal PGLite or Supabase brain, register MCP, capture per-remote trust\npolicy. One command from zero to \"gbrain is running, and this agent\ncan call it.\" Use when: \"setup gbrain\", \"connect gbrain\", \"start\ngbrain\", \"install gbrain\", \"configure gbrain for this machine\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.833Z"
+    },
+    "5aea95777c61954a6fe76b161125de26975e89a9edf08e52df5383c437220436": {
+      "category": "发布部署",
+      "summaryZh": "执行发版流程：合并基线、测试、改版本号与写日志",
+      "enrichmentFailed": false,
+      "hash": "5aea95777c61954a6fe76b161125de26975e89a9edf08e52df5383c437220436",
+      "name": "ship",
+      "description": "Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION,\nupdate CHANGELOG, commit, push, create PR. Use when asked to \"ship\", \"deploy\",\n\"push to main\", \"create a PR\", \"merge and push\", or \"get it deployed\".\nProactively invoke this skill (do NOT push/PR directly) when the user says code\nis ready, asks about deploying, wants to push code up, or asks to create a PR. (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.834Z"
+    },
+    "b46608d1eb00e19db04e05222dff2150d9b0e570ab33f304613c2e5ce38feec1": {
+      "category": "工具环境",
+      "summaryZh": "将网页抓取流程固化为可长期复用的技能",
+      "enrichmentFailed": false,
+      "hash": "b46608d1eb00e19db04e05222dff2150d9b0e570ab33f304613c2e5ce38feec1",
+      "name": "skillify",
+      "description": "Codify the most recent successful /scrape flow into a permanent\nbrowser-skill on disk. Future /scrape calls with the same intent run\nthe codified script in ~200ms instead of re-driving the page. Walks\nback through the conversation, synthesizes script.ts + script.test.ts\n+ fixture, runs the test in a temp dir, and asks before committing.\nUse when asked to \"skillify\", \"codify\", \"save this scrape\", or\n\"make this permanent\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.834Z"
+    },
+    "7053820b9db689161de7f2dc60eb46cba2aeca586650cb9a5eb6405b64315196": {
+      "category": "工具环境",
+      "summaryZh": "同步最新代码索引至 gbrain 并更新提示词上下文",
+      "enrichmentFailed": false,
+      "hash": "7053820b9db689161de7f2dc60eb46cba2aeca586650cb9a5eb6405b64315196",
+      "name": "sync-gbrain",
+      "description": "Keep gbrain current with this repo's code and refresh agent search\nguidance in CLAUDE.md. Wraps the gstack-gbrain-sync orchestrator with\nstate probing, native code-surface registration, capability checks,\nand a verdict block. Re-runnable, idempotent. Use when: \"sync gbrain\",\n\"refresh gbrain\", \"re-index this repo\", \"gbrain search isn't finding\nthings\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.835Z"
+    },
+    "4ef43436c734046a65fcadf4ecd2fed7782ca4c0a0557d7fd6bb5243b4a91ea5": {
+      "category": "安全管控",
+      "summaryZh": "解除文件修改锁定，恢复对所有目录的编辑权限",
+      "enrichmentFailed": false,
+      "hash": "4ef43436c734046a65fcadf4ecd2fed7782ca4c0a0557d7fd6bb5243b4a91ea5",
+      "name": "unfreeze",
+      "description": "Clear the freeze boundary set by /freeze, allowing edits to all directories\nagain. Use when you want to widen edit scope without ending the session.\nUse when asked to \"unfreeze\", \"unlock edits\", \"remove freeze\", or\n\"allow all edits\". (gstack)",
+      "updatedAt": "2026-09-07T14:29:48.835Z"
+    },
+    "df93bbf830d52e0aa35881989a8098a8b71738cfa2dab762b66f53e27d1bd4b7": {
+      "category": "工具环境",
+      "summaryZh": "检测并升级 gstack 到最新版本",
+      "enrichmentFailed": false,
+      "hash": "df93bbf830d52e0aa35881989a8098a8b71738cfa2dab762b66f53e27d1bd4b7",
+      "name": "gstack-upgrade",
+      "description": "Upgrade gstack to the latest version. Detects global vs vendored install,\nruns the upgrade, and shows what's new. Use when asked to \"upgrade gstack\",\n\"update gstack\", or \"get latest version\".\nVoice triggers (speech-to-text aliases): \"upgrade the tools\", \"update the tools\", \"gee stack upgrade\", \"g stack upgrade\".",
+      "updatedAt": "2026-09-07T14:29:48.836Z"
+    },
+    "a5e4c89059715e5e20226a20de9696566b44ffc8098f0580ab66263e9bbe1fe9": {
+      "category": "界面设计",
+      "summaryZh": "Scrape the Hacker News front page (titles, points, comment counts)",
+      "enrichmentFailed": true,
+      "hash": "a5e4c89059715e5e20226a20de9696566b44ffc8098f0580ab66263e9bbe1fe9",
+      "name": "hackernews-frontpage",
+      "description": "Scrape the Hacker News front page (titles, points, comment counts).",
+      "updatedAt": "2026-09-07T14:29:48.836Z"
+    },
+    "260fae6e0116da7ae01119c336dbfb72b8b26829eff1746fb390debafc2e657d": {
+      "category": "工具环境",
+      "summaryZh": "调用 OpenAI Codex 命令行进行独立评审与代码辅助",
+      "enrichmentFailed": false,
+      "hash": "260fae6e0116da7ae01119c336dbfb72b8b26829eff1746fb390debafc2e657d",
+      "name": "codex",
+      "description": "OpenAI Codex CLI wrapper — three modes. Code review: independent diff review via\ncodex review with pass/fail gate. Challenge: adversarial mode that tries to break\nyour code. Consult: ask codex anything with session continuity for follow-ups.\nThe \"200 IQ autistic developer\" second opinion. Use when asked to \"codex review\",\n\"codex challenge\", \"ask codex\", \"second opinion\", or \"consult codex\". (gstack)\nVoice triggers (speech-to-text aliases): \"code x\", \"code ex\", \"get another opinion\".",
+      "updatedAt": "2026-09-07T14:29:48.837Z"
+    },
+    "3cc5ee59e4f59ab1e33409b9fd9643d48668c7d22a692ac07afd4b733fa81684": {
+      "category": "质量保障",
+      "summaryZh": "Use when asked to review a plan, challenge a proposal, run a CEO review, poke holes in an approach, think bigger about s...",
+      "enrichmentFailed": true,
+      "hash": "3cc5ee59e4f59ab1e33409b9fd9643d48668c7d22a692ac07afd4b733fa81684",
+      "name": "gstack-openclaw-ceo-review",
+      "description": "Use when asked to review a plan, challenge a proposal, run a CEO review, poke holes in an approach, think bigger about scope, or decide whether to expand or reduce the plan.",
+      "updatedAt": "2026-09-07T14:29:48.837Z"
+    },
+    "e8bdcdf1ffe0e72a9db149d6cfcc8220f39ed81ad1d3733ecf7db13fab71230a": {
+      "category": "质量保障",
+      "summaryZh": "Use when asked to debug, fix a bug, investigate an error, or do root cause analysis, and when users report errors, stack...",
+      "enrichmentFailed": true,
+      "hash": "e8bdcdf1ffe0e72a9db149d6cfcc8220f39ed81ad1d3733ecf7db13fab71230a",
+      "name": "gstack-openclaw-investigate",
+      "description": "Use when asked to debug, fix a bug, investigate an error, or do root cause analysis, and when users report errors, stack traces, unexpected behavior, or say something stopped working.",
+      "updatedAt": "2026-09-07T14:29:48.838Z"
+    },
+    "a02b44ffab6588bff066ce334949a80f062466ad7304868f581b4dd003412acb": {
+      "category": "界面设计",
+      "summaryZh": "Use when asked to brainstorm, evaluate whether an idea is worth building, run office hours, or think through a new produ...",
+      "enrichmentFailed": true,
+      "hash": "a02b44ffab6588bff066ce334949a80f062466ad7304868f581b4dd003412acb",
+      "name": "gstack-openclaw-office-hours",
+      "description": "Use when asked to brainstorm, evaluate whether an idea is worth building, run office hours, or think through a new product idea or design direction before any code is written.",
+      "updatedAt": "2026-09-07T14:29:48.838Z"
+    },
+    "eafb531c0f1f1fbd455e48a0f2ecc2f3fa4332c77254bfdd0978d8e5bc6677ea": {
+      "category": "质量保障",
+      "summaryZh": "Weekly engineering retrospective",
+      "enrichmentFailed": true,
+      "hash": "eafb531c0f1f1fbd455e48a0f2ecc2f3fa4332c77254bfdd0978d8e5bc6677ea",
+      "name": "gstack-openclaw-retro",
+      "description": "Weekly engineering retrospective. Analyzes commit history, work patterns, and code quality metrics with persistent history and trend tracking. Team-aware with per-person contributions, praise, and growth areas. Use when asked for weekly retro, what shipped this week, or engineering retrospective.",
+      "updatedAt": "2026-09-07T14:29:48.838Z"
+    },
+    "6350fdc6a52c0d296413621fb002a080d75cbf153322cfe5286788d7899d8ed2": {
+      "category": "界面设计",
+      "summaryZh": "Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one",
+      "enrichmentFailed": true,
+      "hash": "6350fdc6a52c0d296413621fb002a080d75cbf153322cfe5286788d7899d8ed2",
+      "name": "frontend-design",
+      "description": "Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typography, and making choices that don't read as templated defaults.",
+      "updatedAt": "2026-09-07T14:29:48.839Z"
+    },
+    "b16191887f58b1af514028f53ab2eada21a060c8765aa6dff325b26f13bf3593": {
+      "category": "界面设计",
+      "summaryZh": "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying ...",
+      "enrichmentFailed": true,
+      "hash": "b16191887f58b1af514028f53ab2eada21a060c8765aa6dff325b26f13bf3593",
+      "name": "brainstorming",
+      "description": "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.",
+      "updatedAt": "2026-09-07T14:29:48.839Z"
+    },
+    "7a0e917c5d12993500801953a0d9adc2b74e27eba2f544d8a2e5cb5dcdfd8a3e": {
+      "category": "工具环境",
+      "summaryZh": "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies",
+      "enrichmentFailed": true,
+      "hash": "7a0e917c5d12993500801953a0d9adc2b74e27eba2f544d8a2e5cb5dcdfd8a3e",
+      "name": "dispatching-parallel-agents",
+      "description": "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies",
+      "updatedAt": "2026-09-07T14:29:48.839Z"
+    },
+    "abc1fbbd75589f31923ff7a453cef60b9ecbdea039591c10508b27a984e56511": {
+      "category": "质量保障",
+      "summaryZh": "Use when you have a written implementation plan to execute in a separate session with review checkpoints",
+      "enrichmentFailed": true,
+      "hash": "abc1fbbd75589f31923ff7a453cef60b9ecbdea039591c10508b27a984e56511",
+      "name": "executing-plans",
+      "description": "Use when you have a written implementation plan to execute in a separate session with review checkpoints",
+      "updatedAt": "2026-09-07T14:29:48.840Z"
+    },
+    "3da5106d2104467433b4cc7e3089616460cd298d03d24dedf89a89b70d56c0bc": {
+      "category": "工具环境",
+      "summaryZh": "Use when implementation is complete, all tests pass, and you need to decide how to integrate the work",
+      "enrichmentFailed": true,
+      "hash": "3da5106d2104467433b4cc7e3089616460cd298d03d24dedf89a89b70d56c0bc",
+      "name": "finishing-a-development-branch",
+      "description": "Use when implementation is complete, all tests pass, and you need to decide how to integrate the work",
+      "updatedAt": "2026-09-07T14:29:48.840Z"
+    },
+    "9c6f0d862aa2ac7cc2cdb66a4db92c258bbed6b59325cda335e87d428c1d3645": {
+      "category": "质量保障",
+      "summaryZh": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or techni...",
+      "enrichmentFailed": true,
+      "hash": "9c6f0d862aa2ac7cc2cdb66a4db92c258bbed6b59325cda335e87d428c1d3645",
+      "name": "receiving-code-review",
+      "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation",
+      "updatedAt": "2026-09-07T14:29:48.840Z"
+    },
+    "dc558b1c37ac175327694d9d9c9970ddb477164ac02174484e87bb72b33faf29": {
+      "category": "质量保障",
+      "summaryZh": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements",
+      "enrichmentFailed": true,
+      "hash": "dc558b1c37ac175327694d9d9c9970ddb477164ac02174484e87bb72b33faf29",
+      "name": "requesting-code-review",
+      "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements",
+      "updatedAt": "2026-09-07T14:29:48.841Z"
+    },
+    "c1a03f305e190f5bbea35500092351e29da6c7f89e4041c8f0674938bd44cdc2": {
+      "category": "工具环境",
+      "summaryZh": "Use when executing implementation plans with independent tasks in the current session",
+      "enrichmentFailed": true,
+      "hash": "c1a03f305e190f5bbea35500092351e29da6c7f89e4041c8f0674938bd44cdc2",
+      "name": "subagent-driven-development",
+      "description": "Use when executing implementation plans with independent tasks in the current session",
+      "updatedAt": "2026-09-07T14:29:48.841Z"
+    },
+    "c511952aa62cf1b9c195cbd34f9ed955b4a6618cd9a624c560300e47e6adc67e": {
+      "category": "质量保障",
+      "summaryZh": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+      "enrichmentFailed": true,
+      "hash": "c511952aa62cf1b9c195cbd34f9ed955b4a6618cd9a624c560300e47e6adc67e",
+      "name": "systematic-debugging",
+      "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+      "updatedAt": "2026-09-07T14:29:48.842Z"
+    },
+    "fbbf929c9e6c15a8cb47f4b7a20534fcb50a90e205182b28e0167cbf458e4334": {
+      "category": "文档写作",
+      "summaryZh": "Use when implementing any feature or bugfix, before writing implementation code",
+      "enrichmentFailed": true,
+      "hash": "fbbf929c9e6c15a8cb47f4b7a20534fcb50a90e205182b28e0167cbf458e4334",
+      "name": "test-driven-development",
+      "description": "Use when implementing any feature or bugfix, before writing implementation code",
+      "updatedAt": "2026-09-07T14:29:48.842Z"
+    },
+    "c3ce55d3173c652ec994e497c049f241ff76668bffdff7a8d53f39bec0675f27": {
+      "category": "开发实现",
+      "summaryZh": "Use when starting feature work that needs isolation from current workspace or before executing implementation plans - en...",
+      "enrichmentFailed": true,
+      "hash": "c3ce55d3173c652ec994e497c049f241ff76668bffdff7a8d53f39bec0675f27",
+      "name": "using-git-worktrees",
+      "description": "Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback",
+      "updatedAt": "2026-09-07T14:29:48.842Z"
+    },
+    "fd831fa8133739462211d2e15870ba97839957495b8759a94682240878c97c3d": {
+      "category": "工具环境",
+      "summaryZh": "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY respo...",
+      "enrichmentFailed": true,
+      "hash": "fd831fa8133739462211d2e15870ba97839957495b8759a94682240878c97c3d",
+      "name": "using-superpowers",
+      "description": "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions",
+      "updatedAt": "2026-09-07T14:29:48.842Z"
+    },
+    "a167994b6fdaee8eb51bf6d950aaf25e4329e322a89a557102b6e66cead7b561": {
+      "category": "工具环境",
+      "summaryZh": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verifi...",
+      "enrichmentFailed": true,
+      "hash": "a167994b6fdaee8eb51bf6d950aaf25e4329e322a89a557102b6e66cead7b561",
+      "name": "verification-before-completion",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+      "updatedAt": "2026-09-07T14:29:48.843Z"
+    },
+    "10f995a2dcedbb6bbfafaadebebfe5dc895f76d4f5761f51f0b96f6567fc5fdd": {
+      "category": "文档写作",
+      "summaryZh": "Use when you have a spec or requirements for a multi-step task, before touching code",
+      "enrichmentFailed": true,
+      "hash": "10f995a2dcedbb6bbfafaadebebfe5dc895f76d4f5761f51f0b96f6567fc5fdd",
+      "name": "writing-plans",
+      "description": "Use when you have a spec or requirements for a multi-step task, before touching code",
+      "updatedAt": "2026-09-07T14:29:48.843Z"
+    },
+    "ea86088c889ae6267fbe62f5a28186e1337872f0ee3abe13490716006c60b03e": {
+      "category": "文档写作",
+      "summaryZh": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
+      "enrichmentFailed": true,
+      "hash": "ea86088c889ae6267fbe62f5a28186e1337872f0ee3abe13490716006c60b03e",
+      "name": "writing-skills",
+      "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
+      "updatedAt": "2026-09-07T14:29:48.843Z"
+    },
+    "cbe545811eec8b61221ec535be36195db702378f25a666dc12a2d4b285b5af15": {
+      "category": "开发实现",
+      "summaryZh": "Internal helper contract for calling the codex-companion runtime from Claude Code",
+      "enrichmentFailed": true,
+      "hash": "cbe545811eec8b61221ec535be36195db702378f25a666dc12a2d4b285b5af15",
+      "name": "codex-cli-runtime",
+      "description": "Internal helper contract for calling the codex-companion runtime from Claude Code",
+      "updatedAt": "2026-09-07T14:29:48.844Z"
+    },
+    "863845fd2aa769231854b8c8931243f402083004957e297f82585cadf528d89b": {
+      "category": "工具环境",
+      "summaryZh": "Internal guidance for presenting Codex helper output back to the user",
+      "enrichmentFailed": true,
+      "hash": "863845fd2aa769231854b8c8931243f402083004957e297f82585cadf528d89b",
+      "name": "codex-result-handling",
+      "description": "Internal guidance for presenting Codex helper output back to the user",
+      "updatedAt": "2026-09-07T14:29:48.844Z"
+    },
+    "f8d690a3f900591b243a616061627595ae4c98640cbaf39068719c64f8218966": {
+      "category": "质量保障",
+      "summaryZh": "Internal guidance for composing Codex and GPT-5",
+      "enrichmentFailed": true,
+      "hash": "f8d690a3f900591b243a616061627595ae4c98640cbaf39068719c64f8218966",
+      "name": "gpt-5-4-prompting",
+      "description": "Internal guidance for composing Codex and GPT-5.4 prompts for coding, review, diagnosis, and research tasks inside the Codex Claude Code plugin",
+      "updatedAt": "2026-09-07T14:29:48.846Z"
+    },
+    "1ac31bf2b509c82d4b8b020f1b952b901a825fdd657762fe998af0e44ff3b8e4": {
+      "category": "工具环境",
+      "summaryZh": "Manage Discord channel access — approve pairings, edit allowlists, set DM/group policy",
+      "enrichmentFailed": true,
+      "hash": "1ac31bf2b509c82d4b8b020f1b952b901a825fdd657762fe998af0e44ff3b8e4",
+      "name": "access",
+      "description": "Manage Discord channel access — approve pairings, edit allowlists, set DM/group policy. Use when the user asks to pair, approve someone, check who's allowed, or change policy for the Discord channel.",
+      "updatedAt": "2026-09-07T14:29:48.846Z"
+    },
+    "e0971e5ed31845302c58cec31e9881faa06cd0cd8cc32471700b10732e60d154": {
+      "category": "质量保障",
+      "summaryZh": "Set up the Discord channel — save the bot token and review access policy",
+      "enrichmentFailed": true,
+      "hash": "e0971e5ed31845302c58cec31e9881faa06cd0cd8cc32471700b10732e60d154",
+      "name": "configure",
+      "description": "Set up the Discord channel — save the bot token and review access policy. Use when the user pastes a Discord bot token, asks to configure Discord, asks \"how do I set this up\" or \"who can reach me,\" or wants to check channel status.",
+      "updatedAt": "2026-09-07T14:29:48.846Z"
+    },
+    "4915df09a53e49d87b39eb13e151f63708377e792a14335bffe97bc0245c713e": {
+      "category": "开发实现",
+      "summaryZh": "Analyze a codebase and recommend Claude Code automations (hooks, subagents, skills, plugins, MCP servers)",
+      "enrichmentFailed": true,
+      "hash": "4915df09a53e49d87b39eb13e151f63708377e792a14335bffe97bc0245c713e",
+      "name": "claude-automation-recommender",
+      "description": "Analyze a codebase and recommend Claude Code automations (hooks, subagents, skills, plugins, MCP servers). Use when user asks for automation recommendations, wants to optimize their Claude Code setup, mentions improving Claude Code workflows, asks how to first set up Claude Code for a project, or wants to know what Claude Code features they should use.",
+      "updatedAt": "2026-09-07T14:29:48.847Z"
+    },
+    "249d7bf49a60032fe498fa0433742d1a6dea967c6fc3fec186270627ec2e5f94": {
+      "category": "安全管控",
+      "summaryZh": "Audit and improve CLAUDE",
+      "enrichmentFailed": true,
+      "hash": "249d7bf49a60032fe498fa0433742d1a6dea967c6fc3fec186270627ec2e5f94",
+      "name": "claude-md-improver",
+      "description": "Audit and improve CLAUDE.md files in repositories. Use when user asks to check, audit, update, improve, or fix CLAUDE.md files. Scans for all CLAUDE.md files, evaluates quality against templates, outputs quality report, then makes targeted updates. Also use when the user mentions \"CLAUDE.md maintenance\" or \"project memory optimization\".",
+      "updatedAt": "2026-09-07T14:29:48.847Z"
+    },
+    "448289206a23d63017aa6e5ca94cc43095aad39ccd9b2cee1211ab6810c939a2": {
+      "category": "安全管控",
+      "summaryZh": "The Claude Security menu — pick a job: scan the codebase (the whole repository or a scoped part of it), scan changes (th...",
+      "enrichmentFailed": true,
+      "hash": "448289206a23d63017aa6e5ca94cc43095aad39ccd9b2cee1211ab6810c939a2",
+      "name": "claude-security",
+      "description": "The Claude Security menu — pick a job: scan the codebase (the whole repository or a scoped part of it), scan changes (this branch's or a pull request's diff, or one commit), or suggest patches (findings turned into targeted patch files, each verified by a panel of agents, that you apply when you choose).",
+      "updatedAt": "2026-09-07T14:29:48.847Z"
+    },
+    "8d5aab36639534f26574ed3804fd0cd666b3c0aa4574f1a04b13ae98b0a34f03": {
+      "category": "工具环境",
+      "summaryZh": "Iterate on the Cardputer-Adv MicroPython app bundle (Claude Buddy, Snake, Hello) after the device is already provisioned...",
+      "enrichmentFailed": true,
+      "hash": "8d5aab36639534f26574ed3804fd0cd666b3c0aa4574f1a04b13ae98b0a34f03",
+      "name": "cardputer-buddy",
+      "description": "Iterate on the Cardputer-Adv MicroPython app bundle (Claude Buddy, Snake, Hello) after the device is already provisioned via m5-onboard. Use when the user wants to add a new app, push a single changed .py without re-flashing, watch device serial logs, or run a one-shot REPL command. Trigger on \"add an app\", \"push to the cardputer\", \"tail the device\", \"run on the device\", or follow-up work after /maker-setup.",
+      "updatedAt": "2026-09-07T14:29:48.847Z"
+    },
+    "2064d34b477f0a682b3872486712225843e5b66a5be36420de38a5bbce9275a9": {
+      "category": "工具环境",
+      "summaryZh": "End-to-end onboarding for a freshly-plugged-in M5Stack ESP32 device (Cardputer, Cardputer-Adv, Core, CoreS3, Stick) — de...",
+      "enrichmentFailed": true,
+      "hash": "2064d34b477f0a682b3872486712225843e5b66a5be36420de38a5bbce9275a9",
+      "name": "m5-onboard",
+      "description": "End-to-end onboarding for a freshly-plugged-in M5Stack ESP32 device (Cardputer, Cardputer-Adv, Core, CoreS3, Stick) — detect on USB, flash UIFlow 2.0 firmware, and install the Claude Buddy MicroPython app bundle. Use whenever the user plugs in or wants to flash/provision/reset an M5Stack or ESP32 board, or says \"m5-onboard go\".",
+      "updatedAt": "2026-09-07T14:29:48.848Z"
+    },
+    "671f01b69ef560a8e48c1ac8ee30a1f43fd1337d5737476a4da94211dcde54a5": {
+      "category": "工具环境",
+      "summaryZh": "example user-invoked skill that demonstrates frontmatter options and the skills/<name>/SKILL",
+      "enrichmentFailed": true,
+      "hash": "671f01b69ef560a8e48c1ac8ee30a1f43fd1337d5737476a4da94211dcde54a5",
+      "name": "example-command",
+      "description": "An example user-invoked skill that demonstrates frontmatter options and the skills/<name>/SKILL.md layout",
+      "updatedAt": "2026-09-07T14:29:48.848Z"
+    },
+    "3925f9f9778c0a2e88ee6af2fbc516cb8b3e435f7d6862d1b63227ff52b03fc7": {
+      "category": "开发实现",
+      "summaryZh": "This skill should be used when the user asks to \"demonstrate skills\", \"show skill format\", \"create a skill template\", or...",
+      "enrichmentFailed": true,
+      "hash": "3925f9f9778c0a2e88ee6af2fbc516cb8b3e435f7d6862d1b63227ff52b03fc7",
+      "name": "example-skill",
+      "description": "This skill should be used when the user asks to \"demonstrate skills\", \"show skill format\", \"create a skill template\", or discusses skill development patterns. Provides a reference template for creating Claude Code plugin skills.",
+      "updatedAt": "2026-09-07T14:29:48.848Z"
+    },
+    "5ad0cba7b20e8dc900236bc9e5a1df01049595ecf90f75e0007a34a87ab6aa94": {
+      "category": "文档写作",
+      "summaryZh": "This skill should be used when the user asks to \"create a hookify rule\", \"write a hook rule\", \"configure hookify\", \"add ...",
+      "enrichmentFailed": true,
+      "hash": "5ad0cba7b20e8dc900236bc9e5a1df01049595ecf90f75e0007a34a87ab6aa94",
+      "name": "writing-hookify-rules",
+      "description": "This skill should be used when the user asks to \"create a hookify rule\", \"write a hook rule\", \"configure hookify\", \"add a hookify rule\", or needs guidance on hookify rule syntax and patterns.",
+      "updatedAt": "2026-09-07T14:29:48.849Z"
+    },
+    "ea9dc394e0507828a2618471aae5373c8b375b73db1b3dfd65b6183ead175525": {
+      "category": "文档写作",
+      "summaryZh": "Solve competition math problems (IMO, Putnam, USAMO, AIME) with adversarial verification that catches the errors self-ve...",
+      "enrichmentFailed": true,
+      "hash": "ea9dc394e0507828a2618471aae5373c8b375b73db1b3dfd65b6183ead175525",
+      "name": "math-olympiad",
+      "description": "Solve competition math problems (IMO, Putnam, USAMO, AIME) with adversarial verification that catches the errors self-verification misses. Activates when asked to 'solve this IMO problem', 'prove this olympiad inequality', 'verify this competition proof', 'find a counterexample', 'is this proof correct', or for any problem with 'IMO', 'Putnam', 'USAMO', 'olympiad', or 'competition math' in it. Uses pure reasoning (no tools) — then a fresh-context adversarial verifier attacks the proof using specific failure patterns, not generic 'check logic'. Outputs calibrated confidence — will say 'no confident solution' rather than bluff. If LaTeX is available, produces a clean PDF after verification passes.",
+      "updatedAt": "2026-09-07T14:29:48.849Z"
+    },
+    "d913e187d908e5631397150f536a2b28c3638d13abdd1f30ddfc7ce2d46702e0": {
+      "category": "界面设计",
+      "summaryZh": "This skill should be used when the user wants to build an \"MCP app\", add \"interactive UI\" or \"widgets\" to an MCP server,...",
+      "enrichmentFailed": true,
+      "hash": "d913e187d908e5631397150f536a2b28c3638d13abdd1f30ddfc7ce2d46702e0",
+      "name": "build-mcp-app",
+      "description": "This skill should be used when the user wants to build an \"MCP app\", add \"interactive UI\" or \"widgets\" to an MCP server, \"render components in chat\", build \"MCP UI resources\", make a tool that shows a \"form\", \"picker\", \"dashboard\" or \"confirmation dialog\" inline in the conversation, or mentions \"apps SDK\" in the context of MCP. Use AFTER the build-mcp-server skill has settled the deployment model, or when the user already knows they want UI widgets.",
+      "updatedAt": "2026-09-07T14:29:48.850Z"
+    },
+    "f31b0d108df53e9c26ac6cf0dffc4da3ba43ed5013eda252de1b76f5fe3d9f14": {
+      "category": "界面设计",
+      "summaryZh": "This skill should be used when the user asks to \"build an MCP server\", \"create an MCP\", \"make an MCP integration\", \"wrap...",
+      "enrichmentFailed": true,
+      "hash": "f31b0d108df53e9c26ac6cf0dffc4da3ba43ed5013eda252de1b76f5fe3d9f14",
+      "name": "build-mcp-server",
+      "description": "This skill should be used when the user asks to \"build an MCP server\", \"create an MCP\", \"make an MCP integration\", \"wrap an API for Claude\", \"expose tools to Claude\", \"make an MCP app\", or discusses building something with the Model Context Protocol. It is the entry point for MCP server development — it interrogates the user about their use case, determines the right deployment model (remote HTTP, MCPB, local stdio), picks a tool-design pattern, and hands off to specialized skills.",
+      "updatedAt": "2026-09-07T14:29:48.850Z"
+    },
+    "0ff49f72452760bd0399de1b06c29043db86cba33f01bfced5e39a38ff3ffd3a": {
+      "category": "发布部署",
+      "summaryZh": "This skill should be used when the user wants to \"package an MCP server\", \"bundle an MCP\", \"make an MCPB\", \"ship a local...",
+      "enrichmentFailed": true,
+      "hash": "0ff49f72452760bd0399de1b06c29043db86cba33f01bfced5e39a38ff3ffd3a",
+      "name": "build-mcpb",
+      "description": "This skill should be used when the user wants to \"package an MCP server\", \"bundle an MCP\", \"make an MCPB\", \"ship a local MCP server\", \"distribute a local MCP\", discusses \".mcpb files\", mentions bundling a Node or Python runtime with their MCP server, or needs an MCP server that interacts with the local filesystem, desktop apps, or OS and must be installable without the user having Node/Python set up.",
+      "updatedAt": "2026-09-07T14:29:48.851Z"
+    },
+    "a09aa7beb37e4db70140180cf64f50af94ddf5fe2e29457c5e61852dfa1aca17": {
+      "category": "界面设计",
+      "summaryZh": "Creates interactive HTML playgrounds — self-contained single-file explorers that let users configure something visually ...",
+      "enrichmentFailed": true,
+      "hash": "a09aa7beb37e4db70140180cf64f50af94ddf5fe2e29457c5e61852dfa1aca17",
+      "name": "playground",
+      "description": "Creates interactive HTML playgrounds — self-contained single-file explorers that let users configure something visually through controls, see a live preview, and copy out a prompt. Use when the user asks to make a playground, explorer, or interactive tool for a topic.",
+      "updatedAt": "2026-09-07T14:29:48.851Z"
+    },
+    "987e318f2b114e72ae6063d7c1cea7dc937d8b512fe2d0f21a6060f51139785a": {
+      "category": "文档写作",
+      "summaryZh": "This skill should be used when the user asks to \"create an agent\", \"add an agent\", \"write a subagent\", \"agent frontmatte...",
+      "enrichmentFailed": true,
+      "hash": "987e318f2b114e72ae6063d7c1cea7dc937d8b512fe2d0f21a6060f51139785a",
+      "name": "agent-development",
+      "description": "This skill should be used when the user asks to \"create an agent\", \"add an agent\", \"write a subagent\", \"agent frontmatter\", \"when to use description\", \"agent examples\", \"agent tools\", \"agent colors\", \"autonomous agent\", or needs guidance on agent structure, system prompts, triggering conditions, or agent development best practices for Claude Code plugins.",
+      "updatedAt": "2026-09-07T14:29:48.851Z"
+    },
+    "0ffa81660058fbab0764fccaebf2de4c83fb8fa929c97206baf0d550667af654": {
+      "category": "文档写作",
+      "summaryZh": "This skill should be used when the user asks to \"create a slash command\", \"add a command\", \"write a custom command\", \"de...",
+      "enrichmentFailed": true,
+      "hash": "0ffa81660058fbab0764fccaebf2de4c83fb8fa929c97206baf0d550667af654",
+      "name": "command-development",
+      "description": "This skill should be used when the user asks to \"create a slash command\", \"add a command\", \"write a custom command\", \"define command arguments\", \"use command frontmatter\", \"organize commands\", \"create command with file references\", \"interactive command\", \"use AskUserQuestion in command\", or needs guidance on slash command structure, YAML frontmatter fields, dynamic arguments, bash execution in commands, user interaction patterns, or command development best practices for Claude Code.",
+      "updatedAt": "2026-09-07T14:29:48.852Z"
+    },
+    "b03232eaa3baabd4eb26cc19a29822a77bf08922c92628c70509a1d030cf8891": {
+      "category": "安全管控",
+      "summaryZh": "This skill should be used when the user asks to \"create a hook\", \"add a PreToolUse/PostToolUse/Stop hook\", \"validate too...",
+      "enrichmentFailed": true,
+      "hash": "b03232eaa3baabd4eb26cc19a29822a77bf08922c92628c70509a1d030cf8891",
+      "name": "hook-development",
+      "description": "This skill should be used when the user asks to \"create a hook\", \"add a PreToolUse/PostToolUse/Stop hook\", \"validate tool use\", \"implement prompt-based hooks\", \"use ${CLAUDE_PLUGIN_ROOT}\", \"set up event-driven automation\", \"block dangerous commands\", or mentions hook events (PreToolUse, PostToolUse, Stop, SubagentStop, SessionStart, SessionEnd, UserPromptSubmit, PreCompact, Notification). Provides comprehensive guidance for creating and implementing Claude Code plugin hooks with focus on advanced prompt-based hooks API.",
+      "updatedAt": "2026-09-07T14:29:48.852Z"
+    },
+    "7b7bd261401bafd4e672133782cd77136270eb80fe57941e431fe18b455792b0": {
+      "category": "开发实现",
+      "summaryZh": "This skill should be used when the user asks to \"add MCP server\", \"integrate MCP\", \"configure MCP in plugin\", \"use",
+      "enrichmentFailed": true,
+      "hash": "7b7bd261401bafd4e672133782cd77136270eb80fe57941e431fe18b455792b0",
+      "name": "mcp-integration",
+      "description": "This skill should be used when the user asks to \"add MCP server\", \"integrate MCP\", \"configure MCP in plugin\", \"use .mcp.json\", \"set up Model Context Protocol\", \"connect external service\", mentions \"${CLAUDE_PLUGIN_ROOT} with MCP\", or discusses MCP server types (SSE, stdio, HTTP, WebSocket). Provides comprehensive guidance for integrating Model Context Protocol servers into Claude Code plugins for external tool and service integration.",
+      "updatedAt": "2026-09-07T14:29:48.852Z"
+    },
+    "dd3ef33f721a5c6962219d02db725adf0146914146a7f5a62c187962b4bfbe35": {
+      "category": "工具环境",
+      "summaryZh": "This skill should be used when the user asks about \"plugin settings\", \"store plugin configuration\", \"user-configurable p...",
+      "enrichmentFailed": true,
+      "hash": "dd3ef33f721a5c6962219d02db725adf0146914146a7f5a62c187962b4bfbe35",
+      "name": "plugin-settings",
+      "description": "This skill should be used when the user asks about \"plugin settings\", \"store plugin configuration\", \"user-configurable plugin\", \".local.md files\", \"plugin state files\", \"read YAML frontmatter\", \"per-project plugin settings\", or wants to make plugin behavior configurable. Documents the .claude/plugin-name.local.md pattern for storing plugin-specific configuration with YAML frontmatter and markdown content.",
+      "updatedAt": "2026-09-07T14:29:48.853Z"
+    },
+    "f6e73b77df76ad9317b2843094d127047fec866ae1a6c914010dcbe8f80707a8": {
+      "category": "开发实现",
+      "summaryZh": "This skill should be used when the user asks to \"create a plugin\", \"scaffold a plugin\", \"understand plugin structure\", \"...",
+      "enrichmentFailed": true,
+      "hash": "f6e73b77df76ad9317b2843094d127047fec866ae1a6c914010dcbe8f80707a8",
+      "name": "plugin-structure",
+      "description": "This skill should be used when the user asks to \"create a plugin\", \"scaffold a plugin\", \"understand plugin structure\", \"organize plugin components\", \"set up plugin.json\", \"use ${CLAUDE_PLUGIN_ROOT}\", \"add commands/agents/skills/hooks\", \"configure auto-discovery\", or needs guidance on plugin directory layout, manifest configuration, component organization, file naming conventions, or Claude Code plugin architecture best practices.",
+      "updatedAt": "2026-09-07T14:29:48.853Z"
+    },
+    "79a9d991d2329234d66c6968bae84774796df28e0878cb7e5d3c965741ed90da": {
+      "category": "文档写作",
+      "summaryZh": "This skill should be used when the user wants to \"create a skill\", \"add a skill to plugin\", \"write a new skill\", \"improv...",
+      "enrichmentFailed": true,
+      "hash": "79a9d991d2329234d66c6968bae84774796df28e0878cb7e5d3c965741ed90da",
+      "name": "skill-development",
+      "description": "This skill should be used when the user wants to \"create a skill\", \"add a skill to plugin\", \"write a new skill\", \"improve skill description\", \"organize skill content\", or needs guidance on skill structure, progressive disclosure, or skill development best practices for Claude Code plugins.",
+      "updatedAt": "2026-09-07T14:29:48.854Z"
+    },
+    "c4d83cdcb0e8c4a7db530b9e371048a6bfaa0f2f8c7db376861fb4cc0f2aef71": {
+      "category": "安全管控",
+      "summaryZh": "Generate and publish a project status artifact — an opinionated, tabbed status page for a project too big for one update...",
+      "enrichmentFailed": true,
+      "hash": "c4d83cdcb0e8c4a7db530b9e371048a6bfaa0f2f8c7db376861fb4cc0f2aef71",
+      "name": "project-artifact",
+      "description": "Generate and publish a project status artifact — an opinionated, tabbed status page for a project too big for one update (overview & success criteria, the workstream sequence, next steps, plus background, plan, risks & open questions, and decisions/FAQ when they earn a tab) — published with the built-in Artifact tool to a default-private claude.ai page the user can share with teammates. Use when a piece of work spans several workstreams and you want a shareable overview kept current. Each artifact is backed by a small per-project config in the plugin data dir, so refreshing it re-gathers live state, redeploys the same URL, and reports only the delta. For software projects whose workstreams are PRs, also read swe.md (the X.Y PR-numbering convention; pulling PR state with gh/git; a per-PR detail block). Needs the built-in Artifact tool (claude.ai login). Not for single-PR changes or public docs.",
+      "updatedAt": "2026-09-07T14:29:48.854Z"
+    },
+    "b535f14b81a45cb46068c228e2efe8620abd96d0aec76623297e581b6d59b9b4": {
+      "category": "界面设计",
+      "summaryZh": "Generate a personal Claude Code usage & impact report (\"receipts\") from this machine's local session transcripts — for j...",
+      "enrichmentFailed": true,
+      "hash": "b535f14b81a45cb46068c228e2efe8620abd96d0aec76623297e581b6d59b9b4",
+      "name": "receipts",
+      "description": "Generate a personal Claude Code usage & impact report (\"receipts\") from this machine's local session transcripts — for justifying Claude Code usage/spend to a manager, self-review, or \"what have I been using this for\" check-ins. Mines ~/.claude/projects locally (no extra API calls beyond one final write-up), cross-references local git history, and writes a markdown report plus a self-contained HTML receipt to your home directory. Use when the user asks for \"receipts\", an \"impact report\", \"usage report\", wants to \"show my Claude Code activity\", \"prove the value of Claude Code\", or runs `/receipts`.",
+      "updatedAt": "2026-09-07T14:29:48.855Z"
+    },
+    "d5bbf341a708552d59b0aee2ae60bdd552a13c7c8faf9c01b8fbf8ac2d5ba54a": {
+      "category": "界面设计",
+      "summaryZh": "Generate an explorable HTML report of Claude Code session usage (tokens, cache, subagents, skills, expensive prompts) fr...",
+      "enrichmentFailed": true,
+      "hash": "d5bbf341a708552d59b0aee2ae60bdd552a13c7c8faf9c01b8fbf8ac2d5ba54a",
+      "name": "session-report",
+      "description": "Generate an explorable HTML report of Claude Code session usage (tokens, cache, subagents, skills, expensive prompts) from ~/.claude/projects transcripts.",
+      "updatedAt": "2026-09-07T14:29:48.855Z"
+    },
+    "5b5066ba47bc7f19a63ad7f4ec8c98d9282f9f3ebb6f7496acf0b71eeb6669c2": {
+      "category": "质量保障",
+      "summaryZh": "Create new skills, modify and improve existing skills, and measure skill performance",
+      "enrichmentFailed": true,
+      "hash": "5b5066ba47bc7f19a63ad7f4ec8c98d9282f9f3ebb6f7496acf0b71eeb6669c2",
+      "name": "skill-creator",
+      "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
+      "updatedAt": "2026-09-07T14:29:48.855Z"
+    },
+    "cc9bba53cd118a37ec11c899dbcf3a451a0fa68550a1abd6793fc2594e2d015b": {
+      "category": "界面设计",
+      "summaryZh": "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, text...",
+      "enrichmentFailed": true,
+      "hash": "cc9bba53cd118a37ec11c899dbcf3a451a0fa68550a1abd6793fc2594e2d015b",
+      "name": "imagegen",
+      "description": "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas.",
+      "updatedAt": "2026-09-07T14:29:48.856Z"
+    },
+    "0ca5822b9c01aa2b73e76ecef143f63a47de6c6fc411ccdc981f3d1645724ff9": {
+      "category": "文档写作",
+      "summaryZh": "Use when the user asks how to build with OpenAI products or APIs, asks about Codex itself or choosing Codex surfaces, ne...",
+      "enrichmentFailed": true,
+      "hash": "0ca5822b9c01aa2b73e76ecef143f63a47de6c6fc411ccdc981f3d1645724ff9",
+      "name": "openai-docs",
+      "description": "Use when the user asks how to build with OpenAI products or APIs, asks about Codex itself or choosing Codex surfaces, needs up-to-date official documentation with citations, help choosing the latest model for a use case, or model upgrade and prompt-upgrade guidance; use OpenAI docs MCP tools for non-Codex docs questions, use the Codex manual helper first for broad Codex self-knowledge, and restrict fallback browsing to official OpenAI domains.",
+      "updatedAt": "2026-09-07T14:29:48.856Z"
+    },
+    "188b2d7aaf297c516b65ec99bdcc5dfcfc00be8e308492e3e42401a80cc5301a": {
+      "category": "开发实现",
+      "summaryZh": "Create and scaffold plugin directories for Codex with a required `",
+      "enrichmentFailed": true,
+      "hash": "188b2d7aaf297c516b65ec99bdcc5dfcfc00be8e308492e3e42401a80cc5301a",
+      "name": "plugin-creator",
+      "description": "Create and scaffold plugin directories for Codex with a required `.codex-plugin/plugin.json`, optional plugin folders/files, valid manifest defaults, and personal-marketplace entries by default. Use when Codex needs to create a new personal plugin, add optional plugin structure, generate or update marketplace entries for plugin ordering and availability metadata, or update an existing local plugin during development with the CLI-driven cachebuster and reinstall flow.",
+      "updatedAt": "2026-09-07T14:29:48.857Z"
+    },
+    "5cd9f829b04855630b807263b129e5ffd2d8a228d00e333f310a064c063531f5": {
+      "category": "工具环境",
+      "summaryZh": "Guide for creating effective skills",
+      "enrichmentFailed": true,
+      "hash": "5cd9f829b04855630b807263b129e5ffd2d8a228d00e333f310a064c063531f5",
+      "name": "skill-creator",
+      "description": "Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Codex's capabilities with specialized knowledge, workflows, or tool integrations.",
+      "updatedAt": "2026-09-07T14:29:48.857Z"
+    },
+    "6b699d665b99ef09788e0c4bd08161e077e62be71e9e489b5aff7056eb64a6ec": {
+      "category": "工具环境",
+      "summaryZh": "Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path",
+      "enrichmentFailed": true,
+      "hash": "6b699d665b99ef09788e0c4bd08161e077e62be71e9e489b5aff7056eb64a6ec",
+      "name": "skill-installer",
+      "description": "Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos).",
+      "updatedAt": "2026-09-07T14:29:48.857Z"
+    },
+    "ccd831a2c538a3e2b83340123217e347e96c71be5bbe6ea2d10384a2edb02afe": {
+      "category": "工具环境",
+      "summaryZh": "Reuse follow-builders-compatible feed patterns to collect, rank, and summarize AI hotspots for AI product managers",
+      "enrichmentFailed": true,
+      "hash": "ccd831a2c538a3e2b83340123217e347e96c71be5bbe6ea2d10384a2edb02afe",
+      "name": "ai-hotspot-radar",
+      "description": "Reuse follow-builders-compatible feed patterns to collect, rank, and summarize AI hotspots for AI product managers. Focus on PM-relevant change detection instead of generic digesting.",
+      "updatedAt": "2026-09-07T14:29:48.858Z"
+    },
+    "2c5347eb5f26f0b0fd852dba4799aaa578d8fe9154a48e682f62f1b84af07289": {
+      "category": "界面设计",
+      "summaryZh": "Apply Apple-inspired DESIGN",
+      "enrichmentFailed": true,
+      "hash": "2c5347eb5f26f0b0fd852dba4799aaa578d8fe9154a48e682f62f1b84af07289",
+      "name": "apple-design",
+      "description": "Apply Apple-inspired DESIGN.md guidance for frontend design and UI implementation. Use when the user asks for Apple, iOS, macOS, Cupertino, premium consumer electronics, SF Pro, cinematic product imagery, spacious white UI, or wants a project DESIGN.md/style guide based on Apple.",
+      "updatedAt": "2026-09-07T14:29:48.858Z"
+    },
+    "390c06afb2cd8794d665262cd2092a5c552c581d4f356c1a72e8304b92857745": {
+      "category": "工具环境",
+      "summaryZh": "寻找适合当前场景的工作流与技能指引",
+      "enrichmentFailed": false,
+      "hash": "390c06afb2cd8794d665262cd2092a5c552c581d4f356c1a72e8304b92857745",
+      "name": "ask-matt",
+      "description": "Ask which skill or flow fits your situation. A router over the user-invoked skills in this repo.",
+      "updatedAt": "2026-09-07T14:29:48.859Z"
+    },
+    "9e1a35c7eb2f343a87d4cfb5ffffcf1c57c6fd38428a4259f13aaccce7e520ae": {
+      "category": "开发实现",
+      "summaryZh": "设计深层模块结构，建立清晰的代码架构与词汇",
+      "enrichmentFailed": false,
+      "hash": "9e1a35c7eb2f343a87d4cfb5ffffcf1c57c6fd38428a4259f13aaccce7e520ae",
+      "name": "codebase-design",
+      "description": "Shared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a seam goes, make code more testable or AI-navigable, or when another skill needs the deep-module vocabulary.",
+      "updatedAt": "2026-09-07T14:29:48.859Z"
+    },
+    "c27ac2d13e8658fd397645cb91578d22ef04b60d28feb51f63a476caec508cd4": {
+      "category": "规划决策",
+      "summaryZh": "将散乱想法拆解梳理为有序的调研与任务执行图",
+      "enrichmentFailed": false,
+      "hash": "c27ac2d13e8658fd397645cb91578d22ef04b60d28feb51f63a476caec508cd4",
+      "name": "decision-mapping",
+      "description": "Turn a loose idea into a sequenced map of investigation tickets, then drive them to resolution one at a time.",
+      "updatedAt": "2026-09-07T14:29:48.859Z"
+    },
+    "e3d75ddaec6c52d8fe56a9976d54ad3a95f3f526a1046796950544767812d02f": {
+      "category": "规划决策",
+      "summaryZh": "需要深度思考与方案权衡时，制定详尽架构规划",
+      "enrichmentFailed": false,
+      "hash": "e3d75ddaec6c52d8fe56a9976d54ad3a95f3f526a1046796950544767812d02f",
+      "name": "deep-planning",
+      "description": "Use when facing a complex or multi-step task, before committing to an approach — planning or proposing solutions (出方案/规划/写计划), decomposing work (拆解), orchestrating subagents (调度/编排), audits or reviews at scale, or anything hard to reverse or spanning more than an hour of work. Especially when a stakeholder hands over a pre-chosen solution (\"use AI for X\", \"add a cache\", \"刷新一下缓存就行\") or when the problem statement itself may hide the real problem.",
+      "updatedAt": "2026-09-07T14:29:48.860Z"
+    },
+    "c271feac8f40e894a95aaffe0f3c5ca1a66a4c0f5ccba328b2e84b2e20960b2e": {
+      "category": "界面设计",
+      "summaryZh": "为功能探索并生成多个截然不同的 UI 界面方案",
+      "enrichmentFailed": false,
+      "hash": "c271feac8f40e894a95aaffe0f3c5ca1a66a4c0f5ccba328b2e84b2e20960b2e",
+      "name": "design-an-interface",
+      "description": "Generate multiple radically different interface designs for a module using parallel sub-agents. Use when user wants to design an API, explore interface options, compare module shapes, or mentions \"design it twice\".",
+      "updatedAt": "2026-09-07T14:29:48.860Z"
+    },
+    "ba8ae5cc3b2f13f4a3c31d1897db8538d1a16f13c51ebfed86409a36bc6346b9": {
+      "category": "质量保障",
+      "summaryZh": "排查疑难 Bug 与性能退化问题时进行系统诊断",
+      "enrichmentFailed": false,
+      "hash": "ba8ae5cc3b2f13f4a3c31d1897db8538d1a16f13c51ebfed86409a36bc6346b9",
+      "name": "diagnosing-bugs",
+      "description": "Diagnosis loop for hard bugs and performance regressions. Use when the user says \"diagnose\"/\"debug this\", or reports something broken/throwing/failing/slow.",
+      "updatedAt": "2026-09-07T14:29:48.861Z"
+    },
+    "ceb3c758a59ea0c61eb3fb90d935b4e842418263314c29f09520b89028a9d5fe": {
+      "category": "规划决策",
+      "summaryZh": "梳理并构建领域模型，统一业务术语与实体关系",
+      "enrichmentFailed": false,
+      "hash": "ceb3c758a59ea0c61eb3fb90d935b4e842418263314c29f09520b89028a9d5fe",
+      "name": "domain-modeling",
+      "description": "Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, record an architectural decision, or when another skill needs to maintain the domain model.",
+      "updatedAt": "2026-09-07T14:29:48.861Z"
+    },
+    "8adaf02acb312146b894102d9a34a882aeedf39140c45c2e21db2eda106bc93e": {
+      "category": "文档写作",
+      "summaryZh": "重构文章结构、优化文字表达并提升论述清晰度",
+      "enrichmentFailed": false,
+      "hash": "8adaf02acb312146b894102d9a34a882aeedf39140c45c2e21db2eda106bc93e",
+      "name": "edit-article",
+      "description": "Edit and improve articles by restructuring sections, improving clarity, and tightening prose. Use when user wants to edit, revise, or improve an article draft.",
+      "updatedAt": "2026-09-07T14:29:48.861Z"
+    },
+    "7feacd776ea07d4ebf43e4e65e34efc68e1cace1054522be1ea99edfee2f1d41": {
+      "category": "界面设计",
+      "summaryZh": "Создание высококачественных интерфейсов в стиле \"Mobile First\" для проекта Knock-Knock",
+      "enrichmentFailed": true,
+      "hash": "7feacd776ea07d4ebf43e4e65e34efc68e1cace1054522be1ea99edfee2f1d41",
+      "name": "front-design",
+      "description": "Создание высококачественных интерфейсов в стиле \"Mobile First\" для проекта Knock-Knock. Используйте этот навык при разработке компонентов, страниц или рефакторинге UI. Скилл гарантирует соблюдение архитектуры (React 19, кастомных Radix UI), использование CSS-переменных из index.css, правильную работу с темами (Dark/Light) и Mobile-First верстку. Генерирует уникальный, премиальный дизайн, избегая стандартных \"AI-шаблонов\", сохраняя при этом чистоту кода проекта.",
+      "updatedAt": "2026-09-07T14:29:48.862Z"
+    },
+    "2eb05ef13761809a93aabe1ef7c5e72946f9fcdb022dea9ec7d6e11ec3f2ab14": {
+      "category": "发布部署",
+      "summaryZh": "Create distinctive, production-grade frontend interfaces with high design quality",
+      "enrichmentFailed": true,
+      "hash": "2eb05ef13761809a93aabe1ef7c5e72946f9fcdb022dea9ec7d6e11ec3f2ab14",
+      "name": "frontend-design",
+      "description": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, artifacts, posters, or applications (examples include websites, landing pages, dashboards, React components, HTML/CSS layouts, or when styling/beautifying any web UI). Generates creative, polished code and UI design that avoids generic AI aesthetics.",
+      "updatedAt": "2026-09-07T14:29:48.862Z"
+    },
+    "1ed734d1a10235d9c8120f6f67d4d7c278a50a61aafc377316a922b08b157736": {
+      "category": "安全管控",
+      "summaryZh": "配置 Git 钩子拦截 force push 等高危操作",
+      "enrichmentFailed": false,
+      "hash": "1ed734d1a10235d9c8120f6f67d4d7c278a50a61aafc377316a922b08b157736",
+      "name": "git-guardrails-claude-code",
+      "description": "Set up Claude Code hooks to block dangerous git commands (push, reset --hard, clean, branch -D, etc.) before they execute. Use when user wants to prevent destructive git operations, add git safety hooks, or block git push/reset in Claude Code.",
+      "updatedAt": "2026-09-07T14:29:48.862Z"
+    },
+    "edad120a395a04eb15cf3625c1d006cf5ce70e55a567078772d22b0353674ad3": {
+      "category": "规划决策",
+      "summaryZh": "通过连环追问面试，高强度打磨和推敲方案",
+      "enrichmentFailed": false,
+      "hash": "edad120a395a04eb15cf3625c1d006cf5ce70e55a567078772d22b0353674ad3",
+      "name": "grill-me",
+      "description": "A relentless interview to sharpen a plan or design.",
+      "updatedAt": "2026-09-07T14:29:48.863Z"
+    },
+    "8a808230902b162d669643213111bdb5791ddbecb61888181da302fca8043c1a": {
+      "category": "文档写作",
+      "summaryZh": "追问打磨方案并同步产出架构决策记录与术语表",
+      "enrichmentFailed": false,
+      "hash": "8a808230902b162d669643213111bdb5791ddbecb61888181da302fca8043c1a",
+      "name": "grill-with-docs",
+      "description": "A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.",
+      "updatedAt": "2026-09-07T14:29:48.863Z"
+    },
+    "0710995ea05785f025a248c7e1c34d2c839efbb5505707fedc01d57e8669318a": {
+      "category": "规划决策",
+      "summaryZh": "高强度追问和压力测试方案中的漏洞与盲点",
+      "enrichmentFailed": false,
+      "hash": "0710995ea05785f025a248c7e1c34d2c839efbb5505707fedc01d57e8669318a",
+      "name": "grilling",
+      "description": "Interview the user relentlessly about a plan or design. Use when the user wants to stress-test a plan before building, or uses any 'grill' trigger phrases.",
+      "updatedAt": "2026-09-07T14:29:48.863Z"
+    },
+    "443be8b7f36a6c32c05ca711fe88aa379ca61c399706598e95bef7a3d39a797e": {
+      "category": "文档写作",
+      "summaryZh": "压缩当前会话上下文，生成供下一位交接的文档",
+      "enrichmentFailed": false,
+      "hash": "443be8b7f36a6c32c05ca711fe88aa379ca61c399706598e95bef7a3d39a797e",
+      "name": "handoff",
+      "description": "Compact the current conversation into a handoff document for another agent to pick up.",
+      "updatedAt": "2026-09-07T14:29:48.864Z"
+    },
+    "7e5fba1278dcaa1bb78a9de9a56a7502f62fd9b0efcddea3109b718609b5b2b8": {
+      "category": "开发实现",
+      "summaryZh": "依据 PRD 需求或 Issue 任务清单编写代码实现",
+      "enrichmentFailed": false,
+      "hash": "7e5fba1278dcaa1bb78a9de9a56a7502f62fd9b0efcddea3109b718609b5b2b8",
+      "name": "implement",
+      "description": "Implement a piece of work based on a PRD or set of issues.",
+      "updatedAt": "2026-09-07T14:29:48.864Z"
+    },
+    "67b4fe22a74d795fc34c1b638c212bcfb6ee0e52cf47990621a7d44435b0ada1": {
+      "category": "开发实现",
+      "summaryZh": "扫描代码库架构改进点并输出可视化重构建议",
+      "enrichmentFailed": false,
+      "hash": "67b4fe22a74d795fc34c1b638c212bcfb6ee0e52cf47990621a7d44435b0ada1",
+      "name": "improve-codebase-architecture",
+      "description": "Scan a codebase for deepening opportunities, present them as a visual HTML report, then grill through whichever one you pick.",
+      "updatedAt": "2026-09-07T14:29:48.865Z"
+    },
+    "676640cca5c6da1ae8128cbefcef9c65cc23fec45a1c7a775443c4887a840898": {
+      "category": "界面设计",
+      "summaryZh": "Apply Linear-inspired DESIGN",
+      "enrichmentFailed": true,
+      "hash": "676640cca5c6da1ae8128cbefcef9c65cc23fec45a1c7a775443c4887a840898",
+      "name": "linear-design",
+      "description": "Apply Linear-inspired DESIGN.md guidance for frontend design and UI implementation. Use when the user asks for Linear, linear.app, project-management SaaS, engineer-focused productivity UI, ultra-minimal precise layouts, subtle purple accents, or wants a project DESIGN.md/style guide based on Linear.",
+      "updatedAt": "2026-09-07T14:29:48.865Z"
+    },
+    "4680399741ed0b0d8b51872eb9c1af67ce53c4d396a88f5b49a3da3bd8aaff89": {
+      "category": "开发实现",
+      "summaryZh": "将测试文件中的类型断言迁移改造至 shoehorn",
+      "enrichmentFailed": false,
+      "hash": "4680399741ed0b0d8b51872eb9c1af67ce53c4d396a88f5b49a3da3bd8aaff89",
+      "name": "migrate-to-shoehorn",
+      "description": "Migrate test files from `as` type assertions to @total-typescript/shoehorn. Use when user mentions shoehorn, wants to replace `as` in tests, or needs partial test data.",
+      "updatedAt": "2026-09-07T14:29:48.865Z"
+    },
+    "7ad99d69e8704f002fa0e15a5b5395c39c97ebd6dc67c310d23e82e95873cbca": {
+      "category": "文档写作",
+      "summaryZh": "在 Obsidian 双链知识库中检索、创建与管理笔记",
+      "enrichmentFailed": false,
+      "hash": "7ad99d69e8704f002fa0e15a5b5395c39c97ebd6dc67c310d23e82e95873cbca",
+      "name": "obsidian-vault",
+      "description": "Search, create, and manage notes in the Obsidian vault with wikilinks and index notes. Use when user wants to find, create, or organize notes in Obsidian.",
+      "updatedAt": "2026-09-07T14:29:48.866Z"
+    },
+    "64e4cf9df634df0d6a8644d05b810447d9b678e01c1bfb4ad4ac05f65be99968": {
+      "category": "界面设计",
+      "summaryZh": "Use when the task requires automating a real browser from the terminal (navigation, form filling, snapshots, screenshots...",
+      "enrichmentFailed": true,
+      "hash": "64e4cf9df634df0d6a8644d05b810447d9b678e01c1bfb4ad4ac05f65be99968",
+      "name": "playwright",
+      "description": "Use when the task requires automating a real browser from the terminal (navigation, form filling, snapshots, screenshots, data extraction, UI-flow debugging) via `playwright-cli` or the bundled wrapper script.",
+      "updatedAt": "2026-09-07T14:29:48.866Z"
+    },
+    "c60fd0f10c56fc7a0b0584f827d5a198a40adfd14b49091d8eecbbcda10dbaf4": {
+      "category": "开发实现",
+      "summaryZh": "快速构建原型应用，用于验证状态流与业务逻辑",
+      "enrichmentFailed": false,
+      "hash": "c60fd0f10c56fc7a0b0584f827d5a198a40adfd14b49091d8eecbbcda10dbaf4",
+      "name": "prototype",
+      "description": "Build a throwaway prototype to flesh out a design — a runnable terminal app for state/business-logic questions, or several radically different UI variations toggleable from one route.",
+      "updatedAt": "2026-09-07T14:29:48.866Z"
+    },
+    "f7129d416b904566f214dd8defc7633c658b52c8c3ee62c838317800c84695c5": {
+      "category": "质量保障",
+      "summaryZh": "以对话方式记录缺陷并自动在 Issue 跟踪器建单",
+      "enrichmentFailed": false,
+      "hash": "f7129d416b904566f214dd8defc7633c658b52c8c3ee62c838317800c84695c5",
+      "name": "qa",
+      "description": "Interactive QA session where user reports bugs or issues conversationally, and the agent files GitHub issues. Explores the codebase in the background for context and domain language. Use when user wants to report bugs, do QA, file issues conversationally, or mentions \"QA session\".",
+      "updatedAt": "2026-09-07T14:29:48.867Z"
+    },
+    "15703097ec5f3ba739823aabb8c9402112078aa878fc4d1067872deeb8e5798c": {
+      "category": "规划决策",
+      "summaryZh": "Assist China-based investors …",
+      "enrichmentFailed": false,
+      "hash": "15703097ec5f3ba739823aabb8c9402112078aa878fc4d1067872deeb8e5798c",
+      "name": "qdii-dca-advisor",
+      "description": "Assist China-based investors with daily QDII fixed-investment decisions for off-exchange U.S. index feeder funds, especially Guangfa Nasdaq 100 ETF feeder (QDII) RMB F and Bosera S&P 500 ETF feeder E. Use when the user asks whether to reduce, keep, or add to daily定投 based on latest U.S. market moves, China morning/evening decision timing, QDII NAV/confirmation mechanics, blind-buy T-day uncertainty, USD/CNY, fund purchase limits, and risk-controlled decision bands. Also use when explaining exactly when in China time to act before or after the 15:00 fund cut-off.",
+      "updatedAt": "2026-09-07T14:29:48.867Z"
+    },
+    "3e047489481e35746432b14408a90a3626f0ea586a9b8ae88fb7731c6ad07f8a": {
+      "category": "规划决策",
+      "summaryZh": "通过访谈梳理小步重构方案并创建任务工单",
+      "enrichmentFailed": false,
+      "hash": "3e047489481e35746432b14408a90a3626f0ea586a9b8ae88fb7731c6ad07f8a",
+      "name": "request-refactor-plan",
+      "description": "Create a detailed refactor plan with tiny commits via user interview, then file it as a GitHub issue. Use when user wants to plan a refactor, create a refactoring RFC, or break a refactor into safe incremental steps.",
+      "updatedAt": "2026-09-07T14:29:48.868Z"
+    },
+    "0536d5bfe620f0034c9999c701e593dce8972c47725d9fb9a7efcc1050e90bad": {
+      "category": "开发实现",
+      "summaryZh": "在 Git 合并或变基发生冲突时协助分析与解决",
+      "enrichmentFailed": false,
+      "hash": "0536d5bfe620f0034c9999c701e593dce8972c47725d9fb9a7efcc1050e90bad",
+      "name": "resolving-merge-conflicts",
+      "description": "Use when you need to resolve an in-progress git merge/rebase conflict.",
+      "updatedAt": "2026-09-07T14:29:48.868Z"
+    },
+    "613898315e639a07179767bbccbac43ed6bad7b7f2145567a2b35e031cf0f975": {
+      "category": "质量保障",
+      "summaryZh": "对比指定基准节点，对代码改动开展全面审查",
+      "enrichmentFailed": false,
+      "hash": "613898315e639a07179767bbccbac43ed6bad7b7f2145567a2b35e031cf0f975",
+      "name": "review",
+      "description": "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/PRD asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\".",
+      "updatedAt": "2026-09-07T14:29:48.868Z"
+    },
+    "b6ff23050247495967ec1a4c7d60fc5341cac267de9deb4335dd1a369fc3c7fc": {
+      "category": "开发实现",
+      "summaryZh": "脚手架生成配套练习题、解析与测试目录结构",
+      "enrichmentFailed": false,
+      "hash": "b6ff23050247495967ec1a4c7d60fc5341cac267de9deb4335dd1a369fc3c7fc",
+      "name": "scaffold-exercises",
+      "description": "Create exercise directory structures with sections, problems, solutions, and explainers that pass linting. Use when user wants to scaffold exercises, create exercise stubs, or set up a new course section.",
+      "updatedAt": "2026-09-07T14:29:48.869Z"
+    },
+    "e7c81034db20395d2e531838e739d2c6beebd2a81ea8088992683a9fbd710980": {
+      "category": "工具环境",
+      "summaryZh": "Use when the user explicitly asks for a desktop or system screenshot (full screen, specific app or window, or a pixel re...",
+      "enrichmentFailed": true,
+      "hash": "e7c81034db20395d2e531838e739d2c6beebd2a81ea8088992683a9fbd710980",
+      "name": "screenshot",
+      "description": "Use when the user explicitly asks for a desktop or system screenshot (full screen, specific app or window, or a pixel region), or when tool-specific capture capabilities are unavailable and an OS-level capture is needed.",
+      "updatedAt": "2026-09-07T14:29:48.869Z"
+    },
+    "35d413a7a6759c5046a186ba249b290b0c7047be3b34673dfbf6a3f0d1d86b91": {
+      "category": "工具环境",
+      "summaryZh": "为当前仓库配置工单标签与技能工作流规范",
+      "enrichmentFailed": false,
+      "hash": "35d413a7a6759c5046a186ba249b290b0c7047be3b34673dfbf6a3f0d1d86b91",
+      "name": "setup-matt-pocock-skills",
+      "description": "Configure this repo for the engineering skills — set up its issue tracker, triage label vocabulary, and domain doc layout. Run once before first use of the other engineering skills.",
+      "updatedAt": "2026-09-07T14:29:48.870Z"
+    },
+    "8f2809dcc501ab01e18eada189d779fde895769e4fced0df414595ad7e0f8ac0": {
+      "category": "质量保障",
+      "summaryZh": "配置 Husky 与 lint-staged 代码提交前检查",
+      "enrichmentFailed": false,
+      "hash": "8f2809dcc501ab01e18eada189d779fde895769e4fced0df414595ad7e0f8ac0",
+      "name": "setup-pre-commit",
+      "description": "Set up Husky pre-commit hooks with lint-staged (Prettier), type checking, and tests in the current repo. Use when user wants to add pre-commit hooks, set up Husky, configure lint-staged, or add commit-time formatting/typechecking/testing.",
+      "updatedAt": "2026-09-07T14:29:48.870Z"
+    },
+    "50baa39b429258e21cf95946f9804b2edd4a9df3ca5c9045e9932cc40395378b": {
+      "category": "开发实现",
+      "summaryZh": "按测试驱动开发流程，先写测试再编码实现功能",
+      "enrichmentFailed": false,
+      "hash": "50baa39b429258e21cf95946f9804b2edd4a9df3ca5c9045e9932cc40395378b",
+      "name": "tdd",
+      "description": "Test-driven development. Use when the user wants to build features or fix bugs test-first, mentions \"red-green-refactor\", or wants integration tests.",
+      "updatedAt": "2026-09-07T14:29:48.870Z"
+    },
+    "3e90557afa3a3b8dd08242ab56ea66243c8a8f21a67129b659f68a33d6d64291": {
+      "category": "文档写作",
+      "summaryZh": "在当前工作区内向用户讲解技能知识与开发概念",
+      "enrichmentFailed": false,
+      "hash": "3e90557afa3a3b8dd08242ab56ea66243c8a8f21a67129b659f68a33d6d64291",
+      "name": "teach",
+      "description": "Teach the user a new skill or concept, within this workspace.",
+      "updatedAt": "2026-09-07T14:29:48.871Z"
+    },
+    "a2503aa9d4ef99b8b787e0d34969e86f47e1febab230343ed14cc31a0f5277f8": {
+      "category": "规划决策",
+      "summaryZh": "将方案或 PRD 拆解为可独立认领的 Issue 工单",
+      "enrichmentFailed": false,
+      "hash": "a2503aa9d4ef99b8b787e0d34969e86f47e1febab230343ed14cc31a0f5277f8",
+      "name": "to-issues",
+      "description": "Break a plan, spec, or PRD into independently-grabbable issues on the project issue tracker using tracer-bullet vertical slices.",
+      "updatedAt": "2026-09-07T14:29:48.871Z"
+    },
+    "a4f7de24de9607e8fff155a4fb8ab804254da2d8617e2ef2171fd5f7285f5af3": {
+      "category": "规划决策",
+      "summaryZh": "将当前讨论要点整理为正式 PRD 需求文档并提交",
+      "enrichmentFailed": false,
+      "hash": "a4f7de24de9607e8fff155a4fb8ab804254da2d8617e2ef2171fd5f7285f5af3",
+      "name": "to-prd",
+      "description": "Turn the current conversation into a PRD and publish it to the project issue tracker — no interview, just synthesis of what you've already discussed.",
+      "updatedAt": "2026-09-07T14:29:48.872Z"
+    },
+    "f7e65f261c116048f1c6fbce803d8b07ade9573fce589374dba3dacd98b2270b": {
+      "category": "规划决策",
+      "summaryZh": "对工单与 PR 进行分类、复现核验与初步定级",
+      "enrichmentFailed": false,
+      "hash": "f7e65f261c116048f1c6fbce803d8b07ade9573fce589374dba3dacd98b2270b",
+      "name": "triage",
+      "description": "Move issues and external PRs through a state machine of triage roles — categorise, verify, grill if needed, and write agent-ready briefs.",
+      "updatedAt": "2026-09-07T14:29:48.872Z"
+    },
+    "0c8ae3d31fd709894c497dae18ba744f8c42d2b05923d933838f8ae9108af18d": {
+      "category": "规划决策",
+      "summaryZh": "提取业务通用术语词汇表，消除命名歧义",
+      "enrichmentFailed": false,
+      "hash": "0c8ae3d31fd709894c497dae18ba744f8c42d2b05923d933838f8ae9108af18d",
+      "name": "ubiquitous-language",
+      "description": "Extract a DDD-style ubiquitous language glossary from the current conversation, flagging ambiguities and proposing canonical terms. Saves to UBIQUITOUS_LANGUAGE.md. Use when user wants to define domain terms, build a glossary, harden terminology, create a ubiquitous language, or mentions \"domain model\" or \"DDD\".",
+      "updatedAt": "2026-09-07T14:29:48.873Z"
+    },
+    "ac9463f19577b227dafcb1fffb9388d5523806b4b29fb56c5e09b4d20e82ad9e": {
+      "category": "界面设计",
+      "summaryZh": "Apply Vercel-inspired DESIGN",
+      "enrichmentFailed": true,
+      "hash": "ac9463f19577b227dafcb1fffb9388d5523806b4b29fb56c5e09b4d20e82ad9e",
+      "name": "vercel-design",
+      "description": "Apply Vercel-inspired DESIGN.md guidance for frontend design and UI implementation. Use when the user asks for Vercel, developer platform UI, deployment/dashboard aesthetics, Geist typography, black-and-white precision, command-line/code-forward layouts, or wants a project DESIGN.md/style guide based on Vercel.",
+      "updatedAt": "2026-09-07T14:29:48.873Z"
+    },
+    "d69ebe54503d59492f9da46950b79bbd4d19cdcd16cee212d6321bd77d6a1f89": {
+      "category": "文档写作",
+      "summaryZh": "将文章核心观点梳理为分步推进的情节节拍",
+      "enrichmentFailed": false,
+      "hash": "d69ebe54503d59492f9da46950b79bbd4d19cdcd16cee212d6321bd77d6a1f89",
+      "name": "writing-beats",
+      "description": "Shape an article as a journey of beats, choose-your-own-adventure style. The user picks a starting beat from the raw material, you write only that beat, then offer options for where to pivot next, beat by beat, until the article reaches a natural end. Use when the user has raw material and wants to assemble it as a narrative rather than an argument.",
+      "updatedAt": "2026-09-07T14:29:48.873Z"
+    },
+    "959d046496d352fe934f76c1e1beff9c3a7b6cff3aedae28b133a432d32e1322": {
+      "category": "文档写作",
+      "summaryZh": "通过问答挖掘并提炼写作素材片段与核心论据",
+      "enrichmentFailed": false,
+      "hash": "959d046496d352fe934f76c1e1beff9c3a7b6cff3aedae28b133a432d32e1322",
+      "name": "writing-fragments",
+      "description": "Grilling session that mines the user for fragments — heterogeneous nuggets of writing (claims, vignettes, sharp sentences, half-thoughts) — and appends them to a single document as raw material for a future article. Use when the user wants to develop ideas before imposing structure, or mentions \"fragments\", \"ideate\", or \"raw material\" for writing.",
+      "updatedAt": "2026-09-07T14:29:48.874Z"
+    },
+    "3335b1fa37003ff03732caf243b4c7da2bde584ff93d70206dfbc4ec0fee3ff5": {
+      "category": "文档写作",
+      "summaryZh": "编写高质量技能规范的原则、范式与编写指引",
+      "enrichmentFailed": false,
+      "hash": "3335b1fa37003ff03732caf243b4c7da2bde584ff93d70206dfbc4ec0fee3ff5",
+      "name": "writing-great-skills",
+      "description": "Reference for writing and editing skills well — the vocabulary and principles that make a skill predictable.",
+      "updatedAt": "2026-09-07T14:29:48.874Z"
+    },
+    "ae3216dc00d340ab65614111531845cefc1f1e3f5ca6788554f8e152c2e7744e": {
+      "category": "文档写作",
+      "summaryZh": "将零散材料通过对话加工塑造成结构完整的文章",
+      "enrichmentFailed": false,
+      "hash": "ae3216dc00d340ab65614111531845cefc1f1e3f5ca6788554f8e152c2e7744e",
+      "name": "writing-shape",
+      "description": "Take a markdown file of raw material and shape it into an article through a conversational session — drafting candidate openings, growing the piece paragraph by paragraph, arguing about format (lists, tables, callouts, quotes) at each step. Use when the user has a pile of notes, fragments, or a rough draft and wants help turning it into something publishable.",
+      "updatedAt": "2026-09-07T14:29:48.875Z"
+    },
+    "9c6f5f684b3eb4f361490e38a212127cac60cd3d5b8073b2dce9a58d6cbca699": {
+      "category": "工具环境",
+      "summaryZh": "Comprehensive guide and reference for the Antigravity Customization System",
+      "enrichmentFailed": true,
+      "hash": "9c6f5f684b3eb4f361490e38a212127cac60cd3d5b8073b2dce9a58d6cbca699",
+      "name": "agy-customizations",
+      "description": "Comprehensive guide and reference for the Antigravity Customization System. Use to explain how customizations work, their loading priority, discovery mechanisms, and to guide the creation of skills, rules, plugins, hooks, and MCP servers.",
+      "updatedAt": "2026-09-07T14:29:48.875Z"
+    },
+    "eeab83c6b74e5fc178be7e0973a39e9009889447174a3dfe8ff7dd3ac9221e07": {
+      "category": "工具环境",
+      "summaryZh": "Provides a comprehensive guide, quick reference, and sitemap for Google Antigravity (AGY), including the Antigravity CLI...",
+      "enrichmentFailed": true,
+      "hash": "eeab83c6b74e5fc178be7e0973a39e9009889447174a3dfe8ff7dd3ac9221e07",
+      "name": "antigravity-guide",
+      "description": "Provides a comprehensive guide, quick reference, and sitemap for Google Antigravity (AGY), including the Antigravity CLI (agy), Antigravity 2.0, Antigravity IDE, Python SDK, slash commands, keybindings, and customizations (skills, rules, MCP, sidecars). Activate this skill when the user asks questions about how to use, configure, or customize Antigravity, AGY, the agy CLI, the Antigravity IDE, or Antigravity 2.0.",
+      "updatedAt": "2026-09-07T14:29:48.876Z"
+    },
+    "10c9a5999fc20fc734212b4968f2db174d1f581198d094aae2c2c6f32d013846": {
+      "category": "界面设计",
+      "summaryZh": "How to render rich interactive HTML widgets inline in the chat or as standalone artifacts",
+      "enrichmentFailed": true,
+      "hash": "10c9a5999fc20fc734212b4968f2db174d1f581198d094aae2c2c6f32d013846",
+      "name": "generative_ui",
+      "description": "How to render rich interactive HTML widgets inline in the chat or as standalone artifacts. Use this skill when you want to show the user diagrams, data visualizations, interactive controls, educational walkthroughs, or any rich visual content beyond plain text and markdown.",
+      "updatedAt": "2026-09-07T14:29:48.876Z"
+    },
+    "fb2a397aaf4a78cd4627e310945071e8a7ec71b43058e528b4e83d59315c9b29": {
+      "category": "开发实现",
+      "summaryZh": "Automatically migrate legacy workflows to modern skills across global and workspace configurations",
+      "enrichmentFailed": true,
+      "hash": "fb2a397aaf4a78cd4627e310945071e8a7ec71b43058e528b4e83d59315c9b29",
+      "name": "migrate-workflows",
+      "description": "Automatically migrate legacy workflows to modern skills across global and workspace configurations. Scans for existing workflows, creates target SKILL.md files, and safely archives old workflow files.",
+      "updatedAt": "2026-09-07T14:29:48.877Z"
+    },
+    "02ffd34d156bb7b3f7fa429f55aaf90df5801761b2259b87fbc857ce672a22bb": {
+      "category": "工具环境",
+      "summaryZh": "Guidelines for interacting with GitHub and request permissions from the user when commands fail due to restrictions in t...",
+      "enrichmentFailed": true,
+      "hash": "02ffd34d156bb7b3f7fa429f55aaf90df5801761b2259b87fbc857ce672a22bb",
+      "name": "permissioned-github",
+      "description": "Guidelines for interacting with GitHub and request permissions from the user when commands fail due to restrictions in the agent environment.",
+      "updatedAt": "2026-09-07T14:29:48.877Z"
+    },
+    "177cdc55cfe783920ca4d65f51990fffb1347a39c4bec7c61f67510865b1389f": {
+      "category": "界面设计",
+      "summaryZh": "审查代码库架构与排版",
+      "enrichmentFailed": false,
+      "hash": "177cdc55cfe783920ca4d65f51990fffb1347a39c4bec7c61f67510865b1389f",
+      "name": "r4-skill-3-mtrc7fct",
+      "description": "Review codebase architecture and visual layout.\nGN-R4-LOAD r4-skill-3-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:49.937Z"
+    },
+    "c44995560fb6de12b2196e4c9d587a802a4e35224b3ec25ab3bb839dcac1bb3b": {
+      "category": "工具环境",
+      "summaryZh": "检查与分析项目依赖关系",
+      "enrichmentFailed": false,
+      "hash": "c44995560fb6de12b2196e4c9d587a802a4e35224b3ec25ab3bb839dcac1bb3b",
+      "name": "r4-skill-1-mtrc7fct",
+      "description": "Inspect project dependencies and analyze modules.\nGN-R4-LOAD r4-skill-1-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:49.946Z"
+    },
+    "af4faa6e5487151d27423bcf40156a56d994e5d73c8126c080959214a08b7787": {
+      "category": "安全管控",
+      "summaryZh": "审计安全规则并保护改动",
+      "enrichmentFailed": false,
+      "hash": "af4faa6e5487151d27423bcf40156a56d994e5d73c8126c080959214a08b7787",
+      "name": "r4-skill-2-mtrc7fct",
+      "description": "Audit security rules and protect file changes.\nGN-R4-LOAD r4-skill-2-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:49.947Z"
+    },
+    "63c89cc39d077724cbc1e6fc3787296f19636d0936b27d3df5de6fbbca45a330": {
+      "category": "质量保障",
+      "summaryZh": "脚手架生成练习题与测试",
+      "enrichmentFailed": false,
+      "hash": "63c89cc39d077724cbc1e6fc3787296f19636d0936b27d3df5de6fbbca45a330",
+      "name": "r4-skill-4-mtrc7fct",
+      "description": "Scaffold exercises and test suites for module.\nGN-R4-LOAD r4-skill-4-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:54.104Z"
+    },
+    "775209955030be8e3cfca3b29118d6ef6796cac4e70903f39ac7974415137fb6": {
+      "category": "质量保障",
+      "summaryZh": "测试驱动开发与性能基准",
+      "enrichmentFailed": false,
+      "hash": "775209955030be8e3cfca3b29118d6ef6796cac4e70903f39ac7974415137fb6",
+      "name": "r4-skill-5-mtrc7fct",
+      "description": "Run test driven development and benchmark performance.\nGN-R4-LOAD r4-skill-5-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:54.105Z"
+    },
+    "7a13e4a77680c83a0b2e3fc08a31e1d819805156b224c8d51fade0ff5925d871": {
+      "category": "文档写作",
+      "summaryZh": "同步知识库并导出交接文档",
+      "enrichmentFailed": false,
+      "hash": "7a13e4a77680c83a0b2e3fc08a31e1d819805156b224c8d51fade0ff5925d871",
+      "name": "r4-skill-6-mtrc7fct",
+      "description": "Sync knowledge graph and generate handoff document.\nGN-R4-LOAD r4-skill-6-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:54.107Z"
+    },
+    "7c2e15b1db3dab326eb511382aaca89ed8bd85eebe29e5d93ed519f076c6d99b": {
+      "category": "文档写作",
+      "summaryZh": "将文档转换为高质量PDF",
+      "enrichmentFailed": false,
+      "hash": "7c2e15b1db3dab326eb511382aaca89ed8bd85eebe29e5d93ed519f076c6d99b",
+      "name": "r4-skill-8-mtrc7fct",
+      "description": "Convert documentation to PDF.\nGN-R4-LOAD r4-skill-8-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:54.242Z"
+    },
+    "f7101e1f1f55728a7c4d2cc81c473413ffffd3ccdbf5d502da04d68f6b991812": {
+      "category": "界面设计",
+      "summaryZh": "连接或启动Chrome协同操控",
+      "enrichmentFailed": false,
+      "hash": "f7101e1f1f55728a7c4d2cc81c473413ffffd3ccdbf5d502da04d68f6b991812",
+      "name": "r4-skill-9-mtrc7fct",
+      "description": "Connect Chrome browser for UI test.\nGN-R4-LOAD r4-skill-9-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:54.243Z"
+    },
+    "2bd880121c0294f4440e08407d32eeb98e69fa4d8a6138b88269451c77bbdb0a": {
+      "category": "发布部署",
+      "summaryZh": "执行发版部署并监控健康",
+      "enrichmentFailed": false,
+      "hash": "2bd880121c0294f4440e08407d32eeb98e69fa4d8a6138b88269451c77bbdb0a",
+      "name": "r4-skill-7-mtrc7fct",
+      "description": "Publish and land release version.\nGN-R4-LOAD r4-skill-7-mtrc7fct",
+      "updatedAt": "2026-09-07T14:29:55.623Z"
+    }
+  }
+}

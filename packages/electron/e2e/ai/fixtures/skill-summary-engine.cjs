@@ -13,44 +13,33 @@ const delayMs = parseInt(process.env.NIMBALYST_SKILL_ENGINE_DELAY_MS || '2500', 
 const failAll = process.env.NIMBALYST_SKILL_ENGINE_FAIL_ALL === '1';
 const customOutput = process.env.NIMBALYST_SKILL_ENGINE_CUSTOM_OUTPUT;
 
-// 1. 记录启动状态
-if (stateDir && fs.existsSync(stateDir)) {
-  const pidFile = path.join(stateDir, `running-${pid}.json`);
-  fs.writeFileSync(pidFile, JSON.stringify({ pid, startTime: Date.now() }), 'utf8');
-  const logFile = path.join(stateDir, 'events.log');
-  fs.appendFileSync(logFile, `START ${pid} ${Date.now()}\n`, 'utf8');
-}
-
-function cleanupState(status) {
-  if (stateDir && fs.existsSync(stateDir)) {
-    const pidFile = path.join(stateDir, `running-${pid}.json`);
-    try {
-      if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile);
-    } catch {}
-    const logFile = path.join(stateDir, 'events.log');
-    try {
-      fs.appendFileSync(logFile, `${status} ${pid} ${Date.now()}\n`, 'utf8');
-    } catch {}
-  }
-}
-
-process.on('SIGTERM', () => {
-  cleanupState('KILLED');
-  process.exit(143);
-});
-
-process.on('SIGINT', () => {
-  cleanupState('KILLED');
-  process.exit(130);
-});
-
-// 解析输入参数
 const args = process.argv.slice(2);
-let rawPrompt = '';
-const pIdx = args.indexOf('-p');
-if (pIdx !== -1 && args[pIdx + 1]) {
-  rawPrompt = args[pIdx + 1];
+const rawPrompt = args[args.indexOf('-p') + 1] || '';
+const description = rawPrompt.split('<skill_raw_description>\n')[1]?.split('\n</skill_raw_description>')[0] || '';
+const startTime = Date.now();
+const identity = { pid, startTime, description };
+let finished = false;
+
+function record(event, extra = {}) {
+  if (!stateDir || !fs.existsSync(stateDir)) return;
+  const at = Date.now();
+  fs.appendFileSync(path.join(stateDir, 'events.log'), `${event} ${pid} ${at}\n`);
+  fs.appendFileSync(path.join(stateDir, 'process-events.jsonl'), JSON.stringify({ event, at, ...identity, ...extra }) + '\n');
 }
+if (stateDir && fs.existsSync(stateDir)) {
+  fs.writeFileSync(path.join(stateDir, `running-${pid}.json`), JSON.stringify(identity));
+}
+record('START', { args, hasApiKey: 'ANTHROPIC_API_KEY' in process.env });
+
+function finish(event, exitCode, stdout = '') {
+  if (finished) return;
+  finished = true;
+  record(event, { endTime: Date.now(), exitCode, stdout });
+  if (stateDir) fs.rmSync(path.join(stateDir, `running-${pid}.json`), { force: true });
+  process.stdout.write(stdout, () => process.exit(exitCode));
+}
+process.on('SIGTERM', () => finish('KILLED', 143));
+process.on('SIGINT', () => finish('KILLED', 130));
 
 let output = customOutput || '分析并处理项目技能说明';
 if (rawPrompt.includes('dependencies')) {
@@ -73,19 +62,22 @@ if (rawPrompt.includes('dependencies')) {
   output = '连接或启动Chrome协同操控';
 }
 
-setTimeout(() => {
+function complete() {
   if (failAll) {
-    cleanupState('FAIL');
     process.stderr.write('Simulated engine failure for test probe\n');
-    process.exit(1);
+    finish('FAIL', 1);
+    return;
   }
-  cleanupState('END');
-  const payload = {
-    type: 'result',
-    subtype: 'success',
-    is_error: false,
-    result: output,
-  };
-  process.stdout.write(JSON.stringify(payload) + '\n');
-  process.exit(0);
-}, delayMs);
+  finish('END', 0, JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: output }) + '\n');
+}
+
+// 仅受控负载夹具等待主链释放；有界看门狗早于正式 15 秒超时，绝不无限延长。
+// delay=0 保留反向 B：真实进程立即退出，留下的旧标记不能冒充在飞负载。
+if (stateDir && description.includes('GN-R4-LOAD') && delayMs !== 0) {
+  setInterval(() => {
+    if (fs.existsSync(path.join(stateDir, `release-${pid}`))) complete();
+  }, 20);
+  setTimeout(() => finish('HOLD_TIMEOUT', 1), 14000);
+} else {
+  setTimeout(complete, delayMs);
+}

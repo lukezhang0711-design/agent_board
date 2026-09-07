@@ -130,7 +130,7 @@ import {
   _getActiveGlobalSkillGenerationsForTest,
   _getWindowSkillSessionForTest,
 } from '../SettingsHandlers';
-import { skillTaxonomyCacheManager } from '../../services/SkillTaxonomyEnricher';
+import { generateSkillSummaryWithEngine, skillTaxonomyCacheManager } from '../../services/SkillTaxonomyEnricher';
 
 function createMockSender(id: number) {
   const listeners = new Map<string, Function[]>();
@@ -175,8 +175,104 @@ describe('SettingsHandlers.skillSummaries (施工单 GN: 按需生成限额与�
   afterEach(() => {
     _resetSkillGenerationStateForTest();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     if (tmpCacheDir) {
       fs.rmSync(tmpCacheDir, { recursive: true, force: true });
+    }
+  });
+
+
+  it('GN-R4: 50 项走实际假进程，失败与真实超时计入单窗口 20 次且离开重进不重置', async () => {
+    const callsFile = path.join(tmpCacheDir, 'calls.jsonl');
+    const script = path.join(tmpCacheDir, 'engine.cjs');
+    fs.writeFileSync(script, `#!/usr/bin/env node
+const fs = require('fs');
+const args = process.argv.slice(2);
+const sample = Number(/sample-(\\d+)/.exec(args.join(' '))[1]);
+function record(event) { fs.appendFileSync(${JSON.stringify(callsFile)},JSON.stringify({event,pid:process.pid,at:Date.now(),sample,args})+'\\n'); }
+record('START');
+process.on('SIGTERM',()=>{record('TIMEOUT');process.exit(143);});
+if (sample === 0) setInterval(()=>{},1000);
+else {record(sample===1 ? 'FAIL' : 'END');process.stdout.write(JSON.stringify({type:'result',subtype:'success',is_error:false,result:'检查项目依赖'}));process.exitCode=sample===1 ? 1 : 0;}
+`);
+    fs.chmodSync(script, 0o755);
+    vi.stubEnv('NODE_ENV', 'test');
+    vi.stubEnv('NIMBALYST_TEST_SKILL_SUMMARY_ENGINE', script);
+    const originalGenerator = skillTaxonomyCacheManager.getAiGenerator();
+    skillTaxonomyCacheManager.setAiGenerator(generateSkillSummaryWithEngine);
+    const sender = createMockSender(401);
+    const generate = getHandler('dispatch-skills:generate-summary');
+    const visibility = getHandler('dispatch-skills:set-page-visibility');
+    const outcomes: unknown[] = [];
+    try {
+      for (let i = 0; i < 50; i++) {
+        if (i === 10) {
+          await visibility({ sender }, false);
+          expect(await generate({ sender }, { name: 'left-page', description: 'sample-99' })).toMatchObject({ reason: 'page_not_visible' });
+          await visibility({ sender }, true);
+        }
+        const started = Date.now();
+        const result = await generate({ sender }, { name: `actual-quota-${i}`, description: `Inspect sample-${i}.` });
+        const elapsed = Date.now() - started;
+        outcomes.push({ i, elapsed, result });
+        if (i === 0) {
+          expect(elapsed).toBeGreaterThanOrEqual(14500);
+          expect(elapsed).toBeLessThan(20000);
+        }
+        if (i < 2) expect(result.enrichmentFailed).toBe(true);
+        else if (i < 20) expect(result.success).toBe(true);
+        else expect(result.reason).toBe('quota_exceeded');
+      }
+      const before = fs.readFileSync(callsFile, 'utf8');
+      const starts = before.trim().split('\n').map(line => JSON.parse(line)).filter(event => event.event === 'START');
+      expect(starts).toHaveLength(20);
+      for (const proc of starts) expect(() => process.kill(proc.pid, 0)).toThrow();
+      expect(await generate({ sender }, { name: 'actual-quota-0', description: 'Inspect sample-0.' })).toMatchObject({ reason: 'already_attempted' });
+      expect(fs.readFileSync(callsFile, 'utf8')).toBe(before);
+      sender.destroy();
+      expect(_getWindowSkillSessionForTest(sender.id)).toBeUndefined();
+      expect(await generate({ sender: createMockSender(402) }, { name: 'after-close', description: 'Inspect sample-51.' })).toMatchObject({ success: true });
+    } finally {
+      const evidence = { outcomes, events: fs.existsSync(callsFile) ? fs.readFileSync(callsFile, 'utf8') : '', cache: fs.existsSync(tmpCacheFile) ? JSON.parse(fs.readFileSync(tmpCacheFile, 'utf8')) : null };
+      console.log('GN_R4_ACTUAL_QUOTA', JSON.stringify(evidence));
+      if (process.env.NIMBALYST_GN_EVIDENCE_DIR) fs.writeFileSync(path.join(process.env.NIMBALYST_GN_EVIDENCE_DIR, 'actual-quota.json'), JSON.stringify(evidence, null, 2));
+      skillTaxonomyCacheManager.setAiGenerator(originalGenerator);
+    }
+  }, 45000);
+
+  it('GN-R4: 两个窗口身份通过实际假进程占满全局三并发，第四项与离页项均不启动', async () => {
+    const fixture = path.resolve(__dirname, '../../../../e2e/ai/fixtures/skill-summary-engine.cjs');
+    vi.stubEnv('NODE_ENV', 'test');
+    vi.stubEnv('NIMBALYST_TEST_SKILL_SUMMARY_ENGINE', fixture);
+    vi.stubEnv('NIMBALYST_SKILL_ENGINE_STATE_DIR', tmpCacheDir);
+    const originalGenerator = skillTaxonomyCacheManager.getAiGenerator();
+    skillTaxonomyCacheManager.setAiGenerator(generateSkillSummaryWithEngine);
+    const senderA = createMockSender(403), senderB = createMockSender(404);
+    const generate = getHandler('dispatch-skills:generate-summary');
+    const requests = [senderA, senderA, senderB].map((sender, i) => generate({ sender }, { name: `two-window-${i}`, description: `Inspect GN-R4-LOAD item ${i}.` }));
+    const markers = () => fs.readdirSync(tmpCacheDir).filter(name => name.startsWith('running-')).map(name => JSON.parse(fs.readFileSync(path.join(tmpCacheDir, name), 'utf8')));
+    try {
+      await vi.waitFor(() => expect(markers()).toHaveLength(3), { timeout: 5000 });
+      for (const proc of markers()) expect(() => process.kill(proc.pid, 0)).not.toThrow();
+      expect(_getActiveGlobalSkillGenerationsForTest()).toBe(3);
+      expect(await generate({ sender: senderB }, { name: 'fourth', description: 'Inspect a fourth item.' })).toMatchObject({ reason: 'concurrency_limit' });
+      await getHandler('dispatch-skills:set-page-visibility')({ sender: senderA }, false);
+      expect(await generate({ sender: senderA }, { name: 'left-page', description: 'Inspect after leaving.' })).toMatchObject({ reason: 'page_not_visible' });
+      for (const proc of markers()) fs.writeFileSync(path.join(tmpCacheDir, `release-${proc.pid}`), 'release');
+      for (const result of await Promise.all(requests)) expect(result.success).toBe(true);
+      const events = fs.readFileSync(path.join(tmpCacheDir, 'process-events.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+      expect(events.filter(event => event.event === 'START')).toHaveLength(3);
+      let active = 0, maximum = 0;
+      for (const event of events) { active += event.event === 'START' ? 1 : -1; maximum = Math.max(maximum, active); }
+      expect(maximum).toBe(3);
+      expect(active).toBe(0);
+      const evidence = { windowIds: [senderA.id, senderB.id], maximum, active, events };
+      console.log('GN_R4_ACTUAL_TWO_WINDOWS', JSON.stringify(evidence));
+      if (process.env.NIMBALYST_GN_EVIDENCE_DIR) fs.writeFileSync(path.join(process.env.NIMBALYST_GN_EVIDENCE_DIR, 'actual-two-windows.json'), JSON.stringify(evidence, null, 2));
+    } finally {
+      for (const proc of markers()) { try { process.kill(proc.pid, 'SIGTERM'); } catch {} }
+      await Promise.allSettled(requests);
+      skillTaxonomyCacheManager.setAiGenerator(originalGenerator);
     }
   });
 

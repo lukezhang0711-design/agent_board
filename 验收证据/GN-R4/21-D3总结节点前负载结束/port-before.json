@@ -1,0 +1,17 @@
+[
+  {
+    "port": 5273,
+    "exit_code": 1,
+    "stdout": ""
+  },
+  {
+    "port": 8234,
+    "exit_code": 1,
+    "stdout": ""
+  },
+  {
+    "port": 9333,
+    "exit_code": 1,
+    "stdout": ""
+  }
+]

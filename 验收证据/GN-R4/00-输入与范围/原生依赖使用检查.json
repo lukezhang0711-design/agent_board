@@ -1,0 +1,16 @@
+{
+  "command": "ps -axo pid,ppid,comm",
+  "matches": [],
+  "dependency_realpath": "/Users/lukezhang/Desktop/Agent运行面板/agent_board/node_modules",
+  "port_5273": {
+    "command": [
+      "lsof",
+      "-nP",
+      "-iTCP:5273",
+      "-sTCP:LISTEN"
+    ],
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": ""
+  }
+}

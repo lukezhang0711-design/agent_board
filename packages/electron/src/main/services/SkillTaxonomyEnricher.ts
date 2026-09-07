@@ -136,7 +136,7 @@ export function computeSkillHash(name: string, description?: string, content?: s
   const normContent = (content ?? '').trim();
   return crypto
     .createHash('sha256')
-    .update(`${normName}:${normDesc}:${normContent}`, 'utf8')
+    .update(JSON.stringify([normName, normDesc, normContent]), 'utf8')
     .digest('hex');
 }
 
@@ -283,7 +283,7 @@ export type SkillSummaryAiGenerator = (description: string) => Promise<string>;
 
 /**
  * 解析并校验 Claude CLI 的结构化输出（SDKResultSuccess 格式）。
- * 必须包含 type: 'result', subtype: 'success', is_error !== true，且 result 为非空字符串。
+ * 必须包含 type: 'result', subtype: 'success', is_error === false，且 result 为非空字符串。
  * 若为错误分支、非成功结果、空结果、坏 JSON 等均抛错，由调用方捕获并保留原文。
  */
 export function parseEngineSuccessOutput(stdout?: string): string {
@@ -305,8 +305,8 @@ export function parseEngineSuccessOutput(stdout?: string): string {
   if (parsed.subtype !== 'success') {
     throw new Error(`Engine output subtype is not "success", received: ${parsed.subtype}`);
   }
-  if (parsed.is_error === true) {
-    throw new Error('Engine output indicates is_error: true');
+  if (parsed.is_error !== false) {
+    throw new Error('Engine output is_error must be boolean false');
   }
   if (typeof parsed.result !== 'string') {
     throw new Error(`Engine output result is not a string, received: ${typeof parsed.result}`);
@@ -442,16 +442,27 @@ export async function generateSkillSummaryWithEngine(description: string): Promi
 }
 
 export class SkillTaxonomyCacheManager {
-  private cachePath: string;
+  private cachePath?: string;
   private memoryCache: Map<string, SkillEnrichmentCacheEntry> = new Map();
   private loaded: boolean = false;
   private dirty: boolean = false;
   private aiGenerator: SkillSummaryAiGenerator = generateSkillSummaryWithEngine;
 
   constructor(customPath?: string) {
-    if (customPath) {
-      this.cachePath = customPath;
-    } else {
+    this.cachePath = customPath;
+  }
+
+  public setAiGenerator(generator: SkillSummaryAiGenerator): void {
+    this.aiGenerator = generator;
+  }
+
+  public getAiGenerator(): SkillSummaryAiGenerator {
+    return this.aiGenerator;
+  }
+
+  public getCachePath(): string {
+    // 首次读写时再取路径，等待 Electron bootstrap 的 userData 配置生效。
+    if (!this.cachePath) {
       let baseDir = path.join(os.homedir(), '.nimbalyst');
       try {
         // In electron main process, use app.getPath('userData') if available
@@ -464,26 +475,16 @@ export class SkillTaxonomyCacheManager {
       }
       this.cachePath = path.join(baseDir, 'skill-taxonomy-cache.json');
     }
-  }
-
-  public setAiGenerator(generator: SkillSummaryAiGenerator): void {
-    this.aiGenerator = generator;
-  }
-
-  public getAiGenerator(): SkillSummaryAiGenerator {
-    return this.aiGenerator;
-  }
-
-  public getCachePath(): string {
     return this.cachePath;
   }
 
   public load(): void {
     if (this.loaded) return;
     this.memoryCache.clear();
+    const cachePath = this.getCachePath();
     try {
-      if (fs.existsSync(this.cachePath)) {
-        const raw = fs.readFileSync(this.cachePath, 'utf8');
+      if (fs.existsSync(cachePath)) {
+        const raw = fs.readFileSync(cachePath, 'utf8');
         const data = JSON.parse(raw) as DiskCacheFormat;
         if (data && data.version === 1 && data.entries && typeof data.entries === 'object') {
           for (const [hash, entry] of Object.entries(data.entries)) {
@@ -522,7 +523,8 @@ export class SkillTaxonomyCacheManager {
   public save(): void {
     if (!this.dirty) return;
     try {
-      const dir = path.dirname(this.cachePath);
+      const cachePath = this.getCachePath();
+      const dir = path.dirname(cachePath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
@@ -530,7 +532,7 @@ export class SkillTaxonomyCacheManager {
         version: 1,
         entries: Object.fromEntries(this.memoryCache.entries()),
       };
-      fs.writeFileSync(this.cachePath, JSON.stringify(data, null, 2), 'utf8');
+      fs.writeFileSync(cachePath, JSON.stringify(data, null, 2), 'utf8');
       this.dirty = false;
     } catch {
       // Ignore disk write errors in restricted environments
