@@ -109,9 +109,46 @@ const PLAN_APPROVAL_SCREENSHOT_DIR = path.resolve(
 async function countRunningEngineProcesses(): Promise<number> {
   try {
     const files = await fs.readdir(engineStateDir);
-    return files.filter((f) => f.startsWith('running-') && f.endsWith('.json')).length;
+    let aliveCount = 0;
+    for (const f of files) {
+      if (f.startsWith('running-') && f.endsWith('.json')) {
+        try {
+          const content = await fs.readFile(path.join(engineStateDir, f), 'utf8');
+          const data = JSON.parse(content);
+          if (data && typeof data.pid === 'number') {
+            process.kill(data.pid, 0);
+            aliveCount++;
+          }
+        } catch {
+          // Process exited or invalid file
+        }
+      }
+    }
+    return aliveCount;
   } catch {
     return 0;
+  }
+}
+
+async function getLiveEngineProcessInfo(): Promise<Array<{ pid: number; startTime: number }>> {
+  try {
+    const files = await fs.readdir(engineStateDir);
+    const list: Array<{ pid: number; startTime: number }> = [];
+    for (const f of files) {
+      if (f.startsWith('running-') && f.endsWith('.json')) {
+        try {
+          const content = await fs.readFile(path.join(engineStateDir, f), 'utf8');
+          const data = JSON.parse(content);
+          if (data && typeof data.pid === 'number') {
+            process.kill(data.pid, 0);
+            list.push({ pid: data.pid, startTime: data.startTime ?? 0 });
+          }
+        } catch {}
+      }
+    }
+    return list;
+  } catch {
+    return [];
   }
 }
 
@@ -752,6 +789,13 @@ test.beforeAll(async ({}, testInfo) => {
   engineStateDir = path.join(workspacePath, '.skill-engine-state');
   await fs.mkdir(engineStateDir, { recursive: true });
 
+  if (process.env.NIMBALYST_TEST_STALE_MARKERS === '1') {
+    for (let i = 0; i < 3; i++) {
+      const deadPid = Number(execFileSync(process.execPath, ['-e', 'process.stdout.write(String(process.pid))'], { encoding: 'utf8' }));
+      await fs.writeFile(path.join(engineStateDir, `running-${deadPid}.json`), JSON.stringify({ pid: deadPid, startTime: Date.now() }));
+    }
+  }
+
   electronApp = await launchElectronApp({
     workspace: workspacePath,
     permissionMode: 'allow-all',
@@ -759,6 +803,9 @@ test.beforeAll(async ({}, testInfo) => {
       NODE_ENV: 'test',
       NIMBALYST_TEST_SKILL_SUMMARY_ENGINE: fakeEnginePath,
       NIMBALYST_SKILL_ENGINE_STATE_DIR: engineStateDir,
+      ...(process.env.NIMBALYST_SKILL_ENGINE_FAIL_ALL ? { NIMBALYST_SKILL_ENGINE_FAIL_ALL: process.env.NIMBALYST_SKILL_ENGINE_FAIL_ALL } : {}),
+      ...(process.env.NIMBALYST_SKILL_ENGINE_DELAY_MS ? { NIMBALYST_SKILL_ENGINE_DELAY_MS: process.env.NIMBALYST_SKILL_ENGINE_DELAY_MS } : {}),
+      ...(process.env.NIMBALYST_SKILL_ENGINE_CUSTOM_OUTPUT ? { NIMBALYST_SKILL_ENGINE_CUSTOM_OUTPUT: process.env.NIMBALYST_SKILL_ENGINE_CUSTOM_OUTPUT } : {}),
     },
   });
   page = await electronApp.firstWindow();
@@ -794,7 +841,7 @@ test.afterAll(async () => {
   if (engineStateDir) {
     try {
       const srcLog = path.join(engineStateDir, 'events.log');
-      const destDir = path.resolve(__dirname, '../../../../验收证据/GN-R2');
+      const destDir = path.resolve(__dirname, '../../../../验收证据/GN-R3');
       await fs.mkdir(destDir, { recursive: true });
       const stat = await fs.stat(srcLog).catch(() => null);
       if (stat) {
@@ -1272,7 +1319,7 @@ test('绿⑭: 真实技能库入口 -> 可见项 -> 未替换页面通信 -> 指
 name: ${skillName}
 description: Inspect and manage project dependencies and modules.
 ---
-# Live E2E Skill Content
+# Live E2E Skill Content Initial
 `,
     'utf8',
   );
@@ -1297,18 +1344,69 @@ description: Inspect and manage project dependencies and modules.
   await expect(card).toContainText('检查与分析项目依赖关系', { timeout: 20_000 });
   await expect(card).not.toContainText('[未翻译]');
 
-  // 5. 重新扫描验证磁盘缓存已持久化且直接复用
-  const listResult = await invokeElectron<{ skills: Array<{ name: string; summaryZh?: string; enrichmentFailed?: boolean }> }>(
-    page,
-    'dispatch-skills:list',
-    workspacePath,
-  );
-  const matched = listResult.skills.find((s) => s.name === skillName);
-  expect(matched).toBeDefined();
-  expect(matched?.summaryZh).toBe('检查与分析项目依赖关系');
-  expect(matched?.enrichmentFailed).toBeFalsy();
+  // 5. 核对磁盘缓存文件真正落盘
+  const cachePath = await invokeElectron<string>(page, 'dispatch-skills:get-cache-path');
+  expect(cachePath).toBeTruthy();
+  await expect.poll(async () => {
+    try {
+      const content = await fs.readFile(cachePath, 'utf8');
+      const data = JSON.parse(content);
+      const entries = Object.values(data.entries ?? data) as any[];
+      return entries.some((e) => e.summaryZh === '检查与分析项目依赖关系' && !e.enrichmentFailed);
+    } catch {
+      return false;
+    }
+  }, { timeout: 10_000 }).toBe(true);
 
-  // 6. 返回 Agent 模式保证后续测试隔离
+  // 6. 实际离开页面再重新打开技能库（验证成功缓存直接复用，不重复生成）
+  await switchToAgentMode(page);
+  await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.agentMode)).toBeVisible({ timeout: 10_000 });
+
+  await skillLibraryButton.click();
+  await expect(skillPanel).toBeVisible({ timeout: 10_000 });
+  await searchInput.fill(skillName);
+  await expect(card).toBeVisible({ timeout: 10_000 });
+  await expect(card).toContainText('检查与分析项目依赖关系');
+  await expect(card).not.toContainText('[未翻译]');
+
+  // 7. 同名正文更新：离开页面后更新 SKILL.md 的内容（正文和描述变化）
+  await switchToAgentMode(page);
+  await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.agentMode)).toBeVisible({ timeout: 10_000 });
+
+  await fs.writeFile(
+    path.join(e2eSkillDir, 'SKILL.md'),
+    `---
+name: ${skillName}
+description: Audit security rules and protect file changes.
+---
+# Live E2E Skill Content Updated: Audit security rules and protect file changes
+`,
+    'utf8',
+  );
+
+  // 8. 重新打开技能库，验证同名新内容触发重新生成并更新页面与磁盘缓存
+  await skillLibraryButton.click();
+  await expect(skillPanel).toBeVisible({ timeout: 10_000 });
+  await searchInput.fill(skillName);
+  await expect(card).toBeVisible({ timeout: 10_000 });
+
+  // 等待新内容生成完成并在页面更新显示
+  await expect(card).toContainText('审计安全规则并保护改动', { timeout: 20_000 });
+  await expect(card).not.toContainText('[未翻译]');
+
+  // 再次核对磁盘缓存：新内容的说明也已落盘
+  await expect.poll(async () => {
+    try {
+      const content = await fs.readFile(cachePath, 'utf8');
+      const data = JSON.parse(content);
+      const entries = Object.values(data.entries ?? data) as any[];
+      return entries.some((e) => e.summaryZh === '审计安全规则并保护改动' && !e.enrichmentFailed);
+    } catch {
+      return false;
+    }
+  }, { timeout: 10_000 }).toBe(true);
+
+  // 9. 返回 Agent 模式保证后续测试隔离
   await switchToAgentMode(page);
   await expect(page.locator(PLAYWRIGHT_TEST_SELECTORS.agentMode)).toBeVisible({ timeout: 10_000 });
 });
@@ -1317,6 +1415,20 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   // 1. 设置页面可见性为 true，使得按需生成接受请求
   await invokeElectron(page, 'dispatch-skills:set-page-visibility', true);
   const runTag = Date.now().toString(36);
+
+  const lifecycleEvidence = {
+    runTag,
+    recordedAt: new Date().toISOString(),
+    phases: [] as Array<{
+      phase: number;
+      name: string;
+      skillNames: string[];
+      liveProcesses: Array<{ pid: number; startTime: number }>;
+      mainChainNode: string;
+      mainChainTimestamp: number;
+      completedAt: number;
+    }>,
+  };
 
   // 阶段 1：方案渲染与批准阶段的 3 并发技能生成负载
   const loadSkills = [
@@ -1342,8 +1454,9 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     ),
   );
 
-  // 必须先等实际在跑的假生成进程数确实达到 3，验证真实在飞并发负载已形成
+  // 必须先等实际在跑且真实存活的假生成进程数确实达到 3，验证真实在飞并发负载已形成
   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
+  const phase1LiveProcs = await getLiveEngineProcessInfo();
 
   // 3. 在 3 并发技能生成负载持续期间，完整跑通协作主链核心环节：
   //    创建总指挥 Session -> 建立 MCP Client -> 提交协作方案 -> 等待方案卡片展示 -> 点击批准 -> 验证审批生命周期与数据库持久化
@@ -1362,7 +1475,13 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   await expect(card).toContainText('Concurrent skill load verification plan');
 
   await resetRendererEvents(page);
-  await card.getByTestId('plan-approval-approve').click();
+  if (process.env.NIMBALYST_TEST_REJECT_PLAN === '1') {
+    await card.getByTestId('plan-approval-request-changes').click();
+    await card.getByTestId('plan-approval-feedback-input').fill('Reverse test probe: intentionally reject plan');
+    await card.getByTestId('plan-approval-submit-changes').click();
+  } else {
+    await card.getByTestId('plan-approval-approve').click();
+  }
 
   const planResult = parseMcpToolResult<{ approved: boolean; deliveryMethod: string }>(await plan.completion);
   expect(planResult).toMatchObject({
@@ -1373,6 +1492,16 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
   await assertApprovalLifecycle(loadHeadSessionId, plan.requestId, {
     decision: 'approved',
     method: 'direct',
+  });
+
+  lifecycleEvidence.phases.push({
+    phase: 1,
+    name: 'PlanApproval',
+    skillNames: loadSkills.map((s) => s.name),
+    liveProcesses: phase1LiveProcs,
+    mainChainNode: 'plan_approved',
+    mainChainTimestamp: Date.now(),
+    completedAt: Date.now(),
   });
 
   // 4. 等待 3 个并发生成请求完成，验证无崩溃、无未捕获异常、正常返回
@@ -1417,6 +1546,7 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
 
   // 等待第 2 阶段在跑数达到 3
   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
+  const phase2LiveProcs = await getLiveEngineProcessInfo();
 
   // 在并发负载下派发子任务工单并等待完成
   const child = await createImplementationChild(
@@ -1432,6 +1562,16 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     content: 'Scripted provider completed the requested collaboration turn.',
   });
   await expect.poll(async () => getWorkOrderStatus(child.sessionId), { timeout: 15_000 }).toBe('completed');
+
+  lifecycleEvidence.phases.push({
+    phase: 2,
+    name: 'ChildExecution',
+    skillNames: phase2Skills.map((s) => s.name),
+    liveProcesses: phase2LiveProcs,
+    mainChainNode: 'child_completed',
+    mainChainTimestamp: Date.now(),
+    completedAt: Date.now(),
+  });
 
   const phase2Results = await Promise.all(skillGenPromisesPhase2);
   expect(phase2Results).toHaveLength(3);
@@ -1466,11 +1606,22 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
 
   // 等待第 3 阶段在跑数达到 3
   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
+  const phase3LiveProcs = await getLiveEngineProcessInfo();
 
   // 在并发负载下完成总指挥收敛总结与交付
   await resetRendererEvents(page);
   const summaryResult = await sendRealProviderTurn(loadHeadSessionId, 'Produce final collaboration summary.');
   expect(summaryResult.content).toBe(SCRIPTED_FINAL_SUMMARY);
+
+  lifecycleEvidence.phases.push({
+    phase: 3,
+    name: 'FinalSummary',
+    skillNames: phase3Skills.map((s) => s.name),
+    liveProcesses: phase3LiveProcs,
+    mainChainNode: 'summary_completed',
+    mainChainTimestamp: Date.now(),
+    completedAt: Date.now(),
+  });
 
   const phase3Results = await Promise.all(skillGenPromisesPhase3);
   expect(phase3Results).toHaveLength(3);
@@ -1478,4 +1629,13 @@ test('绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作�
     expect(res.success).toBe(true);
     expect(res.enrichmentFailed).toBe(false);
   }
+
+  // 将三阶段负载实证归档至 验收证据/GN-R3/
+  const destDir = path.resolve(__dirname, '../../../../验收证据/GN-R3');
+  await fs.mkdir(destDir, { recursive: true });
+  await fs.writeFile(
+    path.join(destDir, 'collab-load-lifecycle.json'),
+    JSON.stringify(lifecycleEvidence, null, 2),
+    'utf8',
+  );
 });

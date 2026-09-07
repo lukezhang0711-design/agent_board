@@ -80,6 +80,12 @@ setTimeout(() => {
     process.exit(1);
   }
   cleanupState('END');
-  process.stdout.write(output + '\n');
+  const payload = {
+    type: 'result',
+    subtype: 'success',
+    is_error: false,
+    result: output,
+  };
+  process.stdout.write(JSON.stringify(payload) + '\n');
   process.exit(0);
 }, delayMs);

@@ -244,6 +244,8 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
   const panelSessionCallsRef = useRef(0);
   const isMountedRef = useRef(true);
   const activeWorkspaceRef = useRef(workspacePath);
+  activeWorkspaceRef.current = workspacePath;
+  const scheduleEnrichmentRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     activeWorkspaceRef.current = workspacePath;
@@ -568,11 +570,13 @@ export function SkillLibraryPanel({ workspacePath }: SkillLibraryPanelProps) {
         .finally(() => {
           inFlightCountRef.current--;
           if (isMountedRef.current) {
-            scheduleEnrichment();
+            scheduleEnrichmentRef.current?.();
           }
         });
     }
   }, [mergedCards, workspacePath]);
+
+  scheduleEnrichmentRef.current = scheduleEnrichment;
 
   const handleCardVisibleChange = useCallback(
     (name: string, isVisible: boolean) => {

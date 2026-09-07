@@ -281,28 +281,46 @@ export function generateSkillEnrichment(
 
 export type SkillSummaryAiGenerator = (description: string) => Promise<string>;
 
-const INVALID_SUMMARY_PATTERNS = [
-  // 1. 系统/网络/服务错误状态与异常（避免用单个业务词如认证、token、天气误杀）
-  /(?:服务器|服务|网络|网关|接口|连接|数据库|系统|请求).*(?:不可达|不可用|超时|断开|失败|拒绝|异常|错误|崩溃|50[0-4]|40[1-4])/i,
-  // 2. 交互提示、重试与人工指令（技能说明不应是命令用户做某事的指令）
-  /(?:请(?:稍后|重新|再次|联系)?(?:重试|再试|尝试|登录|检查)|稍后再试|请先)/i,
-  // 3. 鉴权失效与过期状态（允许正常的认证、token业务主题如“检查 OAuth 认证配置”）
-  /(?:已过期|已失效|已耗尽|已用完|鉴权失败|认证失败|未授权|禁止访问|无权访问|权限不足)/i,
-  // 4. 英文报错与异常字眼
-  /(?:error|exception|failed|timeout|bad gateway|status code|rate limit|unauthorized|forbidden|internal server)/i,
-  // 5. 闲聊问候、拒答与第二人称对话口吻（技能说明讲干什么，不对话）
-  /^(?:你好|您好|早上好|下午好|晚上好|哈喽|嗨)[，,！!\s]/i,
-  /(?:作为|我是).*(?:ai|助手|模型|语言模型|机器人)/i,
-  /^(?:很抱歉|非常抱歉|对不起|抱歉|很遗憾)/i,
-  /(?:无法|不能)(?:回答|完成|提供|处理|生成|概括|理解)/i,
-  /(?:值得你|适合你|建议你|你可以|您可以|值得您|试一试|尝一尝)/i,
-  // 6. 日常闲聊偏题主题（天气闲聊、公园散步、做菜餐饮等与软件技能无关的闲聊）
-  /(?:今天天气|天气很好|适合去公园|去公园|散步)/i,
-  /(?:这道菜|口感|味道很好|很好吃|美味|食谱|烹饪|一道菜)/i,
-];
+/**
+ * 解析并校验 Claude CLI 的结构化输出（SDKResultSuccess 格式）。
+ * 必须包含 type: 'result', subtype: 'success', is_error !== true，且 result 为非空字符串。
+ * 若为错误分支、非成功结果、空结果、坏 JSON 等均抛错，由调用方捕获并保留原文。
+ */
+export function parseEngineSuccessOutput(stdout?: string): string {
+  if (!stdout || typeof stdout !== 'string') {
+    throw new Error('Engine stdout is empty or not a string');
+  }
+  let parsed: any;
+  try {
+    parsed = JSON.parse(stdout.trim());
+  } catch (err) {
+    throw new Error(`Engine stdout is not valid JSON: ${(err as Error).message}`);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Engine output is not a JSON object');
+  }
+  if (parsed.type !== 'result') {
+    throw new Error(`Engine output type is not "result", received: ${parsed.type}`);
+  }
+  if (parsed.subtype !== 'success') {
+    throw new Error(`Engine output subtype is not "success", received: ${parsed.subtype}`);
+  }
+  if (parsed.is_error === true) {
+    throw new Error('Engine output indicates is_error: true');
+  }
+  if (typeof parsed.result !== 'string') {
+    throw new Error(`Engine output result is not a string, received: ${typeof parsed.result}`);
+  }
+  const rawResult = parsed.result.trim();
+  if (!rawResult) {
+    throw new Error('Engine output result is empty');
+  }
+  return rawResult;
+}
 
 /**
- * 校验并提取符合质量与安全要求的技能中文说明（2~30 字以内，排除鉴权报错与闲聊）。
+ * 校验并提取符合格式要求的技能中文说明（2~30 字以内，包含中文字符，动宾/描述短语）。
+ * 删除一切业务黑名单词库（排障、食谱、天气、认证、错误边界等合法主题均通过）。
  */
 export function validateAndExtractSkillSummary(text?: string): { valid: boolean; summary?: string } {
   if (!text || typeof text !== 'string') {
@@ -318,13 +336,6 @@ export function validateAndExtractSkillSummary(text?: string): { valid: boolean;
     return { valid: false };
   }
 
-  // 排除报错、鉴权失败及闲聊拒答模式
-  for (const pattern of INVALID_SUMMARY_PATTERNS) {
-    if (pattern.test(clean)) {
-      return { valid: false };
-    }
-  }
-
   // 提取首句
   const firstSentenceMatch = /^([^。!！?？\n]+)/.exec(clean);
   const sentence = firstSentenceMatch ? firstSentenceMatch[1].trim() : clean;
@@ -338,16 +349,15 @@ export function validateAndExtractSkillSummary(text?: string): { valid: boolean;
 }
 
 /**
- * 解析技能生成引擎可执行程序路径。
- * 铁律：若需测试模式假程序注入，只能限于明确的测试模式（NODE_ENV === 'test'），
- * 测试模式下缺少或未配置变量必须直接失败，严禁悄悄回退到真实 Claude 账号。
- * 正常运行模式（NODE_ENV !== 'test'）：忽略测试注入变量，仍按既有正式路径解析；不把测试开关暴露到普通设置。
+ * Resolve path to Claude executable using claudeExecutableResolver.
+ * Only if Claude is installed and executable exists.
  */
 export function resolveSkillSummaryEngineExecutable(): string {
+  // 测试隔离：在 test 模式下，仅当配置了 NIMBALYST_TEST_SKILL_SUMMARY_ENGINE 时允许受控注入
   if (process.env.NODE_ENV === 'test') {
     const testEnginePath = process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
     if (!testEnginePath || !testEnginePath.trim()) {
-      throw new Error('Test skill summary engine is not configured (NIMBALYST_TEST_SKILL_SUMMARY_ENGINE is required in test mode)');
+      throw new Error('Test skill summary engine is not configured in test environment');
     }
     if (!path.isAbsolute(testEnginePath)) {
       throw new Error(`Test skill summary engine must be an absolute path: ${testEnginePath}`);
@@ -401,6 +411,8 @@ export async function generateSkillSummaryWithEngine(description: string): Promi
       '--safe-mode',
       '--disable-slash-commands',
       '--strict-mcp-config',
+      '--output-format',
+      'json',
       '-p',
       prompt,
     ];
@@ -413,12 +425,17 @@ export async function generateSkillSummaryWithEngine(description: string): Promi
           reject(error);
           return;
         }
-        const validated = validateAndExtractSkillSummary(stdout ?? '');
-        if (!validated.valid || !validated.summary) {
-          reject(new Error('Invalid or unverified response from engine'));
-          return;
+        try {
+          const rawResult = parseEngineSuccessOutput(stdout);
+          const validated = validateAndExtractSkillSummary(rawResult);
+          if (!validated.valid || !validated.summary) {
+            reject(new Error('Engine summary failed format validation'));
+            return;
+          }
+          resolve(validated.summary);
+        } catch (err) {
+          reject(err);
         }
-        resolve(validated.summary);
       },
     );
   });

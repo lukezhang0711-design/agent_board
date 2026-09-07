@@ -10,6 +10,7 @@ import {
   computeSkillHash,
   generateSkillEnrichment,
   inferSkillCategory,
+  parseEngineSuccessOutput,
   validateAndExtractSkillSummary,
   resolveSkillSummaryEngineExecutable,
   type SkillCategory,
@@ -264,34 +265,74 @@ describe('SkillTaxonomyEnricher', () => {
     expect(mockGen).toHaveBeenCalledTimes(3);
   });
 
-  describe('GN-R2 专项单元测试: 输出判定、测试隔离与内容身份', () => {
-    it('GN-R2: validateAndExtractSkillSummary 精准放行合法技能并拦截错误/闲聊', () => {
+  describe('GN-R3 专项单元测试: 输出判定、测试隔离与内容身份', () => {
+    it('GN-R3: parseEngineSuccessOutput 严格校验 SDKResultSuccess 结构', () => {
+      // 1. 明确成功分支：放行
+      const validJson = JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+        result: '排查服务器连接超时',
+      });
+      expect(parseEngineSuccessOutput(validJson)).toBe('排查服务器连接超时');
+
+      // 2. 错误/异常结果分支：拦截
+      expect(() => parseEngineSuccessOutput(JSON.stringify({
+        type: 'result',
+        subtype: 'error_during_execution',
+        is_error: true,
+        errors: ['Simulated engine failure'],
+      }))).toThrow(/subtype/);
+
+      // 3. is_error 为 true：拦截
+      expect(() => parseEngineSuccessOutput(JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: true,
+        result: '排查服务器连接超时',
+      }))).toThrow(/is_error/);
+
+      // 4. 未约定的错误对象（如 {"message":"账户余额不足"}）：拦截
+      expect(() => parseEngineSuccessOutput('{"message":"账户余额不足"}')).toThrow(/type/);
+
+      // 5. 原始非 JSON 文本（如 "账户余额不足" 或 "周末适合看一场电影"）：拦截
+      expect(() => parseEngineSuccessOutput('账户余额不足')).toThrow(/valid JSON/);
+      expect(() => parseEngineSuccessOutput('周末适合看一场电影')).toThrow(/valid JSON/);
+      expect(() => parseEngineSuccessOutput('')).toThrow(/empty/);
+      expect(() => parseEngineSuccessOutput(undefined)).toThrow(/empty/);
+
+      // 6. 字段类型错误或空 result：拦截
+      expect(() => parseEngineSuccessOutput(JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+        result: '',
+      }))).toThrow(/empty/);
+
+      expect(() => parseEngineSuccessOutput(JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+        result: 12345,
+      }))).toThrow(/string/);
+    });
+
+    it('GN-R3: validateAndExtractSkillSummary 放行合法业务主题，仅作中文格式与首句提取校验', () => {
       // 无效输入
       expect(validateAndExtractSkillSummary('')).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary(undefined)).toEqual({ valid: false });
       expect(validateAndExtractSkillSummary('No Chinese words at all')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('中')).toEqual({ valid: false });
+      expect(validateAndExtractSkillSummary('这是一个超过三十个汉字长度的超级超级超级超级超级超级超级长的技能中文描述说明语句')).toEqual({ valid: false });
 
-      // 错误/网络报错/鉴权失效（即便包含中文也坚决拦截）
-      expect(validateAndExtractSkillSummary('登录已过期，请重新登录后再试')).toEqual({ valid: false });
-      expect(validateAndExtractSkillSummary('API key expired or unauthorized')).toEqual({ valid: false });
-      expect(validateAndExtractSkillSummary('权限不足无法执行此操作')).toEqual({ valid: false });
-      expect(validateAndExtractSkillSummary('Error: failed to connect to service')).toEqual({ valid: false });
-      expect(validateAndExtractSkillSummary('服务器暂时不可达，请稍后再试')).toEqual({ valid: false });
+      // 合法业务主题（绝无业务词黑名单，排障/食谱/React错误边界/天气/认证等均放行）
+      expect(validateAndExtractSkillSummary('排查服务器连接超时')).toEqual({ valid: true, summary: '排查服务器连接超时' });
+      expect(validateAndExtractSkillSummary('生成每周食谱与购物清单')).toEqual({ valid: true, summary: '生成每周食谱与购物清单' });
+      expect(validateAndExtractSkillSummary('分析 React ErrorBoundary 故障')).toEqual({ valid: true, summary: '分析 React ErrorBoundary 故障' });
+      expect(validateAndExtractSkillSummary('查询城市天气预报')).toEqual({ valid: true, summary: '查询城市天气预报' });
+      expect(validateAndExtractSkillSummary('检查 OAuth 认证配置')).toEqual({ valid: true, summary: '检查 OAuth 认证配置' });
 
-      // 闲聊/餐饮/通用建议
-      expect(validateAndExtractSkillSummary('今天天气很好，适合去公园散步')).toEqual({ valid: false });
-      expect(validateAndExtractSkillSummary('你好，我是AI语言模型助手')).toEqual({ valid: false });
-      expect(validateAndExtractSkillSummary('很抱歉，我无法回答该问题')).toEqual({ valid: false });
-      expect(validateAndExtractSkillSummary('这道菜口感很好，值得你试一试')).toEqual({ valid: false });
-
-      // 合法业务主题（绝不能因“天气”、“认证”等业务词被误伤）
-      const weatherSkill = validateAndExtractSkillSummary('查询城市天气预报');
-      expect(weatherSkill).toEqual({ valid: true, summary: '查询城市天气预报' });
-
-      const authSkill = validateAndExtractSkillSummary('检查 OAuth 认证配置');
-      expect(authSkill).toEqual({ valid: true, summary: '检查 OAuth 认证配置' });
-
-      // 支持剥离【技能说明】前缀
+      // 支持剥离【技能说明】前缀与提取首句
       const valid1 = validateAndExtractSkillSummary('【技能说明】分析项目依赖并报告漏洞');
       expect(valid1).toEqual({ valid: true, summary: '分析项目依赖并报告漏洞' });
 
@@ -375,6 +416,128 @@ describe('SkillTaxonomyEnricher', () => {
       // 重新访问 Project B 内容，命中 B 的缓存
       const resBCached = manager.enrichAndCache(name, descB, contentB);
       expect(resBCached.summaryZh).toBe('发布新服务');
+    });
+
+    it('GN-R3: 真实假进程调用验证，无成功标记/错误退出/坏JSON/空摘要均拦截且假程序只启动一次', async () => {
+      const execDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gn-r3-process-test-'));
+      const scriptPath = path.join(execDir, 'engine.cjs');
+      const counterFile = path.join(execDir, 'counter.txt');
+      const argsLogFile = path.join(execDir, 'args.json');
+
+      const createFakeEngine = (stdoutOutput: string, exitCode = 0) => {
+        const code = `#!/usr/bin/env node
+const fs = require('fs');
+let c = 0;
+try { c = parseInt(fs.readFileSync(${JSON.stringify(counterFile)}, 'utf8'), 10) || 0; } catch {}
+fs.writeFileSync(${JSON.stringify(counterFile)}, String(c + 1), 'utf8');
+fs.writeFileSync(${JSON.stringify(argsLogFile)}, JSON.stringify(process.argv.slice(2)), 'utf8');
+process.stdout.write(${JSON.stringify(stdoutOutput)});
+process.exitCode = ${exitCode};
+`;
+        fs.writeFileSync(scriptPath, code, 'utf8');
+        fs.chmodSync(scriptPath, 0o755);
+      };
+
+      const originalNodeEnv = process.env.NODE_ENV;
+      const originalEngine = process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
+      process.env.NODE_ENV = 'test';
+      process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = scriptPath;
+
+      try {
+        // 1. 合法业务主题成功返回
+        createFakeEngine(JSON.stringify({
+          type: 'result',
+          subtype: 'success',
+          is_error: false,
+          result: '排查服务器连接超时',
+        }), 0);
+        fs.writeFileSync(counterFile, '0', 'utf8');
+        const manager1 = new SkillTaxonomyCacheManager(path.join(execDir, 'c1.json'));
+        const res1 = await manager1.enrichAsync('skill-timeout', 'Diagnose server connection timeouts.');
+        expect(res1.enrichmentFailed).toBe(false);
+        expect(res1.summaryZh).toBe('排查服务器连接超时');
+        expect(fs.readFileSync(counterFile, 'utf8')).toBe('1');
+        const capturedArgs = JSON.parse(fs.readFileSync(argsLogFile, 'utf8'));
+        expect(capturedArgs).toContain('--output-format');
+        expect(capturedArgs).toContain('json');
+        expect(capturedArgs).toContain('--tools');
+
+        // 2. 错误退出（exitCode=1）但 stdout 有合法中文：坚决拦截
+        createFakeEngine(JSON.stringify({
+          type: 'result',
+          subtype: 'success',
+          is_error: false,
+          result: '检查项目依赖',
+        }), 1);
+        fs.writeFileSync(counterFile, '0', 'utf8');
+        const manager2 = new SkillTaxonomyCacheManager(path.join(execDir, 'c2.json'));
+        const res2 = await manager2.enrichAsync('skill-exit-1', 'Inspect project dependencies.');
+        expect(res2.enrichmentFailed).toBe(true);
+        expect(fs.readFileSync(counterFile, 'utf8')).toBe('1');
+
+        // 3. 错误分支有中文（subtype: error_during_execution）：坚决拦截
+        createFakeEngine(JSON.stringify({
+          type: 'result',
+          subtype: 'error_during_execution',
+          is_error: true,
+          errors: ['服务认证已失效，请重新登录'],
+        }), 0);
+        fs.writeFileSync(counterFile, '0', 'utf8');
+        const manager3 = new SkillTaxonomyCacheManager(path.join(execDir, 'c3.json'));
+        const res3 = await manager3.enrichAsync('skill-error-subtype', 'Inspect project dependencies.');
+        expect(res3.enrichmentFailed).toBe(true);
+        expect(fs.readFileSync(counterFile, 'utf8')).toBe('1');
+
+        // 4. 原始非 JSON 文本（无成功标记）：坚决拦截
+        createFakeEngine('账户余额不足', 0);
+        fs.writeFileSync(counterFile, '0', 'utf8');
+        const manager4 = new SkillTaxonomyCacheManager(path.join(execDir, 'c4.json'));
+        const res4 = await manager4.enrichAsync('skill-raw-text', 'Inspect project dependencies.');
+        expect(res4.enrichmentFailed).toBe(true);
+        expect(fs.readFileSync(counterFile, 'utf8')).toBe('1');
+
+        // 5. 坏 JSON：坚决拦截
+        createFakeEngine('{"type":"result", broken json', 0);
+        fs.writeFileSync(counterFile, '0', 'utf8');
+        const manager5 = new SkillTaxonomyCacheManager(path.join(execDir, 'c5.json'));
+        const res5 = await manager5.enrichAsync('skill-bad-json', 'Inspect project dependencies.');
+        expect(res5.enrichmentFailed).toBe(true);
+        expect(fs.readFileSync(counterFile, 'utf8')).toBe('1');
+
+        // 6. 空摘要：坚决拦截
+        createFakeEngine(JSON.stringify({
+          type: 'result',
+          subtype: 'success',
+          is_error: false,
+          result: '   ',
+        }), 0);
+        fs.writeFileSync(counterFile, '0', 'utf8');
+        const manager6 = new SkillTaxonomyCacheManager(path.join(execDir, 'c6.json'));
+        const res6 = await manager6.enrichAsync('skill-empty-result', 'Inspect project dependencies.');
+        expect(res6.enrichmentFailed).toBe(true);
+        expect(fs.readFileSync(counterFile, 'utf8')).toBe('1');
+
+        // 7. 摘要不是字符串：坚决拦截
+        createFakeEngine(JSON.stringify({
+          type: 'result',
+          subtype: 'success',
+          is_error: false,
+          result: 12345,
+        }), 0);
+        fs.writeFileSync(counterFile, '0', 'utf8');
+        const manager7 = new SkillTaxonomyCacheManager(path.join(execDir, 'c7.json'));
+        const res7 = await manager7.enrichAsync('skill-non-string', 'Inspect project dependencies.');
+        expect(res7.enrichmentFailed).toBe(true);
+        expect(fs.readFileSync(counterFile, 'utf8')).toBe('1');
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+        if (originalEngine) {
+          process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE = originalEngine;
+        } else {
+          delete process.env.NIMBALYST_TEST_SKILL_SUMMARY_ENGINE;
+        }
+        fs.rmSync(execDir, { recursive: true, force: true });
+      }
     });
   });
 });

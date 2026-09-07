@@ -353,6 +353,10 @@ export function registerSettingsHandlers() {
         }
     });
 
+    safeHandle('dispatch-skills:get-cache-path', async () => {
+        return skillTaxonomyCacheManager.getCachePath();
+    });
+
     // Spellcheck toggle - controls Chromium's built-in spellchecker for all windows
     safeHandle('spellcheck:set-enabled', (_event, enabled: boolean) => {
         session.defaultSession.setSpellCheckerEnabled(enabled);
