@@ -1,0 +1,75 @@
+{
+  "verified": true,
+  "page_start_counts": [
+    1,
+    1,
+    2
+  ],
+  "maximum_actual_processes": 3,
+  "phases": [
+    {
+      "phase": 1,
+      "node": "plan_approval",
+      "pids": [
+        14151,
+        14152,
+        14153
+      ],
+      "node_ms": 1320
+    },
+    {
+      "phase": 2,
+      "node": "child_execution",
+      "pids": [
+        14199,
+        14200,
+        14201
+      ],
+      "node_ms": 854
+    },
+    {
+      "phase": 3,
+      "node": "final_summary",
+      "pids": [
+        14234,
+        14235,
+        14236
+      ],
+      "node_ms": 222
+    }
+  ],
+  "negative_runs": [
+    {
+      "run": "16-A全部生成失败",
+      "exit_code": 1,
+      "body_ms": 3252
+    },
+    {
+      "run": "17-B失效进程标记",
+      "exit_code": 1,
+      "body_ms": 10011
+    },
+    {
+      "run": "18-C主链打回",
+      "exit_code": 1,
+      "body_ms": 2064
+    },
+    {
+      "run": "19-D1批准节点前负载结束",
+      "exit_code": 1,
+      "body_ms": 3380
+    },
+    {
+      "run": "20-D2子任务节点前负载结束",
+      "exit_code": 1,
+      "body_ms": 5889
+    },
+    {
+      "run": "21-D3总结节点前负载结束",
+      "exit_code": 1,
+      "body_ms": 10956
+    }
+  ],
+  "positive_total_seconds": 88.434,
+  "positive_observed_test_body_ms": 41431
+}

@@ -16,6 +16,7 @@ vi.mock('child_process', async (importOriginal) => {
 });
 
 import { DispatchSkillLibraryService } from '../DispatchSkillLibraryService';
+import { skillTaxonomyCacheManager } from '../SkillTaxonomyEnricher';
 
 describe('DispatchSkillLibraryService', () => {
   let tmpRoot: string | null = null;
@@ -232,5 +233,44 @@ Body content
     expect(result.errors.length).toBeGreaterThan(0);
     expect(result.errors.some((err) => err.includes('配置 JSON 解析失败'))).toBe(true);
     expect(result.errors.some((err) => err.includes('codex skills list 跑不通'))).toBe(true);
+  });
+
+  it('绿③: 反向断言——扫描过程中生成器一次都没被调用，且 DispatchSkillLibraryService 源码未被修改', () => {
+    const { home, workspace } = makeTempHome();
+    // 写入 5 个全新的表外英文技能
+    for (let i = 1; i <= 5; i++) {
+      writeSkill(
+        path.join(home, '.claude', 'skills', `untranslated-skill-${i}`, 'SKILL.md'),
+        `untranslated-skill-${i}`,
+        `This is untranslated custom English skill ${i} for testing scan zero generation.`,
+      );
+    }
+
+    const mockAiGenerator = vi.fn().mockResolvedValue('中文说明');
+    skillTaxonomyCacheManager.setAiGenerator(mockAiGenerator);
+    const enrichAsyncSpy = vi.spyOn(skillTaxonomyCacheManager, 'enrichAsync');
+
+    const service = new DispatchSkillLibraryService();
+    const result = service.listSkillsDetailed(workspace);
+
+    // 扫描正常返回且每个技能带有初始字段
+    expect(result.skills.length).toBeGreaterThanOrEqual(5);
+    const customSkills = result.skills.filter((s) => s.name.startsWith('untranslated-skill-'));
+    expect(customSkills).toHaveLength(5);
+    for (const s of customSkills) {
+      expect(s.enrichmentFailed).toBe(true);
+      expect(s.summaryZh).toContain('This is untranslated custom English skill');
+    }
+
+    // 绿③最重断言：扫描全过程中 AI 生成器一次都没被调用
+    expect(mockAiGenerator).toHaveBeenCalledTimes(0);
+    expect(enrichAsyncSpy).toHaveBeenCalledTimes(0);
+
+    // 反向断言：DispatchSkillLibraryService.ts 源码零改动（文件存在且保持出厂纯同步）
+    const serviceSourcePath = path.resolve(__dirname, '../DispatchSkillLibraryService.ts');
+    expect(fs.existsSync(serviceSourcePath)).toBe(true);
+    const serviceContent = fs.readFileSync(serviceSourcePath, 'utf8');
+    expect(serviceContent).not.toContain('enrichAsync');
+    expect(serviceContent).not.toContain('generateSkillSummaryWithEngine');
   });
 });

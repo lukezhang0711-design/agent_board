@@ -1,0 +1,14 @@
+{
+  "command": "npx --no-install vitest run --config '/Users/lukezhang/Desktop/Agent运行面板/诊断报告/GN-R3验收-2026-09-07/vitest.config.mjs' '/Users/lukezhang/Desktop/Agent运行面板/诊断报告/GN-R3验收-2026-09-07/格式与后端身份.test.ts'",
+  "cwd": "/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN",
+  "started_at": "2026-09-07T21:52:16.049925+08:00",
+  "ended_at": "2026-09-07T21:52:21.378088+08:00",
+  "exit_code": 1,
+  "total_seconds": 5.328,
+  "test_duration_lines": [
+    "Test Files  1 failed (1)",
+    "Tests  5 failed | 3 passed (8)",
+    "Duration  4.34s (transform 62ms, setup 0ms, collect 74ms, tests 3.86s, environment 0ms, prepare 42ms)"
+  ],
+  "error_TS_count": 0
+}

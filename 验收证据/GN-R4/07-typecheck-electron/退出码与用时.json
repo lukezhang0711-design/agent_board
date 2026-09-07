@@ -1,0 +1,10 @@
+{
+  "command": "npm run typecheck --prefix packages/electron",
+  "cwd": "/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN",
+  "started_at": "2026-09-07T21:59:51.114248+08:00",
+  "ended_at": "2026-09-07T22:00:13.634988+08:00",
+  "exit_code": 2,
+  "total_seconds": 22.52,
+  "test_duration_lines": [],
+  "error_TS_count": 3
+}

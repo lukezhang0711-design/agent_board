@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "entries": {
+    "43d1d02a1b490ba216d6c8f1339d8e53db5c3211dc9d6c068d0ab03cdffd515e": {
+      "category": "安全管控",
+      "summaryZh": "审计安全规则并保护改动",
+      "enrichmentFailed": false,
+      "hash": "43d1d02a1b490ba216d6c8f1339d8e53db5c3211dc9d6c068d0ab03cdffd515e",
+      "name": "r4-skill-2-mtrc2vq1",
+      "description": "Audit security rules and protect file changes.\nGN-R4-LOAD r4-skill-2-mtrc2vq1",
+      "updatedAt": "2026-09-07T14:26:14.623Z"
+    },
+    "c392a3215dcb3fed6e5dc8f603fe26f3cf67a8779c9d9d5fc148333981fdd4c2": {
+      "category": "工具环境",
+      "summaryZh": "检查与分析项目依赖关系",
+      "enrichmentFailed": false,
+      "hash": "c392a3215dcb3fed6e5dc8f603fe26f3cf67a8779c9d9d5fc148333981fdd4c2",
+      "name": "r4-skill-1-mtrc2vq1",
+      "description": "Inspect project dependencies and analyze modules.\nGN-R4-LOAD r4-skill-1-mtrc2vq1",
+      "updatedAt": "2026-09-07T14:26:14.678Z"
+    },
+    "97c4e8a1215380e3b3035d9ab6b26bb503ea803e431863c6c430e625a276b89f": {
+      "category": "界面设计",
+      "summaryZh": "审查代码库架构与排版",
+      "enrichmentFailed": false,
+      "hash": "97c4e8a1215380e3b3035d9ab6b26bb503ea803e431863c6c430e625a276b89f",
+      "name": "r4-skill-3-mtrc2vq1",
+      "description": "Review codebase architecture and visual layout.\nGN-R4-LOAD r4-skill-3-mtrc2vq1",
+      "updatedAt": "2026-09-07T14:26:14.678Z"
+    }
+  }
+}

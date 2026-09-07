@@ -1,0 +1,111 @@
+{
+  "verified": true,
+  "disabledCard": {
+    "name": "owner-priority",
+    "descriptors": [
+      {
+        "id": "claude:project:owner-priority",
+        "engine": "claude",
+        "name": "owner-priority",
+        "source": "project",
+        "scope": "project",
+        "description": "Inspect new content.",
+        "content": "# New body",
+        "summaryZh": "自动新内容说明",
+        "category": "开发实现",
+        "enrichmentFailed": false
+      },
+      {
+        "id": "codex:project:owner-priority",
+        "engine": "codex",
+        "name": "owner-priority",
+        "source": "project",
+        "scope": "project",
+        "description": "Inspect new content.",
+        "content": "# New body",
+        "summaryZh": "自动新内容说明",
+        "category": "开发实现",
+        "enrichmentFailed": false
+      }
+    ],
+    "engines": {
+      "claude": true,
+      "codex": true,
+      "gemini": false
+    },
+    "contentMatch": "same",
+    "rawDescription": "Inspect new content.",
+    "content": "# New body",
+    "summary": "Inspect new content.",
+    "summaryZh": "老板批准说明",
+    "category": "老板分类",
+    "enrichmentFailed": false,
+    "hasDescription": true,
+    "estimatedTokens": 6,
+    "scopes": [
+      "project"
+    ],
+    "sources": [
+      "project"
+    ],
+    "bundleNames": [],
+    "disabled": true,
+    "hasCodex": true,
+    "paths": []
+  },
+  "enabledCard": {
+    "name": "owner-priority",
+    "descriptors": [
+      {
+        "id": "claude:project:owner-priority",
+        "engine": "claude",
+        "name": "owner-priority",
+        "source": "project",
+        "scope": "project",
+        "description": "Inspect new content.",
+        "content": "# New body",
+        "summaryZh": "自动新内容说明",
+        "category": "开发实现",
+        "enrichmentFailed": false
+      },
+      {
+        "id": "codex:project:owner-priority",
+        "engine": "codex",
+        "name": "owner-priority",
+        "source": "project",
+        "scope": "project",
+        "description": "Inspect new content.",
+        "content": "# New body",
+        "summaryZh": "自动新内容说明",
+        "category": "开发实现",
+        "enrichmentFailed": false
+      }
+    ],
+    "engines": {
+      "claude": true,
+      "codex": true,
+      "gemini": false
+    },
+    "contentMatch": "same",
+    "rawDescription": "Inspect new content.",
+    "content": "# New body",
+    "summary": "Inspect new content.",
+    "summaryZh": "老板批准说明",
+    "category": "老板分类",
+    "enrichmentFailed": false,
+    "hasDescription": true,
+    "estimatedTokens": 6,
+    "scopes": [
+      "project"
+    ],
+    "sources": [
+      "project"
+    ],
+    "bundleNames": [],
+    "disabled": false,
+    "hasCodex": true,
+    "paths": []
+  },
+  "approvedSettingsUnchanged": true,
+  "scope": "实际合并和启停过滤函数；批准数据为夹具，不触发批准或修改真实设置。"
+}

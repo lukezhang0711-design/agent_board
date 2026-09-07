@@ -1,0 +1,14 @@
+{
+  "command": "npm run test --prefix packages/electron -- --run --maxWorkers=2 src/main/services/__tests__/SkillTaxonomyEnricher.test.ts",
+  "cwd": "/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN",
+  "started_at": "2026-09-07T21:56:35.220873+08:00",
+  "ended_at": "2026-09-07T21:56:47.780352+08:00",
+  "exit_code": 0,
+  "total_seconds": 12.559,
+  "test_duration_lines": [
+    "Test Files  1 passed (1)",
+    "Tests  33 passed (33)",
+    "Duration  11.91s (transform 319ms, setup 21ms, collect 80ms, tests 10.90s, environment 0ms, prepare 43ms)"
+  ],
+  "error_TS_count": 0
+}

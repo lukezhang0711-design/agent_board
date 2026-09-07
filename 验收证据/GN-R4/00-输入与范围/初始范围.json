@@ -1,0 +1,44 @@
+[
+  {
+    "command": [
+      "git",
+      "status",
+      "--short"
+    ],
+    "exit_code": 0,
+    "stdout": " M packages/electron/src/main/ipc/SettingsHandlers.ts\n M packages/electron/src/main/services/SkillTaxonomyEnricher.ts\n M packages/electron/src/main/services/__tests__/SkillTaxonomyEnricher.test.ts\n M packages/electron/src/renderer/utils/dispatchSkillLibrary.ts\n?? node_modules\n?? packages/electron/node_modules\n?? packages/extension-sdk/node_modules\n?? packages/ios/node_modules\n?? packages/runtime/node_modules\n?? \"\\345\\267\\245\\344\\272\\272\\346\\212\\245\\345\\221\\212-GN-R1.md\"\n?? \"\\345\\267\\245\\344\\272\\272\\346\\212\\245\\345\\221\\212-GN-R2.md\"\n?? \"\\345\\267\\245\\344\\272\\272\\346\\212\\245\\345\\221\\212-GN-R3.md\"\n?? \"\\345\\267\\245\\344\\272\\272\\346\\212\\245\\345\\221\\212-GN-R4.md\"\n?? \"\\345\\267\\245\\344\\272\\272\\346\\212\\245\\345\\221\\212-GN.md\"\n?? \"\\351\\252\\214\\346\\224\\266\\350\\257\\201\\346\\215\\256/\"\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "exit_code": 0,
+    "stdout": "8a383887e8cdbe7fccd9073f0967a1e13e12922f\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--stat",
+      "28a1b7f3b963077a95faa0157fdbe2fa25ce159d"
+    ],
+    "exit_code": 0,
+    "stdout": " packages/electron/e2e/ai/collab-chain.spec.ts      | 413 ++++++++++++++-\n .../e2e/ai/fixtures/skill-summary-engine.cjs       |  91 ++++\n packages/electron/src/main/ipc/SettingsHandlers.ts | 153 ++++++\n .../SettingsHandlers.skillSummaries.test.ts        | 353 +++++++++++++\n .../src/main/services/SkillTaxonomyEnricher.ts     | 306 +++++++++++-\n .../__tests__/DispatchSkillLibraryService.test.ts  |  40 ++\n .../__tests__/SkillTaxonomyEnricher.test.ts        | 552 +++++++++++++++++++++\n .../components/MetaAgentMode/MetaAgentMode.tsx     |   2 +-\n .../__tests__/MetaAgentMode.GC.test.tsx            |  56 +++\n .../__tests__/MetaAgentMode.queuedSummary.test.tsx |  16 +-\n .../components/Settings/SkillLibraryPanel.tsx      | 444 ++++++++++++-----\n .../Settings/__tests__/SkillLibraryPanel.test.tsx  | 224 +++++++++\n .../src/renderer/utils/dispatchSkillLibrary.ts     |  33 +-\n 13 files changed, 2527 insertions(+), 156 deletions(-)\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "lsof",
+      "-nP",
+      "-iTCP:5273",
+      "-sTCP:LISTEN"
+    ],
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,92 @@
+--- /Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN/packages/electron/e2e/ai/collab-chain.spec.ts
++++ /Users/lukezhang/Desktop/Agent运行面板/诊断报告/GN-R3验收-2026-09-07/负载已结束夹具/ended-before-node.spec.ts
+@@ -10,17 +10,17 @@
+   createTempWorkspace,
+   launchElectronApp,
+   waitForAppReady,
+-} from '../helpers';
++} from "/Users/lukezhang/Desktop/Agent\u8fd0\u884c\u9762\u677f/.worktrees/worker-GN/packages/electron/e2e/helpers";
+ import {
+   dismissAPIKeyDialog,
+   PLAYWRIGHT_TEST_SELECTORS,
+   switchToAgentMode,
+-} from '../utils/testHelpers';
++} from "/Users/lukezhang/Desktop/Agent\u8fd0\u884c\u9762\u677f/.worktrees/worker-GN/packages/electron/e2e/utils/testHelpers";
+ import {
+   SCRIPTED_FINAL_SUMMARY,
+   SCRIPTED_REVIVE_SUMMARY,
+   ScriptedCollaborationProvider,
+-} from './fixtures/scriptedCollaborationProvider';
++} from "/Users/lukezhang/Desktop/Agent\u8fd0\u884c\u9762\u677f/.worktrees/worker-GN/packages/electron/e2e/ai/fixtures/scriptedCollaborationProvider";
+ 
+ test.setTimeout(120_000);
+ test.describe.configure({ mode: 'serial' });
+@@ -102,7 +102,7 @@
+ let engineStateDir: string;
+ const mcpClients: MetaAgentMcpClient[] = [];
+ const PLAN_APPROVAL_SCREENSHOT_DIR = path.resolve(
+-  __dirname,
++  "/Users/lukezhang/Desktop/Agent\u8fd0\u884c\u9762\u677f/.worktrees/worker-GN/packages/electron/e2e/ai",
+   '../../../../e2e_test_output/plan-approval-layout',
+ );
+ 
+@@ -785,7 +785,7 @@
+   execFileSync('git', ['add', 'README.md'], { cwd: workspacePath, stdio: 'pipe' });
+   execFileSync('git', ['commit', '-m', 'Initial workspace'], { cwd: workspacePath, stdio: 'pipe' });
+ 
+-  const fakeEnginePath = path.resolve(__dirname, 'fixtures/skill-summary-engine.cjs');
++  const fakeEnginePath = path.resolve("/Users/lukezhang/Desktop/Agent\u8fd0\u884c\u9762\u677f/.worktrees/worker-GN/packages/electron/e2e/ai", 'fixtures/skill-summary-engine.cjs');
+   engineStateDir = path.join(workspacePath, '.skill-engine-state');
+   await fs.mkdir(engineStateDir, { recursive: true });
+ 
+@@ -841,7 +841,7 @@
+   if (engineStateDir) {
+     try {
+       const srcLog = path.join(engineStateDir, 'events.log');
+-      const destDir = path.resolve(__dirname, '../../../../验收证据/GN-R3');
++      const destDir = "/Users/lukezhang/Desktop/Agent\u8fd0\u884c\u9762\u677f/\u8bca\u65ad\u62a5\u544a/GN-R3\u9a8c\u6536-2026-09-07/\u8d1f\u8f7d\u5df2\u7ed3\u675f\u5939\u5177/\u672c\u8f6e\u751f\u547d\u5468\u671f";
+       await fs.mkdir(destDir, { recursive: true });
+       const stat = await fs.stat(srcLog).catch(() => null);
+       if (stat) {
+@@ -1457,6 +1457,10 @@
+   // 必须先等实际在跑且真实存活的假生成进程数确实达到 3，验证真实在飞并发负载已形成
+   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
+   const phase1LiveProcs = await getLiveEngineProcessInfo();
++  await new Promise(resolve => setTimeout(resolve, 3200));
++  const chiefLive1 = await countRunningEngineProcesses();
++  console.log('CHIEF_LOAD_ENDED', JSON.stringify({phase:1,aliveBeforeMainNode:chiefLive1,at:Date.now()}));
++  expect(chiefLive1).toBe(0);
+ 
+   // 3. 在 3 并发技能生成负载持续期间，完整跑通协作主链核心环节：
+   //    创建总指挥 Session -> 建立 MCP Client -> 提交协作方案 -> 等待方案卡片展示 -> 点击批准 -> 验证审批生命周期与数据库持久化
+@@ -1547,6 +1551,10 @@
+   // 等待第 2 阶段在跑数达到 3
+   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
+   const phase2LiveProcs = await getLiveEngineProcessInfo();
++  await new Promise(resolve => setTimeout(resolve, 3200));
++  const chiefLive2 = await countRunningEngineProcesses();
++  console.log('CHIEF_LOAD_ENDED', JSON.stringify({phase:2,aliveBeforeMainNode:chiefLive2,at:Date.now()}));
++  expect(chiefLive2).toBe(0);
+ 
+   // 在并发负载下派发子任务工单并等待完成
+   const child = await createImplementationChild(
+@@ -1607,6 +1615,10 @@
+   // 等待第 3 阶段在跑数达到 3
+   await expect.poll(async () => countRunningEngineProcesses(), { timeout: 10_000 }).toBe(3);
+   const phase3LiveProcs = await getLiveEngineProcessInfo();
++  await new Promise(resolve => setTimeout(resolve, 3200));
++  const chiefLive3 = await countRunningEngineProcesses();
++  console.log('CHIEF_LOAD_ENDED', JSON.stringify({phase:3,aliveBeforeMainNode:chiefLive3,at:Date.now()}));
++  expect(chiefLive3).toBe(0);
+ 
+   // 在并发负载下完成总指挥收敛总结与交付
+   await resetRendererEvents(page);
+@@ -1631,7 +1643,7 @@
+   }
+ 
+   // 将三阶段负载实证归档至 验收证据/GN-R3/
+-  const destDir = path.resolve(__dirname, '../../../../验收证据/GN-R3');
++  const destDir = "/Users/lukezhang/Desktop/Agent\u8fd0\u884c\u9762\u677f/\u8bca\u65ad\u62a5\u544a/GN-R3\u9a8c\u6536-2026-09-07/\u8d1f\u8f7d\u5df2\u7ed3\u675f\u5939\u5177/\u672c\u8f6e\u751f\u547d\u5468\u671f";
+   await fs.mkdir(destDir, { recursive: true });
+   await fs.writeFile(
+     path.join(destDir, 'collab-load-lifecycle.json'),

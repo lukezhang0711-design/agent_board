@@ -1,0 +1,26 @@
+{
+  "command": "ps -axo pid,ppid,comm",
+  "matches": [
+    " 8056     1 /Applications/Dumbo.app/Contents/Frameworks/Electron Framework.framework/Helpers/chrome_crashpad_handler",
+    "23093     1 /Applications/CatDesk.app/Contents/Frameworks/Electron Framework.framework/Helpers/chrome_crashpad_handler",
+    "90995     1 /Applications/Claude.app/Contents/Frameworks/Electron Framework.framework/Helpers/chrome_crashpad_handler"
+  ],
+  "dependency_realpath": "/Users/lukezhang/Desktop/Agent运行面板/agent_board/node_modules",
+  "ports": [
+    {
+      "port": 5273,
+      "exit_code": 1,
+      "stdout": ""
+    },
+    {
+      "port": 8234,
+      "exit_code": 1,
+      "stdout": ""
+    },
+    {
+      "port": 9333,
+      "exit_code": 1,
+      "stdout": ""
+    }
+  ]
+}

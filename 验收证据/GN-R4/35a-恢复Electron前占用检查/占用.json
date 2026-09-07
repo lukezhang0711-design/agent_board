@@ -1,0 +1,12 @@
+[
+  {
+    "path": "/Users/lukezhang/Desktop/Agent运行面板/agent_board/node_modules/better-sqlite3/build/Release/test_extension.node",
+    "exit_code": 1,
+    "stdout": ""
+  },
+  {
+    "path": "/Users/lukezhang/Desktop/Agent运行面板/agent_board/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+    "exit_code": 1,
+    "stdout": ""
+  }
+]

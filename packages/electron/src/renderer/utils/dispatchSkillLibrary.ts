@@ -49,6 +49,7 @@ export interface MergedSkillCard {
   disabled: boolean;
   hasCodex: boolean;
   paths: string[];
+  content?: string;
 }
 
 export interface SkillCategoryGroup {
@@ -105,6 +106,10 @@ export function extractOneSentenceSummary(description?: string): string {
   return firstSentence;
 }
 
+export function computeSkillContentKey(name: string, description?: string, content?: string): string {
+  return JSON.stringify([name.trim(), (description ?? '').trim(), (content ?? '').trim()]);
+}
+
 export function mergeSkillsByName(
   skills: readonly DispatchSkillDescriptor[],
   settings: DispatchSkillSettings,
@@ -139,24 +144,41 @@ export function mergeSkillsByName(
       contentMatch = allSame ? 'same' : 'different';
     }
 
-    const rawDescription = descriptors.find((d) => d.description?.trim())?.description?.trim();
+    const primaryDescriptor = descriptors.find((d) => d.description?.trim() && d.content?.trim())
+      ?? descriptors.find((d) => d.description?.trim())
+      ?? descriptors[0];
+    const rawDescription = primaryDescriptor?.description?.trim();
+    const content = primaryDescriptor?.content;
     const hasDescription = Boolean(rawDescription);
     const summary = extractOneSentenceSummary(rawDescription);
     const estimatedTokens = estimateSkillTokens(rawDescription);
 
     const enrichment = taxonomy.skills[normalizeSkillTaxonomyKey(name)];
-    const enrichedDesc = descriptors.find((d) => d.summaryZh?.trim());
+    const primaryDescText = (rawDescription ?? '').trim();
+    const primaryContentText = (content ?? '').trim();
+    const matchingDescriptors = descriptors.filter(
+      (d) =>
+        (d.description ?? '').trim() === primaryDescText &&
+        (d.content ?? '').trim() === primaryContentText,
+    );
+
+    const matchingSuccessfulDesc = matchingDescriptors.find(
+      (d) => Boolean(d.summaryZh?.trim()) && !d.enrichmentFailed,
+    );
     const summaryZh = enrichment?.summaryZh
-      ?? enrichedDesc?.summaryZh?.trim()
+      ?? matchingSuccessfulDesc?.summaryZh?.trim()
       ?? (hasDescription ? summary : '这个技能没有自带说明');
     const categoryCandidate = enrichment?.category
+      ?? matchingDescriptors.find((d) => d.category && categories.includes(d.category))?.category
       ?? descriptors.find((d) => d.category && categories.includes(d.category))?.category;
     const category: SkillCategory = categoryCandidate && categories.includes(categoryCandidate)
       ? categoryCandidate
       : categories[0];
-    const enrichmentFailed = enrichment?.summaryZh
+    const hasSuccessfulEnrichment = Boolean(enrichment?.summaryZh)
+      || Boolean(matchingSuccessfulDesc);
+    const enrichmentFailed = hasSuccessfulEnrichment
       ? false
-      : descriptors.some((d) => d.enrichmentFailed);
+      : matchingDescriptors.some((d) => d.enrichmentFailed);
 
     const descriptorIds = new Set(descriptors.map((d) => d.id));
     const disabled = descriptors.every((d) => settings.disabledSkillIds.includes(d.id));
@@ -175,6 +197,7 @@ export function mergeSkillsByName(
       engines,
       contentMatch,
       rawDescription,
+      content,
       summary,
       summaryZh,
       category,

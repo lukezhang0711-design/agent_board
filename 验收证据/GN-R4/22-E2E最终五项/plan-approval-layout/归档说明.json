@@ -1,0 +1,21 @@
+{
+  "source": "原前三项原有截图路径；仅复制本次命令起止时间内生成的文件。",
+  "files": [
+    {
+      "file": "plan-card-480-page-1.png",
+      "mtime": 1788791571.1022286
+    },
+    {
+      "file": "plan-card-720-page-1.png",
+      "mtime": 1788791571.368775
+    },
+    {
+      "file": "plan-card-480-page-2-rejected.png",
+      "mtime": 1788791573.731239
+    },
+    {
+      "file": "plan-card-360-page-1.png",
+      "mtime": 1788791570.830479
+    }
+  ]
+}

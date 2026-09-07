@@ -1,0 +1,13 @@
+{
+  "command": "env NIMBALYST_TEST_LOAD_ENDED_BEFORE_NODE=2 npx --no-install playwright test --config=e2e/ai/collab.playwright.config.ts --grep '绿⑮' --max-failures=1",
+  "cwd": "/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN/packages/electron",
+  "started_at": "2026-09-07T22:28:06.393328+08:00",
+  "ended_at": "2026-09-07T22:28:54.678033+08:00",
+  "exit_code": 1,
+  "total_seconds": 48.239,
+  "test_duration_lines": [],
+  "test_case_duration_lines": [
+    "✘  1 [electron-collab] › e2e/ai/collab-chain.spec.ts:1537:5 › 绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作链路（3 并发技能生成负载） (5.9s)"
+  ],
+  "error_TS_count": 0
+}

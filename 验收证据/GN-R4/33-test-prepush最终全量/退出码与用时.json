@@ -1,0 +1,13 @@
+{
+  "command": "npm run test:prepush -- --maxWorkers=2",
+  "cwd": "/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN",
+  "started_at": "2026-09-07T22:37:48.995418+08:00",
+  "ended_at": "2026-09-07T22:41:40.286248+08:00",
+  "exit_code": 0,
+  "total_seconds": 231.284,
+  "test_duration_lines": [
+    "Duration  230.67s (transform 9.89s, setup 14.58s, collect 108.41s, tests 191.89s, environment 61.66s, prepare 22.73s)"
+  ],
+  "test_case_duration_lines": [],
+  "error_TS_count": 0
+}

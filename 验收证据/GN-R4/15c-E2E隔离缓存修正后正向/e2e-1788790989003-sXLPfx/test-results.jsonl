@@ -1,0 +1,2 @@
+{"title":"绿⑭: 真实技能库入口 -> 可见项 -> 未替换页面通信 -> 指定假程序 -> 缓存落盘 -> 页面更新 -> 重新扫描复用","status":"passed","expectedStatus":"passed","bodyStartedAt":1788791008012,"bodyCompletedAt":1788791024143,"observedBodyMs":16131,"errors":[]}
+{"title":"绿⑮: 技能生成占满允许并发时仍能跑通 collab-chain 协作链路（3 并发技能生成负载）","status":"passed","expectedStatus":"passed","bodyStartedAt":1788791024159,"bodyCompletedAt":1788791029171,"observedBodyMs":5012,"errors":[]}

@@ -1,0 +1,2113 @@
+{
+  "report_links_all_exist": true,
+  "parent": "8a383887e8cdbe7fccd9073f0967a1e13e12922f",
+  "source_files": {
+    "packages/electron/e2e/ai/collab-chain.spec.ts": "6ddf4f06d5f90815c97a28a278a1d11b07df7ea89e2ed52862c865eb4d758c60",
+    "packages/electron/e2e/ai/fixtures/skill-summary-engine.cjs": "b2bad3a350580a5a0f54f46610bbd3e409c1ef95d2c210cf592badfd920f5916",
+    "packages/electron/src/main/ipc/SettingsHandlers.ts": "124f71cfd6b04a530775bfaa7a7ec80b7412c14f7bb83e075e8d384e0c8939d3",
+    "packages/electron/src/main/ipc/__tests__/SettingsHandlers.skillSummaries.test.ts": "e7174454478bca0d29c14540effa02530535de5d9af885c813ec5736c1957075",
+    "packages/electron/src/main/services/SkillTaxonomyEnricher.ts": "45f1730714c1a9382d06aa91114db93cf96d98e5bab719f9f6c11d0c776c4bcd",
+    "packages/electron/src/main/services/__tests__/SkillTaxonomyEnricher.test.ts": "0ecc21b8c7b5517217cd9204bf3ceb4482ed2b362832e47fb374677507147e19",
+    "packages/electron/src/renderer/components/Settings/__tests__/SkillLibraryPanel.test.tsx": "271609b9f4e8d23d82ccdf7a65b05c60e8c27ddaf3b40e15919f147615b56604",
+    "packages/electron/src/renderer/utils/dispatchSkillLibrary.ts": "b1c22aa1628a79073084e12b3cf3edf49edbd8550a0b706d0e7b9140d0d8a246"
+  },
+  "evidence_files": [
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/E2E前原生依赖检查.json",
+      "bytes": 78,
+      "sha256": "fe3d1b56bf46d921e5ad77016b0306c7c58436be46844d43957dba51b965b2e1"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/vitest.config.mjs",
+      "bytes": 659,
+      "sha256": "015cc87a800ee70df0bd6570cb92985bd089ce47e44d00e485cd86226c1e60d6"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/全部协作断言复核.json",
+      "bytes": 1017,
+      "sha256": "26164ed56c1473634623cc96b3bc32b1555dfd67e97e103a58271732709e1e41"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/切项目与内容身份.test.tsx",
+      "bytes": 5645,
+      "sha256": "8b09fe8a261001e6452f58fdf011bcd6d292333f8a18cda4669a7d4ef4dea038"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/初始范围.json",
+      "bytes": 2469,
+      "sha256": "0e1c156e87757dcc4796de612f509bd5e89496137e10d4b0d3157aef20eef927"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/历史探针SHA256.json",
+      "bytes": 406,
+      "sha256": "a7c2f94eb0035c0bac2a22deafb30e442773c3899b0beef5a0cb92f5d818468b"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/原协作断言保留.json",
+      "bytes": 456,
+      "sha256": "8228d08690b0f2f5851310f4e946e47ccfa7a57cf62b60ac9872e12b401b032a"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/原生依赖使用检查.json",
+      "bytes": 322,
+      "sha256": "2aebba6aace5bb8c1661e667e226d529f85431d281a21bfbdd188909515cb75b"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/格式与后端身份.test.ts",
+      "bytes": 3367,
+      "sha256": "4c7d97ba3bed2fe550ee9070433e034cbb13f090791e1a0846b269c309b93a26"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/相对当前提交的探针差异.patch",
+      "bytes": 5072,
+      "sha256": "d3747e9c248e8a1d302279c01380b5a71fa2765d81aa9648658e78c85c15f17b"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/真实超时与隔离.test.ts",
+      "bytes": 2992,
+      "sha256": "d92ca93f942233363cd61ca233077d0fe191cf5b50ae2ee52f61a0a4efea6d5a"
+    },
+    {
+      "path": "验收证据/GN-R4/00-输入与范围/禁止路径与list零改动.json",
+      "bytes": 392,
+      "sha256": "9860f521da2ba6aeb067ac80ca0ae4ed361a27d05ebda3999d0396e5c64b549b"
+    },
+    {
+      "path": "验收证据/GN-R4/01-主审反例修复前/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/01-主审反例修复前/原始输出.log",
+      "bytes": 12597,
+      "sha256": "2d872614630382f14bdb5f8f59753685fa2a996b242774d05eafab75e509dae4"
+    },
+    {
+      "path": "验收证据/GN-R4/01-主审反例修复前/退出码与用时.json",
+      "bytes": 721,
+      "sha256": "f9e313615f83bd752d7b9240dde179e15a65e4dbe41a17337ffd2e50f5e2d46e"
+    },
+    {
+      "path": "验收证据/GN-R4/02-主审反例修复后/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/02-主审反例修复后/原始输出.log",
+      "bytes": 10047,
+      "sha256": "9ed93a4a8854363fc068748a1a47246791e7ff28c8844442b5ffe0a5846bba03"
+    },
+    {
+      "path": "验收证据/GN-R4/02-主审反例修复后/退出码与用时.json",
+      "bytes": 711,
+      "sha256": "b67a80d9fec6be658b4cd127648bc7c25e2e64ebc326c85f970d6abe3b79436f"
+    },
+    {
+      "path": "验收证据/GN-R4/03-清已知Node缓存/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/03-清已知Node缓存/原始输出.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "验收证据/GN-R4/03-清已知Node缓存/退出码与用时.json",
+      "bytes": 368,
+      "sha256": "d94b47e734818620a55a882bafa97c868cf2a773ca2f18ea42019c0a9d5fcd39"
+    },
+    {
+      "path": "验收证据/GN-R4/04-重建Node依赖/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/04-重建Node依赖/原始输出.log",
+      "bytes": 34,
+      "sha256": "5fea06889844726ffbf8e27f38feb7a12898a3d5a295ed2d1284ad720672f18e"
+    },
+    {
+      "path": "验收证据/GN-R4/04-重建Node依赖/退出码与用时.json",
+      "bytes": 321,
+      "sha256": "c265e721f765a064d919d542ffb1f31f767d30d06fd08829009a6c53476f5ce7"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/cache-identity.json",
+      "bytes": 8482,
+      "sha256": "5415b67a26b5edd95ebedcbdfeb69fa0fd0fb47a237c4d5740b19e55f907207e"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-bad-json.json",
+      "bytes": 1639,
+      "sha256": "c7173cd4a60244003eafc43ce9b3b92a76604306e65c05a29c1aba3927ee0263"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-boolean-false.json",
+      "bytes": 1884,
+      "sha256": "2a90c376abd7b0b51e5fea90c283c6c8c8c05c18fea0f4e466d8ad3ecc385a0d"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-empty-result.json",
+      "bytes": 1781,
+      "sha256": "0148302a6991e9d0595c5b9f948bcf4b46fbd098ee5b7d5b166076b7769df7a3"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-error-branch-false.json",
+      "bytes": 1881,
+      "sha256": "5e0bcc022dd598b2696da9e21cf444b8ffb10f31053e249dc39f4541d6239199"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-error-branch-true.json",
+      "bytes": 1878,
+      "sha256": "5efbcc5023612045aeabd2c215e10abcf31cf715018ba02e53a294ebe72dac33"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-error-exit-false.json",
+      "bytes": 1849,
+      "sha256": "a587e3d2d14bbf72feac4c164bae30f40ce2fe908dbaca803b324d9fa0ee4e6c"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-error-exit-missing.json",
+      "bytes": 1783,
+      "sha256": "7231e9cf2d00ea7fb9dd86dd293b44e0cb61e782ba0d7dfbbf9b673c1b5f3507"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-first-sentence.json",
+      "bytes": 1885,
+      "sha256": "a9ac658997c5430a64d75790baa0da54c327b433a0b799316674429dc44d1999"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-is_error-\"false\".json",
+      "bytes": 1859,
+      "sha256": "935842ca0e32805a6830469a075532a14240ee19a7b4402c0b75281bad896399"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-is_error-\"true\".json",
+      "bytes": 1856,
+      "sha256": "221755e771d1602feb3ab6e96fe5b963ac862f94ead3dab954e81853fbd0a8da"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-is_error-0.json",
+      "bytes": 1835,
+      "sha256": "f93f74bdd124784647804b9fb4deefdd40918735a9a2b88c2299b29284442a7a"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-is_error-1.json",
+      "bytes": 1835,
+      "sha256": "3d205592ae73db7b0d432f2e30b07753b4a949879116d09405cbb734b02c8c61"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-is_error-null.json",
+      "bytes": 1844,
+      "sha256": "0629aa48245815380e36cb667fe3cddb7e031a123842ab0f933b07ca917bc422"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-is_error-true.json",
+      "bytes": 1844,
+      "sha256": "56f9ca4e72c7512b65c521fc65d390718f0b52cbb8b4735be412d0450956d224"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-missing.json",
+      "bytes": 1772,
+      "sha256": "f930ade0ba2cf220a327ed7ac68d5a03dcafde3a9a8cf47134210ef8d6bef794"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-non-chinese.json",
+      "bytes": 1808,
+      "sha256": "4a102ff073665bb885322cff93b01fc94eafd6d04011266391da8114082fdd8d"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-non-string-result.json",
+      "bytes": 1778,
+      "sha256": "56328f14caaa4a6a7ad69e5b2ac6c890c180beb5f17d242200d21ce2abb3fab3"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-plain-text.json",
+      "bytes": 1653,
+      "sha256": "ebaf1dcfa15771a0eb9daf1220ade078a232331bc4692c62db80fff323f11012"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/protocol-wrong-type.json",
+      "bytes": 1849,
+      "sha256": "719a8f073ca17b4e386391f5d6c347930d16944e2a9968237dd1b33e05f1b70b"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/原始输出.log",
+      "bytes": 43794,
+      "sha256": "3ab639f15200a4f151dd61691e159b94c5f7908629fbb45df4b0281ac7e6852c"
+    },
+    {
+      "path": "验收证据/GN-R4/05-协议与身份定向/退出码与用时.json",
+      "bytes": 592,
+      "sha256": "ebafd543ef40a8c2d426295545a0501c5da36dcb49d7ff0d315ad6f55af7f452"
+    },
+    {
+      "path": "验收证据/GN-R4/06-主审34项反例/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/06-主审34项反例/原始输出.log",
+      "bytes": 20613,
+      "sha256": "733f4de5ff188bbb3b94f70cf2030ccad7456e6bf9e53b1f3c4c6d0decd87128"
+    },
+    {
+      "path": "验收证据/GN-R4/06-主审34项反例/退出码与用时.json",
+      "bytes": 609,
+      "sha256": "48e42555aa7ec745411ea5fb322bbdffd983e2324a8b52ed539ab0163e1ca438"
+    },
+    {
+      "path": "验收证据/GN-R4/07-typecheck-electron/exitcode.txt",
+      "bytes": 2,
+      "sha256": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+    },
+    {
+      "path": "验收证据/GN-R4/07-typecheck-electron/原始输出.log",
+      "bytes": 2278,
+      "sha256": "8f9aa02fcc2aec5221a07ee87944d05b23d4925fd6ba80b6b3b8a8bb3627d8d8"
+    },
+    {
+      "path": "验收证据/GN-R4/07-typecheck-electron/退出码与用时.json",
+      "bytes": 338,
+      "sha256": "9e2b3050297adf6ee08f833f1c6963230bb4d3d8dc67d5e999d41c318bc413fb"
+    },
+    {
+      "path": "验收证据/GN-R4/08-typecheck-electron修正后/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/08-typecheck-electron修正后/原始输出.log",
+      "bytes": 56,
+      "sha256": "91950df180e365b731245ae9274ade249afc50d104205cbe4cd7d61f93452775"
+    },
+    {
+      "path": "验收证据/GN-R4/08-typecheck-electron修正后/退出码与用时.json",
+      "bytes": 339,
+      "sha256": "211fcf1de3c597635f0ab90f7f65d12a63db4ad26a98de0d36f56d9c034f7136"
+    },
+    {
+      "path": "验收证据/GN-R4/09-真实进程限额与双窗口/actual-quota.json",
+      "bytes": 57015,
+      "sha256": "63647df7cb6e81c35a0342d9e5d766595e174fde40d3dd1c1eed83a85fb9b440"
+    },
+    {
+      "path": "验收证据/GN-R4/09-真实进程限额与双窗口/actual-two-windows.json",
+      "bytes": 4344,
+      "sha256": "07e6cbea55a79ef89044cdb361fedf9ed61ab8bc6eb0e0392eca32b8e620e1e2"
+    },
+    {
+      "path": "验收证据/GN-R4/09-真实进程限额与双窗口/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/09-真实进程限额与双窗口/原始输出.log",
+      "bytes": 56450,
+      "sha256": "1708d9c7bf6ec6bee0cb79345934fe0299a3133048b16c8d4b5d4897bad71f8f"
+    },
+    {
+      "path": "验收证据/GN-R4/09-真实进程限额与双窗口/退出码与用时.json",
+      "bytes": 596,
+      "sha256": "c0c1a144dd255043f79a17082cfe0d26d4cf9bf1f369c16b3cfacf0a9bbadace"
+    },
+    {
+      "path": "验收证据/GN-R4/10-typecheck-electron最终/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/10-typecheck-electron最终/原始输出.log",
+      "bytes": 56,
+      "sha256": "91950df180e365b731245ae9274ade249afc50d104205cbe4cd7d61f93452775"
+    },
+    {
+      "path": "验收证据/GN-R4/10-typecheck-electron最终/退出码与用时.json",
+      "bytes": 339,
+      "sha256": "350dfec296b12d34674d6f35c58cb5961a4dc52cfd3e457814bc39735606878c"
+    },
+    {
+      "path": "验收证据/GN-R4/11-typecheck-runtime/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/11-typecheck-runtime/原始输出.log",
+      "bytes": 54,
+      "sha256": "259b754fae917e0fbdc5ac147eb3491f3521c8f56e6749c35af1187adb52bf7a"
+    },
+    {
+      "path": "验收证据/GN-R4/11-typecheck-runtime/退出码与用时.json",
+      "bytes": 336,
+      "sha256": "35884313fdb3b63876c2d1be194df73b795f7a09b1440f5a291e16bc4ef6472e"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/actual-quota.json",
+      "bytes": 57019,
+      "sha256": "dbd64356c57f8257bb7ebbead1fd366681cd5d40e1be89e287b420b2d9b5281b"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/actual-two-windows.json",
+      "bytes": 4344,
+      "sha256": "db1a684cc0e757f33094e58d5ac5c2aa00a6068fa135dd4241cf282bd880fe56"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/cache-identity.json",
+      "bytes": 8482,
+      "sha256": "d07277629a84f9b1d62ea3672b26fb007cbe697434c8b9d58cd760ceac8b6607"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-bad-json.json",
+      "bytes": 1639,
+      "sha256": "ddf0adb1fcaeb89d02ff6bf3af67a88b1407356cdc5dfdb4fc050c20c0597218"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-boolean-false.json",
+      "bytes": 1884,
+      "sha256": "154bff8f7cb555f9e325a3550d1bcff41b81bacaa7985ff48ead73c08ad7fd64"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-empty-result.json",
+      "bytes": 1781,
+      "sha256": "3781c4d7520a2d0928fface55ee057d1ad818570921488bf848044461bff2358"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-error-branch-false.json",
+      "bytes": 1881,
+      "sha256": "ab1ac5ce1ef5df56aaafed841c2d03427e361289f64ddb8620156f1f61e3fdfa"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-error-branch-true.json",
+      "bytes": 1878,
+      "sha256": "e06d565718649e2d108ad97703be94751ddf20927a795f287c514c4462dc0bf5"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-error-exit-false.json",
+      "bytes": 1849,
+      "sha256": "9593505f4e9a395da976b03db78ad83597ceff57e9e27ba678957a9c1e8c4a29"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-error-exit-missing.json",
+      "bytes": 1783,
+      "sha256": "24832cb5acc332fe11689c375568817c4fb7bf38c995d3774792cdc8e6aefecc"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-first-sentence.json",
+      "bytes": 1885,
+      "sha256": "35f5d23025107fa9fe054fc1e4feef7a2c5b71d85a45708911fee875a5441fad"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-is_error-\"false\".json",
+      "bytes": 1859,
+      "sha256": "eb2ab584f58a2cb1cff8cd25f54e4b59a97bfcff081fd54cac2e41f8184c9b9c"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-is_error-\"true\".json",
+      "bytes": 1856,
+      "sha256": "eb6516053f9af42bba6632ea7cc01830df94e10b0b0f11d7b3e93b442fb45ba0"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-is_error-0.json",
+      "bytes": 1835,
+      "sha256": "28875939e14271146ae8ef88afc813b5d577ddf18c1a87a02632b593a0a74cc9"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-is_error-1.json",
+      "bytes": 1835,
+      "sha256": "f75f993098d4183e0f8bf28bab00581fce6ba6c7711b27755e806addb498cedf"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-is_error-null.json",
+      "bytes": 1844,
+      "sha256": "e5e874a5758cadaaf0299900bb8178b4daf7d964ee64f3a16b145e444c6b819c"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-is_error-true.json",
+      "bytes": 1844,
+      "sha256": "5a6fa7bf5c0cd2ff3a243a2ef6cf6c0f646200194bfc485918dab0d95ce74c3e"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-missing.json",
+      "bytes": 1772,
+      "sha256": "75dd8406510d4ccd6d320aec92f4bc3f24b009895f0b020195161c3304700328"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-non-chinese.json",
+      "bytes": 1808,
+      "sha256": "6dbdf2c80ba77f2b31f5809f44a9a5fdbcca249ebb8a1b80b5f2f494ddb6d987"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-non-string-result.json",
+      "bytes": 1778,
+      "sha256": "b4ea566645eeb3193c0f2da7222ca900ec33d6f4899b0ea08f779d7c478dbe0e"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-plain-text.json",
+      "bytes": 1653,
+      "sha256": "bebfeed609fc793743a93f5f0e7fea3e4919680e61cb0ad30cee6e146189b976"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/protocol-wrong-type.json",
+      "bytes": 1849,
+      "sha256": "9aff0ea29622e355e8f9417521bca46e434524ab8f7163bec7967752da6a2221"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/原始输出.log",
+      "bytes": 1098976,
+      "sha256": "f56115d31fe373382951d5b13d6315a2ec5ddf4dd00a55f343b204965d76d890"
+    },
+    {
+      "path": "验收证据/GN-R4/12-test-electron全量/退出码与用时.json",
+      "bytes": 485,
+      "sha256": "05c0119be42d8e91823516c627579d34eaad756c55bf50aba4a941a8b3d2770c"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/actual-quota.json",
+      "bytes": 57015,
+      "sha256": "57bcead1746bcd940959843b21458f4734526cbada9e41c5cae1ca361171dc5a"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/actual-two-windows.json",
+      "bytes": 4344,
+      "sha256": "f96f00321723994b3b8cab1065354dda87b7c9b7f71d6b0ebc1974040b39bb94"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/cache-identity.json",
+      "bytes": 8482,
+      "sha256": "5f01fb5655dd24d09e5ae95e4ffd5764eac146e9f19a364486928793cd4b9ca5"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-bad-json.json",
+      "bytes": 1639,
+      "sha256": "094c61e516e811dc6f62e507605f5883b4b894542bf8f1ad275815cc0c992e6d"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-boolean-false.json",
+      "bytes": 1884,
+      "sha256": "afc694512cb0ab929547d145b4929a97d8c24904f3f4abcc69474033ea20f166"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-empty-result.json",
+      "bytes": 1781,
+      "sha256": "ab61256ff26a84fd2dc2b4e4f85c8c0b93442e594cfacfa5c551b3a3d3fabe0b"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-error-branch-false.json",
+      "bytes": 1881,
+      "sha256": "66b87b6e4c36f5b65a29415b6caba923274b063aab01383db498791cb71a6f8a"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-error-branch-true.json",
+      "bytes": 1878,
+      "sha256": "4689ec18d784e6554bf71ac56787c62e1a4a1e83dc87a5953dffcf246742bbfe"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-error-exit-false.json",
+      "bytes": 1849,
+      "sha256": "0215b205b5c9b3d78d68aaec6888f2b4588c30595f85d90827e7c13722f797e7"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-error-exit-missing.json",
+      "bytes": 1783,
+      "sha256": "8470bdb2dfdd35ffe814ab9384cbd596d01b23da777f9f85c8d83a81bcd35261"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-first-sentence.json",
+      "bytes": 1885,
+      "sha256": "9e24939abe8c7d8dd26435c1d85630a9e1cf72d10c3086c978a2f26e8a9bc42b"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-is_error-\"false\".json",
+      "bytes": 1859,
+      "sha256": "aa46c98a1b5fa934f2d4512e8271b7368d42c4e40eca8ba2e33f52cf16314bd3"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-is_error-\"true\".json",
+      "bytes": 1856,
+      "sha256": "46c2a852b407e9a32e0a9890b3d750192a0abac18306190ce4c538547a8d6b8d"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-is_error-0.json",
+      "bytes": 1835,
+      "sha256": "99da308546dc84302130a4a431a4aaef6340df3fd98eca501c6785c9b5b7ff22"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-is_error-1.json",
+      "bytes": 1835,
+      "sha256": "2f043bb14b13de408bcaf43168dd2acc6e4cbb45ecf841d7046f2830d1444d96"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-is_error-null.json",
+      "bytes": 1844,
+      "sha256": "490c54541d3339cae86464ac4590fdf3decf0497990bdd1177571279b6762e1e"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-is_error-true.json",
+      "bytes": 1844,
+      "sha256": "e795e3df7545f04ba0f4f9f1cf2264c40597e4dd2682591a0c38e73ea1d83d93"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-missing.json",
+      "bytes": 1772,
+      "sha256": "91f0f31a79b492ed57a76ae687047ea718849461941c202661a55f9538c3a9de"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-non-chinese.json",
+      "bytes": 1808,
+      "sha256": "19e1d76a078a1bd9a58f9e16140ff0092f8436f3776068ff21cd209439d66fc3"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-non-string-result.json",
+      "bytes": 1778,
+      "sha256": "b30691d8b587f7a2b15566085085ff30dafe37719e926287ee7a5e727f80e030"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-plain-text.json",
+      "bytes": 1653,
+      "sha256": "419f3ca0d0df186d78598f9048817ce25b43283f6254820d4ba37fd561330772"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/protocol-wrong-type.json",
+      "bytes": 1849,
+      "sha256": "887bb68fb3aec1a5fdc23768a5be48d86bb93ea2ea1ff808dfbd9f5d3ba87979"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/原始输出.log",
+      "bytes": 2243842,
+      "sha256": "6d231e7a995cacce00ce123a278db90765214ecc2e47a57527abcfec42192750"
+    },
+    {
+      "path": "验收证据/GN-R4/13-test-prepush全量/退出码与用时.json",
+      "bytes": 462,
+      "sha256": "bdd2f5cc7328f3287d979f7d0d500a3319abb1d4f9c31f7eae3f427501a078c5"
+    },
+    {
+      "path": "验收证据/GN-R4/14-native-electron/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/14-native-electron/原始输出.log",
+      "bytes": 1289,
+      "sha256": "1702bae15d07722b1d89841b8eb2a214f4ac1ffad2461182b086b20c45bded77"
+    },
+    {
+      "path": "验收证据/GN-R4/14-native-electron/退出码与用时.json",
+      "bytes": 396,
+      "sha256": "129c943ac9ae3e1d39475a30e143cba748babc047c663613ee36c36223bc1209"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/e2e-1788790497928-FEo6LC/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/e2e-1788790497928-FEo6LC/collab-load-lifecycle.json",
+      "bytes": 38,
+      "sha256": "5e84fa3997d7e88a431e1c854d867b07d9819d8b2a9d89de06af5edd7a995a61"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/e2e-1788790497928-FEo6LC/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "48e4019608c2e2a58660c6caf4b7a3e9a7cd72659bdb32bfc02e634d69b1c122"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/e2e-1788790497928-FEo6LC/test-results.jsonl",
+      "bytes": 1601,
+      "sha256": "d5bcb0753f5280deb4a11a7ef19d4d6e09c8769b53e9ab7944ae87568693b917"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/e2e-1788790497928-FEo6LC/videos/page@c40f2db7fe9453a831f2d2e8bbebf60e.webm",
+      "bytes": 807798,
+      "sha256": "fce71092c84db2636e93f5da66d7040de14b5f27994d0f8962ac024f33e708a2"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/playwright-artifacts/.last-run.json",
+      "bytes": 96,
+      "sha256": "b9cbdbfa0c6f2e6141931c3c742a131f1bdc121e9d3631d34629816c57e69668"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/playwright-artifacts/ai-collab-chain-绿⑭-真实技能库入口-36d20-定假程序---缓存落盘---页面更新---重新扫描复用-electron-collab/error-context.md",
+      "bytes": 21931,
+      "sha256": "3363ee38c5cc383ae3bdfd03bf79a77722e6afb8dec0aa6df5f82bee1137e6c8"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/playwright-artifacts/ai-collab-chain-绿⑭-真实技能库入口-36d20-定假程序---缓存落盘---页面更新---重新扫描复用-electron-collab/test-failed-1.png",
+      "bytes": 261130,
+      "sha256": "8834195fa183eaeba7fed4f472e3de34e23c2760cb4de03ec1f4f02b4cec2eef"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/playwright-artifacts/ai-collab-chain-绿⑭-真实技能库入口-36d20-定假程序---缓存落盘---页面更新---重新扫描复用-electron-collab/trace.zip",
+      "bytes": 300125,
+      "sha256": "0b1130f3c79da6f046ea30e1b36f7e5b2b9fd689ddc3393e07006198c53d81dd"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/原始输出.log",
+      "bytes": 134071,
+      "sha256": "29fcf77aa0cae24f8692e20fa20cc26fbbe0f1ae16981ec0b74c75a5043ff31a"
+    },
+    {
+      "path": "验收证据/GN-R4/15-E2E页面与三阶段正向/退出码与用时.json",
+      "bytes": 689,
+      "sha256": "561b559c9ed7f7a9776e50e65c983e47b5349ffd096dc9a387237f76a43e255d"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/e2e-1788790697139-Zd3ISe/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/e2e-1788790697139-Zd3ISe/collab-load-lifecycle.json",
+      "bytes": 38,
+      "sha256": "5e84fa3997d7e88a431e1c854d867b07d9819d8b2a9d89de06af5edd7a995a61"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/e2e-1788790697139-Zd3ISe/engine-state/events.log",
+      "bytes": 48,
+      "sha256": "717574d59d2233abea302908985768d886f6e12f86e5d3688ca2b968b58bac0f"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/e2e-1788790697139-Zd3ISe/engine-state/process-events.jsonl",
+      "bytes": 1266,
+      "sha256": "14182c03617098ca2d4f17d2a8878ba0f6d1ba6f5b9c49ee1fb08754e6cbc7ff"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/e2e-1788790697139-Zd3ISe/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "e207e4fcca246984418ab8aa196877a488d865123b8ab8b30a1f9420cba68fc8"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/e2e-1788790697139-Zd3ISe/test-results.jsonl",
+      "bytes": 460,
+      "sha256": "fbce54d6049a9bc65f928240d490e7eb85a85b0964ab8ef8ed365b9ee1ade843"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/e2e-1788790697139-Zd3ISe/videos/page@2083ca03e376169d3a46301ba838174d.webm",
+      "bytes": 434441,
+      "sha256": "81b32b9f1b36d8a7d62682bec4b05af4058827eab5e47427f16ad09507be2879"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/playwright-artifacts/.last-run.json",
+      "bytes": 96,
+      "sha256": "b9cbdbfa0c6f2e6141931c3c742a131f1bdc121e9d3631d34629816c57e69668"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/playwright-artifacts/ai-collab-chain-绿⑭-真实技能库入口-36d20-定假程序---缓存落盘---页面更新---重新扫描复用-electron-collab/error-context.md",
+      "bytes": 21235,
+      "sha256": "c8d10cd9509699ae2021ca63e1d183b6fc05943d5b9ad72a86cd65cadd6f6f95"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/playwright-artifacts/ai-collab-chain-绿⑭-真实技能库入口-36d20-定假程序---缓存落盘---页面更新---重新扫描复用-electron-collab/test-failed-1.png",
+      "bytes": 226816,
+      "sha256": "2da501c54b614f4922358196a31d578639aa41909044deda3a05c3a0ed0db2ad"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/playwright-artifacts/ai-collab-chain-绿⑭-真实技能库入口-36d20-定假程序---缓存落盘---页面更新---重新扫描复用-electron-collab/trace.zip",
+      "bytes": 266561,
+      "sha256": "0d35dd53d2c850d5c677597401837675f62b5daaa6ae39609414009ae6f98ea3"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/仅清理本轮测试缓存残留.json",
+      "bytes": 284,
+      "sha256": "c1e7a6a2268ec745a7abeaaea026976985782f3e88db31a9324366971d4be457"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/原始输出.log",
+      "bytes": 136359,
+      "sha256": "8ae2e607cfac72cde0023f651725b9b8586d20c6a35373943ecb6f22b4e71304"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/缓存提前初始化定位.json",
+      "bytes": 820,
+      "sha256": "f597d90f6b06a7e712d6f32335e31a7cd71023ecf13f22de01f288e11aec68f2"
+    },
+    {
+      "path": "验收证据/GN-R4/15b-E2E真实滚动后正向/退出码与用时.json",
+      "bytes": 688,
+      "sha256": "1079d2c2d1c60aa3dd82018c2cc0adbd085118180a5ce20f817ca7e43211d7eb"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/collab-load-lifecycle.json",
+      "bytes": 19303,
+      "sha256": "787597907f0cc4cb93fdcce338f4e2229ed39feddc488a9a313d8ee948ff4abb"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/events.log",
+      "bytes": 528,
+      "sha256": "fd7111ef84f0123ff058288fd717978cd00733ec3cabfb3a40fcab6059711a6e"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/process-events.jsonl",
+      "bytes": 14535,
+      "sha256": "fb798d44cdcbd4c0c2c3c84b1edebd5d1536603748ad4a320004d368fe732542"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7006",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7007",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7008",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7060",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7061",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7062",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7148",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7149",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/engine-state/release-7150",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "c18fded69aeaaf978cf99c3993307015e343c3c1611927e796830f1844d73bdd"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/skill-taxonomy-cache.json",
+      "bytes": 122193,
+      "sha256": "1d2c52d193d973bc77dd5d5fe372e5f0d0461f83bc07d924410b53636ffcc381"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/test-results.jsonl",
+      "bytes": 558,
+      "sha256": "3c6cf1fcad70d5344e3e82ccb6c15fb15a8d126e6683a639bcab24e526b61901"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/e2e-1788790989003-sXLPfx/videos/page@c5736adb3e3a300c45b16dcb3c26440b.webm",
+      "bytes": 1033487,
+      "sha256": "48f18254930cae1619e62108eef98a605a8880101d31585d7f1194102e9be4d5"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/playwright-artifacts/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/原始输出.log",
+      "bytes": 146259,
+      "sha256": "3afe3bcfecdb9e1512387f23c1c590b5addc1bf09c1ed8d4f34ebd6b5c1853f4"
+    },
+    {
+      "path": "验收证据/GN-R4/15c-E2E隔离缓存修正后正向/退出码与用时.json",
+      "bytes": 908,
+      "sha256": "498a7903cea32ac42f4efd29a13936b1df0811265e2c8de3db408fbb78a5b678"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/collab-load-lifecycle.json",
+      "bytes": 2294,
+      "sha256": "2bdead323194d95647e0aed77614b13fba4ca47fd7afe291c9f480c1a5a3a12e"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/engine-state/events.log",
+      "bytes": 147,
+      "sha256": "323914688e4ae2413f43e1f1975b711de276d00f227df9d25840cdc467e1652d"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/engine-state/process-events.jsonl",
+      "bytes": 3702,
+      "sha256": "6052226f14cadb789db47a978eb9e1f9704bdaa5378648a5225edd2d4a61adcc"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/engine-state/release-8010",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/engine-state/release-8011",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/engine-state/release-8012",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "759a20fa27129131bc943f1d4f877b2b03b0e1a8588dbc0d47e6a5a29c05212b"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/skill-taxonomy-cache.json",
+      "bytes": 117883,
+      "sha256": "162e77e3a401681dfb52ec0dcde5ce6024ccc564e5af28a5183b25be66bdbdf3"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/test-results.jsonl",
+      "bytes": 517,
+      "sha256": "aeca88f6dce528afa0414fbcf497de1eaa9f30b835e11116079e07f9dac9a577"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/e2e-1788791107583-oR7tZA/videos/page@ca2ecc89bc340ae99d006173e296a6a1.webm",
+      "bytes": 310627,
+      "sha256": "239b79a769d7e27e853bec3b84256758365bab9f11a55880f7d27a67df7f4c66"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/playwright-artifacts/.last-run.json",
+      "bytes": 96,
+      "sha256": "9ac54b4627e9475ba17cc000ffc4af164fb8152d0aa1f80fc237470c27663b32"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/error-context.md",
+      "bytes": 17644,
+      "sha256": "82df11eb92b662420fd096ed2548ed6ba99dc08bca6e7893532277a22637e99d"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/test-failed-1.png",
+      "bytes": 189581,
+      "sha256": "85e1752cce423923a7d56c3057df8ae05d8b10ff9b81c67be10fdadc5fc9be03"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/trace.zip",
+      "bytes": 231429,
+      "sha256": "de3660608e1b98ce9c9067df9fdb6c9d5941c3779c6f75ac826524577822e552"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/原始输出.log",
+      "bytes": 137175,
+      "sha256": "b6234d29109b05f851642be0b79e2535103836e17fed83278a8c0d2673494754"
+    },
+    {
+      "path": "验收证据/GN-R4/16-A全部生成失败/退出码与用时.json",
+      "bytes": 690,
+      "sha256": "8d296dd352dd49a355db4ca5af01e63f389a1d235c13d956039649c9a01fefba"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/collab-load-lifecycle.json",
+      "bytes": 38,
+      "sha256": "5e84fa3997d7e88a431e1c854d867b07d9819d8b2a9d89de06af5edd7a995a61"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/engine-state/events.log",
+      "bytes": 144,
+      "sha256": "f6235dabea0c82b45bd8aa333a4be13b5e30c04be00d8141f70e8e30b80fc7d7"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/engine-state/process-events.jsonl",
+      "bytes": 4041,
+      "sha256": "8f512ef7d9b98f2467d855b3d53ef00fda8284717945538b0c176af536fb5dac"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/engine-state/running-8418.json",
+      "bytes": 38,
+      "sha256": "f700fa0ccdc1ec062c33682afdd9b2e9909d512f36a34cd9a53b46dfa682ab30"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/engine-state/running-8419.json",
+      "bytes": 38,
+      "sha256": "a8e486a9c82cbeaa4583b7ec489959f58878917e980b1c613b4d6bf9492a2d90"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/engine-state/running-8420.json",
+      "bytes": 38,
+      "sha256": "b408c2520a9663292a322befb40e994a537dd9b2d3fd1f16dba0885611d93c13"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "48eb786dcef069964538123b845d64d2bb81a33d868b0394c5b6c1d914ea9ef6"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/skill-taxonomy-cache.json",
+      "bytes": 1454,
+      "sha256": "bb31cb344141e1b1e959ebabe3a0a9e260ef3b0dc3beae1370b1155243031b7b"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/test-results.jsonl",
+      "bytes": 583,
+      "sha256": "8cc03a13413a178788b92804e5c3729adb757bc190cb4cc203c22424a1c26acc"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/e2e-1788791155775-rgKvzp/videos/page@6635722cfe98ee3e4346a8cc41917ffe.webm",
+      "bytes": 378404,
+      "sha256": "318d400825a5fc6efd013b8565dbdcc63407a2e7b42d9f6641f3e9bbcc3ca66c"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/playwright-artifacts/.last-run.json",
+      "bytes": 96,
+      "sha256": "9ac54b4627e9475ba17cc000ffc4af164fb8152d0aa1f80fc237470c27663b32"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/error-context.md",
+      "bytes": 20088,
+      "sha256": "637ab92f97b561e0d27acf2c97e43ca7bca76f538ac270666e0e2a22002dd824"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/test-failed-1.png",
+      "bytes": 201868,
+      "sha256": "d9e609274081dadf1de1cc7b7c713ec1bf0d631c4f0c7312831dab3906fcbb1a"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/trace.zip",
+      "bytes": 242101,
+      "sha256": "9d9f3487cf44b5d40cd3f92e54f598e61d9391084e13fde695012a38138e64cd"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/原始输出.log",
+      "bytes": 131004,
+      "sha256": "20dfaed06121f5bc2b38b21b63bb50a337a1c036a1b1fce9e8486c7477a762e6"
+    },
+    {
+      "path": "验收证据/GN-R4/17-B失效进程标记/退出码与用时.json",
+      "bytes": 722,
+      "sha256": "353fd87b92da4242500c039ca0dc4cebec1662b313e280ff44493da6906dd01c"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/e2e-1788791212943-5CN8Wu/cleanup.json",
+      "bytes": 81,
+      "sha256": "2be37c889a05b30a464e0cacf6b21ea288dad3228f62b02342b7f8321afe3b74"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/e2e-1788791212943-5CN8Wu/collab-load-lifecycle.json",
+      "bytes": 1925,
+      "sha256": "c8de00fab62b5037e738723f96ec8d452a9ca308cfbb73d1c7923ff665e904f5"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/e2e-1788791212943-5CN8Wu/engine-state/events.log",
+      "bytes": 153,
+      "sha256": "5311fe0f55e4e0453f1ec333afafce9abd074cbfec07a4824901a81c3c4d32ff"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/e2e-1788791212943-5CN8Wu/engine-state/process-events.jsonl",
+      "bytes": 3714,
+      "sha256": "88b2a6706d3d702318c82acd22677f2cb48bf536835533b0b05066ec0918e4f0"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/e2e-1788791212943-5CN8Wu/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "b5abbdb6203ee6e57745f9dcb6ad745062e928ecdf7b74092c417928da81c382"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/e2e-1788791212943-5CN8Wu/skill-taxonomy-cache.json",
+      "bytes": 117883,
+      "sha256": "b7f28b9201e5b21c39863a56e96b9c92783a08bd456c621477879a102b49624e"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/e2e-1788791212943-5CN8Wu/test-results.jsonl",
+      "bytes": 709,
+      "sha256": "e29e18061d3c3869d718b3d8408544d2e36aa905fb4f4bb078892b6b0124985c"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/e2e-1788791212943-5CN8Wu/videos/page@cbf804ee7396ec16d94f3ee627994d95.webm",
+      "bytes": 292963,
+      "sha256": "12053a94ebe37c03894b0a288c120efcbb601debe36d01a0533fa94324de8394"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/playwright-artifacts/.last-run.json",
+      "bytes": 96,
+      "sha256": "9ac54b4627e9475ba17cc000ffc4af164fb8152d0aa1f80fc237470c27663b32"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/error-context.md",
+      "bytes": 17601,
+      "sha256": "6f23de270afa3551a8ed24383c9bbe7783b93bf43a4c481b33c67e08c014dbbf"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/test-failed-1.png",
+      "bytes": 189567,
+      "sha256": "a26298bb2b04492bcc955ce55eda99a45125a4909c1cbdab5234fc8bd296c5dc"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/trace.zip",
+      "bytes": 231033,
+      "sha256": "d961065bf5fb45e3c24f753d34f6fb7e7c115a99ce57c819c1a0444215b0fa59"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/原始输出.log",
+      "bytes": 135908,
+      "sha256": "8d96ef6bb5f888712ecc498f51d8b965c2374fb714eb35683fffbe9afbdb3dbc"
+    },
+    {
+      "path": "验收证据/GN-R4/18-C主链打回/退出码与用时.json",
+      "bytes": 685,
+      "sha256": "ab9ef86ba5e8d15bf11e23448e323f037c5925ce595f96b662cd80a186317dae"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/collab-load-lifecycle.json",
+      "bytes": 1976,
+      "sha256": "c71396382ff027934dde8160f98ef413454f68f7b193453508a14eb7d7335c36"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/engine-state/events.log",
+      "bytes": 150,
+      "sha256": "7aa447c826a8c2041e8f37f1afece1cca959e5496485495678dfa253f15bc841"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/engine-state/process-events.jsonl",
+      "bytes": 4047,
+      "sha256": "c73eba8fb843cd1a53bba5dabdbeb0da24534799b6f485ee044ad7a5f4e31d51"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/engine-state/release-10389",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/engine-state/release-10390",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/engine-state/release-10391",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "c92c3936c7dff1ba478e6beb5176c9d027a0599b063cd6a0434917f7889319eb"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/skill-taxonomy-cache.json",
+      "bytes": 1454,
+      "sha256": "59f2f47a18db808978f9d4fd16405d5301b3e9cf5d469c4b2b0ca6abeef81b7d"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/test-results.jsonl",
+      "bytes": 630,
+      "sha256": "7f12d7d805ddd806070f088304b118b51da897ab7a9086e418724b4d41bec122"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/e2e-1788791261230-bERF3G/videos/page@afe90479e237123148c2417c4756df70.webm",
+      "bytes": 284227,
+      "sha256": "54d24b6e9148795a6942f9274aeac6132a12569bab47e2952afe8e3c9d56b763"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/playwright-artifacts/.last-run.json",
+      "bytes": 96,
+      "sha256": "9ac54b4627e9475ba17cc000ffc4af164fb8152d0aa1f80fc237470c27663b32"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/error-context.md",
+      "bytes": 19348,
+      "sha256": "30b369dad1c7c4878ae41ab4e7b5a72cf9998762422fb4daf3a1f66f8f7d1049"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/test-failed-1.png",
+      "bytes": 201604,
+      "sha256": "f0d83a74be796db376b65a84b8d191a62d890eaae86399dc5fc679c1e1e8c7cd"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/trace.zip",
+      "bytes": 241481,
+      "sha256": "9dfa93c2dfc7062859e3a330fe9a7833bd4f6fa326ada400f1a85815ec754866"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/原始输出.log",
+      "bytes": 131464,
+      "sha256": "f87c38a52c7aced4145305792ea4175992ff93cb4a5cc92ce4c739ed1c33f767"
+    },
+    {
+      "path": "验收证据/GN-R4/19-D1批准节点前负载结束/退出码与用时.json",
+      "bytes": 696,
+      "sha256": "cff18c6ed17281bdd63277a2a764df6b14ed3327339aa593610b85eaa3cb1521"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/collab-load-lifecycle.json",
+      "bytes": 5622,
+      "sha256": "892dd65ec6c8a0fd0051538f5fa4e622fe32d0c4fdd128eeb1dedac7be9537d3"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/engine-state/events.log",
+      "bytes": 300,
+      "sha256": "b1e1f8b6eabdd1226beb87e2aa482cf459c508ec04fc23e7e3a5f317dcc2243a"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/engine-state/process-events.jsonl",
+      "bytes": 8127,
+      "sha256": "75e6d315266861b6b5646fcb84ee251ae34b49d41f4d5f71b1e9596f03052e46"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/engine-state/release-11138",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/engine-state/release-11139",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/engine-state/release-11140",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/engine-state/release-11210",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/engine-state/release-11211",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/engine-state/release-11212",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "8ee4afd80e53843d145d8d8c83314f5b539b412bea87bcac9e0380e4e83378e1"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/skill-taxonomy-cache.json",
+      "bytes": 119275,
+      "sha256": "aaa94d788a80713991e332260689d1183b64624c1a7a52ec68ccc27a6e5e1c62"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/test-results.jsonl",
+      "bytes": 630,
+      "sha256": "608e88ee3dcb6cbc158309fc764c17022b24a72ee63f518b15a4316c505c9eb8"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/e2e-1788791309888-4QAFh9/videos/page@bc510df8734141dfd794f951c9736926.webm",
+      "bytes": 352969,
+      "sha256": "4094f1b0f7ce8598f753db3a78ce34225b9afbb3007cf23fcd185afef202f97a"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/playwright-artifacts/.last-run.json",
+      "bytes": 96,
+      "sha256": "9ac54b4627e9475ba17cc000ffc4af164fb8152d0aa1f80fc237470c27663b32"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/error-context.md",
+      "bytes": 17371,
+      "sha256": "2dda86c56559ed1cff97778d11314eb5fa2e5a903ea78749cf24427c238021e9"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/test-failed-1.png",
+      "bytes": 189216,
+      "sha256": "99e8f331228967d7a40def8a9fbc4e09ebd05d3dedec9af30897a65227249a9f"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/trace.zip",
+      "bytes": 233236,
+      "sha256": "08446d5633a660631521b3960b36caf28b288b299e58a4a9b900d330dfea2262"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/原始输出.log",
+      "bytes": 136753,
+      "sha256": "144654be0d37078c4d8f5e209d2d329929fcafb73bef441b5991bc1d5336a776"
+    },
+    {
+      "path": "验收证据/GN-R4/20-D2子任务节点前负载结束/退出码与用时.json",
+      "bytes": 696,
+      "sha256": "c06f119ff592a1d6e5bb9a2266444fb4dca169bd61a995dcff72b086ca0fc019"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/collab-load-lifecycle.json",
+      "bytes": 9173,
+      "sha256": "7963156e1bf6754df1e1cf06a7e81a17aff6403f5c2dd86987258097225d4540"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/events.log",
+      "bytes": 450,
+      "sha256": "35d0df78b9344bff7be2c0db16fd20afb81fef253cd2df500656611d0e016f68"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/process-events.jsonl",
+      "bytes": 12039,
+      "sha256": "6ae8c2562b7900a7c0d8b7dcfe1561b4ea7c6123e81fb37454fc7c43a95042b1"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12082",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12083",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12084",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12180",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12181",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12182",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12224",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12225",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/engine-state/release-12226",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "d425020f668a0b02c568d3b97d3c582ef8a1ff93a2de37b4cc46acdb63c2c966"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/skill-taxonomy-cache.json",
+      "bytes": 120647,
+      "sha256": "8f7d6d1c3aa198233742ba7551dac3160995c90032cf81202de471d064470eca"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/test-results.jsonl",
+      "bytes": 631,
+      "sha256": "b3dfff08f6b9eb32d2586d6dac3201e1fce65c720d0eb56eec6e549930ebde79"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/e2e-1788791365811-W32wvk/videos/page@e69e765f2cc7315019b5705407df9abc.webm",
+      "bytes": 598285,
+      "sha256": "fee5e30ce4a974c583e23d7979513643604f09bb48bc8bdadde87e1d780c9372"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/playwright-artifacts/.last-run.json",
+      "bytes": 96,
+      "sha256": "9ac54b4627e9475ba17cc000ffc4af164fb8152d0aa1f80fc237470c27663b32"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/error-context.md",
+      "bytes": 18170,
+      "sha256": "96034a92e4003baaaa075478b0cceac9981899f637ae85c50de20ab2f9647885"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/test-failed-1.png",
+      "bytes": 206435,
+      "sha256": "67cf10b4e40eb8f991c4fcfaea4a39f39af37e49603d185c3d20b1e4ee0b59e2"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/playwright-artifacts/ai-collab-chain-绿⑮-技能生成占满允-f66f1-llab-chain-协作链路（3-并发技能生成负载）-electron-collab/trace.zip",
+      "bytes": 253758,
+      "sha256": "c780677ff9c8a6966e1164719eba7a16aff6d7a90f0c2d7b884b6197f21557c1"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/原始输出.log",
+      "bytes": 144429,
+      "sha256": "fe7d22c5777c5c0f546bf3ad33f3880cfadc23952270362f8e224849d843d47a"
+    },
+    {
+      "path": "验收证据/GN-R4/21-D3总结节点前负载结束/退出码与用时.json",
+      "bytes": 695,
+      "sha256": "10ae2b48cc1b63d071ca63861219bf010b879eb27d0d4f8aad5fbc30f43c9e68"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/cleanup.json",
+      "bytes": 49,
+      "sha256": "2d8bd4c4a67b031d65bdbc27807c9304e38e503e6b2a364725f9b9801edded89"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/collab-load-lifecycle.json",
+      "bytes": 19343,
+      "sha256": "aea28fee729b2458b388b0487e54bc7d55725aa3b233d2bd08e2fa0d59ec6fa9"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/events.log",
+      "bytes": 550,
+      "sha256": "cc267e72d4606ce40c3ab312c021ffd650cc18693e13360ff052f94f4fd5827a"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/process-events.jsonl",
+      "bytes": 14557,
+      "sha256": "f20c0e0f5af31a6038a4b2c23da97856e90f8b22ed5ca74b46e0bb9068f3a5a1"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14151",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14152",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14153",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14199",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14200",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14201",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14234",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14235",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/engine-state/release-14236",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/isolated-paths.json",
+      "bytes": 452,
+      "sha256": "072bcfa406270e6274751977639c320708198b47d6cc7fc0cf9c1fb4be950167"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/skill-taxonomy-cache.json",
+      "bytes": 122193,
+      "sha256": "dec2a34bc274bf847dd4066468e9877a0036eb073219820d611cc2798c8a07ad"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/test-results.jsonl",
+      "bytes": 1292,
+      "sha256": "f089b999639dcaff4464269a61786a714db08c27b7f601299a7a4addf9204674"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/e2e-1788791546319-r9JcDB/videos/page@401064305b8c4e73d255229426a9ccb6.webm",
+      "bytes": 1799098,
+      "sha256": "5a5da9274b591ef2163534777bf89760ceee406ed51b7265cad94bf7c386d351"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/plan-approval-layout/plan-card-360-page-1.png",
+      "bytes": 120847,
+      "sha256": "1278de1a2907319975a8d369cf95bc4335218c95397bea49284eae59adc90b16"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/plan-approval-layout/plan-card-480-page-1.png",
+      "bytes": 134575,
+      "sha256": "460cd2c0b76e5ceed2807dc82fc062a75668e163ed02ce5a1085f43562bb3ca2"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/plan-approval-layout/plan-card-480-page-2-rejected.png",
+      "bytes": 111103,
+      "sha256": "1e158e840d00c96dc317b6db07d007153c23cecde10cada330d43c326e5bf6b2"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/plan-approval-layout/plan-card-720-page-1.png",
+      "bytes": 182864,
+      "sha256": "714f10178f6f5b72b190b9302c3be43f59407383f0dab6a7db5a90e2f8717f68"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/plan-approval-layout/归档说明.json",
+      "bytes": 484,
+      "sha256": "543385b36a7c573d1f8b552aaa9f3a772373e43ce0280d3a979578cae9abc85b"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/playwright-artifacts/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/port-after.json",
+      "bytes": 36,
+      "sha256": "0497fda740a09042d26bc93e401ff036269642554353e409ad3f9acee46256d6"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/port-before.json",
+      "bytes": 194,
+      "sha256": "1dd8a23a2c165cd0afd3dd980efdf5c93bdd171863187508f30f7f022689ddee"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/原始输出.log",
+      "bytes": 206169,
+      "sha256": "a8dd8eb4db7b352d87986f0a60d8a3cc658c866309b2c0a9750887a28181efa4"
+    },
+    {
+      "path": "验收证据/GN-R4/22-E2E最终五项/退出码与用时.json",
+      "bytes": 1349,
+      "sha256": "1e86d42966c53c68beee5e7cb6601ee78b4a04986fe0e5eeb971dc0effdffb65"
+    },
+    {
+      "path": "验收证据/GN-R4/23-最终范围与原断言复核/exitcode.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "验收证据/GN-R4/23-最终范围与原断言复核/原始输出.log",
+      "bytes": 803,
+      "sha256": "c136468a46e63c0d022c885b3187c12357f11163c0135d4e5bff189ad15276c7"
+    },
+    {
+      "path": "验收证据/GN-R4/23-最终范围与原断言复核/退出码与用时.json",
+      "bytes": 369,
+      "sha256": "fd7dea0b1335875b58d39e5c53d286191cef7442d0e5e5532936a2a3e8d69295"
+    },
+    {
+      "path": "验收证据/GN-R4/23b-最终范围与原断言复核/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/23b-最终范围与原断言复核/原始输出.log",
+      "bytes": 2793,
+      "sha256": "230bfc5832eee7d01f58cb57631bdd7fe2ce3e69c5f659e40c7cd0b98d0ad666"
+    },
+    {
+      "path": "验收证据/GN-R4/23b-最终范围与原断言复核/退出码与用时.json",
+      "bytes": 369,
+      "sha256": "fcf8ea42648f4dee9750ea28ca5e9423bc93b9f74519406d4ad5276d98ec05ad"
+    },
+    {
+      "path": "验收证据/GN-R4/23c-交卷范围与原断言复核/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/23c-交卷范围与原断言复核/原始输出.log",
+      "bytes": 2793,
+      "sha256": "230bfc5832eee7d01f58cb57631bdd7fe2ce3e69c5f659e40c7cd0b98d0ad666"
+    },
+    {
+      "path": "验收证据/GN-R4/23c-交卷范围与原断言复核/退出码与用时.json",
+      "bytes": 369,
+      "sha256": "5c1bd38b31425ee4ac689d6585d5815fcd2c4a97cb8bc230da709a597e147ad5"
+    },
+    {
+      "path": "验收证据/GN-R4/24-批准数据优先复核/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/24-批准数据优先复核/原始输出.log",
+      "bytes": 2948,
+      "sha256": "66c71dcfbe8b7cc189d8d15d3ecd65160d9ffef0447e129b45bcf6b9571444a8"
+    },
+    {
+      "path": "验收证据/GN-R4/24-批准数据优先复核/退出码与用时.json",
+      "bytes": 381,
+      "sha256": "46eb610f8ec4a42ea7e93c83059c99098fcee24f323d2f3b171d58c1507aa57d"
+    },
+    {
+      "path": "验收证据/GN-R4/25-归档证据独立复核/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/25-归档证据独立复核/原始输出.log",
+      "bytes": 1292,
+      "sha256": "8a0d655077046bef46b4e234d2a48898b1b9c0fbe1d614a3ebca6c06f6295325"
+    },
+    {
+      "path": "验收证据/GN-R4/25-归档证据独立复核/退出码与用时.json",
+      "bytes": 572,
+      "sha256": "61128380d19cc18117e3708bcf6fad38bbdc3042e5938edf06d8d3d079d44de5"
+    },
+    {
+      "path": "验收证据/GN-R4/28-Node门禁前环境检查/原生依赖使用检查.json",
+      "bytes": 769,
+      "sha256": "876df39aedfa3a128d48f7e8daa48c786262ae26e3345b8d5af3857c116cdc07"
+    },
+    {
+      "path": "验收证据/GN-R4/28-Node门禁前环境检查/实际依赖占用复核.json",
+      "bytes": 619,
+      "sha256": "0f01188702117d22eb7d076b3c1809d0b430132d980848d783f35aff7da2b9b8"
+    },
+    {
+      "path": "验收证据/GN-R4/29a-清已知Node缓存/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/29a-清已知Node缓存/原始输出.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "验收证据/GN-R4/29a-清已知Node缓存/退出码与用时.json",
+      "bytes": 402,
+      "sha256": "b5d85db4139d0320f54c5802070980b40f8f7045bdc525bf68aee10e52923e66"
+    },
+    {
+      "path": "验收证据/GN-R4/29b-重建Node依赖/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/29b-重建Node依赖/原始输出.log",
+      "bytes": 34,
+      "sha256": "5fea06889844726ffbf8e27f38feb7a12898a3d5a295ed2d1284ad720672f18e"
+    },
+    {
+      "path": "验收证据/GN-R4/29b-重建Node依赖/退出码与用时.json",
+      "bytes": 355,
+      "sha256": "75d605de34fe189875698563f0a0b391228d16b77124b188b849c0fdb96eac37"
+    },
+    {
+      "path": "验收证据/GN-R4/30-typecheck-electron最终/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/30-typecheck-electron最终/原始输出.log",
+      "bytes": 56,
+      "sha256": "91950df180e365b731245ae9274ade249afc50d104205cbe4cd7d61f93452775"
+    },
+    {
+      "path": "验收证据/GN-R4/30-typecheck-electron最终/退出码与用时.json",
+      "bytes": 373,
+      "sha256": "71a741a842f285379e284fae7f31381f993b09fdd1e559e0088e4b3745a174ca"
+    },
+    {
+      "path": "验收证据/GN-R4/31-typecheck-runtime最终/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/31-typecheck-runtime最终/原始输出.log",
+      "bytes": 54,
+      "sha256": "259b754fae917e0fbdc5ac147eb3491f3521c8f56e6749c35af1187adb52bf7a"
+    },
+    {
+      "path": "验收证据/GN-R4/31-typecheck-runtime最终/退出码与用时.json",
+      "bytes": 371,
+      "sha256": "a1ef08d0ad3307f6e366da91dc08605754c97e179cd3fadd94ff782cd5ca66c5"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/actual-quota.json",
+      "bytes": 57015,
+      "sha256": "7a30a5d99a6e7b6f83ce3bc4c86291821bfecb50228ae12722d39c021bd4f332"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/actual-two-windows.json",
+      "bytes": 4344,
+      "sha256": "84918d766d2e055860bde790822fae869f26f9a22a59165829bf5f1409664355"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/cache-identity.json",
+      "bytes": 8482,
+      "sha256": "35328339c843718b7dc868d1f118f9ea20a4119f29c025fb8999040343b9ef65"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-bad-json.json",
+      "bytes": 1639,
+      "sha256": "c0e2abb7b78c1344e1bafbd754114c5ec8ebdafb395c1f557d601c26392836f8"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-boolean-false.json",
+      "bytes": 1884,
+      "sha256": "daeff5347d84960b040ec93e90d2d0a28d0173b436bc9b53e27901230226c9ba"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-empty-result.json",
+      "bytes": 1781,
+      "sha256": "49a6c79139566a5e99c6d50b25a7986bcf41ab14310f23e22a8353b7c8401032"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-error-branch-false.json",
+      "bytes": 1881,
+      "sha256": "4ada069f993226a36683e34a376d87b897e41eccd8aff3336be518d68b0c3d1d"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-error-branch-true.json",
+      "bytes": 1878,
+      "sha256": "96591962bc2a2bcd6263a9435a631b5b6ff0b1d371520d455bf159ee095fd958"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-error-exit-false.json",
+      "bytes": 1849,
+      "sha256": "2f3c192755e26fbbb3e09b351913ab2c9136aadab0168c0ce95dbdadc37e67e5"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-error-exit-missing.json",
+      "bytes": 1783,
+      "sha256": "7b308fc65ac2af898c686b9a83d8672dc22eaacd69cea01fe41907f795466a1a"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-first-sentence.json",
+      "bytes": 1885,
+      "sha256": "eeaeb94d98c0a49ea13bb9faad58fe5fc887a5ab3d900921aa8533bfcfb3aa6c"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-is_error-\"false\".json",
+      "bytes": 1859,
+      "sha256": "af26fa1e97dec518a433570fcda6e9e8538e0bc7feaadc17fef27da3db089c3e"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-is_error-\"true\".json",
+      "bytes": 1856,
+      "sha256": "0b0ffecbaa8b29f689bd17f0f71576d68d6ced101081606aa3eb823f7e6bbacc"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-is_error-0.json",
+      "bytes": 1835,
+      "sha256": "3e7a74394454f49f09add502d196f7629041c706c6266b52cf42f42aafbbaa70"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-is_error-1.json",
+      "bytes": 1835,
+      "sha256": "71b11830a942516dccf6c6ad597d9dbb8ac899c355dbb7dbc36994ddc54aca7e"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-is_error-null.json",
+      "bytes": 1844,
+      "sha256": "f2850862fbcbafc4a437fdedf5e84590598ee3c3af4b851a97df2895d2ddf1f1"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-is_error-true.json",
+      "bytes": 1844,
+      "sha256": "0e169321c8bf2b12f553dedb879b18ff424b5a1c024b042eb6a7e755a8b97bdb"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-missing.json",
+      "bytes": 1772,
+      "sha256": "8844982488e2bd07c7eb135fa89792464643ea23f5456571c86ead752f22f003"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-non-chinese.json",
+      "bytes": 1808,
+      "sha256": "ccd053f844032eef6d4fd9f8d1bc04595d83e09e0bd0a5d133051884798d8f6a"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-non-string-result.json",
+      "bytes": 1778,
+      "sha256": "1e53fe1009fb1660bd7a7ad939eefde3de7b99dd2201462fcd579047da6e84ba"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-plain-text.json",
+      "bytes": 1653,
+      "sha256": "802e3890f77c1884a6f244a9c61ea2c8baa828ef007820d1fe886e0c37015064"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/protocol-wrong-type.json",
+      "bytes": 1849,
+      "sha256": "469f77151a9736535bac378ea30ae7edea64b82e82b0ac0bcbd3838a89b764e7"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/原始输出.log",
+      "bytes": 1097906,
+      "sha256": "9852fcbe0e604f6edde520869c03b7bd437288fd05460bef25558e4eabb466f2"
+    },
+    {
+      "path": "验收证据/GN-R4/32-test-electron最终全量/退出码与用时.json",
+      "bytes": 518,
+      "sha256": "34bb5f446d0d9b96cc810b9dd2df9f827c2c34fc46159fd988c1c7123d0ae7d4"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/actual-quota.json",
+      "bytes": 57015,
+      "sha256": "62d84c593257f3e6b1ea3f51eb5d68de5bd552e221921928941daf7cccadc4b0"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/actual-two-windows.json",
+      "bytes": 4344,
+      "sha256": "e3c6a81eaa4ea1da7c767890e97d7f0ac0c4599ef6dfd5bf610954f1d61997ba"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/cache-identity.json",
+      "bytes": 8482,
+      "sha256": "fc4ddfba724d906fa4397b0edb47f04a08d1abd1b8725994e570be847db4f403"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-bad-json.json",
+      "bytes": 1639,
+      "sha256": "1d73861ce39bd6f0da7b26cec6e3974b28012cbeb0e241a19cdcf4073ce3657b"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-boolean-false.json",
+      "bytes": 1884,
+      "sha256": "e608ff4edfd29c46dd87f1670235b3a1b1d3218edcaf2e4de0d6db21ad8f4e33"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-empty-result.json",
+      "bytes": 1781,
+      "sha256": "ea6d52dab91bff50de4c7a993dfc9be854ffe6e27599464c3f42c48c4d745d2c"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-error-branch-false.json",
+      "bytes": 1881,
+      "sha256": "2ac27c0ab204dddee546f1c5d566d23f6c29506a0ce478cec7177a827d6c1636"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-error-branch-true.json",
+      "bytes": 1878,
+      "sha256": "91b95f7a21015860af2a0b74538ee6a5be3cfc371ed5071f83779d3e98ae998a"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-error-exit-false.json",
+      "bytes": 1849,
+      "sha256": "db0c55b61a1ad45a329eeb7b624c6da60f773c8e47bde6883b86a09e00f58d7a"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-error-exit-missing.json",
+      "bytes": 1783,
+      "sha256": "b60e993c919d7fe472fdd73c31c6def357f75b29d480aa58ded8073ed9b10822"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-first-sentence.json",
+      "bytes": 1885,
+      "sha256": "5453bd06087a08f9a2d16819fa28db0190b55e4886180f8bba89ceaaf94bb0d6"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-is_error-\"false\".json",
+      "bytes": 1859,
+      "sha256": "ca0a0a1a8052bfe5aae92a2322fc48b3e8d173a73aea352d04e7454efb0794c9"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-is_error-\"true\".json",
+      "bytes": 1856,
+      "sha256": "6c1a5c26ce889b2e9f3e66ba0af23ea2ac9783bd3c49ca8f6c2895ca990a6987"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-is_error-0.json",
+      "bytes": 1835,
+      "sha256": "be08c4ecff4024e84cd7127361960e55e895b5937abdc645cbe556ead7c6ee89"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-is_error-1.json",
+      "bytes": 1835,
+      "sha256": "3691a3760e7ee9d46efa7704d10c8146f3d15c1fb883e3c18e448929abccd232"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-is_error-null.json",
+      "bytes": 1844,
+      "sha256": "61a8d7a71fbcb6cc8958bdc062315659076d0979cd48c26edb53d30876cc29c4"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-is_error-true.json",
+      "bytes": 1844,
+      "sha256": "74e351b1b3767574f7f77fcf615523fcac7923dee2f26d9e518e0b8871dc4432"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-missing.json",
+      "bytes": 1772,
+      "sha256": "ae95c54cb984cb27917c40c59d830505f233dd16e902a146330bd9dcb12193c8"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-non-chinese.json",
+      "bytes": 1808,
+      "sha256": "d05f72502b05c0b3206e225d43ddf795f17c332c18d8ec35e7540153894654b8"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-non-string-result.json",
+      "bytes": 1778,
+      "sha256": "78843f594aba7f08694d051dde18863b0caf612abea2589094c6ba8d70a277fe"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-plain-text.json",
+      "bytes": 1653,
+      "sha256": "1bc4eee6b7813bb36ee2413ac8d1d87f1d3e86b976f15d0874c5001b99e479ee"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/protocol-wrong-type.json",
+      "bytes": 1849,
+      "sha256": "46c080ff2e777976c3b733a54393b80bf68a65ffd763e8e7407616c202eab454"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/原始输出.log",
+      "bytes": 2244092,
+      "sha256": "e2ba522d809441958691d5e87d883d6bb036a8bcdb12907f0df2076beda3d013"
+    },
+    {
+      "path": "验收证据/GN-R4/33-test-prepush最终全量/退出码与用时.json",
+      "bytes": 495,
+      "sha256": "0f10e69b172b1b214158018e1e04ae65b7b6d23183708dd1adcc08a44577121a"
+    },
+    {
+      "path": "验收证据/GN-R4/34-主审34项反例最终/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/34-主审34项反例最终/原始输出.log",
+      "bytes": 20612,
+      "sha256": "2d63713736af806accb5a4d993363742643b7a74b2bea6aa3c20739594f8d963"
+    },
+    {
+      "path": "验收证据/GN-R4/34-主审34项反例最终/退出码与用时.json",
+      "bytes": 643,
+      "sha256": "681fe42254347d29064f349c8f2ece7605b68cece6ac0de269cb7aa63c578288"
+    },
+    {
+      "path": "验收证据/GN-R4/35a-恢复Electron前占用检查/占用.json",
+      "bytes": 358,
+      "sha256": "f8be40fc9f91c9f40c5ce3c31abc97545a97eedf042653edb2a5de8938b9bd5a"
+    },
+    {
+      "path": "验收证据/GN-R4/35b-最终恢复Electron依赖/exitcode.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "验收证据/GN-R4/35b-最终恢复Electron依赖/原始输出.log",
+      "bytes": 1289,
+      "sha256": "1702bae15d07722b1d89841b8eb2a214f4ac1ffad2461182b086b20c45bded77"
+    },
+    {
+      "path": "验收证据/GN-R4/35b-最终恢复Electron依赖/退出码与用时.json",
+      "bytes": 395,
+      "sha256": "a191c55093b67e75cb18a458acd23af8776a01658c1af49e96ec9cf8c1dad2de"
+    },
+    {
+      "path": "验收证据/GN-R4/approved-priority-check.cjs",
+      "bytes": 2150,
+      "sha256": "a4d90014dca72890afd3ca2f7cddda826bfca6231d7140d327fa8350e7a87b99"
+    },
+    {
+      "path": "验收证据/GN-R4/run.py",
+      "bytes": 3106,
+      "sha256": "0cccf88269e7113a4e26fa49367c16165015dce91a875debf1d9d8d676fc2752"
+    },
+    {
+      "path": "验收证据/GN-R4/scope-audit.cjs",
+      "bytes": 5228,
+      "sha256": "d17685984f82273d68c39acbb7540660009604bc6ba03937b5e6c6fc03a6d11d"
+    },
+    {
+      "path": "验收证据/GN-R4/verify-archive.py",
+      "bytes": 5537,
+      "sha256": "b1f5b65f6c28ff11e40d0c7c85287a23657ed38c4bde2abdead9d1018b48b44d"
+    }
+  ],
+  "total_evidence_files": 419,
+  "total_evidence_bytes": 20416915
+}

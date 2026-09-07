@@ -1,0 +1,10 @@
+{
+  "command": "npm run typecheck --prefix packages/runtime",
+  "cwd": "/Users/lukezhang/Desktop/Agent运行面板/.worktrees/worker-GN",
+  "started_at": "2026-09-07T22:04:29.831962+08:00",
+  "ended_at": "2026-09-07T22:04:39.413050+08:00",
+  "exit_code": 0,
+  "total_seconds": 9.58,
+  "test_duration_lines": [],
+  "error_TS_count": 0
+}
