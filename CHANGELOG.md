@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Contextual tips now fill empty AI sessions immediately and on every empty session, instead of after a delay and only once per app launch.
 
 ### Fixed
+- Codex sessions no longer send a follow-up session naming request when a prompt fails, is canceled, or finishes without completing.
 - Plan approval cards now show the decision once you approve or request changes, instead of sitting at "Awaiting review".
 - Head Agent dispatches that are waiting for a free slot now appear as "Queued" on the session board, instead of being invisible until they start.
 - A session name given when dispatching work is no longer overwritten by automatic naming.

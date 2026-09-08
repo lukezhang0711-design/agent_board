@@ -692,6 +692,8 @@ export class OpenAICodexProvider extends BaseAgentProvider {
 
     let fullText = '';
     let protocolSessionForTurn: ProtocolSession | null = null;
+    let turnCompletedSuccessfully = false;
+    let turnHasTerminalError = false;
 
     try {
       // Check permission using ToolPermissionService
@@ -1022,6 +1024,9 @@ export class OpenAICodexProvider extends BaseAgentProvider {
               break;
 
             case 'complete':
+              if (!turnHasTerminalError) {
+                turnCompletedSuccessfully = true;
+              }
               yield {
                 type: 'complete',
                 content: item.event.content,
@@ -1033,6 +1038,8 @@ export class OpenAICodexProvider extends BaseAgentProvider {
               break;
 
             case 'error':
+              turnHasTerminalError = true;
+              turnCompletedSuccessfully = false;
               yield {
                 type: 'error',
                 error: item.message,
@@ -1065,16 +1072,25 @@ export class OpenAICodexProvider extends BaseAgentProvider {
         console.error('[CODEX] WARNING: Stream completed but thread ID was never captured!');
       }
 
-      if (
-        sessionId &&
+      const shouldSendSessionNaming =
+        Boolean(sessionId) &&
         !isResumedThread &&
         hasSessionNamingServer &&
         !usedSessionNamingToolThisTurn &&
-        !abortController.signal.aborted
-      ) {
-        await this.sendSessionNamingReminder(session, sessionId);
+        !abortController.signal.aborted &&
+        turnCompletedSuccessfully &&
+        !turnHasTerminalError;
+
+      if (sessionId && shouldSendSessionNaming) {
+        try {
+          await this.sendSessionNamingReminder(session, sessionId);
+        } catch (err) {
+          console.warn('[CODEX] Session naming reminder failed (non-fatal):', err);
+        }
       }
     } catch (error) {
+      turnHasTerminalError = true;
+      turnCompletedSuccessfully = false;
       const errorMessage = error instanceof Error ? error.message : String(error);
       const isAbort = abortController.signal.aborted || /abort|cancel/i.test(errorMessage);
       if (!isAbort) {
@@ -1392,25 +1408,29 @@ export class OpenAICodexProvider extends BaseAgentProvider {
 
     let reminderTriggeredNaming = false;
 
-    for await (const reminderEvent of this.protocol.sendMessage(session, {
-      content: OpenAICodexProvider.SESSION_NAMING_REMINDER_PROMPT,
-    })) {
-      // Tag this reminder turn's persisted output rows as a system reminder so
-      // the metadata-based transcript hide covers them. Without the tag they
-      // carry only { eventType, codexProvider, transport } and fall back to the
-      // exact <SYSTEM_REMINDER> tag regex, which a fragmented streamed tag
-      // defeats, leaking the naming nudge into the visible transcript.
-      await this.storeRawEventIfPresent(reminderEvent, sessionId, {
-        promptType: 'system_reminder',
-        reminderKind: 'session_naming',
-      });
+    try {
+      for await (const reminderEvent of this.protocol.sendMessage(session, {
+        content: OpenAICodexProvider.SESSION_NAMING_REMINDER_PROMPT,
+      })) {
+        // Tag this reminder turn's persisted output rows as a system reminder so
+        // the metadata-based transcript hide covers them. Without the tag they
+        // carry only { eventType, codexProvider, transport } and fall back to the
+        // exact <SYSTEM_REMINDER> tag regex, which a fragmented streamed tag
+        // defeats, leaking the naming nudge into the visible transcript.
+        await this.storeRawEventIfPresent(reminderEvent, sessionId, {
+          promptType: 'system_reminder',
+          reminderKind: 'session_naming',
+        });
 
-      if (reminderEvent.type === 'tool_call' && reminderEvent.toolCall) {
-        if (OpenAICodexProvider.isSessionNamingToolCall(reminderEvent.toolCall.name)) {
-          reminderTriggeredNaming = true;
+        if (reminderEvent.type === 'tool_call' && reminderEvent.toolCall) {
+          if (OpenAICodexProvider.isSessionNamingToolCall(reminderEvent.toolCall.name)) {
+            reminderTriggeredNaming = true;
+          }
+          this.handleAskUserQuestionToolCall(reminderEvent.toolCall, sessionId);
         }
-        this.handleAskUserQuestionToolCall(reminderEvent.toolCall, sessionId);
       }
+    } catch (err) {
+      console.warn('[CODEX] Session naming reminder stream failed (non-fatal):', err);
     }
 
     if (!reminderTriggeredNaming) {
