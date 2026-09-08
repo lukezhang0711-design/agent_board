@@ -1086,6 +1086,7 @@ export class OpenAICodexProvider extends BaseAgentProvider {
           await this.sendSessionNamingReminder(session, sessionId);
         } catch (err) {
           console.warn('[CODEX] Session naming reminder failed (non-fatal):', err);
+          this.evictLiveProtocolSession(sessionId);
         }
       }
     } catch (error) {
@@ -1422,6 +1423,15 @@ export class OpenAICodexProvider extends BaseAgentProvider {
           reminderKind: 'session_naming',
         });
 
+        if (reminderEvent.type === 'error') {
+          console.warn(
+            '[CODEX] Session naming reminder received error event (non-fatal, evicting live session):',
+            reminderEvent.error,
+          );
+          this.evictLiveProtocolSession(sessionId);
+          return;
+        }
+
         if (reminderEvent.type === 'tool_call' && reminderEvent.toolCall) {
           if (OpenAICodexProvider.isSessionNamingToolCall(reminderEvent.toolCall.name)) {
             reminderTriggeredNaming = true;
@@ -1430,7 +1440,11 @@ export class OpenAICodexProvider extends BaseAgentProvider {
         }
       }
     } catch (err) {
-      console.warn('[CODEX] Session naming reminder stream failed (non-fatal):', err);
+      console.warn(
+        '[CODEX] Session naming reminder stream failed (non-fatal, evicting live session):',
+        err,
+      );
+      this.evictLiveProtocolSession(sessionId);
     }
 
     if (!reminderTriggeredNaming) {
